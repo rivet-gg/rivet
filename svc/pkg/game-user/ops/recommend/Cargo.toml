@@ -12,3 +12,5 @@ prost = "0.10"
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../../lib/chirp/worker" }
+
+game-user-create = { path = "../create" }

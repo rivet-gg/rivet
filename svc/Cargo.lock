@@ -3694,6 +3694,7 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "game-user-create",
  "prost 0.10.4",
  "rivet-operation",
 ]
