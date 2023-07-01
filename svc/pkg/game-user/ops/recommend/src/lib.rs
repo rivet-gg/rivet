@@ -9,28 +9,23 @@ async fn handle(
 
 	let count = ctx.count as i32;
 
+	// Selects X newest game users
+	let game_user_ids = sqlx::query_as::<_, (Uuid,)>(indoc!(
+		"
+		SELECT game_user_id
+		FROM game_users
+		ORDER BY create_ts DESC
+		LIMIT $1
+		"
+	))
+	.bind(count)
+	.fetch_all(&crdb)
+	.await?;
+
 	Ok(game_user::recommend::Response {
-		game_user_ids: Vec::new(),
+		game_user_ids: game_user_ids
+			.into_iter()
+			.map(|(game_user_id,)| game_user_id.into())
+			.collect::<Vec<_>>(),
 	})
-
-	// 	// TODO: This is very slow, we should use a hash shard for this
-	// 	// Selects X newest game users
-	// 	let game_user_ids = sqlx::query_as::<_, (Uuid,)>(indoc!(
-	// 		"
-	// 		SELECT game_user_id
-	// 		FROM game_users
-	// 		ORDER BY create_ts DESC
-	// 		LIMIT $1
-	// 		"
-	// 	))
-	// 	.bind(count)
-	// 	.fetch_all(&crdb)
-	// 	.await?;
-
-	// 	Ok(game_user_recommend::Response {
-	// 		game_user_ids: game_user_ids
-	// 			.into_iter()
-	// 			.map(|(game_user_id,)| game_user_id.into())
-	// 			.collect::<Vec<_>>(),
-	// 	})
 }
