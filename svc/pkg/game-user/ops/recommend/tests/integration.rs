@@ -12,21 +12,17 @@ async fn create_game_users(
 
 	let namespace_id = namespace_id.unwrap_or_else(Uuid::new_v4);
 
-	println!("Creating {count} game users...");
+	tracing::info!(?count, "Creating game users");
 
 	for i in 0..count {
-		println!("Creating game user {i}...");
-
 		let operation = op!([ctx] game_user_create {
 			namespace_id: Some(namespace_id.into()),
 			user_id: Some(Uuid::new_v4().into())
 		});
 
-		users.push(operation.await.expect("Error creating game user!"));
-
-		println!("Game user {i} created.");
+		users.push(operation.await.unwrap());
 	}
-	println!("{count} game users created.");
+	tracing::info!(?count, "game users created");
 
 	(namespace_id, users)
 }
@@ -76,7 +72,7 @@ async fn check_count(ctx: TestCtx) {
 	create_game_users(&ctx, MAX_USERS, None).await;
 
 	for target_len in 0..MAX_USERS {
-		println!("Requesting {target_len} game users...");
+		tracing::trace!(?target_len, "getting game users");
 
 		let count = target_len as u32;
 
@@ -86,8 +82,7 @@ async fn check_count(ctx: TestCtx) {
 			.game_user_ids
 			.len();
 
-		println!("Returned {len} game user ids.");
+		tracing::debug!(?len, "returned ids");
 		assert_eq!(len, target_len);
 	}
-	println!("Requests for 0 through {MAX_USERS} game user ids successful.");
 }
