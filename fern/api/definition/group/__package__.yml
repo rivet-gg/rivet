@@ -188,7 +188,7 @@ service:
               The pagination anchor. Set to the returned anchor of this endpoint
               to receive the next set of items.
             type: optional<string>
-          count:
+          limit:
             docs: Amount of members to return.
             type: optional<double>
           watch_index:
