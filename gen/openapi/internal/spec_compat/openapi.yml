@@ -9939,7 +9939,7 @@ paths:
           type: string
       - description: Amount of members to return.
         in: query
-        name: count
+        name: limit
         required: false
         schema:
           format: double

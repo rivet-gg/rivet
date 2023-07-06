@@ -412,7 +412,7 @@ pub async fn group_get_join_requests(configuration: &configuration::Configuratio
 }
 
 /// Returns a group's members.
-pub async fn group_get_members(configuration: &configuration::Configuration, group_id: &str, anchor: Option<&str>, count: Option<f64>, watch_index: Option<&str>) -> Result<crate::models::GroupGetMembersResponse, Error<GroupGetMembersError>> {
+pub async fn group_get_members(configuration: &configuration::Configuration, group_id: &str, anchor: Option<&str>, limit: Option<f64>, watch_index: Option<&str>) -> Result<crate::models::GroupGetMembersResponse, Error<GroupGetMembersError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -423,8 +423,8 @@ pub async fn group_get_members(configuration: &configuration::Configuration, gro
     if let Some(ref local_var_str) = anchor {
         local_var_req_builder = local_var_req_builder.query(&[("anchor", &local_var_str.to_string())]);
     }
-    if let Some(ref local_var_str) = count {
-        local_var_req_builder = local_var_req_builder.query(&[("count", &local_var_str.to_string())]);
+    if let Some(ref local_var_str) = limit {
+        local_var_req_builder = local_var_req_builder.query(&[("limit", &local_var_str.to_string())]);
     }
     if let Some(ref local_var_str) = watch_index {
         local_var_req_builder = local_var_req_builder.query(&[("watch_index", &local_var_str.to_string())]);

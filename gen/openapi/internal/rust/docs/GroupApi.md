@@ -184,7 +184,7 @@ Name | Type | Description  | Required | Notes
 
 ## group_get_members
 
-> crate::models::GroupGetMembersResponse group_get_members(group_id, anchor, count, watch_index)
+> crate::models::GroupGetMembersResponse group_get_members(group_id, anchor, limit, watch_index)
 
 
 Returns a group's members.
@@ -196,7 +196,7 @@ Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **group_id** | **uuid::Uuid** |  | [required] |
 **anchor** | Option<**String**> | The pagination anchor. Set to the returned anchor of this endpoint to receive the next set of items. |  |
-**count** | Option<**f64**> | Amount of members to return. |  |
+**limit** | Option<**f64**> | Amount of members to return. |  |
 **watch_index** | Option<**String**> | A query parameter denoting the requests watch index. |  |
 
 ### Return type
