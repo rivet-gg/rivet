@@ -1,6 +1,7 @@
 # Fern
 
 ## Updating the API
+
 When an update to the API is required, a corresponding update to the Fern specification is also needed.
 
 1. Update/Create any files you need under `gen/openapi`. For more information on how to use Fern or its syntax, see https://buildwithfern.com/docs/
@@ -8,6 +9,7 @@ When an update to the API is required, a corresponding update to the Fern specif
 3. From this, create a branch and commit the changes. A Github action will run to both validate and publish the new specification.
 
 ## Using the updated API
+
 To use the newly generated API in places such as the [hub](https://github.com/rivet-gg/hub), follow the steps below
 
 1. Find the Github action for the Fern commit
