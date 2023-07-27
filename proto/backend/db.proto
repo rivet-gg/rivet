@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package rivet.backend.db;
+
+import "proto/common.proto";
+
+// MARK: Game Namespace Config
+message GameNamespaceConfig {
+}
+
+// MARK: Game Version Config
+message GameVersionConfig {	
+	/*
+	message Database {
+		string key = 1;
+		rivet.common.Uuid database_id = 2;
+	}
+
+	repeated Database databases = 1;
+	*/
+}
+
+// MARK: Game Version Config Context
+message GameVersionConfigCtx {
+
+}
+
+// MARK: Game Version Config Meta
+message GameVersionConfigMeta {
+	
+}
+
+// Database
+message Database {
+	rivet.common.Uuid database_id = 1;
+	rivet.common.Uuid team_id = 2;
+	string name_id = 3;
+	repeated Collection collections = 4;
+}
+
+message Collection {
+	rivet.common.Uuid collection_id = 1;
+	string name_id = 2;
+	repeated Field fields = 3;
+}
+
+message Field {
+	enum Type {
+		INTEGER = 0;
+		FLOAT = 1;
+		BOOL = 2;
+		STRING = 3;
+	}
+
+	string name_id = 1;
+	Type type = 2;
+}
+

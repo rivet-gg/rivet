@@ -4,6 +4,7 @@ package rivet.backend.module;
 
 import "proto/common.proto";
 import "proto/backend/module/script.proto";
+import "proto/backend/db.proto";
 
 // MARK: Game Namespace Config
 message GameNamespaceConfig {
@@ -55,6 +56,8 @@ message Version {
 
 	repeated rivet.backend.module.Script scripts = 201;
 
+	repeated Database databases = 401;
+
 	message Docker {
 		// TODO: Auth?
 		string image_tag = 1;
@@ -62,6 +65,12 @@ message Version {
 
 	oneof image {
 		Docker docker = 301;
+	}
+
+	message Database {
+		string key = 1;
+		rivet.common.Uuid database_id = 2;
+		repeated rivet.backend.db.Collection collections = 3;
 	}
 }
 
