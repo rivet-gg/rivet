@@ -14,6 +14,7 @@ lazy_static = "1.4.0"
 rivet-health-checks = { path = "../../../../lib/health-checks" }
 rivet-metrics = { path = "../../../../lib/metrics" }
 rivet-runtime = { path = "../../../../lib/runtime" }
+util-db = { package = "rivet-util-db", path = "../util" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../lib/chirp/worker" }

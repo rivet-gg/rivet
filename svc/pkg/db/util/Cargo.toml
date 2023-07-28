@@ -6,3 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rivet-util = { path = "../../../../lib/util/core" }
+global-error = { path = "../../../../lib/global-error" }
+uuid = { version = "1", features = ["v4"] }
+

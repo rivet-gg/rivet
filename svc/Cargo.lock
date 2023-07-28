@@ -2882,6 +2882,7 @@ dependencies = [
  "rivet-health-checks",
  "rivet-metrics",
  "rivet-runtime",
+ "rivet-util-db",
 ]
 
 [[package]]
@@ -6960,6 +6961,15 @@ version = "0.1.0"
 name = "rivet-util-chat"
 version = "0.1.0"
 dependencies = [
+ "rivet-util",
+ "uuid",
+]
+
+[[package]]
+name = "rivet-util-db"
+version = "0.1.0"
+dependencies = [
+ "global-error",
  "rivet-util",
  "uuid",
 ]

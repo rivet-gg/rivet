@@ -1,9 +1,11 @@
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
+use util_db::assert_ident_snake;
 
 #[worker(name = "db-schema-apply")]
 async fn worker(ctx: OperationContext<db::msg::schema_apply::Message>) -> GlobalResult<()> {
 	let crdb = ctx.crdb("db-db").await?;
+	let pg_data = ctx.crdb("db-db-data").await?;
 
 	let database_id = internal_unwrap!(ctx.database_id).as_uuid();
 	let schema = internal_unwrap!(ctx.schema);
@@ -24,7 +26,7 @@ async fn worker(ctx: OperationContext<db::msg::schema_apply::Message>) -> Global
 	};
 
 	// Run migration
-	run_migration(&merged_schema).await?;
+	run_migration(&pg_data, database_id, &merged_schema).await?;
 
 	msg!([ctx] db::msg::schema_apply_complete(database_id) {
 		database_id: Some(database_id.into()),
@@ -168,9 +170,21 @@ fn merge_schemas(
 }
 
 #[tracing::instrument(skip_all)]
-async fn run_migration(schema: &backend::db::Schema) -> GlobalResult<()> {
-	let script = generate_migration_script(schema)?;
-	tracing::info!(?script, "script");
+async fn run_migration(
+	pg_data: &PostgresPool,
+	database_id: Uuid,
+	schema: &backend::db::Schema,
+) -> GlobalResult<()> {
+	let script = generate_migration_script(database_id, schema)?;
+
+	// Execute transaction
+	let mut tx = pg_data.begin().await?;
+	for step in script {
+		tracing::info!(?step, "running migration step");
+		sqlx::query(&step).execute(&mut tx).await?;
+	}
+	tx.commit().await?;
+
 	Ok(())
 }
 
@@ -178,18 +192,25 @@ async fn run_migration(schema: &backend::db::Schema) -> GlobalResult<()> {
 ///
 /// We use `SERIAL` instead of UUIDs for performance reasons. Neon recommends this and benchmarks
 /// show it as the fasteset. https://supabase.com/blog/choosing-a-postgres-primary-key#benchmarking-id-generation-with-uuid-ossp-and-pg_idkit
-fn generate_migration_script(schema: &backend::db::Schema) -> GlobalResult<String> {
+fn generate_migration_script(
+	database_id: Uuid,
+	schema: &backend::db::Schema,
+) -> GlobalResult<Vec<String>> {
 	let mut instructions = Vec::new();
 
+	let schema_name = util_db::schema_name(database_id);
+
 	for collection in &schema.collections {
+		let table_name = util_db::table_name(&collection.name_id);
+
 		// Create table
 		let columns = collection
 			.fields
 			.iter()
 			.map(|field| {
 				Ok(format!(
-					r#", "{name}" {ty} {opt}"#,
-					name = assert_ident_snake(&field.name_id)?,
+					r#", "{column}" {ty} {opt}"#,
+					column = assert_ident_snake(&field.name_id)?,
 					ty = type_proto_to_pg(field.r#type)?,
 					opt = if field.optional { "NULL" } else { "NOT NULL" }
 				))
@@ -197,17 +218,19 @@ fn generate_migration_script(schema: &backend::db::Schema) -> GlobalResult<Strin
 			.collect::<GlobalResult<Vec<_>>>()?
 			.join("");
 		instructions.push(format!(
-			r#"CREATE TABLE IF NOT EXISTS "{table}" (id SERIAL8 PRIMARY KEY {columns})"#,
-			table = assert_ident_snake(&collection.name_id)?,
+			r#"CREATE TABLE IF NOT EXISTS "{schema}"."{table}" (id SERIAL8 PRIMARY KEY {columns})"#,
+			schema = assert_ident_snake(&schema_name)?,
+			table = assert_ident_snake(&table_name)?,
 		));
 
 		// Add fields
 		for field in &collection.fields {
 			// Add column
 			instructions.push(format!(
-				r#"ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS "{name}" {ty} {opt}"#,
-				table = assert_ident_snake(&collection.name_id)?,
-				name = assert_ident_snake(&field.name_id)?,
+				r#"ALTER TABLE "{schema}"."{table}" ADD COLUMN IF NOT EXISTS "{column}" {ty} {opt}"#,
+				schema = assert_ident_snake(&schema_name)?,
+				table = assert_ident_snake(&table_name)?,
+				column = assert_ident_snake(&field.name_id)?,
 				ty = type_proto_to_pg(field.r#type)?,
 				opt = if field.optional { "NULL" } else { "NOT NULL" }
 			));
@@ -215,15 +238,16 @@ fn generate_migration_script(schema: &backend::db::Schema) -> GlobalResult<Strin
 			// Remove nullable requirement if needed
 			if !field.optional {
 				instructions.push(format!(
-					r#"ALTER TABLE "{table}" ALTER COLUMN "{name}" DROP NOT NULL"#,
-					table = assert_ident_snake(&collection.name_id)?,
-					name = assert_ident_snake(&field.name_id)?
+					r#"ALTER TABLE "{schema}"."{table}" ALTER COLUMN "{column}" DROP NOT NULL"#,
+					schema = assert_ident_snake(&schema_name)?,
+					table = assert_ident_snake(&table_name)?,
+					column = assert_ident_snake(&field.name_id)?
 				));
 			}
 		}
 	}
 
-	Ok(instructions.join(";\n"))
+	Ok(instructions)
 }
 
 fn type_proto_to_pg(ty: i32) -> GlobalResult<&'static str> {
@@ -234,14 +258,6 @@ fn type_proto_to_pg(ty: i32) -> GlobalResult<&'static str> {
 		backend::db::field::Type::String => "TEXT",
 	};
 	Ok(pg)
-}
-
-/// Validates this is a safe identifier and returns error if not.
-///
-/// This is a redundant check to the previous ident checks in `merge_schemas`.
-fn assert_ident_snake(x: &str) -> GlobalResult<&str> {
-	internal_assert!(util::check::ident_snake(x), "unhandled invalid identifier");
-	Ok(x)
 }
 
 #[tracing::instrument]
