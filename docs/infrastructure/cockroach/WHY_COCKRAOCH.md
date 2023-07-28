@@ -47,7 +47,7 @@ CockroachDB supports handling data locality natively while Postgres requires run
 
 > TODO
 
-### Vitess
+### Postgres
 
 > TODO
 

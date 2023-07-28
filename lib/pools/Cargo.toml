@@ -23,7 +23,6 @@ default-features = false
 features = [
 	"runtime-tokio-native-tls",
 	"postgres",
-	"mysql",
 	"macros",
 	"uuid",
 	"json",

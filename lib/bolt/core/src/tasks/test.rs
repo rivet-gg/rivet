@@ -293,7 +293,7 @@ async fn run_test(svc_ctx: &ServiceContext, test_name: Option<&str>) -> TestResu
 			}
 			RuntimeKind::CRDB { .. }
 			| RuntimeKind::ClickHouse { .. }
-			| RuntimeKind::Vitess { .. }
+			| RuntimeKind::Postgres { .. }
 			| RuntimeKind::Redis { .. }
 			| RuntimeKind::S3 { .. }
 			| RuntimeKind::Nats { .. } => {

@@ -23,9 +23,8 @@ async fn worker(ctx: OperationContext<db::msg::schema_apply::Message>) -> Global
 		}
 	};
 
-	// TODO: Generate migration script
-	// TODO: Run migration
-	// TODO: Don't forget update optional
+	// Run migration
+	run_migration(&merged_schema).await?;
 
 	msg!([ctx] db::msg::schema_apply_complete(database_id) {
 		database_id: Some(database_id.into()),
@@ -166,6 +165,13 @@ fn merge_schemas(
 	}
 
 	Ok(merged)
+}
+
+#[tracing::instrument(skip(all))]
+async fn run_migration(schema: &backend::db::Schema) -> GlobalResult<()> {
+	let script = generate_migration_script(schema)?;
+	tracing::info!(?script, "script");
+	Ok(())
 }
 
 /// Generates script to idempotently create the database schema.

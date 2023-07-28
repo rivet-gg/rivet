@@ -5,7 +5,7 @@ use rivet_operation::prelude::*;
 pub async fn handle(
 	ctx: OperationContext<db::query_run::Request>,
 ) -> GlobalResult<db::query_run::Response> {
-	let vt = ctx.vitess("db-db-data").await?;
+	let vt = ctx.postgres("db-db-data").await?;
 
 	sqlx::query_as::<_, (i64,)>("SELECT 1")
 		.fetch_one(&vt)

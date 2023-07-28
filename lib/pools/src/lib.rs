@@ -7,14 +7,14 @@ use rand::prelude::SliceRandom;
 use std::{collections::HashMap, env, fmt::Debug, str::FromStr, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
 
-use crate::pools::{CrdbPool, NatsPool, PoolsInner, RedisPool, VitessPool};
+use crate::pools::{CrdbPool, NatsPool, PoolsInner, PostgresPool, RedisPool};
 
 pub mod prelude {
 	pub use async_nats as nats;
 	pub use redis;
 	pub use sqlx;
 
-	pub use crate::pools::{CrdbPool, NatsPool, RedisConn, RedisPool, VitessPool};
+	pub use crate::pools::{CrdbPool, NatsPool, PostgresPool, RedisConn, RedisPool};
 }
 
 pub use crate::{error::Error, pools::Pools};
@@ -28,7 +28,7 @@ pub async fn from_env(client_name: impl ToString + Debug) -> Result<Pools, Error
 		_guard: token.clone().drop_guard(),
 		nats: nats_from_env(client_name.clone()).await?,
 		crdb: crdb_from_env(client_name.clone())?,
-		vitess: vitess_from_env(client_name.clone())?,
+		postgres: postgres_from_env(client_name.clone())?,
 		redis: redis_from_env().await?,
 	});
 	pool.clone().start(token);
@@ -166,33 +166,49 @@ fn crdb_from_env(client_name: String) -> Result<HashMap<String, CrdbPool>, Error
 }
 
 #[tracing::instrument]
-fn vitess_from_env(client_name: String) -> Result<HashMap<String, VitessPool>, Error> {
-	let mut vitess = HashMap::new();
+fn postgres_from_env(client_name: String) -> Result<HashMap<String, PostgresPool>, Error> {
+	let mut postgres = HashMap::new();
 	for (key, url) in env::vars() {
-		if let Some(svc_name_screaming) = key.strip_prefix("VITESS_URL_") {
+		if let Some(svc_name_screaming) = key.strip_prefix("POSTGRES_URL_") {
 			let svc_name = svc_name_screaming.to_lowercase().replace("_", "-");
 
-			tracing::debug!(%url, "vitess creating connection");
+			tracing::debug!(%url, "postgres creating connection");
 
 			let client_name = client_name.clone();
-			let pool = sqlx::mysql::MySqlPoolOptions::new()
-				// Open a connection
-				// immediately on startup
+			let pool = sqlx::postgres::PgPoolOptions::new()
+				// See above
+				.acquire_timeout(Duration::from_secs(15))
+				// See above
+				.idle_timeout(Some(Duration::from_secs(60)))
+				// See above
 				.min_connections(1)
-				// Raise the cap, since this is effectively the amount of
-				// simultaneous requests we can handle. See
+				// See above
 				.max_connections(512)
-				// Speeds up requests at the expense of potential
-				// failures
+				// See above
 				// .test_before_acquire(false)
+				.after_connect({
+					let url = url.clone();
+					move |conn, _| {
+						let client_name = client_name.clone();
+						let url = url.clone();
+						Box::pin(async move {
+							tracing::debug!(%url, "postgres connected");
+							sqlx::query("SET application_name = $1;")
+								.bind(&client_name)
+								.execute(conn)
+								.await?;
+							Ok(())
+						})
+					}
+				})
 				.connect_lazy(&url)
 				.map_err(Error::BuildSqlx)?;
 
-			vitess.insert(svc_name, pool);
+			postgres.insert(svc_name, pool);
 		}
 	}
 
-	Ok(vitess)
+	Ok(postgres)
 }
 
 #[tracing::instrument]

@@ -6,8 +6,8 @@ pub enum Error {
 	#[error("missing crdb pool: {key:?}")]
 	MissingCrdbPool { key: Option<String> },
 
-	#[error("missing vitess pool: {key:?}")]
-	MissingVitessPool { key: Option<String> },
+	#[error("missing postgres pool: {key:?}")]
+	MissingPostgresPool { key: Option<String> },
 
 	#[error("missing redis pool: {key:?}")]
 	MissingRedisPool { key: Option<String> },

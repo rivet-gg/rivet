@@ -487,12 +487,12 @@ impl ServiceContextData {
 			.collect()
 	}
 
-	pub async fn vitess_dependencies(&self) -> Vec<ServiceContext> {
+	pub async fn postgres_dependencies(&self) -> Vec<ServiceContext> {
 		self.dependencies()
 			.await
 			.iter()
 			.filter(|svc| {
-				if let RuntimeKind::Vitess { .. } = svc.config().runtime {
+				if let RuntimeKind::Postgres { .. } = svc.config().runtime {
 					true
 				} else {
 					false
@@ -990,12 +990,12 @@ impl ServiceContextData {
 			env.push((format!("CRDB_URL_{}", crdb_dep.name_screaming_snake()), uri));
 		}
 
-		// Vitess
-		for vt_dep in self.vitess_dependencies().await {
+		// Postgres
+		for pg_dep in self.postgres_dependencies().await {
 			env.push((
-				format!("VITESS_URL_{}", vt_dep.name_screaming_snake()),
+				format!("POSTGRES_URL_{}", pg_dep.name_screaming_snake()),
 				project_ctx
-					.read_secret(&["vitess", &vt_dep.name(), "url"])
+					.read_secret(&["postgres", &pg_dep.name(), "url"])
 					.await?,
 			));
 		}

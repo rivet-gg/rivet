@@ -387,7 +387,7 @@ async fn build_svc(svc_ctx: &ServiceContext, optimization: BuildOptimization) {
 		}
 		RuntimeKind::CRDB { .. }
 		| RuntimeKind::ClickHouse { .. }
-		| RuntimeKind::Vitess { .. }
+		| RuntimeKind::Postgres { .. }
 		| RuntimeKind::Redis { .. }
 		| RuntimeKind::S3 { .. }
 		| RuntimeKind::Nats { .. } => {
@@ -411,7 +411,7 @@ async fn derive_local_build_driver(
 		},
 		RuntimeKind::CRDB { .. }
 		| RuntimeKind::ClickHouse { .. }
-		| RuntimeKind::Vitess { .. }
+		| RuntimeKind::Postgres { .. }
 		| RuntimeKind::Redis { .. }
 		| RuntimeKind::S3 { .. }
 		| RuntimeKind::Nats { .. } => {
@@ -431,7 +431,7 @@ async fn derive_uploaded_svc_driver(
 		},
 		RuntimeKind::CRDB { .. }
 		| RuntimeKind::ClickHouse { .. }
-		| RuntimeKind::Vitess { .. }
+		| RuntimeKind::Postgres { .. }
 		| RuntimeKind::Redis { .. }
 		| RuntimeKind::S3 { .. }
 		| RuntimeKind::Nats { .. } => {

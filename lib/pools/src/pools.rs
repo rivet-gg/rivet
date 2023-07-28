@@ -5,7 +5,7 @@ use crate::Error;
 
 pub type NatsPool = async_nats::Client;
 pub type CrdbPool = sqlx::PgPool;
-pub type VitessPool = sqlx::MySqlPool;
+pub type PostgresPool = sqlx::PgPool;
 pub type RedisPool = redis::aio::ConnectionManager;
 
 pub type RedisConn = redis::aio::ConnectionManager;
@@ -16,7 +16,7 @@ pub struct PoolsInner {
 	pub(crate) _guard: DropGuard,
 	pub(crate) nats: Option<NatsPool>,
 	pub(crate) crdb: HashMap<String, CrdbPool>,
-	pub(crate) vitess: HashMap<String, VitessPool>,
+	pub(crate) postgres: HashMap<String, PostgresPool>,
 	pub(crate) redis: HashMap<String, RedisPool>,
 }
 
@@ -42,8 +42,8 @@ impl PoolsInner {
 		&self.crdb
 	}
 
-	pub fn vitess_map(&self) -> &HashMap<String, VitessPool> {
-		&self.vitess
+	pub fn postgres_map(&self) -> &HashMap<String, PostgresPool> {
+		&self.postgres
 	}
 
 	pub fn redis_map(&self) -> &HashMap<String, RedisPool> {
@@ -64,11 +64,11 @@ impl PoolsInner {
 			})
 	}
 
-	pub fn vitess(&self, key: &str) -> Result<VitessPool, Error> {
-		self.vitess
+	pub fn postgres(&self, key: &str) -> Result<PostgresPool, Error> {
+		self.postgres
 			.get(key)
 			.cloned()
-			.ok_or_else(|| Error::MissingVitessPool {
+			.ok_or_else(|| Error::MissingPostgresPool {
 				key: Some(key.to_owned()),
 			})
 	}
@@ -126,13 +126,13 @@ impl PoolsInner {
 				.set(pool.num_idle() as i64);
 		}
 
-		// Vitess
-		for (db_name, pool) in self.vitess_map() {
+		// Postgres
+		for (db_name, pool) in self.postgres_map() {
 			let label = &[db_name.as_str()];
-			VITESS_POOL_SIZE
+			POSTGRES_POOL_SIZE
 				.with_label_values(label)
 				.set(pool.size() as i64);
-			VITESS_POOL_NUM_IDLE
+			POSTGRES_POOL_NUM_IDLE
 				.with_label_values(label)
 				.set(pool.num_idle() as i64);
 		}
