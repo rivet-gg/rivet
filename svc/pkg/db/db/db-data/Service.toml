@@ -1,5 +1,5 @@
 [service]
-name = "db-db"
+name = "db-db-data"
 
 [runtime]
 kind = "vitess"

@@ -5,6 +5,7 @@ use crate::Error;
 
 pub type NatsPool = async_nats::Client;
 pub type CrdbPool = sqlx::PgPool;
+pub type VitessPool = sqlx::MySqlPool;
 pub type RedisPool = redis::aio::ConnectionManager;
 
 pub type RedisConn = redis::aio::ConnectionManager;
@@ -15,6 +16,7 @@ pub struct PoolsInner {
 	pub(crate) _guard: DropGuard,
 	pub(crate) nats: Option<NatsPool>,
 	pub(crate) crdb: HashMap<String, CrdbPool>,
+	pub(crate) vitess: HashMap<String, VitessPool>,
 	pub(crate) redis: HashMap<String, RedisPool>,
 }
 
@@ -40,6 +42,10 @@ impl PoolsInner {
 		&self.crdb
 	}
 
+	pub fn vitess_map(&self) -> &HashMap<String, VitessPool> {
+		&self.vitess
+	}
+
 	pub fn redis_map(&self) -> &HashMap<String, RedisPool> {
 		&self.redis
 	}
@@ -54,6 +60,15 @@ impl PoolsInner {
 			.get(key)
 			.cloned()
 			.ok_or_else(|| Error::MissingCrdbPool {
+				key: Some(key.to_owned()),
+			})
+	}
+
+	pub fn vitess(&self, key: &str) -> Result<VitessPool, Error> {
+		self.vitess
+			.get(key)
+			.cloned()
+			.ok_or_else(|| Error::MissingVitessPool {
 				key: Some(key.to_owned()),
 			})
 	}
@@ -107,6 +122,17 @@ impl PoolsInner {
 				.with_label_values(label)
 				.set(pool.size() as i64);
 			CRDB_POOL_NUM_IDLE
+				.with_label_values(label)
+				.set(pool.num_idle() as i64);
+		}
+
+		// Vitess
+		for (db_name, pool) in self.vitess_map() {
+			let label = &[db_name.as_str()];
+			VITESS_POOL_SIZE
+				.with_label_values(label)
+				.set(pool.size() as i64);
+			VITESS_POOL_NUM_IDLE
 				.with_label_values(label)
 				.set(pool.num_idle() as i64);
 		}

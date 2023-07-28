@@ -487,6 +487,21 @@ impl ServiceContextData {
 			.collect()
 	}
 
+	pub async fn vitess_dependencies(&self) -> Vec<ServiceContext> {
+		self.dependencies()
+			.await
+			.iter()
+			.filter(|svc| {
+				if let RuntimeKind::Vitess { .. } = svc.config().runtime {
+					true
+				} else {
+					false
+				}
+			})
+			.cloned()
+			.collect()
+	}
+
 	pub async fn redis_dependencies(&self) -> Vec<ServiceContext> {
 		self.dependencies()
 			.await
@@ -973,6 +988,16 @@ impl ServiceContextData {
 				db_name = crdb_dep.crdb_db_name(),
 			);
 			env.push((format!("CRDB_URL_{}", crdb_dep.name_screaming_snake()), uri));
+		}
+
+		// Vitess
+		for vt_dep in self.vitess_dependencies().await {
+			env.push((
+				format!("VITESS_URL_{}", vt_dep.name_screaming_snake()),
+				project_ctx
+					.read_secret(&["vitess", &vt_dep.name(), "url"])
+					.await?,
+			));
 		}
 
 		// Expose all S3 endpoints to services that need it

@@ -265,6 +265,10 @@ where
 		self.conn.crdb(key).await
 	}
 
+	pub async fn vitess(&self, key: &str) -> Result<VitessPool, rivet_pools::Error> {
+		self.conn.vitess(key).await
+	}
+
 	pub async fn redis_cache(&self) -> Result<RedisPool, rivet_pools::Error> {
 		self.conn.redis_cache().await
 	}

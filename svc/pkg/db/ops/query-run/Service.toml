@@ -1,0 +1,7 @@
+[service]
+name = "db-query-run"
+
+[runtime]
+kind = "rust"
+
+[operation]

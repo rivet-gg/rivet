@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.db.query_run;
+
+import "proto/common.proto";
+
+message Request {
+
+}
+
+message Response {
+
+}

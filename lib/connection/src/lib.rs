@@ -66,6 +66,10 @@ impl Connection {
 		self.pools.crdb(key)
 	}
 
+	pub async fn vitess(&self, key: &str) -> Result<VitessPool, rivet_pools::Error> {
+		self.pools.vitess(key)
+	}
+
 	pub async fn redis_cache(&self) -> Result<RedisPool, rivet_pools::Error> {
 		self.pools.redis("redis-cache")
 	}

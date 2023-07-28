@@ -7,14 +7,14 @@ use rand::prelude::SliceRandom;
 use std::{collections::HashMap, env, fmt::Debug, str::FromStr, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
 
-use crate::pools::{CrdbPool, NatsPool, PoolsInner, RedisPool};
+use crate::pools::{CrdbPool, NatsPool, PoolsInner, RedisPool, VitessPool};
 
 pub mod prelude {
 	pub use async_nats as nats;
 	pub use redis;
 	pub use sqlx;
 
-	pub use crate::pools::{CrdbPool, NatsPool, RedisConn, RedisPool};
+	pub use crate::pools::{CrdbPool, NatsPool, RedisConn, RedisPool, VitessPool};
 }
 
 pub use crate::{error::Error, pools::Pools};
@@ -28,6 +28,7 @@ pub async fn from_env(client_name: impl ToString + Debug) -> Result<Pools, Error
 		_guard: token.clone().drop_guard(),
 		nats: nats_from_env(client_name.clone()).await?,
 		crdb: crdb_from_env(client_name.clone())?,
+		vitess: vitess_from_env(client_name.clone())?,
 		redis: redis_from_env().await?,
 	});
 	pool.clone().start(token);
@@ -162,6 +163,36 @@ fn crdb_from_env(client_name: String) -> Result<HashMap<String, CrdbPool>, Error
 	}
 
 	Ok(crdb)
+}
+
+#[tracing::instrument]
+fn vitess_from_env(client_name: String) -> Result<HashMap<String, VitessPool>, Error> {
+	let mut vitess = HashMap::new();
+	for (key, url) in env::vars() {
+		if let Some(svc_name_screaming) = key.strip_prefix("VITESS_URL_") {
+			let svc_name = svc_name_screaming.to_lowercase().replace("_", "-");
+
+			tracing::debug!(%url, "vitess creating connection");
+
+			let client_name = client_name.clone();
+			let pool = sqlx::mysql::MySqlPoolOptions::new()
+				// Open a connection
+				// immediately on startup
+				.min_connections(1)
+				// Raise the cap, since this is effectively the amount of
+				// simultaneous requests we can handle. See
+				.max_connections(512)
+				// Speeds up requests at the expense of potential
+				// failures
+				// .test_before_acquire(false)
+				.connect_lazy(&url)
+				.map_err(Error::BuildSqlx)?;
+
+			vitess.insert(svc_name, pool);
+		}
+	}
+
+	Ok(vitess)
 }
 
 #[tracing::instrument]
