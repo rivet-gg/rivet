@@ -31,6 +31,7 @@ pub struct Request<B>
 where
 	B: Debug + Clone,
 {
+	#[allow(dead_code)]
 	pub(crate) config: Arc<Config>,
 	pub(crate) conn: Connection,
 
