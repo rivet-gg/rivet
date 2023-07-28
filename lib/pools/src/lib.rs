@@ -166,7 +166,7 @@ fn crdb_from_env(client_name: String) -> Result<HashMap<String, CrdbPool>, Error
 }
 
 #[tracing::instrument]
-fn postgres_from_env(client_name: String) -> Result<HashMap<String, PostgresPool>, Error> {
+fn postgres_from_env(_client_name: String) -> Result<HashMap<String, PostgresPool>, Error> {
 	let mut postgres = HashMap::new();
 	for (key, url) in env::vars() {
 		if let Some(svc_name_screaming) = key.strip_prefix("POSTGRES_URL_") {
@@ -174,7 +174,6 @@ fn postgres_from_env(client_name: String) -> Result<HashMap<String, PostgresPool
 
 			tracing::debug!(%url, "postgres creating connection");
 
-			let client_name = client_name.clone();
 			let pool = sqlx::postgres::PgPoolOptions::new()
 				// See above
 				.acquire_timeout(Duration::from_secs(15))
@@ -186,21 +185,6 @@ fn postgres_from_env(client_name: String) -> Result<HashMap<String, PostgresPool
 				.max_connections(512)
 				// See above
 				// .test_before_acquire(false)
-				.after_connect({
-					let url = url.clone();
-					move |conn, _| {
-						let client_name = client_name.clone();
-						let url = url.clone();
-						Box::pin(async move {
-							tracing::debug!(%url, "postgres connected");
-							sqlx::query("SET application_name = $1;")
-								.bind(&client_name)
-								.execute(conn)
-								.await?;
-							Ok(())
-						})
-					}
-				})
 				.connect_lazy(&url)
 				.map_err(Error::BuildSqlx)?;
 

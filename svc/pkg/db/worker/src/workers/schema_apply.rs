@@ -5,28 +5,28 @@ use util_db::assert_ident_snake;
 #[worker(name = "db-schema-apply")]
 async fn worker(ctx: OperationContext<db::msg::schema_apply::Message>) -> GlobalResult<()> {
 	let crdb = ctx.crdb("db-db").await?;
-	let pg_data = ctx.crdb("db-db-data").await?;
+	let pg_data = ctx.postgres("db-db-data").await?;
 
 	let database_id = internal_unwrap!(ctx.database_id).as_uuid();
 	let schema = internal_unwrap!(ctx.schema);
 
 	// Update schema in database & derive new schema
-	let merged_schema_res = rivet_pools::utils::crdb::tx(&crdb, |tx| {
+	let update_schema_res = rivet_pools::utils::crdb::tx(&crdb, |tx| {
 		let client = ctx.chirp().clone();
 		let schema = schema.clone();
 		let now = ctx.ts();
 		Box::pin(async move { update_schema(client, tx, now, database_id, schema).await })
 	})
 	.await?;
-	let merged_schema = match merged_schema_res {
-		Ok(merged_schema) => merged_schema,
+	let (database_id_short, merged_schema) = match update_schema_res {
+		Ok(x) => x,
 		Err(error_code) => {
 			return fail(ctx.chirp(), database_id, error_code).await;
 		}
 	};
 
 	// Run migration
-	run_migration(&pg_data, database_id, &merged_schema).await?;
+	run_migration(&pg_data, &database_id_short, &merged_schema).await?;
 
 	msg!([ctx] db::msg::schema_apply_complete(database_id) {
 		database_id: Some(database_id.into()),
@@ -44,11 +44,11 @@ async fn update_schema(
 	now: i64,
 	database_id: Uuid,
 	new_schema: backend::db::Schema,
-) -> GlobalResult<Result<backend::db::Schema, db::msg::schema_apply_fail::ErrorCode>> {
+) -> GlobalResult<Result<(String, backend::db::Schema), db::msg::schema_apply_fail::ErrorCode>> {
 	// Read schema
-	let (old_schema_buf,) = sqlx::query_as::<_, (Vec<u8>,)>(indoc!(
+	let (database_id_short, old_schema_buf) = sqlx::query_as::<_, (String, Vec<u8>)>(indoc!(
 		"
-		SELECT schema
+		SELECT database_id_short, schema
 		FROM databases
 		WHERE database_id = $1
 		FOR UPDATE
@@ -98,7 +98,7 @@ async fn update_schema(
 	.execute(&mut *tx)
 	.await?;
 
-	Ok(Ok(merged_schema))
+	Ok(Ok((database_id_short, merged_schema)))
 }
 
 fn merge_schemas(
@@ -172,10 +172,10 @@ fn merge_schemas(
 #[tracing::instrument(skip_all)]
 async fn run_migration(
 	pg_data: &PostgresPool,
-	database_id: Uuid,
+	database_id_short: &str,
 	schema: &backend::db::Schema,
 ) -> GlobalResult<()> {
-	let script = generate_migration_script(database_id, schema)?;
+	let script = generate_migration_script(database_id_short, schema)?;
 
 	// Execute transaction
 	let mut tx = pg_data.begin().await?;
@@ -193,12 +193,12 @@ async fn run_migration(
 /// We use `SERIAL` instead of UUIDs for performance reasons. Neon recommends this and benchmarks
 /// show it as the fasteset. https://supabase.com/blog/choosing-a-postgres-primary-key#benchmarking-id-generation-with-uuid-ossp-and-pg_idkit
 fn generate_migration_script(
-	database_id: Uuid,
+	database_id_short: &str,
 	schema: &backend::db::Schema,
 ) -> GlobalResult<Vec<String>> {
 	let mut instructions = Vec::new();
 
-	let schema_name = util_db::schema_name(database_id);
+	let schema_name = util_db::schema_name(&database_id_short);
 
 	for collection in &schema.collections {
 		let table_name = util_db::table_name(&collection.name_id);

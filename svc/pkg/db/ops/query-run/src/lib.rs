@@ -7,7 +7,7 @@ pub async fn handle(
 ) -> GlobalResult<db::query_run::Response> {
 	let vt = ctx.postgres("db-db-data").await?;
 
-	sqlx::query_as::<_, (i64,)>("SELECT 1")
+	sqlx::query_as::<_, (i64,)>("SELECT 1::INT8")
 		.fetch_one(&vt)
 		.await?;
 

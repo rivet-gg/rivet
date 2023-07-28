@@ -1,12 +1,14 @@
 use global_error::prelude::*;
 use uuid::Uuid;
 
-pub fn schema_name(database_id: Uuid) -> String {
-	format!("data_{}", database_id.to_string().replace("-", "_"))
+// ud = user defined
+
+pub fn schema_name(database_id_short: &str) -> String {
+	format!("ud_{database_id_short}")
 }
 
 pub fn table_name(name_id: &str) -> String {
-	format!("data_{name_id}")
+	format!("ud_{name_id}")
 }
 
 /// Validates this is a safe identifier and returns error if not.
