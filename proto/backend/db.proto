@@ -43,9 +43,8 @@ message Schema {
 }
 
 message Collection {
-	rivet.common.Uuid collection_id = 1;
-	string name_id = 2;
-	repeated Field fields = 3;
+	string name_id = 1;
+	repeated Field fields = 2;
 }
 
 message Field {

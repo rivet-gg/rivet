@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.db.msg.schema_apply_fail;
+
+import "proto/common.proto";
+
+enum ErrorCode {
+	UNKNOWN = 0;
+
+	INVALID_COLLECTION_NAME = 1;
+	TOO_MANY_COLLECTIONS = 2;
+
+	INVALID_FIELD_NAME = 101;
+	FIELD_TYPE_CHANGED = 102;
+	TOO_MANY_FIELDS = 103;
+}
+
+/// name = "msg-db-schema-apply-fail"
+/// parameters = [
+/// 	{ name = "database_id" },
+/// ]
+message Message {
+	rivet.common.Uuid database_id = 1;
+	ErrorCode error_code = 2;
+}

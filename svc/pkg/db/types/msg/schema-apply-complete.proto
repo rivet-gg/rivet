@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.db.msg.schema_apply_complete;
+
+import "proto/common.proto";
+
+/// name = "msg-db-schema-apply-complete"
+/// parameters = [
+/// 	{ name = "database_id" },
+/// ]
+message Message {
+	rivet.common.Uuid database_id = 1;
+}

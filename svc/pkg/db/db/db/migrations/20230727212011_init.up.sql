@@ -7,3 +7,10 @@ CREATE TABLE databases (
 	UNIQUE INDEX (owner_team_id, name_id ASC)
 );
 
+CREATE TABLE database_schema_history (
+	database_id UUID NOT NULL REFERENCES databases (database_id),
+	create_ts INT NOT NULL,
+	schema BYTES NOT NULL,
+	INDEX (database_id, create_ts ASC)
+);
+

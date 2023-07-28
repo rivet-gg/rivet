@@ -9,7 +9,9 @@ async fn worker(ctx: OperationContext<db::msg::create::Message>) -> GlobalResult
 	let owner_team_id = internal_unwrap!(ctx.owner_team_id).as_uuid();
 
 	// Serialize default schema
-	let default_schema = backend::db::Schema::default();
+	let default_schema = backend::db::Schema {
+		collections: Vec::new(),
+	};
 	let mut schema_buf = Vec::with_capacity(default_schema.encoded_len());
 	default_schema.encode(&mut schema_buf)?;
 
