@@ -117,6 +117,8 @@ pub enum RuntimeKind {
 	CRDB {},
 	#[serde(rename = "clickhouse")]
 	ClickHouse {},
+	#[serde(rename = "vitess")]
+	Vitess {},
 	#[serde(rename = "redis")]
 	Redis {
 		// TODO: Validate index is unique
@@ -235,6 +237,7 @@ impl RuntimeKind {
 			RuntimeKind::Rust { .. } => "rust",
 			RuntimeKind::CRDB { .. } => "crdb",
 			RuntimeKind::ClickHouse { .. } => "clickhouse",
+			RuntimeKind::Vitess { .. } => "vitess",
 			RuntimeKind::Redis { .. } => "redis",
 			RuntimeKind::S3 { .. } => "s3",
 			RuntimeKind::Nats { .. } => "nats",
@@ -246,7 +249,10 @@ impl RuntimeKind {
 			(RuntimeKind::Rust { .. }, ComponentClass::Executable) => true,
 			(RuntimeKind::Rust { .. }, ComponentClass::NonExecutable) => true,
 			(
-				RuntimeKind::CRDB { .. } | RuntimeKind::ClickHouse { .. } | RuntimeKind::S3 { .. },
+				RuntimeKind::CRDB { .. }
+				| RuntimeKind::ClickHouse { .. }
+				| RuntimeKind::Vitess { .. }
+				| RuntimeKind::S3 { .. },
 				ComponentClass::Database,
 			) => true,
 			(RuntimeKind::Redis { .. }, ComponentClass::Cache) => true,

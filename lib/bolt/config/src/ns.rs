@@ -235,6 +235,7 @@ pub enum S3Provider {
 #[serde(deny_unknown_fields)]
 pub struct Fly {
 	pub organization_id: String,
+	pub organization_slug: String,
 	pub region: String,
 }
 

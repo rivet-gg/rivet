@@ -27,7 +27,7 @@ pub async fn list_apps(ctx: &ProjectContext) -> Result<Vec<App>> {
 	let res = reqwest::Client::new()
 		.get(format!(
 			"https://api.machines.dev/v1/apps?org_slug={}",
-			"rivet-gg"
+			fly.organization_slug
 		))
 		.bearer_auth(auth_token(ctx).await?)
 		.send()

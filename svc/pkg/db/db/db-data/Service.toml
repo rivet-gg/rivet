@@ -1,0 +1,7 @@
+[service]
+name = "db-db"
+
+[runtime]
+kind = "vitess"
+
+[database]
