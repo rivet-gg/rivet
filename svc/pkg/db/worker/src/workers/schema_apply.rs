@@ -168,18 +168,66 @@ fn merge_schemas(
 	Ok(merged)
 }
 
+/// Generates script to idempotently create the database schema.
+///
+/// We use `SERIAL` instead of UUIDs for performance reasons. Neon recommends this and benchmarks
+/// show it as the fasteset. https://supabase.com/blog/choosing-a-postgres-primary-key#benchmarking-id-generation-with-uuid-ossp-and-pg_idkit
 fn generate_migration_script(schema: &backend::db::Schema) -> GlobalResult<String> {
 	let mut instructions = Vec::new();
 
 	for collection in &schema.collections {
+		// Create table
 		let columns = collection
 			.fields
 			.iter()
-			.map(|field| format!(r#""{name}" {ty} {opt}"#, name = field.name_id, ty = field.r#type, opt = if field.optional { "NULL" } else { "NOT NULL" })
-			.collect::<Vec<_>>()
-			.join(", ");
-		instructions.push(format!(r#"CREATE TABLE IF NOT EXISTS "{}" (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY)"#))
+			.map(|field| {
+				Ok(format!(
+					r#", "{name}" {ty} {opt}"#,
+					name = assert_ident_snake(&field.name_id)?,
+					ty = type_proto_to_pg(field.r#type)?,
+					opt = if field.optional { "NULL" } else { "NOT NULL" }
+				))
+			})
+			.collect::<GlobalResult<Vec<_>>>()?
+			.join("");
+		instructions.push(format!(
+			r#"CREATE TABLE IF NOT EXISTS "{table}" (id SERIAL8 PRIMARY KEY {columns})"#,
+			table = assert_ident_snake(&collection.name_id)?,
+		));
+
+		// Add fields
+		for field in &collection.fields {
+			// Add column
+			instructions.push(format!(
+				r#"ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS "{name}" {ty} {opt}"#,
+				table = assert_ident_snake(&collection.name_id)?,
+				name = assert_ident_snake(&field.name_id)?,
+				ty = type_proto_to_pg(field.r#type)?,
+				opt = if field.optional { "NULL" } else { "NOT NULL" }
+			));
+
+			// Remove nullable requirement if needed
+			if !field.optional {
+				instructions.push(format!(
+					r#"ALTER TABLE "{table}" ALTER COLUMN "{name}" DROP NOT NULL"#,
+					table = assert_ident_snake(&collection.name_id)?,
+					name = assert_ident_snake(&field.name_id)?
+				));
+			}
+		}
 	}
+
+	Ok(instructions.join(";\n"))
+}
+
+fn type_proto_to_pg(ty: i32) -> GlobalResult<&'static str> {
+	let pg = match internal_unwrap!(backend::db::field::Type::from_i32(ty)) {
+		backend::db::field::Type::Integer => "INT8",
+		backend::db::field::Type::Float => "FLOAT8",
+		backend::db::field::Type::Bool => "BOOLEAN",
+		backend::db::field::Type::String => "TEXT",
+	};
+	Ok(pg)
 }
 
 /// Validates this is a safe identifier and returns error if not.

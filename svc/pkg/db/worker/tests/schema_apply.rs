@@ -27,7 +27,6 @@ async fn schema_apply(ctx: TestCtx) {
 					],
 				},
 			],
-		
 		}),
 	})
 	.await
