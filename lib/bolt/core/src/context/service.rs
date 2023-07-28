@@ -1,14 +1,14 @@
+use anyhow::{bail, ensure, Context, Result};
+use s3_util::aws_sdk_s3;
 use std::{
 	collections::HashMap,
 	hash::{Hash, Hasher},
 	path::{Path, PathBuf},
 	sync::{Arc, Weak},
 };
-
-use anyhow::{bail, ensure, Context, Result};
-use s3_util::aws_sdk_s3;
 use tempfile::NamedTempFile;
 use tokio::{fs, process::Command, sync::RwLock};
+use url::Url;
 
 use crate::{
 	config::{
@@ -241,7 +241,9 @@ impl ServiceContextData {
 	pub fn has_migrations(&self) -> bool {
 		matches!(
 			self.config().runtime,
-			RuntimeKind::CRDB { .. } | RuntimeKind::ClickHouse { .. }
+			RuntimeKind::CRDB { .. }
+				| RuntimeKind::ClickHouse { .. }
+				| RuntimeKind::Postgres { .. }
 		)
 	}
 
@@ -250,6 +252,10 @@ impl ServiceContextData {
 	}
 
 	pub fn clickhouse_db_name(&self) -> String {
+		self.name_snake()
+	}
+
+	pub fn pg_db_name(&self) -> String {
 		self.name_snake()
 	}
 
@@ -992,11 +998,18 @@ impl ServiceContextData {
 
 		// Postgres
 		for pg_dep in self.postgres_dependencies().await {
+			// Read URL
+			let url_str = project_ctx
+				.read_secret(&["postgres", &pg_dep.name(), "url"])
+				.await?;
+
+			// Add database name to URL
+			let mut url = Url::parse(&url_str)?;
+			url.set_path(&format!("/{}", pg_dep.pg_db_name()));
+
 			env.push((
 				format!("POSTGRES_URL_{}", pg_dep.name_screaming_snake()),
-				project_ctx
-					.read_secret(&["postgres", &pg_dep.name(), "url"])
-					.await?,
+				url.to_string(),
 			));
 		}
 

@@ -1,5 +1,6 @@
 use anyhow::*;
 use std::collections::HashMap;
+use url::Url;
 
 use crate::{
 	config::{self, service::RuntimeKind},
@@ -12,6 +13,7 @@ pub struct DatabaseConnection {
 	pub redis_hosts: HashMap<String, String>,
 	pub cockroach_host: Option<String>,
 	pub clickhouse_host: Option<String>,
+	pub pg_url: Option<Url>,
 
 	/// Reference to tunnels that these ports are proxied through. Tunnel will
 	/// close on drop.
@@ -28,6 +30,7 @@ impl DatabaseConnection {
 		let mut redis_hosts = HashMap::new();
 		let mut cockroach_host = None;
 		let mut clickhouse_host = None;
+		let mut pg_url = None;
 		for svc in services {
 			match &svc.config().runtime {
 				RuntimeKind::Redis { .. } => {
@@ -70,6 +73,10 @@ impl DatabaseConnection {
 						);
 					}
 				}
+				RuntimeKind::Postgres { .. } => {
+					let pg_url_str = ctx.read_secret(&["postgres", &svc.name(), "url"]).await?;
+					pg_url = Some(Url::parse(&pg_url_str)?);
+				}
 				x @ _ => bail!("cannot connect to this type of service: {x:?}"),
 			}
 		}
@@ -85,6 +92,7 @@ impl DatabaseConnection {
 			redis_hosts,
 			cockroach_host,
 			clickhouse_host,
+			pg_url,
 			_tunnel: tunnel,
 		})
 	}
@@ -107,6 +115,11 @@ impl DatabaseConnection {
 					.await?;
 				let host = self.clickhouse_host.as_ref().unwrap();
 				Ok(format!("clickhouse://{host}/?database={db_name}&username={clickhouse_user}&password={clickhouse_password}&x-multi-statement=true"))
+			}
+			RuntimeKind::Postgres { .. } => {
+				let mut url = self.pg_url.clone().unwrap();
+				url.set_path(&format!("/{}", service.pg_db_name()));
+				Ok(url.to_string())
 			}
 			x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 		}

@@ -117,6 +117,50 @@ pub async fn shell(ctx: &ProjectContext, svc: &ServiceContext, query: Option<&st
 				})?;
 			}
 		}
+		RuntimeKind::Postgres { .. } => {
+			let db_name = svc.pg_db_name();
+			let url = conn.pg_url.as_ref().unwrap();
+			println!("url: {:#?}", url);
+			let hostname = url.host_str().unwrap();
+			let port = url.port().unwrap();
+			let username = url.username();
+			let password = url.password().unwrap();
+
+			rivet_term::status::progress("Connecting to Postgres", &db_name);
+			if let Some(query) = query {
+				block_in_place(|| {
+					cmd!(
+						"psql",
+						"-h",
+						hostname,
+						"-p",
+						port.to_string(),
+						"-U",
+						username,
+						db_name,
+						"-c",
+						query,
+					)
+					.env("PGPASSWORD", password)
+					.run()
+				})?;
+			} else {
+				block_in_place(|| {
+					cmd!(
+						"psql",
+						"-h",
+						hostname,
+						"-p",
+						port.to_string(),
+						"-U",
+						username,
+						db_name
+					)
+					.env("PGPASSWORD", password)
+					.run()
+				})?;
+			}
+		}
 		x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 	}
 

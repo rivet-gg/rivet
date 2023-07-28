@@ -17,6 +17,7 @@ pub async fn create(
 	let db_ext = match &service.config().runtime {
 		RuntimeKind::CRDB { .. } => "sql",
 		RuntimeKind::ClickHouse { .. } => "sql",
+		RuntimeKind::Postgres { .. } => "sql",
 		x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 	};
 
@@ -152,6 +153,64 @@ pub async fn check(_ctx: &ProjectContext, services: &[ServiceContext]) -> Result
 		None
 	};
 
+	// Spawn Postgres test container
+	let pg_port = utils::pick_port();
+	let pg_container_id = if services
+		.iter()
+		.any(|x| matches!(x.config().runtime, RuntimeKind::Postgres { .. }))
+	{
+		let image = "postgres:15.3";
+		rivet_term::status::progress("Creating container", image);
+		let container_id_bytes = block_in_place(|| {
+			cmd!(
+				"docker",
+				"run",
+				"-d",
+				"--rm",
+				"-p",
+				&format!("{pg_port}:26257"),
+				image,
+				"start-single-node",
+				"--insecure",
+			)
+			.stdout_capture()
+			.run()
+		})?
+		.stdout;
+		let container_id = String::from_utf8(container_id_bytes)?.trim().to_string();
+
+		// Wait for the service to boot
+		rivet_term::status::progress("Waiting for database to start", "");
+		loop {
+			let test_cmd = block_in_place(|| {
+				cmd!(
+					"psql",
+					"-h",
+					"127.0.0.1",
+					"-p",
+					pg_port.to_string(),
+					"-U",
+					"root",
+					"postgres",
+					"-c",
+					"SELECT 1;"
+				)
+				.stdout_null()
+				.stderr_null()
+				.run()
+			});
+			if test_cmd.is_ok() {
+				break;
+			}
+
+			tokio::time::sleep(Duration::from_secs(1)).await;
+		}
+
+		Some(container_id)
+	} else {
+		None
+	};
+
 	// Run migrations against test containers
 	for svc in services {
 		eprintln!();
@@ -206,6 +265,31 @@ pub async fn check(_ctx: &ProjectContext, services: &[ServiceContext]) -> Result
 
 				database_url
 			}
+			RuntimeKind::Postgres { .. } => {
+				// Build URL
+				let db_name = svc.pg_db_name();
+				let database_url =
+					format!("postgres://root@127.0.0.1:{pg_port}/{db_name}?sslmode=disable",);
+
+				// Create database
+				block_in_place(|| {
+					cmd!(
+						"psql",
+						"-h",
+						"127.0.0.1",
+						"-p",
+						pg_port.to_string(),
+						"-U",
+						"root",
+						"postgres",
+						"-c",
+						format!("CREATE DATABASE IF NOT EXISTS \"{db_name}\";"),
+					)
+					.run()
+				})?;
+
+				database_url
+			}
 			x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 		};
 
@@ -232,6 +316,10 @@ pub async fn check(_ctx: &ProjectContext, services: &[ServiceContext]) -> Result
 	}
 	if let Some(id) = clickhouse_container_id {
 		rivet_term::status::progress("Killing ClickHouse container", "");
+		block_in_place(|| cmd!("docker", "stop", "-t", "0", id).run())?;
+	}
+	if let Some(id) = pg_container_id {
+		rivet_term::status::progress("Killing Postgres container", "");
 		block_in_place(|| cmd!("docker", "stop", "-t", "0", id).run())?;
 	}
 
@@ -308,6 +396,36 @@ pub async fn up(ctx: &ProjectContext, services: &[ServiceContext]) -> Result<()>
 					)
 					.run()
 				})?;
+			}
+			RuntimeKind::Postgres { .. } => {
+				let db_name = svc.crdb_db_name();
+				rivet_term::status::progress("Migrating Postgres", &db_name);
+
+				let url = conn.pg_url.as_ref().unwrap();
+				let hostname = url.host_str().unwrap();
+				let port = url.port().unwrap();
+				let username = url.username();
+				let password = url.password().unwrap();
+				let default_db_name = url.path().trim_start_matches('/');
+
+				// HACK: Ignore error since there is no `CREATE DATABASE IF NOT EXISTS` in Postgres
+				rivet_term::status::progress("Creating database", &db_name);
+				let _ = block_in_place(|| {
+					cmd!(
+						"psql",
+						"-h",
+						hostname,
+						"-p",
+						port.to_string(),
+						"-U",
+						username,
+						default_db_name,
+						"-c",
+						format!("CREATE DATABASE \"{db_name}\";"),
+					)
+					.env("PGPASSWORD", password)
+					.run()
+				});
 			}
 			x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 		}
