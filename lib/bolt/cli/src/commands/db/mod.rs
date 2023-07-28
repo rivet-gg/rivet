@@ -6,6 +6,7 @@ mod migrate;
 
 #[derive(Parser)]
 pub enum SubCommand {
+	#[clap(alias = "m")]
 	Migrate {
 		#[clap(subcommand)]
 		command: migrate::SubCommand,

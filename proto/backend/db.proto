@@ -33,9 +33,13 @@ message GameVersionConfigMeta {
 // Database
 message Database {
 	rivet.common.Uuid database_id = 1;
-	rivet.common.Uuid team_id = 2;
+	rivet.common.Uuid owner_team_id = 2;
 	string name_id = 3;
-	repeated Collection collections = 4;
+	Schema schema = 4;
+}
+
+message Schema {
+	repeated Collection collections = 1;
 }
 
 message Collection {

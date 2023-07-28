@@ -1,0 +1,8 @@
+[service]
+name = "db-worker"
+
+[runtime]
+kind = "rust"
+
+[consumer]
+

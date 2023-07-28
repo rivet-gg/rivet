@@ -56,7 +56,7 @@ message Version {
 
 	repeated rivet.backend.module.Script scripts = 201;
 
-	repeated Database databases = 401;
+	// repeated Database databases = 401;
 
 	message Docker {
 		// TODO: Auth?

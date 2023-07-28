@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.db.msg.schema_apply;
+
+import "proto/common.proto";
+
+/// name = "msg-db-schema-apply"
+/// parameters = [
+/// 	{ name = "user_id" },
+/// ]
+message Message {
+
+}
