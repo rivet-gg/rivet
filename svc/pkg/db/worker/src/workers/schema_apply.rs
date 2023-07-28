@@ -167,7 +167,7 @@ fn merge_schemas(
 	Ok(merged)
 }
 
-#[tracing::instrument(skip(all))]
+#[tracing::instrument(skip_all)]
 async fn run_migration(schema: &backend::db::Schema) -> GlobalResult<()> {
 	let script = generate_migration_script(schema)?;
 	tracing::info!(?script, "script");
