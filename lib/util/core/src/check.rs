@@ -43,6 +43,18 @@ pub fn ident_unlimited_length(s: impl AsRef<str>) -> bool {
 		&& !s.ends_with('-')
 }
 
+pub fn ident_snake(s: impl AsRef<str>) -> bool {
+	let s = s.as_ref();
+	s.chars().all(|c| match c {
+		'0'..='9' | 'a'..='z' | '_' => true,
+		_ => false,
+	}) && !s.is_empty()
+		&& s.len() <= MAX_IDENT_LEN
+		&& !s.contains("__")
+		&& !s.starts_with('_')
+		&& !s.ends_with('_')
+}
+
 /// Same as `ident` but without the length requirement.
 pub fn docker_ident(s: impl AsRef<str>) -> bool {
 	let s = s.as_ref();

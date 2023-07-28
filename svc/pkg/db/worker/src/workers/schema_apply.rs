@@ -108,7 +108,7 @@ fn merge_schemas(
 
 	// Merge collections
 	for new_collection in new.collections.iter() {
-		if !util::check::ident(&new_collection.name_id) {
+		if !util::check::ident_snake(&new_collection.name_id) {
 			return Err(db::msg::schema_apply_fail::ErrorCode::InvalidCollectionName);
 		}
 
@@ -135,7 +135,7 @@ fn merge_schemas(
 		// Merge fields
 		for new_field in new_collection.fields.iter() {
 			// Validate field
-			if !util::check::ident(&new_field.name_id) {
+			if !util::check::ident_snake(&new_field.name_id) {
 				return Err(db::msg::schema_apply_fail::ErrorCode::InvalidFieldName);
 			}
 
@@ -166,6 +166,28 @@ fn merge_schemas(
 	}
 
 	Ok(merged)
+}
+
+fn generate_migration_script(schema: &backend::db::Schema) -> GlobalResult<String> {
+	let mut instructions = Vec::new();
+
+	for collection in &schema.collections {
+		let columns = collection
+			.fields
+			.iter()
+			.map(|field| format!(r#""{name}" {ty} {opt}"#, name = field.name_id, ty = field.r#type, opt = if field.optional { "NULL" } else { "NOT NULL" })
+			.collect::<Vec<_>>()
+			.join(", ");
+		instructions.push(format!(r#"CREATE TABLE IF NOT EXISTS "{}" (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY)"#))
+	}
+}
+
+/// Validates this is a safe identifier and returns error if not.
+///
+/// This is a redundant check to the previous ident checks in `merge_schemas`.
+fn assert_ident_snake(x: &str) -> GlobalResult<&str> {
+	internal_assert!(util::check::ident_snake(x), "unhandled invalid identifier");
+	Ok(x)
 }
 
 #[tracing::instrument]
