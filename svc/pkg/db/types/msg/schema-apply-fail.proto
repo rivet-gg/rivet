@@ -13,6 +13,7 @@ enum ErrorCode {
 	INVALID_FIELD_NAME = 101;
 	FIELD_TYPE_CHANGED = 102;
 	TOO_MANY_FIELDS = 103;
+	FIELD_OPTIONAL_DISABLED = 104;
 }
 
 /// name = "msg-db-schema-apply-fail"

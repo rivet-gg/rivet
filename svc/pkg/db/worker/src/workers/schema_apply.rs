@@ -25,6 +25,7 @@ async fn worker(ctx: OperationContext<db::msg::schema_apply::Message>) -> Global
 
 	// TODO: Generate migration script
 	// TODO: Run migration
+	// TODO: Don't forget update optional
 
 	msg!([ctx] db::msg::schema_apply_complete(database_id) {
 		database_id: Some(database_id.into()),
@@ -79,10 +80,12 @@ async fn update_schema(
 				UPDATE databases
 				SET schema = $3
 				WHERE database_id = $1
+				RETURNING 1
 			),
 			_insert AS (
-				INSERT INTO database_schema_history (database_id, create_ts schema)
+				INSERT INTO database_schema_history (database_id, create_ts, schema)
 				VALUES ($1, $2, $3)
+				RETURNING 1
 
 			)
 		SELECT 1
@@ -145,6 +148,12 @@ fn merge_schemas(
 				if merged_field.r#type != new_field.r#type {
 					return Err(db::msg::schema_apply_fail::ErrorCode::FieldTypeChanged);
 				}
+				if new_field.optional && !merged_field.optional {
+					return Err(db::msg::schema_apply_fail::ErrorCode::FieldOptionalDisabled);
+				}
+
+				// Update field
+				merged_field.optional = new_field.optional;
 			} else {
 				if new_collection.fields.len() > 32 {
 					return Err(db::msg::schema_apply_fail::ErrorCode::TooManyFields);

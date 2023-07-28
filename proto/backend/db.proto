@@ -57,5 +57,6 @@ message Field {
 
 	string name_id = 1;
 	Type type = 2;
+	bool optional = 3;
 }
 
