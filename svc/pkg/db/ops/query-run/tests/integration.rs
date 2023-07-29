@@ -54,7 +54,7 @@ async fn basic(ctx: TestCtx) {
 	.await
 	.unwrap();
 
-	// Run query
+	// Insert entry
 	let fields = {
 		let mut x = HashMap::new();
 		x.insert(
@@ -83,12 +83,27 @@ async fn basic(ctx: TestCtx) {
 		);
 		x
 	};
-	op!([ctx] db_query_run {
+	let res = op!([ctx] db_query_run {
 		database_id: Some(database_id.into()),
 		query: Some(backend::db::Query {
 			kind: Some(backend::db::query::Kind::Insert(backend::db::query::Insert {
 				collection: "test".into(),
-				fields: fields,
+				fields: fields.clone(),
+			})),
+		}),
+	})
+	.await
+	.unwrap();
+	let id = res.inserted_entries.first().unwrap();
+
+	// Get entry
+	let res = op!([ctx] db_query_run {
+		database_id: Some(database_id.into()),
+		query: Some(backend::db::Query {
+			kind: Some(backend::db::query::Kind::Get(backend::db::query::Get {
+				collection: "test".into(),
+				id: id.clone(),
+				fields: fields.keys().map(|x| x.to_string()).collect(),
 			})),
 		}),
 	})
