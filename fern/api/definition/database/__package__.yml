@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  commons: ../common.yml
+  localCommons: common.yml
+
+service:
+  auth: true
+  url: Database
+  base-path: /collections/{collection}
+  endpoints:
+    fetch:
+      path: /fetch
+      method: POST
+      audiences:
+        - public
+      request:
+        body: FetchRequest
+      response: FetchResponse
+
+    insert:
+      path: /insert
+      method: POST
+      audiences:
+        - public
+      request:
+        body: InsertRequest
+      response: InsertResponse
+
+    update:
+      path: /update
+      method: POST
+      audiences:
+        - public
+      request:
+        body: UpdateRequest
+      response: UpdateResponse
+
+    delete:
+      path: /delete
+      method: POST
+      audiences:
+        - public
+      request:
+        body: DeleteRequest
+      response: DeleteResponse
+
+types:
+  FetchRequest:
+    properties:
+      collection: string
+      filters: optional<list<localCommons.Filter>>
+
+  FetchResponse:
+    properties:
+      entries: list<localCommons.Entry>
+
+  InsertRequest:
+    properties:
+      collection: string
+      fields: map<string, unknown>
+
+  InsertResponse:
+    properties:
+      ids: list<string>
+
+  UpdateRequest:
+    properties:
+      collection: string
+      filters: optional<list<localCommons.Filter>>
+      set: optional<map<string, unknown>>
+
+  UpdateResponse:
+    properties:
+      updated_count: integer
+
+  DeleteRequest:
+    properties:
+      collection: string
+      filters: optional<list<localCommons.Filter>>
+
+  DeleteResponse:
+    properties:
+      deleted_count: integer
+

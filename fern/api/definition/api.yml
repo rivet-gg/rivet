@@ -13,6 +13,7 @@ environments:
       Auth: https://auth.api.rivet.gg/v1
       Chat: https://chat.api.rivet.gg/v1
       Cloud: https://cloud.api.rivet.gg/v1
+      Database: https://database.api.rivet.gg/v1
       Group: https://group.api.rivet.gg/v1
       Identity: https://identity.api.rivet.gg/v1
       Job: https://job.api.rivet.gg/v1
