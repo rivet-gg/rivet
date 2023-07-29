@@ -11,5 +11,5 @@ message Request {
 }
 
 message Response {
-	map<string, rivet.backend.db.Value> response = 1;
+	repeated string inserted_entries = 1;
 }

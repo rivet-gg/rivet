@@ -76,7 +76,7 @@ where
 	/// Calls the given operation. Use the `op!` macro instead of calling this directly.
 	#[tracing::instrument(err, skip_all, fields(operation = O::NAME))]
 	pub async fn call<O: Operation>(&self, body: O::Request) -> GlobalResult<O::Response> {
-		tracing::info!(?body, "operation call");
+		tracing::info!(?body, "operation request");
 
 		// Record metrics
 		metrics::CHIRP_REQUEST_PENDING
@@ -91,6 +91,7 @@ where
 		// TODO: Throw dedicated "timed out" error here
 		// Process the request
 		let res = tokio::time::timeout(O::TIMEOUT, O::handle(self.wrap::<O>(body)?)).await?;
+		tracing::info!(?res, "operation response");
 
 		// Record metrics
 		{

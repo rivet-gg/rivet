@@ -120,7 +120,6 @@ pub async fn shell(ctx: &ProjectContext, svc: &ServiceContext, query: Option<&st
 		RuntimeKind::Postgres { .. } => {
 			let db_name = svc.pg_db_name();
 			let url = conn.pg_url.as_ref().unwrap();
-			println!("url: {:#?}", url);
 			let hostname = url.host_str().unwrap();
 			let port = url.port().unwrap();
 			let username = url.username();

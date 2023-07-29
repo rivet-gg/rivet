@@ -25,14 +25,19 @@ pub async fn handle(
 	.fetch_one(&crdb)
 	.await?;
 
+	tracing::info!(?database_id_short);
+
 	// Parse schema
 	let schema = backend::db::Schema::decode(schema_buf.as_slice())?;
 
 	// Run query
-	run_query(&pg_data, &database_id_short, &schema, query).await?;
+	let inserted_entries = run_query(&pg_data, &database_id_short, &schema, query).await?;
 
 	Ok(db::query_run::Response {
-		response: HashMap::new(),
+		inserted_entries: inserted_entries
+			.into_iter()
+			.map(|x| x.to_string())
+			.collect::<Vec<_>>(),
 	})
 }
 
@@ -41,14 +46,16 @@ async fn run_query(
 	database_id_short: &str,
 	schema: &backend::db::Schema,
 	query: &backend::db::Query,
-) -> GlobalResult<()> {
+) -> GlobalResult<Vec<i64>> {
 	let schema_name = util_db::schema_name(database_id_short);
+
+	// TODO: Do bulk inserts with https://github.com/launchbadge/sqlx/blob/main/FAQ.md#how-can-i-bind-an-array-to-a-values-clause-how-can-i-do-bulk-inserts
 
 	match internal_unwrap!(query.kind) {
 		backend::db::query::Kind::Get(get) => {
 			todo!()
 		}
-		backend::db::query::Kind::Set(set) => {
+		backend::db::query::Kind::Insert(set) => {
 			let collection = get_collection(schema, &set.collection)?;
 
 			let table = util_db::table_name(&collection.name_id);
@@ -76,15 +83,21 @@ async fn run_query(
 					query.push(", ");
 				}
 			}
-			query.push(")");
+			query.push(") RETURNING (id)");
 
-			// TODO: Returning
+			tracing::info!(sql = ?query.sql(), "running insert");
 
-			query.build().execute(pg_data).await?;
+			let inserted_entries = query
+				.build_query_as::<(i64,)>()
+				.fetch_all(pg_data)
+				.await?
+				.into_iter()
+				.map(|x| x.0)
+				.collect();
+
+			Ok(inserted_entries)
 		}
 	}
-
-	Ok(())
 }
 
 fn get_collection<'a>(

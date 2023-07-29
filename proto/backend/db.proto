@@ -69,16 +69,14 @@ message Query {
 		repeated string fields = 3;
 	}
 
-	message Set {
+	message Insert {
 		string collection = 1;
-		string id = 2;
-		map<string, Value> fields = 3;
-		repeated string returning_fields = 4;
+		map<string, Value> fields = 2;
 	}
 
 	oneof kind {
 		Get get = 101;
-		Set set = 102;
+		Insert insert = 102;
 	}
 }
 
