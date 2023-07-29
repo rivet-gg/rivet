@@ -1,6 +1,6 @@
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
-use util_db::assert_ident_snake;
+use util_db::ais;
 
 #[worker(name = "db-schema-apply")]
 async fn worker(ctx: OperationContext<db::msg::schema_apply::Message>) -> GlobalResult<()> {
@@ -210,7 +210,7 @@ fn generate_migration_script(
 			.map(|field| {
 				Ok(format!(
 					r#", "{column}" {ty} {opt}"#,
-					column = assert_ident_snake(&field.name_id)?,
+					column = ais(&field.name_id)?,
 					ty = type_proto_to_pg(field.r#type)?,
 					opt = if field.optional { "NULL" } else { "NOT NULL" }
 				))
@@ -219,8 +219,8 @@ fn generate_migration_script(
 			.join("");
 		instructions.push(format!(
 			r#"CREATE TABLE IF NOT EXISTS "{schema}"."{table}" (id SERIAL8 PRIMARY KEY {columns})"#,
-			schema = assert_ident_snake(&schema_name)?,
-			table = assert_ident_snake(&table_name)?,
+			schema = ais(&schema_name)?,
+			table = ais(&table_name)?,
 		));
 
 		// Add fields
@@ -228,9 +228,9 @@ fn generate_migration_script(
 			// Add column
 			instructions.push(format!(
 				r#"ALTER TABLE "{schema}"."{table}" ADD COLUMN IF NOT EXISTS "{column}" {ty} {opt}"#,
-				schema = assert_ident_snake(&schema_name)?,
-				table = assert_ident_snake(&table_name)?,
-				column = assert_ident_snake(&field.name_id)?,
+				schema = ais(&schema_name)?,
+				table = ais(&table_name)?,
+				column = ais(&field.name_id)?,
 				ty = type_proto_to_pg(field.r#type)?,
 				opt = if field.optional { "NULL" } else { "NOT NULL" }
 			));
@@ -239,9 +239,9 @@ fn generate_migration_script(
 			if !field.optional {
 				instructions.push(format!(
 					r#"ALTER TABLE "{schema}"."{table}" ALTER COLUMN "{column}" DROP NOT NULL"#,
-					schema = assert_ident_snake(&schema_name)?,
-					table = assert_ident_snake(&table_name)?,
-					column = assert_ident_snake(&field.name_id)?
+					schema = ais(&schema_name)?,
+					table = ais(&table_name)?,
+					column = ais(&field.name_id)?
 				));
 			}
 		}
@@ -252,7 +252,7 @@ fn generate_migration_script(
 
 fn type_proto_to_pg(ty: i32) -> GlobalResult<&'static str> {
 	let pg = match internal_unwrap!(backend::db::field::Type::from_i32(ty)) {
-		backend::db::field::Type::Integer => "INT8",
+		backend::db::field::Type::Int => "INT8",
 		backend::db::field::Type::Float => "FLOAT8",
 		backend::db::field::Type::Bool => "BOOLEAN",
 		backend::db::field::Type::String => "TEXT",

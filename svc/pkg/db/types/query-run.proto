@@ -3,11 +3,13 @@ syntax = "proto3";
 package rivet.backend.pkg.db.query_run;
 
 import "proto/common.proto";
+import "proto/backend/db.proto";
 
 message Request {
-
+	rivet.common.Uuid database_id = 1;
+	rivet.backend.db.Query query = 2;
 }
 
 message Response {
-
+	map<string, rivet.backend.db.Value> response = 1;
 }

@@ -70,7 +70,7 @@ message Version {
 	message Database {
 		string key = 1;
 		rivet.common.Uuid database_id = 2;
-		repeated rivet.backend.db.Collection collections = 3;
+		rivet.backend.db.Schema schema = 3;
 	}
 }
 

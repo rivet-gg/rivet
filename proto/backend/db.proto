@@ -3,6 +3,7 @@ syntax = "proto3";
 package rivet.backend.db;
 
 import "proto/common.proto";
+import "google/protobuf/empty.proto";
 
 // MARK: Game Namespace Config
 message GameNamespaceConfig {
@@ -49,7 +50,7 @@ message Collection {
 
 message Field {
 	enum Type {
-		INTEGER = 0;
+		INT = 0;
 		FLOAT = 1;
 		BOOL = 2;
 		STRING = 3;
@@ -58,5 +59,36 @@ message Field {
 	string name_id = 1;
 	Type type = 2;
 	bool optional = 3;
+}
+
+// Query
+message Query {
+	message Get {
+		string collection = 1;
+		string id = 2;
+		repeated string fields = 3;
+	}
+
+	message Set {
+		string collection = 1;
+		string id = 2;
+		map<string, Value> fields = 3;
+		repeated string returning_fields = 4;
+	}
+
+	oneof kind {
+		Get get = 101;
+		Set set = 102;
+	}
+}
+
+message Value {
+	oneof type {
+		google.protobuf.Empty null = 1;
+		int64 int = 2;
+		double float = 3;
+		bool bool = 4;
+		string string = 5;
+	}
 }
 

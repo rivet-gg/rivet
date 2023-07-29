@@ -2867,6 +2867,7 @@ dependencies = [
  "chirp-client",
  "chirp-worker",
  "rivet-operation",
+ "rivet-util-db",
  "sqlx",
 ]
 

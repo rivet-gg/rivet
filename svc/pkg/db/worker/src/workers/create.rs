@@ -1,7 +1,7 @@
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
 use rand::Rng;
-use util_db::assert_ident_snake;
+use util_db::ais;
 
 const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
 
@@ -35,12 +35,9 @@ async fn worker(ctx: OperationContext<db::msg::create::Message>) -> GlobalResult
 
 	// Create database
 	let schema_name = util_db::schema_name(&database_id_short);
-	sqlx::query(&format!(
-		r#"CREATE SCHEMA "{db}""#,
-		db = assert_ident_snake(&schema_name)?
-	))
-	.execute(&pg_data)
-	.await?;
+	sqlx::query(&format!(r#"CREATE SCHEMA "{db}""#, db = ais(&schema_name)?))
+		.execute(&pg_data)
+		.await?;
 
 	// Save database
 	sqlx::query(indoc!(

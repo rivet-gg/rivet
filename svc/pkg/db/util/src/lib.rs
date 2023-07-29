@@ -1,5 +1,4 @@
 use global_error::prelude::*;
-use uuid::Uuid;
 
 // ud = user defined
 
@@ -21,3 +20,6 @@ pub fn assert_ident_snake(x: &str) -> GlobalResult<&str> {
 	);
 	Ok(x)
 }
+
+// Short alias since this is used frequently.
+pub use assert_ident_snake as ais;
