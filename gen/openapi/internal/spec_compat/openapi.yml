@@ -2684,6 +2684,108 @@ components:
       - create_ts
       - display_name
       type: object
+    DatabaseDeleteRequest:
+      properties:
+        collection:
+          type: string
+        database_id:
+          format: uuid
+          type: string
+        filters:
+          items:
+            $ref: '#/components/schemas/DatabaseFilter'
+          type: array
+      required:
+      - collection
+      type: object
+    DatabaseDeleteResponse:
+      properties:
+        deleted_count:
+          type: integer
+      required:
+      - deleted_count
+      type: object
+    DatabaseEntry:
+      additionalProperties: {}
+      type: object
+    DatabaseFetchRequest:
+      properties:
+        collection:
+          type: string
+        database_id:
+          format: uuid
+          type: string
+        filters:
+          items:
+            $ref: '#/components/schemas/DatabaseFilter'
+          type: array
+      required:
+      - collection
+      type: object
+    DatabaseFetchResponse:
+      properties:
+        entries:
+          items:
+            $ref: '#/components/schemas/DatabaseEntry'
+          type: array
+      required:
+      - entries
+      type: object
+    DatabaseFilter:
+      properties:
+        eq: {}
+        field:
+          type: string
+      required:
+      - field
+      type: object
+    DatabaseInsertRequest:
+      properties:
+        collection:
+          type: string
+        database_id:
+          format: uuid
+          type: string
+        fields:
+          additionalProperties: {}
+          type: object
+      required:
+      - collection
+      - fields
+      type: object
+    DatabaseInsertResponse:
+      properties:
+        ids:
+          items:
+            type: string
+          type: array
+      required:
+      - ids
+      type: object
+    DatabaseUpdateRequest:
+      properties:
+        collection:
+          type: string
+        database_id:
+          format: uuid
+          type: string
+        filters:
+          items:
+            $ref: '#/components/schemas/DatabaseFilter'
+          type: array
+        set:
+          additionalProperties: {}
+          type: object
+      required:
+      - collection
+      type: object
+    DatabaseUpdateResponse:
+      properties:
+        updated_count:
+          type: integer
+      required:
+      - updated_count
+      type: object
     DisplayName:
       type: string
     Email:
@@ -5094,6 +5196,258 @@ paths:
       - url: https://cloud.api.rivet.gg/v1
       tags:
       - CloudAuth
+  /collections/{collection}/delete:
+    post:
+      operationId: database_delete
+      parameters:
+      - in: path
+        name: collection
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseDeleteRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseDeleteResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      servers:
+      - url: https://database.api.rivet.gg/v1
+      tags:
+      - Database
+  /collections/{collection}/fetch:
+    post:
+      operationId: database_fetch
+      parameters:
+      - in: path
+        name: collection
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseFetchRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseFetchResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      servers:
+      - url: https://database.api.rivet.gg/v1
+      tags:
+      - Database
+  /collections/{collection}/insert:
+    post:
+      operationId: database_insert
+      parameters:
+      - in: path
+        name: collection
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseInsertRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseInsertResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      servers:
+      - url: https://database.api.rivet.gg/v1
+      tags:
+      - Database
+  /collections/{collection}/update:
+    post:
+      operationId: database_update
+      parameters:
+      - in: path
+        name: collection
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseUpdateRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseUpdateResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      servers:
+      - url: https://database.api.rivet.gg/v1
+      tags:
+      - Database
   /devices/links:
     get:
       operationId: cloud_devices_links_get

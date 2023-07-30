@@ -87,6 +87,10 @@ Class | Method | HTTP request | Description
 *CloudLogsApi* | [**cloud_logs_get_ray_perf_logs**](docs/CloudLogsApi.md#cloud_logs_get_ray_perf_logs) | **GET** /rays/{ray_id}/perf | 
 *CloudTiersApi* | [**cloud_tiers_get_region_tiers**](docs/CloudTiersApi.md#cloud_tiers_get_region_tiers) | **GET** /region-tiers | 
 *CloudUploadsApi* | [**cloud_uploads_complete_upload**](docs/CloudUploadsApi.md#cloud_uploads_complete_upload) | **POST** /uploads/{upload_id}/complete | 
+*DatabaseApi* | [**database_delete**](docs/DatabaseApi.md#database_delete) | **POST** /collections/{collection}/delete | 
+*DatabaseApi* | [**database_fetch**](docs/DatabaseApi.md#database_fetch) | **POST** /collections/{collection}/fetch | 
+*DatabaseApi* | [**database_insert**](docs/DatabaseApi.md#database_insert) | **POST** /collections/{collection}/insert | 
+*DatabaseApi* | [**database_update**](docs/DatabaseApi.md#database_update) | **POST** /collections/{collection}/update | 
 *GroupApi* | [**group_ban_identity**](docs/GroupApi.md#group_ban_identity) | **POST** /groups/{group_id}/bans/{identity_id} | 
 *GroupApi* | [**group_complete_avatar_upload**](docs/GroupApi.md#group_complete_avatar_upload) | **POST** /groups/{group_id}/avatar-upload/{upload_id}/complete | 
 *GroupApi* | [**group_create**](docs/GroupApi.md#group_create) | **POST** /groups | 
@@ -365,6 +369,15 @@ Class | Method | HTTP request | Description
  - [CloudVersionMatchmakerPortRange](docs/CloudVersionMatchmakerPortRange.md)
  - [CloudVersionMatchmakerProxyKind](docs/CloudVersionMatchmakerProxyKind.md)
  - [CloudVersionSummary](docs/CloudVersionSummary.md)
+ - [DatabaseDeleteRequest](docs/DatabaseDeleteRequest.md)
+ - [DatabaseDeleteResponse](docs/DatabaseDeleteResponse.md)
+ - [DatabaseFetchRequest](docs/DatabaseFetchRequest.md)
+ - [DatabaseFetchResponse](docs/DatabaseFetchResponse.md)
+ - [DatabaseFilter](docs/DatabaseFilter.md)
+ - [DatabaseInsertRequest](docs/DatabaseInsertRequest.md)
+ - [DatabaseInsertResponse](docs/DatabaseInsertResponse.md)
+ - [DatabaseUpdateRequest](docs/DatabaseUpdateRequest.md)
+ - [DatabaseUpdateResponse](docs/DatabaseUpdateResponse.md)
  - [ErrorBody](docs/ErrorBody.md)
  - [GameHandle](docs/GameHandle.md)
  - [GameLeaderboardCategory](docs/GameLeaderboardCategory.md)

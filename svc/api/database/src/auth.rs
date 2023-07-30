@@ -80,6 +80,14 @@ impl Auth {
 		}
 	}
 
+	pub async fn database(
+		&self,
+		ctx: &OperationContext<()>,
+		database_id: Option<Uuid>,
+	) -> GlobalResult<Uuid> {
+		todo!()
+	}
+
 	/// Validates that the agent can write to a given game.
 	pub async fn namespace(
 		&self,

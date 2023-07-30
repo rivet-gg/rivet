@@ -8,12 +8,15 @@ service:
   auth: true
   url: Database
   base-path: /collections/{collection}
+  audiences:
+    - public
+  path-parameters:
+    collection:
+      type: string
   endpoints:
     fetch:
       path: /fetch
       method: POST
-      audiences:
-        - public
       request:
         body: FetchRequest
       response: FetchResponse
@@ -21,8 +24,6 @@ service:
     insert:
       path: /insert
       method: POST
-      audiences:
-        - public
       request:
         body: InsertRequest
       response: InsertResponse
@@ -30,8 +31,6 @@ service:
     update:
       path: /update
       method: POST
-      audiences:
-        - public
       request:
         body: UpdateRequest
       response: UpdateResponse
@@ -39,8 +38,6 @@ service:
     delete:
       path: /delete
       method: POST
-      audiences:
-        - public
       request:
         body: DeleteRequest
       response: DeleteResponse
@@ -48,6 +45,7 @@ service:
 types:
   FetchRequest:
     properties:
+      database_id: optional<uuid>
       collection: string
       filters: optional<list<localCommons.Filter>>
 
@@ -57,6 +55,7 @@ types:
 
   InsertRequest:
     properties:
+      database_id: optional<uuid>
       collection: string
       fields: map<string, unknown>
 
@@ -66,6 +65,7 @@ types:
 
   UpdateRequest:
     properties:
+      database_id: optional<uuid>
       collection: string
       filters: optional<list<localCommons.Filter>>
       set: optional<map<string, unknown>>
@@ -76,6 +76,7 @@ types:
 
   DeleteRequest:
     properties:
+      database_id: optional<uuid>
       collection: string
       filters: optional<list<localCommons.Filter>>
 

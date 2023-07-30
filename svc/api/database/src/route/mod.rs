@@ -2,8 +2,7 @@ use api_helper::{define_router, util::CorsConfigBuilder};
 use hyper::{Body, Request, Response};
 use rivet_api::models;
 
-mod batch_operations;
-mod operations;
+mod collections;
 
 pub async fn handle(
 	shared_client: chirp_client::SharedClientHandle,
@@ -21,17 +20,17 @@ pub async fn handle(
 define_router! {
 	cors: CorsConfigBuilder::public().build(),
 	routes: {
-		"collections" / String / "get": {
-			POST: operations::put(body: models::DbGetRequest),
+		"collections" / String / "fetch": {
+			POST: collections::fetch(body: models::DatabaseFetchRequest),
 		},
 		"collections" / String / "insert": {
-			POST: collections::insert(body: models::DbInsertRequest),
+			POST: collections::insert(body: models::DatabaseInsertRequest),
 		},
 		"collections" / String / "update": {
-			POST: collections::update(body: models::DbUpdateRequest),
+			POST: collections::update(body: models::DatabaseUpdateRequest),
 		},
 		"collections" / String / "delete": {
-			POST: collections::update(body: models::DbDeleteRequest),
+			POST: collections::delete(body: models::DatabaseDeleteRequest),
 		},
 	},
 }

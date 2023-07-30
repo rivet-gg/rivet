@@ -31,15 +31,11 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "ansi"] }
 url = "2.2.2"
 urlencoding = "2.1.0"
-util-kv = { package = "rivet-util-kv", path = "../../pkg/kv/util" }
 uuid = { version = "1", features = ["v4"] }
 
 game-get = { path = "../../pkg/game/ops/get" }
 game-namespace-get = { path = "../../pkg/game/ops/namespace-get" }
 game-user-get = { path = "../../pkg/game-user/ops/get" }
-kv-config-version-get = { path = "../../pkg/kv-config/ops/version-get" }
-kv-get = { path = "../../pkg/kv/ops/get" }
-kv-list = { path = "../../pkg/kv/ops/list" }
 mm-lobby-get = { path = "../../pkg/mm/ops/lobby-get" }
 token-revoke = { path = "../../pkg/token/ops/revoke" }
 user-get = { path = "../../pkg/user/ops/get" }
@@ -48,7 +44,6 @@ user-team-list = { path = "../../pkg/user/ops/team-list" }
 
 [dev-dependencies]
 rivet-connection = { path = "../../../lib/connection" }
-rivet-kv = { path = "../../../lib/smithy-output/api-database/rust" }
 util-mm = { package = "rivet-util-mm", path = "../../pkg/mm/util" }
 rand = "0.8"
 reqwest = "0.11"

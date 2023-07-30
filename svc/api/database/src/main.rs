@@ -1,5 +1,5 @@
 use api_helper::start;
 
 fn main() {
-	start(api-database::route::handle);
+	start(api_database::route::handle);
 }

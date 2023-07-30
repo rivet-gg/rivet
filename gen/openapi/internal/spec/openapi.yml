@@ -1509,6 +1509,258 @@ paths:
             schema:
               $ref: >-
                 #/components/schemas/CloudGamesNamespacesUpdateGameNamespaceVersionRequest
+  /collections/{collection}/fetch:
+    post:
+      operationId: database_fetch
+      tags:
+        - Database
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseFetchResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      servers:
+        - url: https://database.api.rivet.gg/v1
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseFetchRequest'
+  /collections/{collection}/insert:
+    post:
+      operationId: database_insert
+      tags:
+        - Database
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseInsertResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      servers:
+        - url: https://database.api.rivet.gg/v1
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseInsertRequest'
+  /collections/{collection}/update:
+    post:
+      operationId: database_update
+      tags:
+        - Database
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseUpdateResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      servers:
+        - url: https://database.api.rivet.gg/v1
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseUpdateRequest'
+  /collections/{collection}/delete:
+    post:
+      operationId: database_delete
+      tags:
+        - Database
+      parameters:
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseDeleteResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      servers:
+        - url: https://database.api.rivet.gg/v1
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseDeleteRequest'
   /groups:
     get:
       description: Returns a list of suggested groups.
@@ -10201,6 +10453,97 @@ components:
           description: |-
             **Deprecated: use `game_modes` instead**
             A list of game modes.
+    DatabaseFetchRequest:
+      type: object
+      properties:
+        database_id:
+          type: string
+          format: uuid
+        collection:
+          type: string
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseFilter'
+      required:
+        - collection
+    DatabaseFetchResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseEntry'
+      required:
+        - entries
+    DatabaseInsertRequest:
+      type: object
+      properties:
+        database_id:
+          type: string
+          format: uuid
+        collection:
+          type: string
+        fields:
+          type: object
+          additionalProperties: {}
+      required:
+        - collection
+        - fields
+    DatabaseInsertResponse:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+      required:
+        - ids
+    DatabaseUpdateRequest:
+      type: object
+      properties:
+        database_id:
+          type: string
+          format: uuid
+        collection:
+          type: string
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseFilter'
+        set:
+          type: object
+          additionalProperties: {}
+      required:
+        - collection
+    DatabaseUpdateResponse:
+      type: object
+      properties:
+        updated_count:
+          type: integer
+      required:
+        - updated_count
+    DatabaseDeleteRequest:
+      type: object
+      properties:
+        database_id:
+          type: string
+          format: uuid
+        collection:
+          type: string
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/DatabaseFilter'
+      required:
+        - collection
+    DatabaseDeleteResponse:
+      type: object
+      properties:
+        deleted_count:
+          type: integer
+      required:
+        - deleted_count
     GroupListSuggestedResponse:
       type: object
       properties:
@@ -12962,6 +13305,17 @@ components:
       required:
         - code
         - message
+    DatabaseEntry:
+      type: object
+      additionalProperties: {}
+    DatabaseFilter:
+      type: object
+      properties:
+        field:
+          type: string
+        eq: {}
+      required:
+        - field
     GameHandle:
       type: object
       properties:
