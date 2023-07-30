@@ -52,7 +52,7 @@ async fn basic(ctx: TestCtx) {
 		}),
 	})
 	.await
-	.unwrap();
+	.unwrap().unwrap();
 
 	// Insert entry
 	let entry_id = {
@@ -182,6 +182,7 @@ async fn basic(ctx: TestCtx) {
 		})
 		.await
 		.unwrap();
+		assert_eq!(1, res.entries_affected);
 
 		let res = op!([ctx] db_query_run {
 			database_id: Some(database_id.into()),
@@ -241,6 +242,7 @@ async fn basic(ctx: TestCtx) {
 		})
 		.await
 		.unwrap();
+		assert_eq!(1, res.entries_affected);
 
 		let res = op!([ctx] db_query_run {
 			database_id: Some(database_id.into()),
@@ -269,5 +271,44 @@ async fn basic(ctx: TestCtx) {
 				.clone()
 				.unwrap()
 		);
+	}
+
+	// Delete entry
+	{
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Delete(backend::db::query::Delete {
+					collection: "test".into(),
+					filters: vec![
+						Filter {
+							field: "_id".into(),
+							kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(entry_id.clone())) })),
+						}
+					],
+				})),
+			}),
+		})
+		.await
+		.unwrap();
+		assert_eq!(1, res.entries_affected);
+
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Fetch(backend::db::query::Fetch {
+					collection: "test".into(),
+					filters: vec![
+						Filter {
+							field: "_id".into(),
+							kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(entry_id.clone())) })),
+						}
+					]
+				})),
+			}),
+		})
+		.await
+		.unwrap();
+		assert!(res.fetched_entries.is_empty());
 	}
 }
