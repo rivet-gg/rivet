@@ -32,14 +32,9 @@ pub async fn handle(
 	let schema = backend::db::Schema::decode(schema_buf.as_slice())?;
 
 	// Run query
-	let inserted_entries = run_query(&pg_data, &database_id_short, &schema, query).await?;
+	let res = run_query(&pg_data, &database_id_short, &schema, query).await?;
 
-	Ok(db::query_run::Response {
-		inserted_entries: inserted_entries
-			.into_iter()
-			.map(|x| x.to_string())
-			.collect::<Vec<_>>(),
-	})
+	Ok(res)
 }
 
 async fn run_query(
@@ -47,7 +42,7 @@ async fn run_query(
 	database_id_short: &str,
 	schema: &backend::db::Schema,
 	query: &backend::db::Query,
-) -> GlobalResult<Vec<i64>> {
+) -> GlobalResult<db::query_run::Response> {
 	let schema_name = util_db::schema_name(database_id_short);
 
 	// TODO: Do bulk inserts with https://github.com/launchbadge/sqlx/blob/main/FAQ.md#how-can-i-bind-an-array-to-a-values-clause-how-can-i-do-bulk-inserts
@@ -56,19 +51,30 @@ async fn run_query(
 		backend::db::query::Kind::Fetch(fetch) => {
 			let collection = get_collection(schema, &fetch.collection)?;
 
+			let mut fields = vec![SqlField::Id];
+			fields.extend(
+				collection
+					.fields
+					.iter()
+					.map(SqlField::from_user_defined)
+					.collect::<GlobalResult<Vec<_>>>()?,
+			);
+
 			let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new("SELECT ");
 
 			// Specify columns
-			let mut separated = query.separated(", ");
-			for field in collection.fields.iter() {
-				separated.push(format!(r#""{}""#, ais(&field.name_id)?));
+			for (i, field) in fields.iter().enumerate() {
+				field.push_column_name(&mut query)?;
+				if i != fields.len() - 1 {
+					query.push(", ");
+				}
 			}
-			separated.push_unseparated("\n");
+			query.push(" ");
 
 			// Specify table
 			let table = util_db::table_name(&collection.name_id);
 			query.push(format!(
-				r#"FROM "{schema}"."{table}"\n"#,
+				r#"FROM "{schema}"."{table}" "#,
 				schema = ais(&schema_name)?,
 				table = ais(&table)?
 			));
@@ -76,11 +82,12 @@ async fn run_query(
 			// Specify filters
 			query.push("WHERE ");
 			for (i, filter) in fetch.filters.iter().enumerate() {
-				let field = get_field(collection, &filter.field)?;
+				let field = SqlField::from_user_defined_or_internal(collection, &filter.field)?;
 				match internal_unwrap!(filter.kind) {
 					backend::db::filter::Kind::Equal(value) => {
-						query.push(format!(r#""{}" = "#, ais(&field.name_id)?,));
-						bind_value_for_field(&mut query, field, value)?;
+						field.push_column_name(&mut query)?;
+						query.push(" = ");
+						field.bind_value(&mut query, value)?;
 					}
 				}
 
@@ -88,27 +95,44 @@ async fn run_query(
 					query.push(" AND ");
 				}
 			}
-			query.push("\n");
+			query.push(" ");
 
 			// Run query
 			tracing::info!(sql = ?query.sql(), "running get");
-			let row = query.build().fetch_optional(pg_data).await?;
-			let row = row.unwrap(); // TODO:
-			internal_assert_eq!(collection.fields.len(), row.len());
+			let rows = query.build().fetch_all(pg_data).await?;
 
-			// Decode response
-			let mut fields = HashMap::new();
-			for (i, field) in collection.fields.iter().enumerate() {
-				let value = get_column_for_field(&row, &field, i)?;
-				fields.insert(field.name_id.clone(), value);
+			let mut fetched_entries = Vec::new();
+			for row in rows {
+				internal_assert_eq!(fields.len(), row.len());
+
+				// Decode response
+				let mut entry = HashMap::new();
+				for (i, field) in fields.iter().enumerate() {
+					let value = field.get_column(&row, i)?;
+					entry.insert(field.field_name_id().to_string(), value);
+				}
+
+				fetched_entries.push(db::query_run::response::FetchEntry { entry });
 			}
 
-			tracing::info!(?fields, "fields");
-
-			Ok(Vec::new())
+			Ok(db::query_run::Response {
+				fetched_entries,
+				inserted_entries: Vec::new(),
+			})
 		}
 		backend::db::query::Kind::Insert(insert) => {
 			let collection = get_collection(schema, &insert.collection)?;
+
+			let entry_fields = insert
+				.entry
+				.iter()
+				.map(|(field, value)| {
+					Ok((
+						SqlField::from_user_defined_name_id(collection, field)?,
+						value,
+					))
+				})
+				.collect::<GlobalResult<Vec<_>>>()?;
 
 			let table = util_db::table_name(&collection.name_id);
 			let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new(format!(
@@ -118,19 +142,18 @@ async fn run_query(
 			));
 
 			// Specify columns
-			let mut separated = query.separated(", ");
-			for key in insert.fields.keys() {
-				let field = get_field(collection, key)?;
-				separated.push(format!(r#""{}""#, ais(&field.name_id)?));
+			for (i, (field, _)) in entry_fields.iter().enumerate() {
+				field.push_column_name(&mut query)?;
+				if i != entry_fields.len() - 1 {
+					query.push(", ");
+				}
 			}
-			separated.push_unseparated(" ");
 
 			// Bind values
 			query.push(") VALUES (");
-			for (i, (key, value)) in insert.fields.iter().enumerate() {
-				let field = get_field(collection, key)?;
-				bind_value_for_field(&mut query, field, value)?;
-				if i != insert.fields.len() - 1 {
+			for (i, (field, value)) in entry_fields.iter().enumerate() {
+				field.bind_value(&mut query, value)?;
+				if i != entry_fields.len() - 1 {
 					query.push(", ");
 				}
 			}
@@ -143,10 +166,15 @@ async fn run_query(
 				.fetch_all(pg_data)
 				.await?
 				.into_iter()
-				.map(|x| x.0)
-				.collect();
+				.map(|x| encode_id(x.0))
+				.collect::<GlobalResult<Vec<_>>>()?;
 
-			Ok(inserted_entries)
+			// TODO: Convert these
+
+			Ok(db::query_run::Response {
+				fetched_entries: Vec::new(),
+				inserted_entries,
+			})
 		}
 		backend::db::query::Kind::Update(update) => {
 			todo!()
@@ -169,81 +197,190 @@ fn get_collection<'a>(
 	Ok(x)
 }
 
-fn get_field<'a>(
-	collection: &'a backend::db::Collection,
-	field: &str,
-) -> GlobalResult<&'a backend::db::Field> {
-	let x = unwrap_with_owned!(
-		collection.fields.iter().find(|x| x.name_id == field),
-		DB_FIELD_NOT_FOUND,
-		field = field
-	);
-	Ok(x)
+/// Represents an SQL field to query.
+enum SqlField {
+	Id,
+	UserDefined {
+		name_id: String,
+		r#type: backend::db::field::Type,
+		optional: bool,
+	},
 }
 
-/// Validates a given value can be written to a given field.
-fn bind_value_for_field(
-	builder: &mut sqlx::QueryBuilder<sqlx::Postgres>,
-	field: &backend::db::Field,
-	value: &backend::db::Value,
-) -> GlobalResult<()> {
-	use backend::db::field::Type as FT;
-	use backend::db::value::Type as VT;
+impl SqlField {
+	/// Creates a new SQL field from a user-defined field or matches internal fields.
+	fn from_user_defined_or_internal(
+		collection: &backend::db::Collection,
+		name_id: &str,
+	) -> GlobalResult<Self> {
+		if name_id == "_id" {
+			Ok(Self::Id)
+		} else if name_id.starts_with("_") {
+			// This is an invalid field, since all internal fields start with "_"
+			panic_with!(DB_FIELD_NOT_FOUND, field = name_id)
+		} else {
+			Self::from_user_defined_name_id(collection, name_id)
+		}
+	}
 
-	let field_type = internal_unwrap_owned!(FT::from_i32(field.r#type));
-	let value_type = internal_unwrap!(value.r#type);
-	match (field_type, value_type) {
-		(FT::Int, VT::Int(x)) => {
-			builder.push_bind(*x);
+	/// Finds a user-defined field in a collection. Does not match internal fields.
+	fn from_user_defined_name_id(
+		collection: &backend::db::Collection,
+		name_id: &str,
+	) -> GlobalResult<Self> {
+		// Find existing field
+		let field = unwrap_with_owned!(
+			collection.fields.iter().find(|x| x.name_id == name_id),
+			DB_FIELD_NOT_FOUND,
+			field = name_id
+		);
+		Ok(Self::from_user_defined(field)?)
+	}
+
+	/// Creates a new user-defined field.
+	fn from_user_defined(field: &backend::db::Field) -> GlobalResult<Self> {
+		Ok(Self::UserDefined {
+			name_id: field.name_id.clone(),
+			r#type: internal_unwrap_owned!(backend::db::field::Type::from_i32(field.r#type)),
+			optional: field.optional,
+		})
+	}
+}
+
+impl SqlField {
+	/// Name ID exposed to the user.
+	fn field_name_id(&self) -> &str {
+		match self {
+			SqlField::Id => "_id",
+			SqlField::UserDefined { name_id, .. } => &name_id,
 		}
-		(FT::Float, VT::Float(x)) => {
-			builder.push_bind(*x);
+	}
+
+	fn field_type(&self) -> backend::db::field::Type {
+		match self {
+			SqlField::Id => backend::db::field::Type::String,
+			SqlField::UserDefined { r#type, .. } => *r#type,
 		}
-		(FT::Bool, VT::Bool(x)) => {
-			builder.push_bind(*x);
+	}
+
+	fn field_optional(&self) -> bool {
+		match self {
+			SqlField::Id => false,
+			SqlField::UserDefined { optional, .. } => *optional,
 		}
-		(FT::String, VT::String(x)) => {
-			builder.push_bind(x.clone());
+	}
+
+	fn sql_column_name(&self) -> String {
+		match self {
+			SqlField::Id => "id".into(),
+			SqlField::UserDefined { name_id, .. } => util_db::column_name(&name_id),
 		}
-		(_, VT::Null(_)) => {
-			if field.optional {
-				builder.push_bind(Option::<i64>::None);
-			} else {
-				panic_with!(DB_CANNOT_ASSIGN_NULL_TO_NON_OPTIONAL, field = field.name_id);
+	}
+
+	/// Pushes the SQL column name.
+	fn push_column_name(
+		&self,
+		builder: &mut sqlx::QueryBuilder<sqlx::Postgres>,
+	) -> GlobalResult<()> {
+		builder.push(format!(r#""{}""#, ais(&self.sql_column_name())?));
+		Ok(())
+	}
+
+	/// Validates a given value can be written to a given field.
+	fn bind_value(
+		&self,
+		builder: &mut sqlx::QueryBuilder<sqlx::Postgres>,
+		value: &backend::db::Value,
+	) -> GlobalResult<()> {
+		use backend::db::field::Type as FT;
+		use backend::db::value::Type as VT;
+
+		let value_type = internal_unwrap!(value.r#type);
+		match (self, self.field_type(), value_type) {
+			// Custom field encoders
+			(Self::Id, ft, VT::String(x)) => {
+				internal_assert_eq!(FT::String, ft, "unexpected field type");
+
+				let id = decode_id(&x)?;
+				builder.push_bind(id);
 			}
-		}
-		_ => panic_with!(DB_VALUE_DOES_NOT_MATCH_FIELD_TYPE, field = field.name_id),
-	};
 
-	Ok(())
+			// Generic types
+			(_, FT::Int, VT::Int(x)) => {
+				builder.push_bind(*x);
+			}
+			(_, FT::Float, VT::Float(x)) => {
+				builder.push_bind(*x);
+			}
+			(_, FT::Bool, VT::Bool(x)) => {
+				builder.push_bind(*x);
+			}
+			(_, FT::String, VT::String(x)) => {
+				builder.push_bind(x.clone());
+			}
+			(_, _, VT::Null(_)) => {
+				if self.field_optional() {
+					builder.push_bind(Option::<i64>::None);
+				} else {
+					panic_with!(
+						DB_CANNOT_ASSIGN_NULL_TO_NON_OPTIONAL,
+						field = self.field_name_id()
+					);
+				}
+			}
+			_ => panic_with!(
+				DB_VALUE_DOES_NOT_MATCH_FIELD_TYPE,
+				field = self.field_name_id()
+			),
+		};
+
+		Ok(())
+	}
+
+	/// Reads a column from a raw row based on the field type.
+	fn get_column(
+		&self,
+		row: &sqlx::postgres::PgRow,
+		i: usize,
+	) -> GlobalResult<backend::db::Value> {
+		use backend::db::field::Type as FT;
+		use backend::db::value::Type as VT;
+
+		let value_ty = match (self, self.field_type()) {
+			// Custom field decoders
+			(Self::Id, ft) => {
+				internal_assert_eq!(FT::String, ft, "unexpected field type");
+
+				let id_raw = row.try_get::<i64, _>(i)?;
+				VT::String(encode_id(id_raw)?)
+			}
+
+			// Generic types
+			(_, FT::Int) => row
+				.try_get::<Option<i64>, _>(i)?
+				.map_or_else(|| VT::Null(Default::default()), VT::Int),
+			(_, FT::Float) => row
+				.try_get::<Option<f64>, _>(i)?
+				.map_or_else(|| VT::Null(Default::default()), VT::Float),
+			(_, FT::Bool) => row
+				.try_get::<Option<bool>, _>(i)?
+				.map_or_else(|| VT::Null(Default::default()), VT::Bool),
+			(_, FT::String) => row
+				.try_get::<Option<String>, _>(i)?
+				.map_or_else(|| VT::Null(Default::default()), VT::String),
+		};
+
+		Ok(backend::db::Value {
+			r#type: Some(value_ty),
+		})
+	}
 }
 
-/// Reads a column from a raw row based on the field type.
-fn get_column_for_field(
-	row: &sqlx::postgres::PgRow,
-	field: &backend::db::Field,
-	i: usize,
-) -> GlobalResult<backend::db::Value> {
-	use backend::db::field::Type as FT;
-	use backend::db::value::Type as VT;
+// TODO: Write encoders
+fn decode_id(id: &str) -> GlobalResult<i64> {
+	Ok(id[3..].parse::<i64>()?)
+}
 
-	let field_type = internal_unwrap_owned!(FT::from_i32(field.r#type));
-	let value_ty = match field_type {
-		FT::Int => row
-			.try_get::<Option<i64>, _>(i)?
-			.map_or_else(|| VT::Null(Default::default()), VT::Int),
-		FT::Float => row
-			.try_get::<Option<f64>, _>(i)?
-			.map_or_else(|| VT::Null(Default::default()), VT::Float),
-		FT::Bool => row
-			.try_get::<Option<bool>, _>(i)?
-			.map_or_else(|| VT::Null(Default::default()), VT::Bool),
-		FT::String => row
-			.try_get::<Option<String>, _>(i)?
-			.map_or_else(|| VT::Null(Default::default()), VT::String),
-	};
-
-	Ok(backend::db::Value {
-		r#type: Some(value_ty),
-	})
+fn encode_id(id: i64) -> GlobalResult<String> {
+	Ok(format!("xxx{}", id.to_string()))
 }

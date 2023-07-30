@@ -11,5 +11,10 @@ message Request {
 }
 
 message Response {
-	repeated string inserted_entries = 1;
+	message FetchEntry {
+		map<string, rivet.backend.db.Value> entry = 1;
+	}
+
+	repeated FetchEntry fetched_entries = 1;
+	repeated string inserted_entries = 2;
 }

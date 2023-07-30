@@ -210,7 +210,7 @@ fn generate_migration_script(
 			.map(|field| {
 				Ok(format!(
 					r#", "{column}" {ty} {opt}"#,
-					column = ais(&field.name_id)?,
+					column = ais(&util_db::column_name(&field.name_id))?,
 					ty = type_proto_to_pg(field.r#type)?,
 					opt = if field.optional { "NULL" } else { "NOT NULL" }
 				))
@@ -230,7 +230,7 @@ fn generate_migration_script(
 				r#"ALTER TABLE "{schema}"."{table}" ADD COLUMN IF NOT EXISTS "{column}" {ty} {opt}"#,
 				schema = ais(&schema_name)?,
 				table = ais(&table_name)?,
-				column = ais(&field.name_id)?,
+				column = ais(&util_db::column_name(&field.name_id))?,
 				ty = type_proto_to_pg(field.r#type)?,
 				opt = if field.optional { "NULL" } else { "NOT NULL" }
 			));
@@ -241,7 +241,7 @@ fn generate_migration_script(
 					r#"ALTER TABLE "{schema}"."{table}" ALTER COLUMN "{column}" DROP NOT NULL"#,
 					schema = ais(&schema_name)?,
 					table = ais(&table_name)?,
-					column = ais(&field.name_id)?
+					column = ais(&util_db::column_name(&field.name_id))?
 				));
 			}
 		}

@@ -70,7 +70,7 @@ message Query {
 
 	message Insert {
 		string collection = 1;
-		map<string, Value> fields = 2;
+		map<string, Value> entry = 2;
 	}
 
 	message Update {

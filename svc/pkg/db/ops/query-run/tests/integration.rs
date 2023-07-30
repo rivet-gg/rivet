@@ -55,7 +55,7 @@ async fn basic(ctx: TestCtx) {
 	.unwrap();
 
 	// Insert entry
-	let fields = {
+	let entry = {
 		let mut x = HashMap::new();
 		x.insert(
 			"my_int".into(),
@@ -88,7 +88,7 @@ async fn basic(ctx: TestCtx) {
 		query: Some(backend::db::Query {
 			kind: Some(backend::db::query::Kind::Insert(backend::db::query::Insert {
 				collection: "test".into(),
-				fields: fields.clone(),
+				entry: entry.clone(),
 			})),
 		}),
 	})
@@ -113,4 +113,5 @@ async fn basic(ctx: TestCtx) {
 	})
 	.await
 	.unwrap();
+	assert_eq!(1, res.fetched_entries.len());
 }
