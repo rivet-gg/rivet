@@ -1,7 +1,7 @@
 use chirp_worker::prelude::*;
 use proto::backend::{
 	self,
-	db::{field::Type as FT, value::Type as VT, Field, Value},
+	db::{field::Type as FT, filter::Kind as FilterKind, value::Type as VT, Field, Filter, Value},
 	pkg::*,
 };
 use std::collections::HashMap;
@@ -100,10 +100,14 @@ async fn basic(ctx: TestCtx) {
 	let res = op!([ctx] db_query_run {
 		database_id: Some(database_id.into()),
 		query: Some(backend::db::Query {
-			kind: Some(backend::db::query::Kind::Get(backend::db::query::Get {
+			kind: Some(backend::db::query::Kind::Fetch(backend::db::query::Fetch {
 				collection: "test".into(),
-				id: id.clone(),
-				fields: fields.keys().map(|x| x.to_string()).collect(),
+				filters: vec![
+					Filter {
+						field: "_id".into(),
+						kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(id.clone())) })),
+					}
+				]
 			})),
 		}),
 	})

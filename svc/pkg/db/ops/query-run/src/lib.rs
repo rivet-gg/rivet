@@ -53,39 +53,52 @@ async fn run_query(
 	// TODO: Do bulk inserts with https://github.com/launchbadge/sqlx/blob/main/FAQ.md#how-can-i-bind-an-array-to-a-values-clause-how-can-i-do-bulk-inserts
 
 	match internal_unwrap!(query.kind) {
-		backend::db::query::Kind::Get(get) => {
-			let collection = get_collection(schema, &get.collection)?;
-			let id = get.id.parse::<i64>()?;
+		backend::db::query::Kind::Fetch(fetch) => {
+			let collection = get_collection(schema, &fetch.collection)?;
 
 			let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new("SELECT ");
 
 			// Specify columns
 			let mut separated = query.separated(", ");
-			for key in get.fields.iter() {
-				let field = get_field(collection, key)?;
+			for field in collection.fields.iter() {
 				separated.push(format!(r#""{}""#, ais(&field.name_id)?));
 			}
-			separated.push_unseparated(" ");
+			separated.push_unseparated("\n");
 
 			// Specify table
 			let table = util_db::table_name(&collection.name_id);
 			query.push(format!(
-				r#"FROM "{schema}"."{table}" WHERE id = "#,
+				r#"FROM "{schema}"."{table}"\n"#,
 				schema = ais(&schema_name)?,
 				table = ais(&table)?
 			));
-			query.push_bind(&id);
+
+			// Specify filters
+			query.push("WHERE ");
+			for (i, filter) in fetch.filters.iter().enumerate() {
+				let field = get_field(collection, &filter.field)?;
+				match internal_unwrap!(filter.kind) {
+					backend::db::filter::Kind::Equal(value) => {
+						query.push(format!(r#""{}" = "#, ais(&field.name_id)?,));
+						bind_value_for_field(&mut query, field, value)?;
+					}
+				}
+
+				if i != fetch.filters.len() - 1 {
+					query.push(" AND ");
+				}
+			}
+			query.push("\n");
 
 			// Run query
 			tracing::info!(sql = ?query.sql(), "running get");
 			let row = query.build().fetch_optional(pg_data).await?;
 			let row = row.unwrap(); // TODO:
-			internal_assert_eq!(get.fields.len(), row.len());
+			internal_assert_eq!(collection.fields.len(), row.len());
 
 			// Decode response
 			let mut fields = HashMap::new();
-			for (i, key) in get.fields.iter().enumerate() {
-				let field = get_field(collection, key)?;
+			for (i, field) in collection.fields.iter().enumerate() {
 				let value = get_column_for_field(&row, &field, i)?;
 				fields.insert(field.name_id.clone(), value);
 			}
@@ -94,8 +107,8 @@ async fn run_query(
 
 			Ok(Vec::new())
 		}
-		backend::db::query::Kind::Insert(set) => {
-			let collection = get_collection(schema, &set.collection)?;
+		backend::db::query::Kind::Insert(insert) => {
+			let collection = get_collection(schema, &insert.collection)?;
 
 			let table = util_db::table_name(&collection.name_id);
 			let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new(format!(
@@ -106,7 +119,7 @@ async fn run_query(
 
 			// Specify columns
 			let mut separated = query.separated(", ");
-			for key in set.fields.keys() {
+			for key in insert.fields.keys() {
 				let field = get_field(collection, key)?;
 				separated.push(format!(r#""{}""#, ais(&field.name_id)?));
 			}
@@ -114,10 +127,10 @@ async fn run_query(
 
 			// Bind values
 			query.push(") VALUES (");
-			for (i, (key, value)) in set.fields.iter().enumerate() {
+			for (i, (key, value)) in insert.fields.iter().enumerate() {
 				let field = get_field(collection, key)?;
 				bind_value_for_field(&mut query, field, value)?;
-				if i != set.fields.len() - 1 {
+				if i != insert.fields.len() - 1 {
 					query.push(", ");
 				}
 			}
@@ -134,6 +147,12 @@ async fn run_query(
 				.collect();
 
 			Ok(inserted_entries)
+		}
+		backend::db::query::Kind::Update(update) => {
+			todo!()
+		}
+		backend::db::query::Kind::Delete(delete) => {
+			todo!()
 		}
 	}
 }
