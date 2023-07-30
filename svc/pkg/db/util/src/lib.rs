@@ -21,7 +21,7 @@ pub fn column_name(name_id: &str) -> String {
 /// 2. Prevent users from guessing other IDs.
 /// 3. Prevent users from guessing the number of records in the database.
 pub fn encode_id(id: i64) -> GlobalResult<String> {
-	Ok(format!("xxx{}", id.to_string()))
+	Ok(format!("xxx{}", id))
 }
 
 /// Converts ID from user-friendly -> database.

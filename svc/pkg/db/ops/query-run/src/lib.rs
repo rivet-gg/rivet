@@ -1,7 +1,7 @@
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
 use sqlx::Row;
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryInto};
 use util_db::ais;
 
 use crate::sql_field::SqlField;
@@ -85,20 +85,7 @@ async fn run_query(
 
 			// Specify filters
 			query.push("WHERE ");
-			for (i, filter) in fetch.filters.iter().enumerate() {
-				let field = SqlField::from_user_defined_or_internal(collection, &filter.field)?;
-				match internal_unwrap!(filter.kind) {
-					backend::db::filter::Kind::Equal(value) => {
-						field.push_column_name(&mut query)?;
-						query.push(" = ");
-						field.bind_value(&mut query, value)?;
-					}
-				}
-
-				if i != fetch.filters.len() - 1 {
-					query.push(" AND ");
-				}
-			}
+			push_filters(&collection, &mut query, &fetch.filters)?;
 			query.push(" ");
 
 			// Run query
@@ -122,6 +109,7 @@ async fn run_query(
 			Ok(db::query_run::Response {
 				fetched_entries,
 				inserted_entries: Vec::new(),
+				entries_affected: 0,
 			})
 		}
 		backend::db::query::Kind::Insert(insert) => {
@@ -172,16 +160,62 @@ async fn run_query(
 				.into_iter()
 				.map(|x| util_db::encode_id(x.0))
 				.collect::<GlobalResult<Vec<_>>>()?;
-
-			// TODO: Convert these
+			let entries_affected: u64 = inserted_entries.len().try_into()?;
 
 			Ok(db::query_run::Response {
 				fetched_entries: Vec::new(),
 				inserted_entries,
+				entries_affected,
 			})
 		}
 		backend::db::query::Kind::Update(update) => {
-			todo!()
+			let collection = get_collection(schema, &update.collection)?;
+
+			let set_fields = update
+				.set
+				.iter()
+				.map(|(field, value)| {
+					Ok((
+						SqlField::from_user_defined_name_id(collection, field)?,
+						value,
+					))
+				})
+				.collect::<GlobalResult<Vec<_>>>()?;
+
+			let table = util_db::table_name(&collection.name_id);
+			let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new(format!(
+				r#"UPDATE "{schema}"."{table}" "#,
+				schema = ais(&schema_name)?,
+				table = ais(&table)?,
+			));
+
+			// Set values
+			query.push("SET ");
+			for (i, (field, value)) in set_fields.iter().enumerate() {
+				field.push_column_name(&mut query)?;
+				query.push(" = ");
+				field.bind_value(&mut query, value)?;
+				if i != set_fields.len() - 1 {
+					query.push(", ");
+				}
+			}
+			query.push(" ");
+
+			// Specify filters
+			query.push("WHERE ");
+			push_filters(&collection, &mut query, &update.filters)?;
+			query.push(" ");
+
+			// Run query
+			tracing::info!(sql = ?query.sql(), "running update");
+			let output = query.build().execute(pg_data).await?;
+			let entries_affected = output.rows_affected();
+
+			Ok(db::query_run::Response {
+				fetched_entries: Vec::new(),
+				inserted_entries: Vec::new(),
+				entries_affected,
+			})
 		}
 		backend::db::query::Kind::Delete(delete) => {
 			todo!()
@@ -200,4 +234,25 @@ fn get_collection<'a>(
 		collection = collection
 	);
 	Ok(x)
+}
+
+fn push_filters(
+	collection: &backend::db::Collection,
+	query: &mut sqlx::QueryBuilder<sqlx::Postgres>,
+	filters: &[backend::db::Filter],
+) -> GlobalResult<()> {
+	for (i, filter) in filters.iter().enumerate() {
+		let field = SqlField::from_user_defined_or_internal(collection, &filter.field)?;
+		match internal_unwrap!(filter.kind) {
+			backend::db::filter::Kind::Equal(value) => {
+				field.push_column_name(query)?;
+				query.push(" = ");
+				field.bind_value(query, &value)?;
+			}
+		}
+		if i != filters.len() - 1 {
+			query.push(" AND ");
+		}
+	}
+	Ok(())
 }

@@ -17,4 +17,5 @@ message Response {
 
 	repeated FetchEntry fetched_entries = 1;
 	repeated string inserted_entries = 2;
+	uint64 entries_affected = 3;
 }
