@@ -218,7 +218,39 @@ async fn run_query(
 			})
 		}
 		backend::db::query::Kind::Delete(delete) => {
-			todo!()
+			let collection = get_collection(schema, &delete.collection)?;
+
+			let mut fields = vec![SqlField::Id];
+			fields.extend(
+				collection
+					.fields
+					.iter()
+					.map(SqlField::from_user_defined)
+					.collect::<GlobalResult<Vec<_>>>()?,
+			);
+
+			let table = util_db::table_name(&collection.name_id);
+			let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new(format!(
+				r#"DELETE FROM "{schema}"."{table}" "#,
+				schema = ais(&schema_name)?,
+				table = ais(&table)?,
+			));
+
+			// Specify filters
+			query.push("WHERE ");
+			push_filters(&collection, &mut query, &delete.filters)?;
+			query.push(" ");
+
+			// Run query
+			tracing::info!(sql = ?query.sql(), "running get");
+			let output = query.build().execute(pg_data).await?;
+			let entries_affected = output.rows_affected();
+
+			Ok(db::query_run::Response {
+				fetched_entries: Vec::new(),
+				inserted_entries: Vec::new(),
+				entries_affected,
+			})
 		}
 	}
 }
