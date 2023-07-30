@@ -55,63 +55,219 @@ async fn basic(ctx: TestCtx) {
 	.unwrap();
 
 	// Insert entry
-	let entry = {
-		let mut x = HashMap::new();
-		x.insert(
-			"my_int".into(),
-			Value {
-				r#type: Some(VT::Int(42)),
-			},
-		);
-		x.insert(
-			"my_float".into(),
-			Value {
-				r#type: Some(VT::Float(4.2)),
-			},
-		);
-		x.insert(
-			"my_bool".into(),
-			Value {
-				r#type: Some(VT::Bool(true)),
-			},
-		);
-		x.insert(
-			"my_string".into(),
-			Value {
-				r#type: Some(VT::String("hello, world!".into())),
-			},
-		);
-		x
+	let entry_id = {
+		let entry = {
+			let mut x = HashMap::new();
+			x.insert(
+				"my_int".into(),
+				Value {
+					r#type: Some(VT::Int(42)),
+				},
+			);
+			x.insert(
+				"my_float".into(),
+				Value {
+					r#type: Some(VT::Float(4.2)),
+				},
+			);
+			x.insert(
+				"my_bool".into(),
+				Value {
+					r#type: Some(VT::Bool(true)),
+				},
+			);
+			x.insert(
+				"my_string".into(),
+				Value {
+					r#type: Some(VT::String("hello, world!".into())),
+				},
+			);
+			x
+		};
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Insert(backend::db::query::Insert {
+					collection: "test".into(),
+					entry: entry.clone(),
+				})),
+			}),
+		})
+		.await
+		.unwrap();
+		let id = res.inserted_entries.first().unwrap().clone();
+
+		id
 	};
-	let res = op!([ctx] db_query_run {
-		database_id: Some(database_id.into()),
-		query: Some(backend::db::Query {
-			kind: Some(backend::db::query::Kind::Insert(backend::db::query::Insert {
-				collection: "test".into(),
-				entry: entry.clone(),
-			})),
-		}),
-	})
-	.await
-	.unwrap();
-	let id = res.inserted_entries.first().unwrap();
 
 	// Get entry
-	let res = op!([ctx] db_query_run {
-		database_id: Some(database_id.into()),
-		query: Some(backend::db::Query {
-			kind: Some(backend::db::query::Kind::Fetch(backend::db::query::Fetch {
-				collection: "test".into(),
-				filters: vec![
-					Filter {
-						field: "_id".into(),
-						kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(id.clone())) })),
-					}
-				]
-			})),
-		}),
-	})
-	.await
-	.unwrap();
-	assert_eq!(1, res.fetched_entries.len());
+	{
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Fetch(backend::db::query::Fetch {
+					collection: "test".into(),
+					filters: vec![
+						Filter {
+							field: "_id".into(),
+							kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(entry_id.clone())) })),
+						}
+					]
+				})),
+			}),
+		})
+		.await
+		.unwrap();
+		assert_eq!(1, res.fetched_entries.len());
+		let fetched_entry = res.fetched_entries.first().unwrap();
+		assert_eq!(
+			VT::Int(42),
+			fetched_entry
+				.entry
+				.get("my_int")
+				.unwrap()
+				.r#type
+				.clone()
+				.unwrap()
+		);
+		// TODO: Compare floats with epsilon
+		assert_eq!(
+			VT::Bool(true),
+			fetched_entry
+				.entry
+				.get("my_bool")
+				.unwrap()
+				.r#type
+				.clone()
+				.unwrap()
+		);
+		assert_eq!(
+			VT::String("hello, world!".into()),
+			fetched_entry
+				.entry
+				.get("my_string")
+				.unwrap()
+				.r#type
+				.clone()
+				.unwrap()
+		);
+	}
+
+	// Update entry by ID
+	{
+		let insert_set = {
+			let mut x = HashMap::new();
+			x.insert(
+				"my_int".into(),
+				Value {
+					r#type: Some(VT::Int(123)),
+				},
+			);
+			x
+		};
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Update(backend::db::query::Update {
+					collection: "test".into(),
+					filters: vec![
+						Filter {
+							field: "_id".into(),
+							kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(entry_id.clone())) })),
+						}
+					],
+					set: insert_set
+				})),
+			}),
+		})
+		.await
+		.unwrap();
+
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Fetch(backend::db::query::Fetch {
+					collection: "test".into(),
+					filters: vec![
+						Filter {
+							field: "_id".into(),
+							kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(entry_id.clone())) })),
+						}
+					]
+				})),
+			}),
+		})
+		.await
+		.unwrap();
+		let fetched_entry = res.fetched_entries.first().unwrap();
+		assert_eq!(
+			VT::Int(123),
+			fetched_entry
+				.entry
+				.get("my_int")
+				.unwrap()
+				.r#type
+				.clone()
+				.unwrap()
+		);
+	}
+
+	// Update entry by user defined field
+	{
+		let insert_set = {
+			let mut x = HashMap::new();
+			x.insert(
+				"my_string".into(),
+				Value {
+					r#type: Some(VT::String("foo bar".into())),
+				},
+			);
+			x
+		};
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Update(backend::db::query::Update {
+					collection: "test".into(),
+					filters: vec![
+						Filter {
+							field: "my_int".into(),
+							kind: Some(FilterKind::Equal(Value { r#type: Some(VT::Int(123)) })),
+						}
+					],
+					set: insert_set
+				})),
+			}),
+		})
+		.await
+		.unwrap();
+
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Fetch(backend::db::query::Fetch {
+					collection: "test".into(),
+					filters: vec![
+						Filter {
+							field: "_id".into(),
+							kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(entry_id.clone())) })),
+						}
+					]
+				})),
+			}),
+		})
+		.await
+		.unwrap();
+		let fetched_entry = res.fetched_entries.first().unwrap();
+		assert_eq!(
+			VT::String("foo bar".into()),
+			fetched_entry
+				.entry
+				.get("my_string")
+				.unwrap()
+				.r#type
+				.clone()
+				.unwrap()
+		);
+	}
 }
