@@ -1,0 +1,7 @@
+[service]
+name = "db-get"
+
+[runtime]
+kind = "rust"
+
+[operation]
