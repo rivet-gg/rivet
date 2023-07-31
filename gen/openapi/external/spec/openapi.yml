@@ -9706,14 +9706,10 @@ components:
         database_id:
           type: string
           format: uuid
-        collection:
-          type: string
         filters:
           type: array
           items:
             $ref: '#/components/schemas/DatabaseFilter'
-      required:
-        - collection
     DatabaseFetchResponse:
       type: object
       properties:
@@ -9729,13 +9725,10 @@ components:
         database_id:
           type: string
           format: uuid
-        collection:
-          type: string
         entry:
           type: object
           additionalProperties: {}
       required:
-        - collection
         - entry
     DatabaseInsertResponse:
       type: object
@@ -9752,8 +9745,6 @@ components:
         database_id:
           type: string
           format: uuid
-        collection:
-          type: string
         filters:
           type: array
           items:
@@ -9761,8 +9752,6 @@ components:
         set:
           type: object
           additionalProperties: {}
-      required:
-        - collection
     DatabaseUpdateResponse:
       type: object
       properties:
@@ -9776,14 +9765,10 @@ components:
         database_id:
           type: string
           format: uuid
-        collection:
-          type: string
         filters:
           type: array
           items:
             $ref: '#/components/schemas/DatabaseFilter'
-      required:
-        - collection
     DatabaseDeleteResponse:
       type: object
       properties:

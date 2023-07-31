@@ -4,7 +4,6 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**collection** | **String** |  | 
 **database_id** | Option<[**uuid::Uuid**](uuid::Uuid.md)> |  | [optional]
 **entry** | [**::std::collections::HashMap<String, serde_json::Value>**](serde_json::Value.md) |  | 
 

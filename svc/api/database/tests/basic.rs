@@ -1,7 +1,7 @@
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
 use serde_json::{json, Value};
-use std::{str::FromStr, sync::Once, time::Duration};
+use std::{collections::HashMap, str::FromStr, sync::Once, time::Duration};
 
 use rivet_api::{
 	apis::{configuration::Configuration, *},
@@ -74,24 +74,24 @@ impl Ctx {
 		}
 	}
 
-	async fn issue_lobby_token(&self) -> String {
-		// Create lobby
-		let lobby_group_meta = &self.mm_config_meta.lobby_groups[0];
-		let lobby_id = Uuid::new_v4();
+	// async fn issue_lobby_token(&self) -> String {
+	// 	// Create lobby
+	// 	let lobby_group_meta = &self.mm_config_meta.lobby_groups[0];
+	// 	let lobby_id = Uuid::new_v4();
 
-		msg!([self.op_ctx] mm::msg::lobby_create(lobby_id) -> mm::msg::lobby_create_complete {
-			lobby_id: Some(lobby_id.into()),
-			namespace_id: Some(self.namespace_id.into()),
-			lobby_group_id: lobby_group_meta.lobby_group_id,
-			region_id: Some(self.primary_region_id.into()),
-			create_ray_id: None,
-			preemptively_created: false,
-		})
-		.await
-		.unwrap();
+	// 	msg!([self.op_ctx] mm::msg::lobby_create(lobby_id) -> mm::msg::lobby_create_complete {
+	// 		lobby_id: Some(lobby_id.into()),
+	// 		namespace_id: Some(self.namespace_id.into()),
+	// 		lobby_group_id: lobby_group_meta.lobby_group_id,
+	// 		region_id: Some(self.primary_region_id.into()),
+	// 		create_ray_id: None,
+	// 		preemptively_created: false,
+	// 	})
+	// 	.await
+	// 	.unwrap();
 
-		lobby_token(&self.op_ctx, lobby_id.to_string().as_str()).await
-	}
+	// 	lobby_token(&self.op_ctx, lobby_id.to_string().as_str()).await
+	// }
 
 	async fn issue_cloud_token(&self) -> String {
 		let res = op!([self.op_ctx] cloud_game_token_create {
@@ -129,65 +129,50 @@ impl Ctx {
 		backend::matchmaker::VersionConfig,
 		backend::matchmaker::VersionConfigMeta,
 	) {
+		use backend::db::{field::Type as FT, Field};
+
 		let game_res = op!([ctx] faker_game {
 			..Default::default()
 		})
 		.await
 		.unwrap();
 
-		let build_res = op!([ctx] faker_build {
-			game_id: game_res.game_id,
-			image: faker::build::Image::MmLobbyAutoReady as i32,
-		})
-		.await
-		.unwrap();
-
 		let game_version_res = op!([ctx] faker_game_version {
 			game_id: game_res.game_id,
-			override_lobby_groups: Some(faker::game_version::request::OverrideLobbyGroups {
-				lobby_groups: vec![backend::matchmaker::LobbyGroup {
-					name_id: LOBBY_GROUP_NAME_ID.into(),
-
-					regions: vec![backend::matchmaker::lobby_group::Region {
-						region_id: Some(region_id.into()),
-						tier_name_id: util_mm::test::TIER_NAME_ID.to_owned(),
-						idle_lobbies: None,
-					}],
-					max_players_normal: 8,
-					max_players_direct: 10,
-					max_players_party: 12,
-
-					runtime: Some(backend::matchmaker::lobby_runtime::Docker {
-						build_id: build_res.build_id,
-						args: Vec::new(),
-						env_vars: Vec::new(),
-						network_mode: backend::matchmaker::lobby_runtime::NetworkMode::Bridge as i32,
-						ports: vec![
-							backend::matchmaker::lobby_runtime::Port {
-								label: "test-80-http".into(),
-								target_port: Some(80),
-								port_range: None,
-								proxy_protocol: backend::matchmaker::lobby_runtime::ProxyProtocol::Http as i32,
-								proxy_kind: backend::matchmaker::lobby_runtime::ProxyKind::GameGuard as i32,
-							},
-							backend::matchmaker::lobby_runtime::Port {
-								label: "test-80-https".into(),
-								target_port: Some(80),
-								port_range: None,
-								proxy_protocol: backend::matchmaker::lobby_runtime::ProxyProtocol::Https as i32,
-								proxy_kind: backend::matchmaker::lobby_runtime::ProxyKind::GameGuard as i32,
-							},
-							backend::matchmaker::lobby_runtime::Port {
-								label: "test-5050-https".into(),
-								target_port: Some(5050),
-								port_range: None,
-								proxy_protocol: backend::matchmaker::lobby_runtime::ProxyProtocol::Https as i32,
-								proxy_kind: backend::matchmaker::lobby_runtime::ProxyKind::GameGuard as i32,
+			override_database: Some(faker::game_version::request::OverrideDbConfig {
+				config: Some(backend::db::GameVersionConfig {
+					database_name_id: "test".into(),
+					schema: Some(backend::db::Schema {
+						collections: vec![
+							backend::db::Collection {
+								name_id: "test".into(),
+								fields: vec![
+									Field {
+										name_id: "my_int".into(),
+										r#type: FT::Int.into(),
+										optional: false,
+									},
+									Field {
+										name_id: "my_float".into(),
+										r#type: FT::Float.into(),
+										optional: false,
+									},
+									Field {
+										name_id: "my_bool".into(),
+										r#type: FT::Bool.into(),
+										optional: false,
+									},
+									Field {
+										name_id: "my_string".into(),
+										r#type: FT::String.into(),
+										optional: false,
+									},
+								],
 							},
 						],
-					}.into()),
-				}],
-			}),
+					}),
+				})
+			})
 			..Default::default()
 		})
 		.await
@@ -216,8 +201,44 @@ async fn generic() {
 	let ctx = Ctx::init().await;
 	let cloud_token = ctx.issue_cloud_token().await;
 
-	// TODO: Insert
-	// TODO: Get
+	let insert_res = database_api::database_insert(
+		&ctx.config(&cloud_token),
+		"test".into(),
+		models::DatabaseInsertRequest {
+			database_id: None,
+			entry: {
+				let mut x = HashMap::new();
+				x.insert("my_int".into(), json!(42));
+				x.insert("my_float".into(), json!(1.23));
+				x.insert("my_bool".into(), json!(true));
+				x.insert("my_string".into(), json!("hello, world!"));
+				x
+			},
+		},
+	)
+	.await
+	.unwrap();
+	let entry_id = insert_res.ids.first().unwrap();
+
+	let fetch_res = database_api::database_fetch(
+		&ctx.config(&cloud_token),
+		"test".into(),
+		models::DatabaseFetchRequest {
+			database_id: None,
+			filters: Some(vec![models::DatabaseFilter {
+				field: "my_int".into(),
+				eq: Some(Some(json!(42))),
+			}]),
+		},
+	)
+	.await
+	.unwrap();
+	assert_eq!(1, fetch_res.entries.len());
+	assert_eq!(
+		entry_id,
+		fetch_res.entries.first().unwrap().get("_id").unwrap()
+	)
+
 	// TODO: Update
 	// TODO: Delete
 }

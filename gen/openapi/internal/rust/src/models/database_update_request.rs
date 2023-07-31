@@ -13,8 +13,6 @@
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct DatabaseUpdateRequest {
-    #[serde(rename = "collection")]
-    pub collection: String,
     #[serde(rename = "database_id", skip_serializing_if = "Option::is_none")]
     pub database_id: Option<uuid::Uuid>,
     #[serde(rename = "filters", skip_serializing_if = "Option::is_none")]
@@ -24,9 +22,8 @@ pub struct DatabaseUpdateRequest {
 }
 
 impl DatabaseUpdateRequest {
-    pub fn new(collection: String) -> DatabaseUpdateRequest {
+    pub fn new() -> DatabaseUpdateRequest {
         DatabaseUpdateRequest {
-            collection,
             database_id: None,
             filters: None,
             set: None,

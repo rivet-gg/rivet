@@ -4,7 +4,6 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**collection** | **String** |  | 
 **database_id** | Option<[**uuid::Uuid**](uuid::Uuid.md)> |  | [optional]
 **filters** | Option<[**Vec<crate::models::DatabaseFilter>**](DatabaseFilter.md)> |  | [optional]
 

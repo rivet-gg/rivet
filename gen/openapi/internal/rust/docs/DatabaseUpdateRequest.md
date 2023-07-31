@@ -4,7 +4,6 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**collection** | **String** |  | 
 **database_id** | Option<[**uuid::Uuid**](uuid::Uuid.md)> |  | [optional]
 **filters** | Option<[**Vec<crate::models::DatabaseFilter>**](DatabaseFilter.md)> |  | [optional]
 **set** | Option<[**::std::collections::HashMap<String, serde_json::Value>**](serde_json::Value.md)> |  | [optional]

@@ -13,8 +13,6 @@
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct DatabaseFetchRequest {
-    #[serde(rename = "collection")]
-    pub collection: String,
     #[serde(rename = "database_id", skip_serializing_if = "Option::is_none")]
     pub database_id: Option<uuid::Uuid>,
     #[serde(rename = "filters", skip_serializing_if = "Option::is_none")]
@@ -22,9 +20,8 @@ pub struct DatabaseFetchRequest {
 }
 
 impl DatabaseFetchRequest {
-    pub fn new(collection: String) -> DatabaseFetchRequest {
+    pub fn new() -> DatabaseFetchRequest {
         DatabaseFetchRequest {
-            collection,
             database_id: None,
             filters: None,
         }

@@ -13,8 +13,6 @@
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct DatabaseInsertRequest {
-    #[serde(rename = "collection")]
-    pub collection: String,
     #[serde(rename = "database_id", skip_serializing_if = "Option::is_none")]
     pub database_id: Option<uuid::Uuid>,
     #[serde(rename = "entry")]
@@ -22,9 +20,8 @@ pub struct DatabaseInsertRequest {
 }
 
 impl DatabaseInsertRequest {
-    pub fn new(collection: String, entry: ::std::collections::HashMap<String, serde_json::Value>) -> DatabaseInsertRequest {
+    pub fn new(entry: ::std::collections::HashMap<String, serde_json::Value>) -> DatabaseInsertRequest {
         DatabaseInsertRequest {
-            collection,
             database_id: None,
             entry,
         }

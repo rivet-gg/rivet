@@ -2686,8 +2686,6 @@ components:
       type: object
     DatabaseDeleteRequest:
       properties:
-        collection:
-          type: string
         database_id:
           format: uuid
           type: string
@@ -2695,8 +2693,6 @@ components:
           items:
             $ref: '#/components/schemas/DatabaseFilter'
           type: array
-      required:
-      - collection
       type: object
     DatabaseDeleteResponse:
       properties:
@@ -2710,8 +2706,6 @@ components:
       type: object
     DatabaseFetchRequest:
       properties:
-        collection:
-          type: string
         database_id:
           format: uuid
           type: string
@@ -2719,8 +2713,6 @@ components:
           items:
             $ref: '#/components/schemas/DatabaseFilter'
           type: array
-      required:
-      - collection
       type: object
     DatabaseFetchResponse:
       properties:
@@ -2741,8 +2733,6 @@ components:
       type: object
     DatabaseInsertRequest:
       properties:
-        collection:
-          type: string
         database_id:
           format: uuid
           type: string
@@ -2750,7 +2740,6 @@ components:
           additionalProperties: {}
           type: object
       required:
-      - collection
       - entry
       type: object
     DatabaseInsertResponse:
@@ -2764,8 +2753,6 @@ components:
       type: object
     DatabaseUpdateRequest:
       properties:
-        collection:
-          type: string
         database_id:
           format: uuid
           type: string
@@ -2776,8 +2763,6 @@ components:
         set:
           additionalProperties: {}
           type: object
-      required:
-      - collection
       type: object
     DatabaseUpdateResponse:
       properties:
