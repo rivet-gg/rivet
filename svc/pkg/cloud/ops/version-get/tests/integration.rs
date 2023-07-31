@@ -22,6 +22,10 @@ async fn empty(ctx: TestCtx) {
 			game_id: game_res.game_id,
 			display_name: "0.0.1".into(),
 			config: Some(backend::cloud::VersionConfig {
+				db: Some(backend::db::GameVersionConfig {
+					database_name_id: "test".into(),
+					schema: Some(backend::db::Schema::default()),
+				}),
 				cdn: None,
 				matchmaker: Some(backend::matchmaker::VersionConfig {
 					lobby_groups: vec![

@@ -3,10 +3,11 @@ syntax = "proto3";
 package rivet.backend.cloud;
 
 import "proto/common.proto";
-import "proto/backend/matchmaker.proto";
 import "proto/backend/cdn.proto";
-import "proto/backend/kv.proto";
+import "proto/backend/db.proto";
 import "proto/backend/identity.proto";
+import "proto/backend/kv.proto";
+import "proto/backend/matchmaker.proto";
 import "proto/backend/module.proto";
 
 message Game {
@@ -19,6 +20,7 @@ message GameNamespace {
 }
 
 message NamespaceConfig {
+	optional rivet.backend.db.GameNamespaceConfig db = 106;
 	optional rivet.backend.cdn.NamespaceConfig cdn = 101;
 	optional rivet.backend.matchmaker.NamespaceConfig matchmaker = 102;
 	optional rivet.backend.kv.NamespaceConfig kv = 103;
@@ -34,6 +36,7 @@ message GameVersion {
 // Represents how a game version will be published. This is a data type that will be used
 // before the version is actually inserted in to the database.
 message VersionConfig {
+	optional rivet.backend.db.GameVersionConfig db = 106;
 	optional rivet.backend.cdn.VersionConfig cdn = 101;
 	optional rivet.backend.matchmaker.VersionConfig matchmaker = 102;
 	optional rivet.backend.kv.VersionConfig kv = 103;

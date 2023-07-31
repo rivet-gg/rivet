@@ -159,6 +159,10 @@ async fn gen_default_version_config(
 	)?;
 
 	Ok(backend::cloud::VersionConfig {
+		db: Some(backend::db::GameVersionConfig {
+			database_name_id: "test".into(),
+			schema: Some(backend::db::Schema::default()),
+		}),
 		cdn: Some(backend::cdn::VersionConfig {
 			site_id: Some(site_id.into()),
 			routes: Vec::new(),

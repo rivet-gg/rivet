@@ -25,6 +25,7 @@ pub async fn config_to_proto(
 	value: models::CloudVersionConfig,
 ) -> GlobalResult<backend::cloud::VersionConfig> {
 	Ok(backend::cloud::VersionConfig {
+		db: todo!(),
 		cdn: value.cdn.map(|x| (*x).try_into()).transpose()?,
 		matchmaker: if let Some(matchmaker) = value.matchmaker {
 			Some(matchmaker::config_to_proto(ctx, *matchmaker).await?)

@@ -57,6 +57,7 @@ async fn handle(
 			Some(backend::cloud::GameNamespace {
 				namespace_id: Some(namespace_id_proto),
 				config: Some(backend::cloud::NamespaceConfig {
+					db: Some(backend::db::GameNamespaceConfig {}),
 					cdn: if let Some(x) = cdn_configs_res
 						.namespaces
 						.iter()

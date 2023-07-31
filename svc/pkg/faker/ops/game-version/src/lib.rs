@@ -16,6 +16,10 @@ async fn handle(
 		config
 	} else {
 		backend::cloud::VersionConfig {
+			db: Some(backend::db::GameVersionConfig {
+				database_name_id: "test".into(),
+				schema: Some(backend::db::Schema::default()),
+			}),
 			cdn: if let Some(config) = ctx.override_cdn_config.clone() {
 				config.config
 			} else {

@@ -13,6 +13,10 @@ async fn empty(ctx: TestCtx) {
 		game_id: Some(game_res.game_id.unwrap()),
 		display_name: "   bad name".to_owned(),
 		config: Some(cloud::VersionConfig {
+			db: Some(backend::db::GameVersionConfig {
+				database_name_id: "test".into(),
+				schema: Some(backend::db::Schema::default()),
+			}),
 			cdn: Some(VersionConfig {
 				site_id: None,
 				routes: vec![

@@ -10,6 +10,8 @@ rivet-operation = { path = "../../../../../lib/operation/core" }
 chirp-client = { path = "../../../../../lib/chirp/client" }
 prost = "0.10"
 
+db-game-version-prepare = { path = "../../../db/ops/game-version-prepare" }
+db-game-version-publish = { path = "../../../db/ops/game-version-publish" }
 cdn-version-prepare = { path = "../../../cdn/ops/version-prepare" }
 cdn-version-publish = { path = "../../../cdn/ops/version-publish" }
 game-get = { path = "../../../game/ops/get" }

@@ -11,6 +11,7 @@ chirp-client = { path = "../../../../../lib/chirp/client" }
 prost = "0.10"
 util-mm = { package = "rivet-util-mm", path = "../../../mm/util" }
 
+db-game-version-get = { path = "../../../db/ops/game-version-get" }
 cdn-version-get = { path = "../../../cdn/ops/version-get" }
 identity-config-version-get = { path = "../../../identity-config/ops/version-get" }
 kv-config-version-get = { path = "../../../kv-config/ops/version-get" }

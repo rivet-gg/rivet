@@ -37,6 +37,17 @@ async fn handle(
 	}
 
 	// Prepare the version
+	let db_config_ctx = if let Some(db_config) = &config.db {
+		let prepare_res = op!([ctx] db_game_version_prepare {
+			game_id: Some(game_id.into()),
+			config: Some(db_config.clone()),
+		})
+		.await?;
+
+		Some(internal_unwrap!(prepare_res.config_ctx).clone())
+	} else {
+		None
+	};
 	let cdn_config_ctx = if let Some(cdn_config) = &config.cdn {
 		let prepare_res = op!([ctx] cdn_version_prepare {
 			game_id: Some(game_id.into()),
@@ -113,6 +124,14 @@ async fn handle(
 	.await?;
 
 	// Create the cloud versions
+	if let (Some(db_config), Some(db_config_ctx)) = (&config.db, &db_config_ctx) {
+		op!([ctx] db_game_version_publish {
+			version_id: Some(version_id.into()),
+			config: Some(db_config.clone()),
+			config_ctx: Some((*db_config_ctx).clone()),
+		})
+		.await?;
+	}
 	if let (Some(cdn_config), Some(cdn_config_ctx)) = (&config.cdn, &cdn_config_ctx) {
 		op!([ctx] cdn_version_publish {
 			version_id: Some(version_id.into()),

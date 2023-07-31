@@ -37,24 +37,33 @@ async fn handle(
 		.collect::<Vec<_>>();
 
 	// Fetch all dependent configs
-	let (cdn_configs_res, mm_configs_res, kv_configs_res, identity_configs_res, module_configs_res) =
-		tokio::try_join!(
-			op!([ctx] cdn_version_get {
-				version_ids: all_version_ids_proto.clone(),
-			}),
-			op!([ctx] mm_config_version_get {
-				version_ids: all_version_ids_proto.clone(),
-			}),
-			op!([ctx] kv_config_version_get {
-				version_ids: all_version_ids_proto.clone(),
-			}),
-			op!([ctx] identity_config_version_get {
-				version_ids: all_version_ids_proto.clone(),
-			}),
-			op!([ctx] module_game_version_get {
-				version_ids: all_version_ids_proto.clone(),
-			}),
-		)?;
+	let (
+		db_configs_res,
+		cdn_configs_res,
+		mm_configs_res,
+		kv_configs_res,
+		identity_configs_res,
+		module_configs_res,
+	) = tokio::try_join!(
+		op!([ctx] db_game_version_get {
+			version_ids: all_version_ids_proto.clone(),
+		}),
+		op!([ctx] cdn_version_get {
+			version_ids: all_version_ids_proto.clone(),
+		}),
+		op!([ctx] mm_config_version_get {
+			version_ids: all_version_ids_proto.clone(),
+		}),
+		op!([ctx] kv_config_version_get {
+			version_ids: all_version_ids_proto.clone(),
+		}),
+		op!([ctx] identity_config_version_get {
+			version_ids: all_version_ids_proto.clone(),
+		}),
+		op!([ctx] module_game_version_get {
+			version_ids: all_version_ids_proto.clone(),
+		}),
+	)?;
 
 	let versions = cloud_versions
 		.iter()
@@ -63,6 +72,13 @@ async fn handle(
 			backend::cloud::GameVersion {
 				version_id: Some(version_id_proto),
 				config: Some(backend::cloud::VersionConfig {
+					db: db_configs_res
+						.versions
+						.iter()
+						.find(|db_version| {
+							db_version.version_id.as_ref() == Some(&version_id_proto)
+						})
+						.map(|v| v.config.clone().unwrap()),
 					cdn: cdn_configs_res
 						.versions
 						.iter()
