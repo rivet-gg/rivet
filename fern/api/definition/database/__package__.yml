@@ -57,7 +57,7 @@ types:
     properties:
       database_id: optional<uuid>
       collection: string
-      fields: map<string, unknown>
+      entry: map<string, unknown>
 
   InsertResponse:
     properties:

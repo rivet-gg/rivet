@@ -374,6 +374,7 @@ dependencies = [
  "chirp-client",
  "chrono",
  "cloud-game-token-create",
+ "db-query-run",
  "faker-build",
  "faker-game",
  "faker-game-namespace",

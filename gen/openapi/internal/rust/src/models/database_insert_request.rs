@@ -17,16 +17,16 @@ pub struct DatabaseInsertRequest {
     pub collection: String,
     #[serde(rename = "database_id", skip_serializing_if = "Option::is_none")]
     pub database_id: Option<uuid::Uuid>,
-    #[serde(rename = "fields")]
-    pub fields: ::std::collections::HashMap<String, serde_json::Value>,
+    #[serde(rename = "entry")]
+    pub entry: ::std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl DatabaseInsertRequest {
-    pub fn new(collection: String, fields: ::std::collections::HashMap<String, serde_json::Value>) -> DatabaseInsertRequest {
+    pub fn new(collection: String, entry: ::std::collections::HashMap<String, serde_json::Value>) -> DatabaseInsertRequest {
         DatabaseInsertRequest {
             collection,
             database_id: None,
-            fields,
+            entry,
         }
     }
 }

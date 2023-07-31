@@ -41,6 +41,7 @@ token-revoke = { path = "../../pkg/token/ops/revoke" }
 user-get = { path = "../../pkg/user/ops/get" }
 user-identity-get = { path = "../../pkg/user-identity/ops/get" }
 user-team-list = { path = "../../pkg/user/ops/team-list" }
+db-query-run = { path = "../../pkg/db/ops/query-run" }
 
 [dev-dependencies]
 rivet-connection = { path = "../../../lib/connection" }

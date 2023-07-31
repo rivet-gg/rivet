@@ -2746,12 +2746,12 @@ components:
         database_id:
           format: uuid
           type: string
-        fields:
+        entry:
           additionalProperties: {}
           type: object
       required:
       - collection
-      - fields
+      - entry
       type: object
     DatabaseInsertResponse:
       properties:

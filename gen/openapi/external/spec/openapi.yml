@@ -9731,12 +9731,12 @@ components:
           format: uuid
         collection:
           type: string
-        fields:
+        entry:
           type: object
           additionalProperties: {}
       required:
         - collection
-        - fields
+        - entry
     DatabaseInsertResponse:
       type: object
       properties:
