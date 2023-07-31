@@ -1,0 +1,7 @@
+[service]
+name = "db-game-version-get"
+
+[runtime]
+kind = "rust"
+
+[operation]

@@ -1,0 +1,7 @@
+[service]
+name = "db-resolve-name-id"
+
+[runtime]
+kind = "rust"
+
+[operation]

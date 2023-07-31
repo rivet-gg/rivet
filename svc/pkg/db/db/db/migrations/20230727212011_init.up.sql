@@ -1,3 +1,4 @@
+-- Databases
 CREATE TABLE databases (
 	database_id UUID PRIMARY KEY,
 	database_id_short TEXT NOT NULL UNIQUE,
@@ -13,5 +14,12 @@ CREATE TABLE database_schema_history (
 	create_ts INT NOT NULL,
 	schema BYTES NOT NULL,
 	INDEX (database_id, create_ts ASC)
+);
+
+-- Game version
+CREATE TABLE game_versions (
+	version_id UUID PRIMARY KEY,  -- References db-game.versions
+	database_name_id TEXT NOT NULL,  -- References databases.name_id, will be created if needed
+	schema BYTES NOT NULL
 );
 

@@ -2914,6 +2914,48 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2e66c9d817f1720209181c316d28635c050fa304f9c79e47a520882661b7308"
 
 [[package]]
+name = "db-game-version-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "faker-game",
+ "faker-game-version",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "db-game-version-prepare"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "db-resolve-name-id",
+ "faker-game",
+ "game-get",
+ "prost 0.10.4",
+ "rivet-operation",
+]
+
+[[package]]
+name = "db-game-version-publish"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "db-game-version-get",
+ "db-game-version-prepare",
+ "faker-game",
+ "itertools",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+ "unzip-n",
+]
+
+[[package]]
 name = "db-query-run"
 version = "0.0.1"
 dependencies = [
@@ -2921,6 +2963,16 @@ dependencies = [
  "chirp-worker",
  "rivet-operation",
  "rivet-util-db",
+ "sqlx",
+]
+
+[[package]]
+name = "db-resolve-name-id"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "rivet-operation",
  "sqlx",
 ]
 

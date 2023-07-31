@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.db.game_version_publish;
+
+import "proto/common.proto";
+import "proto/backend/db.proto";
+
+message Request {
+	rivet.common.Uuid version_id = 1;
+	rivet.backend.db.GameVersionConfig config = 2;
+	rivet.backend.db.GameVersionConfigCtx config_ctx = 3;
+}
+
+message Response {
+
+}

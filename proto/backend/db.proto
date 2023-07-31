@@ -10,25 +10,19 @@ message GameNamespaceConfig {
 }
 
 // MARK: Game Version Config
-message GameVersionConfig {	
-	/*
-	message Database {
-		string key = 1;
-		rivet.common.Uuid database_id = 2;
-	}
-
-	repeated Database databases = 1;
-	*/
+message GameVersionConfig {
+	string database_name_id = 1;
+	Schema schema = 2;
 }
 
 // MARK: Game Version Config Context
 message GameVersionConfigCtx {
-
+	optional rivet.common.Uuid database_id = 1;
 }
 
 // MARK: Game Version Config Meta
 message GameVersionConfigMeta {
-	
+
 }
 
 // Database

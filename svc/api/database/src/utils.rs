@@ -2,7 +2,7 @@ use api_helper::anchor::WatchResponse;
 use rivet_api::models;
 use rivet_operation::prelude::*;
 
-pub async fn validate_config(
+pub async fn database_for_namespace(
 	ctx: &OperationContext<()>,
 	namespace_id: common::Uuid,
 ) -> GlobalResult<()> {
@@ -12,7 +12,7 @@ pub async fn validate_config(
 	.await?;
 	let namespace = internal_unwrap_owned!(namespaces_res.namespaces.first());
 
-	internal_panic!("unimplemented");
+	todo!();
 
 	// let version_id = internal_unwrap!(namespace.version_id);
 	// let config_res = op!([ctx] database_game_version_get {

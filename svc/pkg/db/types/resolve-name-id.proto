@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.db.resolve_name_id;
+
+import "proto/common.proto";
+
+message Request {
+	message Database {
+		rivet.common.Uuid team_id = 1;
+		string name_id = 2;
+	}
+
+	repeated Database name_ids = 1;
+}
+
+message Response {
+	message Database {
+		rivet.common.Uuid team_id = 1;
+		string name_id = 2;
+		rivet.common.Uuid database_id = 3;
+	}
+
+	repeated Database databases = 1;
+}
