@@ -33,15 +33,19 @@ url = "2.2.2"
 urlencoding = "2.1.0"
 uuid = { version = "1", features = ["v4"] }
 
+db-game-version-get = { path = "../../pkg/db/ops/game-version-get" }
+db-get = { path = "../../pkg/db/ops/get" }
+db-query-run = { path = "../../pkg/db/ops/query-run" }
 game-get = { path = "../../pkg/game/ops/get" }
 game-namespace-get = { path = "../../pkg/game/ops/namespace-get" }
+game-namespace-list = { path = "../../pkg/game/ops/namespace-list" }
 game-user-get = { path = "../../pkg/game-user/ops/get" }
 mm-lobby-get = { path = "../../pkg/mm/ops/lobby-get" }
+team-member-get = { path = "../../pkg/team/ops/member-get" }
 token-revoke = { path = "../../pkg/token/ops/revoke" }
 user-get = { path = "../../pkg/user/ops/get" }
 user-identity-get = { path = "../../pkg/user-identity/ops/get" }
 user-team-list = { path = "../../pkg/user/ops/team-list" }
-db-query-run = { path = "../../pkg/db/ops/query-run" }
 
 [dev-dependencies]
 rivet-connection = { path = "../../../lib/connection" }

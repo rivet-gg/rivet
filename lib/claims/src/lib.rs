@@ -404,6 +404,7 @@ pub mod ent {
 pub trait ClaimsDecode {
 	fn as_refresh(&self) -> GlobalResult<ent::Refresh>;
 	fn as_user(&self) -> GlobalResult<ent::User>;
+	fn as_user_option(&self) -> GlobalResult<Option<ent::User>>;
 	fn as_game_namespace_public(&self) -> GlobalResult<ent::GameNamespacePublic>;
 	fn as_game_namespace_public_option(&self) -> GlobalResult<Option<ent::GameNamespacePublic>>;
 	fn as_matchmaker_lobby(&self) -> GlobalResult<ent::MatchmakerLobby>;
@@ -411,6 +412,7 @@ pub trait ClaimsDecode {
 	fn as_matchmaker_player(&self) -> GlobalResult<ent::MatchmakerPlayer>;
 	fn as_job_run(&self) -> GlobalResult<ent::JobRun>;
 	fn as_game_cloud(&self) -> GlobalResult<ent::GameCloud>;
+	fn as_game_cloud_option(&self) -> GlobalResult<Option<ent::GameCloud>>;
 	fn as_game_namespace_development_option(
 		&self,
 	) -> GlobalResult<Option<ent::GameNamespaceDevelopment>>;
@@ -448,6 +450,16 @@ impl ClaimsDecode for schema::Claims {
 			})
 			.ok_or(err_code!(CLAIMS_MISSING_ENTITLEMENT, entitlement = "User"))
 			.and_then(std::convert::identity)
+	}
+
+	fn as_user_option(&self) -> GlobalResult<Option<ent::User>> {
+		self.entitlements
+			.iter()
+			.find_map(|ent| match &ent.kind {
+				Some(schema::entitlement::Kind::User(ent)) => Some(ent::User::try_from(ent)),
+				_ => None,
+			})
+			.transpose()
 	}
 
 	fn as_game_namespace_public(&self) -> GlobalResult<ent::GameNamespacePublic> {
@@ -550,6 +562,18 @@ impl ClaimsDecode for schema::Claims {
 				entitlement = "GameCloud"
 			))
 			.and_then(std::convert::identity)
+	}
+
+	fn as_game_cloud_option(&self) -> GlobalResult<Option<ent::GameCloud>> {
+		self.entitlements
+			.iter()
+			.find_map(|ent| match &ent.kind {
+				Some(schema::entitlement::Kind::GameCloud(ent)) => {
+					Some(ent::GameCloud::try_from(ent))
+				}
+				_ => None,
+			})
+			.transpose()
 	}
 
 	fn as_game_namespace_development_option(

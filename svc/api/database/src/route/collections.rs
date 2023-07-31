@@ -1,11 +1,11 @@
 use api_helper::ctx::Ctx;
-use proto::backend::{self, pkg::*};
+use proto::backend;
 use rivet_api::models;
 use rivet_operation::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::{auth::Auth, utils};
+use crate::auth::Auth;
 
 #[derive(Deserialize, Serialize)]
 pub struct SingleQuery {
@@ -97,7 +97,7 @@ pub async fn fetch(
 		query: Some(backend::db::Query {
 			kind: Some(backend::db::query::Kind::Fetch(backend::db::query::Fetch {
 				collection: collection.clone(),
-				filters: filters,
+				filters,
 			})),
 		}),
 	})
@@ -132,7 +132,7 @@ pub async fn insert(
 		query: Some(backend::db::Query {
 			kind: Some(backend::db::query::Kind::Insert(backend::db::query::Insert {
 				collection: collection.clone(),
-				entry: entry,
+				entry,
 			})),
 		}),
 	})

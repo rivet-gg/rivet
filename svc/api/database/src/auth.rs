@@ -2,11 +2,10 @@ use api_helper::{
 	auth::{ApiAuth, AuthRateLimitCtx},
 	util::{as_auth_expired, basic_rate_limit},
 };
-use proto::claims::Claims;
+use proto::{backend::pkg::*, claims::Claims};
 use rivet_claims::ClaimsDecode;
 use rivet_operation::prelude::*;
-
-use crate::{assert, utils};
+use std::collections::HashSet;
 
 /// Information derived from the authentication middleware.
 pub struct Auth {
@@ -42,201 +41,126 @@ impl Auth {
 			.ok_or_else(|| err_code!(API_UNAUTHORIZED))
 	}
 
-	pub async fn user(&self, ctx: &OperationContext<()>) -> GlobalResult<rivet_claims::ent::User> {
-		let claims = self.claims()?;
-		let user_ent = claims.as_user()?;
-
-		let user_res = op!([ctx] user_get {
-			user_ids: vec![user_ent.user_id.into()],
-		})
-		.await?;
-		let user = internal_unwrap_owned!(user_res.users.first());
-
-		// Verify user is not deleted
-		if user.delete_complete_ts.is_some() {
-			let jti = internal_unwrap_owned!(claims.jti);
-			op!([ctx] token_revoke {
-				jtis: vec![jti],
-			})
-			.await?;
-
-			panic_with!(TOKEN_REVOKED);
-		}
-
-		Ok(user_ent)
-	}
-
-	pub fn lobby(&self) -> GlobalResult<rivet_claims::ent::MatchmakerLobby> {
-		self.claims()?.as_matchmaker_lobby()
-	}
-
-	pub fn game_ns_dev_option(
-		&self,
-	) -> GlobalResult<Option<rivet_claims::ent::GameNamespaceDevelopment>> {
-		if let Some(claims) = &self.claims {
-			Ok(claims.as_game_namespace_development_option()?)
-		} else {
-			Ok(None)
-		}
-	}
-
 	pub async fn database(
 		&self,
 		ctx: &OperationContext<()>,
 		database_id: Option<Uuid>,
 	) -> GlobalResult<Uuid> {
-		todo!()
-		// let database_id = if let Some(database_id) = database_id {
-		// 	if let Some(user_id) = self.user(ctx).await? {
-		// 		todo!()
-		// 	} else if let Some(game_id) = self.cloud(ctx).await? {
-		// 		todo!()
-		// 	}
-		// } else if let Some(game_ns_dev) = self.game_ns_dev_option().await? {
-		// 	todo!()
-		// } else if let Ok(lobby_ent) = self.lobby() {
-		// 	let lobbies_res = op!([ctx] mm_lobby_get {
-		// 		lobby_ids: vec![lobby_ent.lobby_id.into()],
-		// 		include_stopped: false,
-		// 	})
-		// 	.await?;
+		let claims = self.claims()?;
 
-		// 	let lobby = internal_unwrap_owned!(lobbies_res.lobbies.first());
+		let database_id = if let Some(database_id) = database_id {
+			if let Some(user) = claims.as_user_option()? {
+				// Get database owner team
+				let database_res = op!([ctx] db_get {
+					database_ids: vec![database_id.into()],
+				})
+				.await?;
+				let database = internal_unwrap_owned!(database_res.databases.first());
+				let db_team_id = internal_unwrap!(database.owner_team_id).as_uuid();
 
-		// 	todo!()
-		// } else {
-		// 	panic_with!(API_UNAUTHORIZED);
-		// };
+				// Check if user is a member of the team
+				let member_res = op!([ctx] team_member_get {
+					members: vec![team::member_get::request::TeamMember {
+						team_id: Some(db_team_id.into()),
+						user_id: Some(user.user_id.into()),
+					}]
+				})
+				.await?;
+				assert_with!(member_res.members.len() == 1, API_UNAUTHORIZED);
 
-		// Ok(database_id)
+				database_id
+			} else if let Some(game) = claims.as_game_cloud_option()? {
+				// Get namespace IDs associated with this token
+				let ns_res = op!([ctx] game_namespace_list {
+					game_ids: vec![game.game_id.into()],
+				})
+				.await?;
+				let namespace_ids = internal_unwrap_owned!(ns_res.games.first())
+					.namespace_ids
+					.clone();
+
+				// Get the version IDs associated with these namespaces
+				let ns_res = op!([ctx] game_namespace_get {
+					namespace_ids: namespace_ids,
+				})
+				.await?;
+				let version_ids = ns_res
+					.namespaces
+					.iter()
+					.flat_map(|x| x.version_id)
+					.map(|x| x.as_uuid())
+					.collect::<HashSet<Uuid>>()
+					.into_iter()
+					.map(common::Uuid::from)
+					.collect::<Vec<_>>();
+
+				// Get the database IDs associated with these versions
+				let db_version_res = op!([ctx] db_game_version_get {
+					version_ids: version_ids,
+				})
+				.await?;
+
+				// Check if one of the versions for this game uses the given database
+				let version_matches = db_version_res
+					.versions
+					.iter()
+					.filter_map(|x| x.config_meta.as_ref())
+					.filter_map(|x| x.database_id)
+					.any(|x| x.as_uuid() == database_id);
+				assert_with!(version_matches, API_UNAUTHORIZED);
+
+				database_id
+			} else {
+				panic_with!(API_UNAUTHORIZED)
+			}
+		} else if let Some(game_ns_dev) = claims.as_game_namespace_development_option()? {
+			self.database_for_namespace(ctx, game_ns_dev.namespace_id)
+				.await?
+		} else if let Ok(lobby_ent) = claims.as_matchmaker_lobby() {
+			// Get lobby's namespace ID
+			let lobbies_res = op!([ctx] mm_lobby_get {
+				lobby_ids: vec![lobby_ent.lobby_id.into()],
+				include_stopped: false,
+			})
+			.await?;
+			let lobby = internal_unwrap_owned!(lobbies_res.lobbies.first());
+			let namespace_id = internal_unwrap!(lobby.namespace_id).as_uuid();
+
+			self.database_for_namespace(ctx, namespace_id).await?
+		} else {
+			panic_with!(API_UNAUTHORIZED);
+		};
+
+		Ok(database_id)
 	}
 
-	// /// Validates that the agent can write to a given game.
-	// pub async fn namespace(
-	// 	&self,
-	// 	ctx: &OperationContext<()>,
-	// 	namespace_id: Option<Uuid>,
-	// 	allow_users: bool,
-	// ) -> GlobalResult<Uuid> {
-	// 	if let Some(namespace_id) = namespace_id {
-	// 		self.namespace_from_cloud(ctx, namespace_id).await
-	// 	} else if let Some(x) = self.game_ns_dev_option()? {
-	// 		Ok(x.namespace_id)
-	// 	} else {
-	// 		self.namespace_from_user_or_lobby(ctx, allow_users).await
-	// 	}
-	// }
+	async fn database_for_namespace(
+		&self,
+		ctx: &OperationContext<()>,
+		namespace_id: Uuid,
+	) -> GlobalResult<Uuid> {
+		// Get namespace's version ID
+		let namespaces_res = op!([ctx] game_namespace_get {
+			namespace_ids: vec![namespace_id.into()],
+		})
+		.await?;
+		let version_id =
+			internal_unwrap!(internal_unwrap_owned!(namespaces_res.namespaces.first()).version_id)
+				.as_uuid();
 
-	// /// Validates that the agent can write to a given game.
-	// pub async fn namespace_from_user_or_lobby(
-	// 	&self,
-	// 	ctx: &OperationContext<()>,
-	// 	allow_users: bool,
-	// ) -> GlobalResult<Uuid> {
-	// 	let namespace_id = if let Ok(lobby_ent) = self.lobby() {
-	// 		let lobbies_res = op!([ctx] mm_lobby_get {
-	// 			lobby_ids: vec![lobby_ent.lobby_id.into()],
-	// 			include_stopped: false,
-	// 		})
-	// 		.await?;
+		// Get version's database ID
+		let versions_res = op!([ctx] db_game_version_get {
+			version_ids: vec![version_id.into()],
+		})
+		.await?;
+		let version = unwrap_with_owned!(
+			versions_res.versions.first(),
+			API_FORBIDDEN,
+			reason = "Database service not enabled for this namespace"
+		);
+		let database_id =
+			internal_unwrap!(internal_unwrap!(version.config_meta).database_id).as_uuid();
 
-	// 		let lobby = internal_unwrap_owned!(lobbies_res.lobbies.first());
-
-	// 		internal_unwrap_owned!(lobby.namespace_id)
-	// 	} else if allow_users {
-	// 		let claims = self.claims()?;
-	// 		let game_user_ent = claims.as_game_user()?;
-
-	// 		let game_users_res = op!([ctx] game_user_get {
-	// 			game_user_ids: vec![game_user_ent.game_user_id.into()],
-	// 		})
-	// 		.await?;
-	// 		let game_user = internal_unwrap_owned!(game_users_res.game_users.first());
-
-	// 		// Verify that game user is not deleted
-	// 		if game_user.deleted_ts.is_some() {
-	// 			let jti = internal_unwrap_owned!(claims.jti);
-	// 			op!([ctx] token_revoke {
-	// 				jtis: vec![jti],
-	// 			})
-	// 			.await?;
-
-	// 			panic_with!(TOKEN_REVOKED);
-	// 		}
-
-	// 		*internal_unwrap!(game_user.namespace_id)
-	// 	} else {
-	// 		panic_with!(API_UNAUTHORIZED);
-	// 	};
-
-	// 	utils::validate_config(ctx, namespace_id).await?;
-
-	// 	Ok(namespace_id.as_uuid())
-	// }
-
-	// /// Validates that the agent can write to a given game.
-	// pub async fn namespace_from_cloud(
-	// 	&self,
-	// 	ctx: &OperationContext<()>,
-	// 	namespace_id: Uuid,
-	// ) -> GlobalResult<Uuid> {
-	// 	let claims = self.claims()?;
-
-	// 	// Pre-fetch entitlements so we don't fetch the namespace if there is no ent
-	// 	let (user_ent, cloud_ent) = if let Ok(ent) = self.user(ctx).await {
-	// 		(Some(ent), None)
-	// 	} else if let Ok(ent) = claims.as_game_cloud() {
-	// 		(None, Some(ent))
-	// 	} else {
-	// 		panic_with!(API_UNAUTHORIZED);
-	// 	};
-
-	// 	let namespaces_res = op!([ctx] game_namespace_get {
-	// 		namespace_ids: vec![namespace_id.into()],
-	// 	})
-	// 	.await?;
-	// 	let namespace = internal_unwrap_owned!(namespaces_res.namespaces.first());
-	// 	let game_id = internal_unwrap!(namespace.game_id);
-
-	// 	if let Some(user_ent) = user_ent {
-	// 		assert::user_registered(ctx, user_ent.user_id).await?;
-
-	// 		// Find the game's development team
-	// 		let dev_team_id = {
-	// 			let games_res = op!([ctx] game_get {
-	// 				game_ids: vec![*game_id],
-	// 			})
-	// 			.await?;
-	// 			let game = internal_unwrap_owned!(games_res.games.first(), "game not found");
-	// 			let dev_team_id = internal_unwrap!(game.developer_team_id);
-
-	// 			*dev_team_id
-	// 		};
-
-	// 		// Validate can write to the team
-	// 		let user_team_list_res = op!([ctx] user_team_list {
-	// 			user_ids: vec![user_ent.user_id.into()],
-	// 		})
-	// 		.await?;
-	// 		let user = internal_unwrap_owned!(user_team_list_res.users.first());
-
-	// 		let has_team = user
-	// 			.teams
-	// 			.iter()
-	// 			.any(|t| t.team_id.as_ref() == Some(&dev_team_id));
-
-	// 		assert_with!(has_team, GROUP_NOT_MEMBER);
-	// 	} else if let Some(cloud_ent) = cloud_ent {
-	// 		assert_eq_with!(
-	// 			cloud_ent.game_id,
-	// 			game_id.as_uuid(),
-	// 			API_FORBIDDEN,
-	// 			reason = "Game cloud token cannot write to this game",
-	// 		);
-	// 	}
-
-	// 	utils::validate_config(ctx, namespace_id.into()).await?;
-
-	// 	Ok(namespace_id)
-	// }
+		Ok(database_id)
+	}
 }

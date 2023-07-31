@@ -374,6 +374,8 @@ dependencies = [
  "chirp-client",
  "chrono",
  "cloud-game-token-create",
+ "db-game-version-get",
+ "db-get",
  "db-query-run",
  "faker-build",
  "faker-game",
@@ -383,6 +385,7 @@ dependencies = [
  "futures-util",
  "game-get",
  "game-namespace-get",
+ "game-namespace-list",
  "game-user-get",
  "http",
  "hyper",
@@ -404,6 +407,7 @@ dependencies = [
  "rivet-util-mm",
  "serde",
  "serde_json",
+ "team-member-get",
  "thiserror",
  "token-create",
  "token-revoke",
@@ -2956,6 +2960,16 @@ dependencies = [
  "rivet-operation",
  "sqlx",
  "unzip-n",
+]
+
+[[package]]
+name = "db-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "rivet-operation",
+ "sqlx",
 ]
 
 [[package]]
