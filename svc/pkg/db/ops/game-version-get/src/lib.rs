@@ -8,6 +8,7 @@ struct GameVersion {
 	version_id: Uuid,
 	database_name_id: String,
 	schema: Vec<u8>,
+	database_id: Uuid,
 }
 
 #[operation(name = "db-game-version-get")]
@@ -24,7 +25,7 @@ async fn handle(
 
 	let versions = sqlx::query_as::<_, GameVersion>(indoc!(
 		"
-		SELECT version_id, database_name_id, schema
+		SELECT version_id, database_name_id, schema, database_id
 		FROM game_versions
 		WHERE version_id = ANY($1)
 		"
@@ -41,7 +42,9 @@ async fn handle(
 				database_name_id: x.database_name_id,
 				schema: Some(schema),
 			}),
-			config_meta: Some(backend::db::GameVersionConfigMeta {}),
+			config_meta: Some(backend::db::GameVersionConfigMeta {
+				database_id: Some(x.database_id.into()),
+			}),
 		})
 	})
 	.collect::<GlobalResult<_>>()?;

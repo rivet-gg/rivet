@@ -19,7 +19,8 @@ CREATE TABLE database_schema_history (
 -- Game version
 CREATE TABLE game_versions (
 	version_id UUID PRIMARY KEY,  -- References db-game.versions
-	database_name_id TEXT NOT NULL,  -- References databases.name_id, will be created if needed
-	schema BYTES NOT NULL
+	database_name_id TEXT NOT NULL,  -- References databases (owner_team_id, name_id)
+	schema BYTES NOT NULL,
+	database_id UUID NOT NULL REFERENCES databases (database_id)
 );
 
