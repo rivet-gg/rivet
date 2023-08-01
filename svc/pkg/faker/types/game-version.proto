@@ -64,6 +64,7 @@ message Request {
 
 message Response {
 	rivet.common.Uuid version_id = 1;
+	rivet.backend.db.GameVersionConfigMeta db_config_meta = 4;
 	rivet.backend.matchmaker.VersionConfig mm_config = 2;
 	rivet.backend.matchmaker.VersionConfigMeta mm_config_meta = 3;
 }

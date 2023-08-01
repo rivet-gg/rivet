@@ -16,10 +16,14 @@ async fn handle(
 		config
 	} else {
 		backend::cloud::VersionConfig {
-			db: Some(backend::db::GameVersionConfig {
-				database_name_id: "test".into(),
-				schema: Some(backend::db::Schema::default()),
-			}),
+			db: if let Some(config) = ctx.override_db_config.clone() {
+				config.config
+			} else {
+				Some(backend::db::GameVersionConfig {
+					database_name_id: "test".into(),
+					schema: Some(backend::db::Schema::default()),
+				})
+			},
 			cdn: if let Some(config) = ctx.override_cdn_config.clone() {
 				config.config
 			} else {
@@ -157,15 +161,22 @@ async fn handle(
 		.await?;
 	}
 
+	let version_get = op!([ctx] db_game_version_get {
+		version_ids: vec![version_create_res.version_id.unwrap()],
+	})
+	.await?;
+	let db_version_data = version_get.versions.first().unwrap();
+
 	let version_get = op!([ctx] mm_config_version_get {
 		version_ids: vec![version_create_res.version_id.unwrap()],
 	})
 	.await?;
-	let version_data = version_get.versions.first().unwrap();
+	let mm_version_data = version_get.versions.first().unwrap();
 
 	Ok(faker::game_version::Response {
 		version_id: version_create_res.version_id,
-		mm_config: version_data.config.clone(),
-		mm_config_meta: version_data.config_meta.clone(),
+		db_config_meta: db_version_data.config_meta.clone(),
+		mm_config: mm_version_data.config.clone(),
+		mm_config_meta: mm_version_data.config_meta.clone(),
 	})
 }

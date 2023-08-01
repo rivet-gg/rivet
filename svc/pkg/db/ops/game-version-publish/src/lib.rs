@@ -15,6 +15,14 @@ async fn handle(
 	let context = internal_unwrap!(ctx.config_ctx);
 	let database_id = internal_unwrap!(context.database_id).as_uuid();
 
+	// Apply schema
+	let _ = msg!([ctx] db::msg::schema_apply(database_id) -> Result<db::msg::schema_apply_complete, db::msg::schema_apply_fail> {
+		database_id: Some(database_id.into()),
+		schema: Some(schema.clone()),
+	})
+	.await?;
+
+	// Update game version
 	let mut schema_buf = Vec::with_capacity(schema.encoded_len());
 	schema.encode(&mut schema_buf)?;
 

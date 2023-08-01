@@ -16,6 +16,7 @@ faker-cdn-site = { path = "../cdn-site" }
 region-list = { path = "../../../region/ops/list" }
 cloud-version-publish = { path = "../../../cloud/ops/version-publish" }
 mm-config-version-get = { path = "../../../mm-config/ops/version-get" }
+db-game-version-get = { path = "../../../db/ops/game-version-get" }
 game-namespace-version-set = { path = "../../../game/ops/namespace-version-set" }
 
 [dev-dependencies]

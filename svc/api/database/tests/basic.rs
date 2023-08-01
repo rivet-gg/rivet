@@ -17,6 +17,7 @@ struct Ctx {
 	game_id: Uuid,
 	primary_region_id: Uuid,
 	namespace_id: Uuid,
+	database_id: Uuid,
 	mm_config_meta: backend::matchmaker::VersionConfigMeta,
 }
 
@@ -54,7 +55,7 @@ impl Ctx {
 		);
 
 		let (primary_region_id, _) = Self::setup_region(&op_ctx).await;
-		let (game_id, _, namespace_id, _, mm_config_meta) =
+		let (game_id, _, namespace_id, db_config_meta, _, mm_config_meta) =
 			Self::setup_game(&op_ctx, primary_region_id).await;
 
 		Ctx {
@@ -62,6 +63,7 @@ impl Ctx {
 			game_id,
 			primary_region_id,
 			namespace_id,
+			database_id: db_config_meta.database_id.unwrap().as_uuid(),
 			mm_config_meta,
 		}
 	}
@@ -126,6 +128,7 @@ impl Ctx {
 		Uuid,
 		Uuid,
 		Uuid,
+		backend::db::GameVersionConfigMeta,
 		backend::matchmaker::VersionConfig,
 		backend::matchmaker::VersionConfigMeta,
 	) {
@@ -139,7 +142,7 @@ impl Ctx {
 
 		let game_version_res = op!([ctx] faker_game_version {
 			game_id: game_res.game_id,
-			override_database: Some(faker::game_version::request::OverrideDbConfig {
+			override_db_config: Some(faker::game_version::request::OverrideDbConfig {
 				config: Some(backend::db::GameVersionConfig {
 					database_name_id: "test".into(),
 					schema: Some(backend::db::Schema {
@@ -172,7 +175,7 @@ impl Ctx {
 						],
 					}),
 				})
-			})
+			}),
 			..Default::default()
 		})
 		.await
@@ -190,6 +193,7 @@ impl Ctx {
 			game_res.game_id.as_ref().unwrap().as_uuid(),
 			game_version_res.version_id.as_ref().unwrap().as_uuid(),
 			namespace_res.namespace_id.as_ref().unwrap().as_uuid(),
+			game_version_res.db_config_meta.clone().unwrap(),
 			game_version_res.mm_config.clone().unwrap(),
 			game_version_res.mm_config_meta.clone().unwrap(),
 		)
@@ -205,7 +209,7 @@ async fn generic() {
 		&ctx.config(&cloud_token),
 		"test".into(),
 		models::DatabaseInsertRequest {
-			database_id: None,
+			database_id: Some(ctx.database_id),
 			entry: {
 				let mut x = HashMap::new();
 				x.insert("my_int".into(), json!(42));
@@ -224,7 +228,7 @@ async fn generic() {
 		&ctx.config(&cloud_token),
 		"test".into(),
 		models::DatabaseFetchRequest {
-			database_id: None,
+			database_id: Some(ctx.database_id),
 			filters: Some(vec![models::DatabaseFilter {
 				field: "my_int".into(),
 				eq: Some(Some(json!(42))),

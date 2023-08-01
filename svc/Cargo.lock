@@ -3275,6 +3275,7 @@ dependencies = [
  "chirp-client",
  "chirp-worker",
  "cloud-version-publish",
+ "db-game-version-get",
  "faker-build",
  "faker-cdn-site",
  "faker-game",

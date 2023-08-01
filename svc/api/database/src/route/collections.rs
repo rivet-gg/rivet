@@ -101,8 +101,7 @@ pub async fn fetch(
 			})),
 		}),
 	})
-	.await
-	.unwrap();
+	.await?;
 
 	let entries = res
 		.fetched_entries
@@ -136,8 +135,7 @@ pub async fn insert(
 			})),
 		}),
 	})
-	.await
-	.unwrap();
+	.await?;
 
 	Ok(models::DatabaseInsertResponse {
 		ids: res.inserted_entries.clone(),
@@ -177,8 +175,7 @@ pub async fn update(
 			})),
 		}),
 	})
-	.await
-	.unwrap();
+	.await?;
 
 	Ok(models::DatabaseUpdateResponse {
 		updated_count: res.entries_affected as i32,
@@ -210,8 +207,7 @@ pub async fn delete(
 			})),
 		}),
 	})
-	.await
-	.unwrap();
+	.await?;
 
 	Ok(models::DatabaseDeleteResponse {
 		deleted_count: res.entries_affected as i32,
