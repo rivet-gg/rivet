@@ -2,7 +2,7 @@ use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
 use sqlx::Row;
 use std::{collections::HashMap, convert::TryInto};
-use util_db::ais;
+use util_db::{ais, entry_id::EntryId};
 
 use crate::sql_field::SqlField;
 
@@ -158,7 +158,7 @@ async fn run_query(
 				.fetch_all(pg_data)
 				.await?
 				.into_iter()
-				.map(|x| util_db::encode_id(x.0))
+				.map(|x| EntryId::new(x.0).encode())
 				.collect::<GlobalResult<Vec<_>>>()?;
 			let entries_affected: u64 = inserted_entries.len().try_into()?;
 

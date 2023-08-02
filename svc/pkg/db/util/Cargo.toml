@@ -9,4 +9,9 @@ edition = "2021"
 rivet-util = { path = "../../../../lib/util/core" }
 global-error = { path = "../../../../lib/global-error" }
 uuid = { version = "1", features = ["v4"] }
+aes-gcm = "0.10"
+bincode = "1.3"
+serde = { version = "1.0", features = ["derive"] }
+bs58 = "0.5.0"
+tracing = "0.1"
 

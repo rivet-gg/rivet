@@ -1,7 +1,7 @@
 use proto::backend;
 use rivet_operation::prelude::*;
 use sqlx::Row;
-use util_db::ais;
+use util_db::{ais, entry_id::EntryId};
 
 /// Helps with querying SQL fields.
 ///
@@ -109,8 +109,8 @@ impl SqlField {
 			(Self::Id, ft, VT::String(x)) => {
 				internal_assert_eq!(FT::String, ft, "unexpected field type");
 
-				let id = util_db::decode_id(&x)?;
-				builder.push_bind(id);
+				let id = EntryId::decode(&x)?;
+				builder.push_bind(id.entry_id);
 			}
 
 			// Generic types
@@ -160,7 +160,7 @@ impl SqlField {
 				internal_assert_eq!(FT::String, ft, "unexpected field type");
 
 				let id_raw = row.try_get::<i64, _>(i)?;
-				VT::String(util_db::encode_id(id_raw)?)
+				VT::String(EntryId::new(id_raw).encode()?)
 			}
 
 			// Generic types
