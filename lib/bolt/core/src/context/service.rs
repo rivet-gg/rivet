@@ -259,6 +259,10 @@ impl ServiceContextData {
 		self.name_snake()
 	}
 
+	pub fn cass_db_name(&self) -> String {
+		self.name_snake()
+	}
+
 	pub fn redis_db_name(&self) -> String {
 		self.config().service.name.clone()
 	}

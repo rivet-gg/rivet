@@ -18,6 +18,7 @@ pub async fn create(
 		RuntimeKind::CRDB { .. } => "sql",
 		RuntimeKind::ClickHouse { .. } => "sql",
 		RuntimeKind::Postgres { .. } => "sql",
+		RuntimeKind::Cassandra { .. } => "cql",
 		x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 	};
 
