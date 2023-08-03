@@ -3,7 +3,6 @@ syntax = "proto3";
 package rivet.backend.db;
 
 import "proto/common.proto";
-import "google/protobuf/empty.proto";
 
 // MARK: Game Namespace Config
 message GameNamespaceConfig {
@@ -41,68 +40,139 @@ message Schema {
 
 message Collection {
 	string name_id = 1;
-	repeated Field fields = 2;
+	string entry_schema = 2;
+	repeated Index indexes = 3;
+	// repeated Aggregate aggregates = 4;
 }
 
-message Field {
-	enum Type {
-		INT = 0;
-		FLOAT = 1;
-		BOOL = 2;
-		STRING = 3;
+message Index {
+	string name_id = 1;
+	repeated GroupBySchema group_by = 2;
+	repeated OrderBySchema order_by = 3;  // TODO: Order by value type
+	// repeated Filter filters = 4;
+	bool include_entry = 5;
+}
+
+/* message Aggregate {
+	message GroupBy {
+		string property = 1;
 	}
 
 	string name_id = 1;
-	Type type = 2;
-	bool optional = 3;
+	repeated GroupBySchema group_by = 2;
+	repeated Filter filters = 3;
+
+	oneof kind {
+		google.protobuf.Empty count = 101;
+		string sum = 102;
+		string average = 103;
+	}
+} */
+
+// Misc
+message GroupBySchema {
+	FieldPath field_path = 1;
+}
+
+message OrderBySchema {
+	enum Direction {
+		Asc = 0;
+		Desc = 1;
+	}
+
+	enum FieldType {
+		Int = 0;
+		Float = 1;
+		String = 2;
+	}
+
+	FieldPath field_path = 1;
+	FieldType field_type = 2;
+	Direction direction = 3;
+}
+
+message GroupBy {
+	FieldPath field_path = 1;
+
+	// JSON
+	string value = 2;
 }
 
 // Query
 message Query {
-	message Fetch {
+	message Get {
 		string collection = 1;
-		repeated Filter filters = 2;
+		string entry_id = 2;
 	}
 
 	message Insert {
 		string collection = 1;
-		map<string, Value> entry = 2;
+
+		// JSON
+		string entry = 2;
 	}
 
 	message Update {
+		message Set {
+			FieldPath field_path = 1;
+
+			// JSON
+			string value = 2;
+		}
+
 		string collection = 1;
-		repeated Filter filters = 2;
-		map<string, Value> set = 3;
+		string entry_id = 2;
+
+		repeated Set set = 3;
 	}
 
 	message Delete {
 		string collection = 1;
-		repeated Filter filters = 2;
+		string entry_id = 2;
 	}
 
+	message Query {
+		string collection = 1;
+		string index = 2;
+		repeated GroupBy group_by = 3;
+		// repeated Filter filters = 4;
+		// uint64 offset = 5;
+		// uint64 limit = 6;
+	}
+
+	/* message Aggregate {
+		string collection = 1;
+		string aggregate = 2;
+
+		// Field path -> JSON
+		map<string, string> group_by = 3;
+	} */
+
 	oneof kind {
-		Fetch fetch = 101;
+		Get get = 101;
 		Insert insert = 102;
 		Update update = 103;
 		Delete delete = 104;
-	}
-}
-
-message Value {
-	oneof type {
-		google.protobuf.Empty null = 1;
-		int64 int = 2;
-		double float = 3;
-		bool bool = 4;
-		string string = 5;
+		Query query = 105;
+		// Aggregate aggregate = 106;
 	}
 }
 
 message Filter {
-	string field = 1;
+	string property = 1;
 
 	oneof kind {
-		Value equal = 101;
+		FieldPath eq = 101;
+		FieldPath gt = 102;
+		FieldPath lt = 103;
+		FieldPath gte = 104;
+		FieldPath lte = 105;
+		// TODO: In set
+		// TODO: Not in set
 	}
+}
+
+message FieldPath {
+	repeated string field_path = 1;
 }
 

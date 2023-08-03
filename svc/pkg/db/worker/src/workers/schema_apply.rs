@@ -1,11 +1,13 @@
 use chirp_worker::prelude::*;
-use proto::backend::{self, pkg::*};
+use proto::backend::{self, db::FieldPath, pkg::*};
+use std::collections::HashSet;
 use util_db::ais;
+
+const MAX_FIELD_PATH_LEN: usize = 8;
 
 #[worker(name = "db-schema-apply")]
 async fn worker(ctx: OperationContext<db::msg::schema_apply::Message>) -> GlobalResult<()> {
 	let crdb = ctx.crdb("db-db").await?;
-	let pg_data = ctx.postgres("db-db-data").await?;
 
 	let database_id = internal_unwrap!(ctx.database_id).as_uuid();
 	let schema = internal_unwrap!(ctx.schema);
@@ -24,9 +26,6 @@ async fn worker(ctx: OperationContext<db::msg::schema_apply::Message>) -> Global
 			return fail(ctx.chirp(), database_id, error_code).await;
 		}
 	};
-
-	// Run migration
-	run_migration(&pg_data, &database_id_short, &merged_schema).await?;
 
 	msg!([ctx] db::msg::schema_apply_complete(database_id) {
 		database_id: Some(database_id.into()),
@@ -62,7 +61,7 @@ async fn update_schema(
 	let old_schema = backend::db::Schema::decode(old_schema_buf.as_slice())?;
 
 	// Merge schemas
-	let merged_schema = match merge_schemas(&old_schema, &new_schema) {
+	let merged_schema = match merge_schemas(&old_schema, &new_schema)? {
 		Ok(new_schema) => new_schema,
 		Err(error_code) => {
 			return Ok(Err(error_code));
@@ -104,13 +103,15 @@ async fn update_schema(
 fn merge_schemas(
 	old: &backend::db::Schema,
 	new: &backend::db::Schema,
-) -> Result<backend::db::Schema, db::msg::schema_apply_fail::ErrorCode> {
+) -> GlobalResult<Result<backend::db::Schema, db::msg::schema_apply_fail::ErrorCode>> {
 	let mut merged = old.clone();
 
 	// Merge collections
 	for new_collection in new.collections.iter() {
 		if !util::check::ident_snake(&new_collection.name_id) {
-			return Err(db::msg::schema_apply_fail::ErrorCode::InvalidCollectionName);
+			return Ok(Err(
+				db::msg::schema_apply_fail::ErrorCode::InvalidCollectionName,
+			));
 		}
 
 		// Get or insert existing collection
@@ -122,142 +123,112 @@ fn merge_schemas(
 			merged_collection
 		} else {
 			if merged.collections.len() > 128 {
-				return Err(db::msg::schema_apply_fail::ErrorCode::TooManyCollections);
+				return Ok(Err(
+					db::msg::schema_apply_fail::ErrorCode::TooManyCollections,
+				));
 			}
 
 			// Insert new collection
 			merged.collections.push(backend::db::Collection {
 				name_id: new_collection.name_id.clone(),
-				fields: Vec::new(),
+				entry_schema: r#"{"type":"object",properties":{}}"#.into(),
+				indexes: Vec::new(),
 			});
 			merged.collections.last_mut().unwrap()
 		};
 
-		// Merge fields
-		for new_field in new_collection.fields.iter() {
-			// Validate field
-			if !util::check::ident_snake(&new_field.name_id) {
-				return Err(db::msg::schema_apply_fail::ErrorCode::InvalidFieldName);
+		// TODO: Validate that the entry schema is a superset
+		merged_collection.entry_schema = new_collection.entry_schema.clone();
+
+		// Merge indexes
+		for new_index in new_collection.indexes.iter() {
+			// Validate index
+			if !util::check::ident_snake(&new_index.name_id) {
+				return Ok(Err(db::msg::schema_apply_fail::ErrorCode::InvalidIndexName));
 			}
 
-			if let Some(merged_field) = merged_collection
-				.fields
+			// Validate group by
+			if new_index.group_by.len() > 8 {
+				return Ok(Err(db::msg::schema_apply_fail::ErrorCode::TooManyGroupBy));
+			}
+			let mut group_by_paths = HashSet::<&Vec<String>>::new();
+			for group_by in &new_index.group_by {
+				// TODO: Validate field path matches valid entry schema
+				if let Err(err) = validate_field_path(internal_unwrap!(group_by.field_path)) {
+					return Ok(Err(err));
+				}
+
+				if group_by_paths.insert(&internal_unwrap!(group_by.field_path).field_path) {
+					return Ok(Err(db::msg::schema_apply_fail::ErrorCode::DuplicateGroupBy));
+				}
+			}
+
+			// Validate order by
+			if new_index.order_by.len() > 1 {
+				return Ok(Err(db::msg::schema_apply_fail::ErrorCode::TooManyOrderBy));
+			}
+			let mut order_by_paths = HashSet::<&Vec<String>>::new();
+			for order_by in &new_index.order_by {
+				// TODO: Validate field path matches valid entry schema
+				// TODO: Validate field type & direction type
+				if let Err(err) = validate_field_path(internal_unwrap!(order_by.field_path)) {
+					return Ok(Err(err));
+				}
+				let _ = backend::db::order_by_schema::FieldType::from_i32(order_by.field_type);
+				let _ = backend::db::order_by_schema::Direction::from_i32(order_by.direction);
+
+				if order_by_paths.insert(&internal_unwrap!(order_by.field_path).field_path) {
+					return Ok(Err(db::msg::schema_apply_fail::ErrorCode::DuplicateOrderBy));
+				}
+			}
+
+			if let Some(merged_index) = merged_collection
+				.indexes
 				.iter_mut()
-				.find(|x| x.name_id == new_field.name_id)
+				.find(|x| x.name_id == new_index.name_id)
 			{
-				// Check existing field
-				if merged_field.r#type != new_field.r#type {
-					return Err(db::msg::schema_apply_fail::ErrorCode::FieldTypeChanged);
+				// Validate indexes are identicatl
+				if !check_index_eq(merged_index, new_index) {
+					return Ok(Err(db::msg::schema_apply_fail::ErrorCode::IndexChanged));
 				}
-				if new_field.optional && !merged_field.optional {
-					return Err(db::msg::schema_apply_fail::ErrorCode::FieldOptionalDisabled);
-				}
-
-				// Update field
-				merged_field.optional = new_field.optional;
 			} else {
-				if new_collection.fields.len() > 32 {
-					return Err(db::msg::schema_apply_fail::ErrorCode::TooManyFields);
+				if new_collection.indexes.len() > 8 {
+					return Ok(Err(db::msg::schema_apply_fail::ErrorCode::TooManyIndexes));
 				}
 
-				// Insert new field
-				merged_collection.fields.push(new_field.clone());
+				// Insert new index
+				merged_collection.indexes.push(new_index.clone());
 			}
 		}
 	}
 
-	Ok(merged)
+	Ok(Ok(merged))
 }
 
-#[tracing::instrument(skip_all)]
-async fn run_migration(
-	pg_data: &PostgresPool,
-	database_id_short: &str,
-	schema: &backend::db::Schema,
-) -> GlobalResult<()> {
-	let script = generate_migration_script(database_id_short, schema)?;
+fn check_index_eq(a: &backend::db::Index, b: &backend::db::Index) -> bool {
+	a.group_by.len() == a.group_by.len()
+		&& a.group_by.iter().zip(a.group_by.iter()).all(|(a, b)| {
+			a.field_path.as_ref().map(|x| x.field_path)
+				== b.field_path.as_ref().map(|x| x.field_path)
+		}) && a.order_by.len() == a.order_by.len()
+		&& a.order_by.iter().zip(a.order_by.iter()).any(|(a, b)| {
+			a.field_path != b.field_path
+				&& a.field_type == b.field_type
+				&& a.direction != b.direction
+		}) && a.include_entry != a.include_entry
+}
 
-	// Execute transaction
-	let mut tx = pg_data.begin().await?;
-	for step in script {
-		tracing::info!(?step, "running migration step");
-		sqlx::query(&step).execute(&mut tx).await?;
+fn validate_field_path(
+	field_path: &FieldPath,
+) -> Result<(), db::msg::schema_apply_fail::ErrorCode::FieldPathEmpty> {
+	if field_path.field_path.is_empty() {
+		return Err(db::msg::schema_apply_fail::ErrorCode::FieldPathEmpty);
 	}
-	tx.commit().await?;
+	if field_path.field_path.len() > MAX_FIELD_PATH_LEN {
+		return Err(db::msg::schema_apply_fail::ErrorCode::FieldPathTooLong);
+	}
 
 	Ok(())
-}
-
-/// Generates script to idempotently create the database schema.
-///
-/// We use `SERIAL` instead of UUIDs for performance reasons. Neon recommends this and benchmarks
-/// show it as the fasteset. https://supabase.com/blog/choosing-a-postgres-primary-key#benchmarking-id-generation-with-uuid-ossp-and-pg_idkit
-fn generate_migration_script(
-	database_id_short: &str,
-	schema: &backend::db::Schema,
-) -> GlobalResult<Vec<String>> {
-	let mut instructions = Vec::new();
-
-	let schema_name = util_db::schema_name(&database_id_short);
-
-	for collection in &schema.collections {
-		let table_name = util_db::table_name(&collection.name_id);
-
-		// Create table
-		let columns = collection
-			.fields
-			.iter()
-			.map(|field| {
-				Ok(format!(
-					r#", "{column}" {ty} {opt}"#,
-					column = ais(&util_db::column_name(&field.name_id))?,
-					ty = type_proto_to_pg(field.r#type)?,
-					opt = if field.optional { "NULL" } else { "NOT NULL" }
-				))
-			})
-			.collect::<GlobalResult<Vec<_>>>()?
-			.join("");
-		instructions.push(format!(
-			r#"CREATE TABLE IF NOT EXISTS "{schema}"."{table}" (id SERIAL8 PRIMARY KEY {columns})"#,
-			schema = ais(&schema_name)?,
-			table = ais(&table_name)?,
-		));
-
-		// Add fields
-		for field in &collection.fields {
-			// Add column
-			instructions.push(format!(
-				r#"ALTER TABLE "{schema}"."{table}" ADD COLUMN IF NOT EXISTS "{column}" {ty} {opt}"#,
-				schema = ais(&schema_name)?,
-				table = ais(&table_name)?,
-				column = ais(&util_db::column_name(&field.name_id))?,
-				ty = type_proto_to_pg(field.r#type)?,
-				opt = if field.optional { "NULL" } else { "NOT NULL" }
-			));
-
-			// Remove nullable requirement if needed
-			if !field.optional {
-				instructions.push(format!(
-					r#"ALTER TABLE "{schema}"."{table}" ALTER COLUMN "{column}" DROP NOT NULL"#,
-					schema = ais(&schema_name)?,
-					table = ais(&table_name)?,
-					column = ais(&util_db::column_name(&field.name_id))?
-				));
-			}
-		}
-	}
-
-	Ok(instructions)
-}
-
-fn type_proto_to_pg(ty: i32) -> GlobalResult<&'static str> {
-	let pg = match internal_unwrap!(backend::db::field::Type::from_i32(ty)) {
-		backend::db::field::Type::Int => "INT8",
-		backend::db::field::Type::Float => "FLOAT8",
-		backend::db::field::Type::Bool => "BOOLEAN",
-		backend::db::field::Type::String => "TEXT",
-	};
-	Ok(pg)
 }
 
 #[tracing::instrument]
