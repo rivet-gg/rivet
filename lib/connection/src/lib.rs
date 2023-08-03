@@ -70,8 +70,8 @@ impl Connection {
 		self.pools.postgres(key)
 	}
 
-	pub async fn cassandra(&self, key: &str) -> Result<CassandraPool, rivet_pools::Error> {
-		self.pools.cassandra(key)
+	pub async fn cass(&self, key: &str) -> Result<CassPool, rivet_pools::Error> {
+		self.pools.cass(key)
 	}
 
 	pub async fn redis_cache(&self) -> Result<RedisPool, rivet_pools::Error> {

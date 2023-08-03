@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! cassandra_prepared_statement {
+macro_rules! cass_prepared_statement {
 	($name:ident => $expr:expr) => {
 		pub mod $name {
 			use super::*;

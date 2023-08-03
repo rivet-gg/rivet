@@ -10,7 +10,7 @@ pub enum Error {
 	MissingPostgresPool { key: Option<String> },
 
 	#[error("missing cassandra pool: {key:?}")]
-	MissingCassandraPool { key: Option<String> },
+	MissingCassPool { key: Option<String> },
 
 	#[error("missing redis pool: {key:?}")]
 	MissingRedisPool { key: Option<String> },

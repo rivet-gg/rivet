@@ -508,7 +508,7 @@ impl ServiceContextData {
 			.collect()
 	}
 
-	pub async fn cassandra_dependencies(&self) -> Vec<ServiceContext> {
+	pub async fn cass_dependencies(&self) -> Vec<ServiceContext> {
 		self.dependencies()
 			.await
 			.iter()

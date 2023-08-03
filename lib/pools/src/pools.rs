@@ -6,7 +6,7 @@ use crate::Error;
 pub type NatsPool = async_nats::Client;
 pub type CrdbPool = sqlx::PgPool;
 pub type PostgresPool = sqlx::PgPool;
-pub type CassandraPool = Arc<scylla::Session>;
+pub type CassPool = Arc<scylla::Session>;
 pub type RedisPool = redis::aio::ConnectionManager;
 
 pub type RedisConn = redis::aio::ConnectionManager;
@@ -18,7 +18,7 @@ pub struct PoolsInner {
 	pub(crate) nats: Option<NatsPool>,
 	pub(crate) crdb: HashMap<String, CrdbPool>,
 	pub(crate) postgres: HashMap<String, PostgresPool>,
-	pub(crate) cassandra: HashMap<String, CassandraPool>,
+	pub(crate) cass: HashMap<String, CassPool>,
 	pub(crate) redis: HashMap<String, RedisPool>,
 }
 
@@ -48,8 +48,8 @@ impl PoolsInner {
 		&self.postgres
 	}
 
-	pub fn cassandra_map(&self) -> &HashMap<String, CassandraPool> {
-		&self.cassandra
+	pub fn cass_map(&self) -> &HashMap<String, CassPool> {
+		&self.cass
 	}
 
 	pub fn redis_map(&self) -> &HashMap<String, RedisPool> {
@@ -79,11 +79,11 @@ impl PoolsInner {
 			})
 	}
 
-	pub fn cassandra(&self, key: &str) -> Result<CassandraPool, Error> {
-		self.cassandra
+	pub fn cass(&self, key: &str) -> Result<CassPool, Error> {
+		self.cass
 			.get(key)
 			.cloned()
-			.ok_or_else(|| Error::MissingCassandraPool {
+			.ok_or_else(|| Error::MissingCassPool {
 				key: Some(key.to_owned()),
 			})
 	}
@@ -153,34 +153,34 @@ impl PoolsInner {
 		}
 
 		// Cassandra
-		for (db_name, pool) in self.cassandra_map() {
+		for (db_name, pool) in self.cass_map() {
 			let label = &[db_name.as_str()];
-			CASSANDRA_LATENCY_AVERAGE
+			CASS_LATENCY_AVERAGE
 				.with_label_values(label)
 				.set(pool.get_metrics().get_latency_avg_ms().unwrap_or(0) as f64 / 1000.);
-			CASSANDRA_LATENCY_P95.with_label_values(label).set(
+			CASS_LATENCY_P95.with_label_values(label).set(
 				pool.get_metrics()
 					.get_latency_percentile_ms(95.)
 					.unwrap_or(0) as f64 / 1000.,
 			);
-			CASSANDRA_LATENCY_P99.with_label_values(label).set(
+			CASS_LATENCY_P99.with_label_values(label).set(
 				pool.get_metrics()
 					.get_latency_percentile_ms(99.)
 					.unwrap_or(0) as f64 / 1000.,
 			);
-			CASSANDRA_ERRORS_NUM
+			CASS_ERRORS_NUM
 				.with_label_values(label)
 				.set(pool.get_metrics().get_errors_num() as i64);
-			CASSANDRA_QUERIES_NUM
+			CASS_QUERIES_NUM
 				.with_label_values(label)
 				.set(pool.get_metrics().get_queries_num() as i64);
-			CASSANDRA_ERRORS_ITER_NUM
+			CASS_ERRORS_ITER_NUM
 				.with_label_values(label)
 				.set(pool.get_metrics().get_errors_iter_num() as i64);
-			CASSANDRA_QUERIES_ITER_NUM
+			CASS_QUERIES_ITER_NUM
 				.with_label_values(label)
 				.set(pool.get_metrics().get_queries_iter_num() as i64);
-			CASSANDRA_RETRIES_NUM
+			CASS_RETRIES_NUM
 				.with_label_values(label)
 				.set(pool.get_metrics().get_retries_num() as i64);
 		}
