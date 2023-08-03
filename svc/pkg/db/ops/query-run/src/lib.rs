@@ -37,42 +37,42 @@ impl TryInto<db::query_run::response::Entry> for GetRow {
 rivet_pools::cass_prepared_statement!(get_entry => indoc!(
 	"
 	SELECT entry_id, value
-	FROM kv
+	FROM db_db_data.kv
 	WHERE database_id = ? AND collection = ? AND entry_id IN ?
 	"
 ));
 
 rivet_pools::cass_prepared_statement!(insert_entry => indoc!(
 	"
-	INSERT INTO kv (database_id, collection, entry_id, value)
+	INSERT INTO db_db_data.kv (database_id, collection, entry_id, value)
 	VALUES (?, ?, ?, ?)
 	"
 ));
 
 rivet_pools::cass_prepared_statement!(insert_entry_index => indoc!(
 	"
-	INSERT INTO kv_index (database_id, collection, \"index\", group_by, entry_id, entry)
+	INSERT INTO db_db_data.kv_index (database_id, collection, \"index\", group_by, entry_id, entry)
 	VALUES (?, ?, ?, ?, ?, ?)
 	"
 ));
 
-rivet_pools::cass_prepared_statement!(insert_entry_index_int_asc => indoc!(
+rivet_pools::cass_prepared_statement!(insert_entry_index_bigint_asc => indoc!(
 	"
-	INSERT INTO kv_index_int_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
+	INSERT INTO db_db_data.kv_index_bigint_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
 	VALUES (?, ?, ?, ?, ?, ?, ?)
 	"
 ));
 
-rivet_pools::cass_prepared_statement!(insert_entry_index_float_asc => indoc!(
+rivet_pools::cass_prepared_statement!(insert_entry_index_double_asc => indoc!(
 	"
-	INSERT INTO kv_index_double_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
+	INSERT INTO db_db_data.kv_index_double_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
 	VALUES (?, ?, ?, ?, ?, ?, ?)
 	"
 ));
 
-rivet_pools::cass_prepared_statement!(insert_entry_index_string_asc => indoc!(
+rivet_pools::cass_prepared_statement!(insert_entry_index_text_asc => indoc!(
 	"
-	INSERT INTO kv_index_text_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
+	INSERT INTO db_db_data.kv_index_text_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
 	VALUES (?, ?, ?, ?, ?, ?, ?)
 	"
 ));
@@ -250,7 +250,7 @@ async fn insert_entry(
 					let r = internal_unwrap_owned!(order_0_v.as_i64(), "rank not i64");
 					cass_data
 						.execute(
-							insert_entry_index_int_asc::prepare(&cass_data).await?,
+							insert_entry_index_bigint_asc::prepare(&cass_data).await?,
 							(d, c, i, g, ei, r, e),
 						)
 						.await?;
@@ -259,7 +259,7 @@ async fn insert_entry(
 					let r = internal_unwrap_owned!(order_0_v.as_f64(), "rank not f64");
 					cass_data
 						.execute(
-							insert_entry_index_float_asc::prepare(&cass_data).await?,
+							insert_entry_index_double_asc::prepare(&cass_data).await?,
 							(d, c, i, g, ei, r, e),
 						)
 						.await?;
@@ -268,14 +268,13 @@ async fn insert_entry(
 					let r = internal_unwrap_owned!(order_0_v.as_str(), "rank not f64");
 					cass_data
 						.execute(
-							insert_entry_index_string_asc::prepare(&cass_data).await?,
+							insert_entry_index_text_asc::prepare(&cass_data).await?,
 							(d, c, i, g, ei, r, e),
 						)
 						.await?;
 				}
 				_ => internal_panic!("todo"),
 			}
-			todo!()
 		} else {
 			internal_panic!("unreachable")
 		}

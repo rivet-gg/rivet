@@ -30,13 +30,13 @@ async fn basic(ctx: TestCtx) {
 					entry_schema: r#"{"type":"object", "properties":{}}"#.into(),
 					indexes: vec![
 						backend::db::Index {
-							name_id: "by_nothing".into(),
+							name_id: "nothing".into(),
 							group_by: vec![],
 							order_by: vec![],
 							include_entry: true,
 						},
 						backend::db::Index {
-							name_id: "by_my_int".into(),
+							name_id: "int".into(),
 							group_by: vec![backend::db::GroupBySchema {
 								field_path: field_path(&["my_int"]),
 							}],
@@ -44,13 +44,37 @@ async fn basic(ctx: TestCtx) {
 							include_entry: true,
 						},
 						backend::db::Index {
-							name_id: "by_my_int_order".into(),
+							name_id: "string_x_int".into(),
+							group_by: vec![backend::db::GroupBySchema {
+								field_path: field_path(&["my_string"]),
+							}],
+							order_by: vec![backend::db::OrderBySchema {
+								field_path: field_path(&["my_int"]),
+								field_type: backend::db::order_by_schema::FieldType::Int as i32,
+								direction: backend::db::order_by_schema::Direction::Asc as i32,
+							}],
+							include_entry: true,
+						},
+						backend::db::Index {
+							name_id: "int_x_float".into(),
 							group_by: vec![backend::db::GroupBySchema {
 								field_path: field_path(&["my_int"]),
 							}],
 							order_by: vec![backend::db::OrderBySchema {
 								field_path: field_path(&["my_float"]),
 								field_type: backend::db::order_by_schema::FieldType::Float as i32,
+								direction: backend::db::order_by_schema::Direction::Asc as i32,
+							}],
+							include_entry: true,
+						},
+						backend::db::Index {
+							name_id: "bool_x_string".into(),
+							group_by: vec![backend::db::GroupBySchema {
+								field_path: field_path(&["my_bool"]),
+							}],
+							order_by: vec![backend::db::OrderBySchema {
+								field_path: field_path(&["my_string"]),
+								field_type: backend::db::order_by_schema::FieldType::String as i32,
 								direction: backend::db::order_by_schema::Direction::Asc as i32,
 							}],
 							include_entry: true,
