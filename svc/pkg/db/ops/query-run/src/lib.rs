@@ -14,9 +14,15 @@ use std::{collections::HashMap, convert::TryInto};
 use util_db::{ais, entry_id::EntryId};
 
 #[derive(scylla::macros::FromRow)]
+struct Lwt {
+	applied: bool,
+}
+
+#[derive(scylla::macros::FromRow)]
 struct GetRow {
 	entry_id: Uuid,
 	value: Vec<u8>,
+	update_id: Uuid,
 }
 
 impl TryInto<db::query_run::response::Entry> for GetRow {
@@ -36,7 +42,7 @@ impl TryInto<db::query_run::response::Entry> for GetRow {
 
 rivet_pools::cass_prepared_statement!(get_entry => indoc!(
 	"
-	SELECT entry_id, value
+	SELECT entry_id, value, update_id
 	FROM db_db_data.kv
 	WHERE database_id = ? AND collection = ? AND entry_id IN ?
 	"
@@ -44,8 +50,8 @@ rivet_pools::cass_prepared_statement!(get_entry => indoc!(
 
 rivet_pools::cass_prepared_statement!(insert_entry => indoc!(
 	"
-	INSERT INTO db_db_data.kv (database_id, collection, entry_id, value)
-	VALUES (?, ?, ?, ?)
+	INSERT INTO db_db_data.kv (database_id, collection, entry_id, value, update_id)
+	VALUES (?, ?, ?, ?, ?)
 	"
 ));
 
@@ -74,6 +80,15 @@ rivet_pools::cass_prepared_statement!(insert_entry_index_text_asc => indoc!(
 	"
 	INSERT INTO db_db_data.kv_index_text_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
 	VALUES (?, ?, ?, ?, ?, ?, ?)
+	"
+));
+
+rivet_pools::cass_prepared_statement!(update_entry => indoc!(
+	"
+	UPDATE db_db_data.kv
+	SET value = ?, update_id = ?
+	WHERE database_id = ? AND collection = ? AND entry_id = ?
+	IF update_id = ?
 	"
 ));
 
@@ -172,7 +187,75 @@ async fn run_query(
 			})
 		}
 		backend::db::query::Kind::Update(update) => {
-			todo!()
+			let collection = get_collection(schema, &update.collection)?;
+
+			// TODO: Select value
+			// TODO: Update BSON
+			// TODO: Write value again with CTE
+			// TODO: Try again if CTE fails
+
+			let entry_id = internal_unwrap!(update.entry_id).as_uuid();
+
+			let mut attempt = 0;
+			loop {
+				// Read values
+				let entry = cass_data
+					.execute(
+						get_entry::prepare(&cass_data).await?,
+						(database_id, &update.collection, vec![entry_id]),
+					)
+					.await?
+					.maybe_first_row_typed::<GetRow>()?;
+				let Some(entry) = entry else {
+					// No entry to update
+					return Ok(Default::default());
+				};
+
+				// Convert value to JSON string
+				let mut value = bson::from_slice::<JsonValue>(entry.value.as_slice())?;
+
+				// Update the value
+				for set in &update.set {
+					let field_path = internal_unwrap!(set.field_path);
+					let set_value = serde_json::from_str::<JsonValue>(&set.value)?;
+					set_field_path(&mut value, field_path, set_value)?;
+				}
+
+				// TODO: Validate JSON schema
+
+				// Serialize the value
+				let value_buf = bson::to_vec(&value)?;
+
+				// Write values
+				let new_update_id = Uuid::new_v4();
+				let lwt = cass_data
+					.execute(
+						update_entry::prepare(&cass_data).await?,
+						(
+							value_buf,
+							new_update_id,
+							database_id,
+							&update.collection,
+							entry_id,
+							entry.update_id,
+						),
+					)
+					.await?
+					.first_row_typed::<Lwt>()?;
+				if lwt.applied {
+					break;
+				} else {
+					attempt += 1;
+					tracing::info!(?attempt, "lwt contention");
+					if attempt > 4 {
+						internal_panic!("too many lwt tries");
+					}
+					// TODO: Backoff?
+				}
+			}
+
+			// TODO: Impl this
+			Ok(Default::default())
 		}
 		backend::db::query::Kind::Delete(delete) => {
 			todo!()
@@ -190,8 +273,9 @@ async fn insert_entry(
 	value_str: String,
 ) -> GlobalResult<common::Uuid> {
 	let entry_id = Uuid::new_v4();
+	let update_id = Uuid::new_v4();
 
-	// TODO: Do this in batch?
+	// TODO: Do this in batch and/or parallelize it?
 
 	// Deserialize value
 	let value = serde_json::from_str::<JsonValue>(&value_str)?;
@@ -201,7 +285,13 @@ async fn insert_entry(
 	cass_data
 		.execute(
 			insert_entry::prepare(&cass_data).await?,
-			(database_id, &collection.name_id, entry_id, &value_bson),
+			(
+				database_id,
+				&collection.name_id,
+				entry_id,
+				&value_bson,
+				update_id,
+			),
 		)
 		.await?;
 
@@ -308,6 +398,39 @@ fn lookup_field_path_inner<'a>(
 			let index = field.parse::<usize>()?;
 			let value = internal_unwrap_owned!(arr.get(index));
 			lookup_field_path_inner(value, field_path)
+		}
+		_ => internal_panic!("field not found"),
+	}
+}
+
+fn set_field_path<'a>(
+	value: &'a mut JsonValue,
+	field_path: &'a FieldPath,
+	set: JsonValue,
+) -> GlobalResult<()> {
+	set_field_path_inner(value, field_path.field_path.as_slice(), set)
+}
+
+fn set_field_path_inner<'a>(
+	value: &'a mut JsonValue,
+	field_path: &'a [String],
+	set: JsonValue,
+) -> GlobalResult<()> {
+	if field_path.is_empty() {
+		*value = set;
+		return Ok(());
+	}
+	let field = &field_path[0];
+	let field_path = &field_path[1..];
+	match value {
+		JsonValue::Object(obj) => {
+			let value = internal_unwrap_owned!(obj.get_mut(field));
+			set_field_path_inner(value, field_path, set)
+		}
+		JsonValue::Array(arr) => {
+			let index = field.parse::<usize>()?;
+			let value = internal_unwrap_owned!(arr.get_mut(index));
+			set_field_path_inner(value, field_path, set)
 		}
 		_ => internal_panic!("field not found"),
 	}

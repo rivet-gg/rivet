@@ -3,6 +3,7 @@ CREATE TABLE kv (
 	collection text,
 	entry_id uuid,
 	value blob,
+	update_id uuid,
 	PRIMARY KEY ((database_id, collection, entry_id))
 );
 

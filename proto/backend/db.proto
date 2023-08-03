@@ -115,6 +115,11 @@ message Query {
 	}
 
 	message Update {
+		/* message Entry {
+			rivet.common.Uuid entry_id = 1;
+			// optional rivet.common.Uuid update_id = 2;
+		} */
+
 		message Set {
 			FieldPath field_path = 1;
 
@@ -123,7 +128,8 @@ message Query {
 		}
 
 		string collection = 1;
-		repeated rivet.common.Uuid entry_ids = 2;
+		rivet.common.Uuid entry_id = 2;
+		// repeated Entry entry_ids = 2;
 
 		repeated Set set = 3;
 	}

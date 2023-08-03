@@ -133,65 +133,41 @@ async fn basic(ctx: TestCtx) {
 		assert_eq!(1, res.entries.len());
 	}
 
-	// // Update entry by ID
-	// {
-	// 	let insert_set = {
-	// 		let mut x = HashMap::new();
-	// 		x.insert(
-	// 			"my_int".into(),
-	// 			Value {
-	// 				r#type: Some(VT::Int(123)),
-	// 			},
-	// 		);
-	// 		x
-	// 	};
-	// 	let res = op!([ctx] db_query_run {
-	// 		database_id: Some(database_id.into()),
-	// 		query: Some(backend::db::Query {
-	// 			kind: Some(backend::db::query::Kind::Update(backend::db::query::Update {
-	// 				collection: "test".into(),
-	// 				filters: vec![
-	// 					Filter {
-	// 						field: "_id".into(),
-	// 						kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(entry_id.clone())) })),
-	// 					}
-	// 				],
-	// 				set: insert_set
-	// 			})),
-	// 		}),
-	// 	})
-	// 	.await
-	// 	.unwrap();
-	// 	assert_eq!(1, res.entries_affected);
+	// Update entry by ID
+	{
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Update(backend::db::query::Update {
+					collection: "test".into(),
+					entry_id: Some(entry_id),
+					set: vec![
+						backend::db::query::update::Set {
+							field_path: field_path(&["my_int"]),
+							value: "123".into(),
+						}
+					]
+				})),
+			}),
+		})
+		.await
+		.unwrap();
 
-	// 	let res = op!([ctx] db_query_run {
-	// 		database_id: Some(database_id.into()),
-	// 		query: Some(backend::db::Query {
-	// 			kind: Some(backend::db::query::Kind::Fetch(backend::db::query::Fetch {
-	// 				collection: "test".into(),
-	// 				filters: vec![
-	// 					Filter {
-	// 						field: "_id".into(),
-	// 						kind: Some(FilterKind::Equal(Value { r#type: Some(VT::String(entry_id.clone())) })),
-	// 					}
-	// 				]
-	// 			})),
-	// 		}),
-	// 	})
-	// 	.await
-	// 	.unwrap();
-	// 	let fetched_entry = res.fetched_entries.first().unwrap();
-	// 	assert_eq!(
-	// 		VT::Int(123),
-	// 		fetched_entry
-	// 			.entry
-	// 			.get("my_int")
-	// 			.unwrap()
-	// 			.r#type
-	// 			.clone()
-	// 			.unwrap()
-	// 	);
-	// }
+		let res = op!([ctx] db_query_run {
+			database_id: Some(database_id.into()),
+			query: Some(backend::db::Query {
+				kind: Some(backend::db::query::Kind::Get(backend::db::query::Get {
+					collection: "test".into(),
+					entry_ids: vec![entry_id],
+				})),
+			}),
+		})
+		.await
+		.unwrap();
+		let entry = res.entries.first().unwrap();
+		let entry_json = serde_json::from_str::<serde_json::Value>(&entry.value).unwrap();
+		assert_eq!(123, entry_json.get("my_int").unwrap().as_i64().unwrap(),);
+	}
 
 	// // Update entry by user defined field
 	// {
