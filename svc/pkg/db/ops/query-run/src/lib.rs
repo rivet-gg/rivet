@@ -118,7 +118,7 @@ async fn run_query(
 						let cass_data = cass_data.clone();
 						let collection = collection.clone();
 
-						let value = serde_json::from_str(&entry.value)?;
+						let value = serde_json::from_str::<serde_json::Value>(&entry.value)?;
 						let value_bson = bson::to_vec(&value)?;
 
 						let entry_id = Uuid::new_v4();
