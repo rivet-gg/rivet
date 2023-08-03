@@ -11,11 +11,14 @@ message Request {
 }
 
 message Response {
-	message FetchEntry {
-		string entry = 1;
+	message Entry {
+		rivet.common.Uuid entry_id = 1;
+
+		// JSON
+		string value = 2;
 	}
 
-	repeated FetchEntry fetched_entries = 1;
-	repeated string inserted_entry_ids = 2;
+	repeated Entry entries = 1;
+	repeated rivet.common.Uuid inserted_entry_ids = 2;
 	uint64 entries_affected = 3;
 }

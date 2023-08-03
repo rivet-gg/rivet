@@ -13,6 +13,7 @@ use crate::pools::{CassPool, CrdbPool, NatsPool, PoolsInner, PostgresPool, Redis
 pub mod prelude {
 	pub use async_nats as nats;
 	pub use redis;
+	pub use scylla;
 	pub use sqlx;
 
 	pub use crate::pools::{CassPool, CrdbPool, NatsPool, PostgresPool, RedisConn, RedisPool};

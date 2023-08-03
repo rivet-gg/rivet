@@ -101,14 +101,17 @@ message GroupBy {
 message Query {
 	message Get {
 		string collection = 1;
-		repeated string entry_ids = 2;
+		repeated rivet.common.Uuid entry_ids = 2;
 	}
 
 	message Insert {
-		string collection = 1;
+		message Entry {
+			// JSON
+			string value = 1;
+		}
 
-		// JSON
-		string entry = 2;
+		string collection = 1;
+		repeated string entries = 2;
 	}
 
 	message Update {
@@ -120,14 +123,14 @@ message Query {
 		}
 
 		string collection = 1;
-		string entry_id = 2;
+		repeated rivet.common.Uuid entry_ids = 2;
 
 		repeated Set set = 3;
 	}
 
 	message Delete {
 		string collection = 1;
-		string entry_id = 2;
+		repeated rivet.common.Uuid entry_ids = 2;
 	}
 
 	message Query {

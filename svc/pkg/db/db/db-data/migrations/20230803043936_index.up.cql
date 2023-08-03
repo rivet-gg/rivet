@@ -3,8 +3,8 @@ CREATE TABLE kv_index (
 	collection text,
 	"index" text,
 	group_by frozen<map<text, text>>,
-	key text,
+	entry_id text,
 	entry blob,
-	PRIMARY KEY ((database_id, collection, "index", group_by), key)
+	PRIMARY KEY ((database_id, collection, "index", group_by), entry_id)
 );
 
