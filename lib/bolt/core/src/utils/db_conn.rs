@@ -14,6 +14,7 @@ pub struct DatabaseConnection {
 	pub cockroach_host: Option<String>,
 	pub clickhouse_host: Option<String>,
 	pub pg_url: Option<Url>,
+	pub cassandra_url: Option<Url>,
 
 	/// Reference to tunnels that these ports are proxied through. Tunnel will
 	/// close on drop.
@@ -31,6 +32,7 @@ impl DatabaseConnection {
 		let mut cockroach_host = None;
 		let mut clickhouse_host = None;
 		let mut pg_url = None;
+		let mut cassandra_url = None;
 		for svc in services {
 			match &svc.config().runtime {
 				RuntimeKind::Redis { .. } => {
@@ -77,6 +79,10 @@ impl DatabaseConnection {
 					let pg_url_str = ctx.read_secret(&["postgres", &svc.name(), "url"]).await?;
 					pg_url = Some(Url::parse(&pg_url_str)?);
 				}
+				RuntimeKind::Cassandra { .. } => {
+					let cassandra_url_str = ctx.read_secret(&["cassandra", &svc.name(), "url"]).await?;
+					cassandra_url = Some(Url::parse(&cassandra_url_str)?);
+				}
 				x @ _ => bail!("cannot connect to this type of service: {x:?}"),
 			}
 		}
@@ -93,6 +99,7 @@ impl DatabaseConnection {
 			cockroach_host,
 			clickhouse_host,
 			pg_url,
+			cassandra_url,
 			_tunnel: tunnel,
 		})
 	}
@@ -119,6 +126,11 @@ impl DatabaseConnection {
 			RuntimeKind::Postgres { .. } => {
 				let mut url = self.pg_url.clone().unwrap();
 				url.set_path(&format!("/{}", service.pg_db_name()));
+				Ok(url.to_string())
+			}
+			RuntimeKind::Cassandra { .. } => {
+				let mut url = self.cassandra_url.clone().unwrap();
+				url.set_path(&format!("/{}", service.cassandra_db_name()));
 				Ok(url.to_string())
 			}
 			x @ _ => bail!("cannot migrate this type of service: {x:?}"),
