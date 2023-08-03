@@ -44,14 +44,14 @@ async fn basic(ctx: TestCtx) {
 							include_entry: true,
 						},
 						backend::db::Index {
-							name_id: "by_my_int_order_float".into(),
+							name_id: "by_my_int_order".into(),
 							group_by: vec![backend::db::GroupBySchema {
 								field_path: field_path(&["my_int"]),
 							}],
 							order_by: vec![backend::db::OrderBySchema {
 								field_path: field_path(&["my_float"]),
-								field_type: backend::db::group_by_schema::FieldType::Float as i32,
-								direction: backend::db::group_by_schema::Direction::Asc as i32,
+								field_type: backend::db::order_by_schema::FieldType::Float as i32,
+								direction: backend::db::order_by_schema::Direction::Asc as i32,
 							}],
 							include_entry: true,
 						},

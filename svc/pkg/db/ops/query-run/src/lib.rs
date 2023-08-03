@@ -1,5 +1,12 @@
 use futures_util::{StreamExt, TryStreamExt};
-use proto::backend::{self, db::FieldPath, pkg::*};
+use proto::backend::{
+	self,
+	db::{
+		order_by_schema::Direction as OrderDir, order_by_schema::FieldType as OrderFieldType,
+		FieldPath,
+	},
+	pkg::*,
+};
 use rivet_operation::prelude::*;
 use scylla::frame::value::MaybeUnset;
 use serde_json::Value as JsonValue;
@@ -46,6 +53,27 @@ rivet_pools::cass_prepared_statement!(insert_entry_index => indoc!(
 	"
 	INSERT INTO kv_index (database_id, collection, \"index\", group_by, entry_id, entry)
 	VALUES (?, ?, ?, ?, ?, ?)
+	"
+));
+
+rivet_pools::cass_prepared_statement!(insert_entry_index_int_asc => indoc!(
+	"
+	INSERT INTO kv_index_int_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
+	VALUES (?, ?, ?, ?, ?, ?, ?)
+	"
+));
+
+rivet_pools::cass_prepared_statement!(insert_entry_index_float_asc => indoc!(
+	"
+	INSERT INTO kv_index_double_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
+	VALUES (?, ?, ?, ?, ?, ?, ?)
+	"
+));
+
+rivet_pools::cass_prepared_statement!(insert_entry_index_string_asc => indoc!(
+	"
+	INSERT INTO kv_index_text_asc (database_id, collection, \"index\", group_by, entry_id, rank_0, entry)
+	VALUES (?, ?, ?, ?, ?, ?, ?)
 	"
 ));
 
@@ -210,6 +238,43 @@ async fn insert_entry(
 				)
 				.await?;
 		} else if index.order_by.len() == 1 {
+			let order_0 = &index.order_by[0];
+			let order_0_fp = internal_unwrap!(order_0.field_path);
+			let order_0_v = lookup_field_path(&value, order_0_fp)?;
+
+			match (
+				internal_unwrap!(OrderFieldType::from_i32(order_0.field_type)),
+				internal_unwrap!(OrderDir::from_i32(order_0.direction)),
+			) {
+				(OrderFieldType::Int, OrderDir::Asc) => {
+					let r = internal_unwrap_owned!(order_0_v.as_i64(), "rank not i64");
+					cass_data
+						.execute(
+							insert_entry_index_int_asc::prepare(&cass_data).await?,
+							(d, c, i, g, ei, r, e),
+						)
+						.await?;
+				}
+				(OrderFieldType::Float, OrderDir::Asc) => {
+					let r = internal_unwrap_owned!(order_0_v.as_f64(), "rank not f64");
+					cass_data
+						.execute(
+							insert_entry_index_float_asc::prepare(&cass_data).await?,
+							(d, c, i, g, ei, r, e),
+						)
+						.await?;
+				}
+				(OrderFieldType::String, OrderDir::Asc) => {
+					let r = internal_unwrap_owned!(order_0_v.as_str(), "rank not f64");
+					cass_data
+						.execute(
+							insert_entry_index_string_asc::prepare(&cass_data).await?,
+							(d, c, i, g, ei, r, e),
+						)
+						.await?;
+				}
+				_ => internal_panic!("todo"),
+			}
 			todo!()
 		} else {
 			internal_panic!("unreachable")
@@ -220,7 +285,7 @@ async fn insert_entry(
 }
 
 fn lookup_field_path<'a>(
-	mut value: &'a JsonValue,
+	value: &'a JsonValue,
 	field_path: &'a FieldPath,
 ) -> GlobalResult<&'a JsonValue> {
 	lookup_field_path_inner(value, field_path.field_path.as_slice())
