@@ -8,6 +8,20 @@ use crate::sql_field::SqlField;
 
 mod sql_field;
 
+#[derive(scylla::macros::FromRow)]
+struct GetRow {
+	key: String,
+	value: Vec<u8>,
+}
+
+rivet_pools::cass_prepared_statement!(get_entry => indoc!(
+	"
+	SELECT key, value
+	FROM uploads
+	WHERE database_id = ? AND collection = ? AND key IN ?
+	"
+));
+
 #[operation(name = "db-query-run")]
 pub async fn handle(
 	ctx: OperationContext<db::query_run::Request>,
@@ -19,9 +33,9 @@ pub async fn handle(
 	let query = internal_unwrap!(ctx.query);
 
 	// Read database
-	let (database_id_short, schema_buf) = sqlx::query_as::<_, (String, Vec<u8>)>(indoc!(
+	let (schema_buf,) = sqlx::query_as::<_, (String, Vec<u8>)>(indoc!(
 		"
-		SELECT database_id_short, schema
+		SELECT schema
 		FROM databases
 		WHERE database_id = $1
 		"
@@ -30,81 +44,38 @@ pub async fn handle(
 	.fetch_one(&crdb)
 	.await?;
 
-	tracing::info!(?database_id_short);
-
 	// Parse schema
 	let schema = backend::db::Schema::decode(schema_buf.as_slice())?;
 
 	// Run query
-	let res = run_query(&cass_data, &database_id_short, &schema, query).await?;
+	let res = run_query(&cass_data, &schema, query).await?;
 
 	Ok(res)
 }
 
 async fn run_query(
 	cass_data: &CassPool,
-	database_id_short: &str,
+	database_id: &str,
 	schema: &backend::db::Schema,
 	query: &backend::db::Query,
 ) -> GlobalResult<db::query_run::Response> {
-	let schema_name = util_db::schema_name(database_id_short);
-
 	// TODO: Do bulk inserts with https://github.com/launchbadge/sqlx/blob/main/FAQ.md#how-can-i-bind-an-array-to-a-values-clause-how-can-i-do-bulk-inserts
 
 	match internal_unwrap!(query.kind) {
-		backend::db::query::Kind::Fetch(fetch) => {
-			let collection = get_collection(schema, &fetch.collection)?;
+		backend::db::query::Kind::Get(get) => {
+			let collection = get_collection(schema, &get.collection)?;
 
-			let mut fields = vec![SqlField::Id];
-			fields.extend(
-				collection
-					.fields
-					.iter()
-					.map(SqlField::from_user_defined)
-					.collect::<GlobalResult<Vec<_>>>()?,
-			);
-
-			let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new("SELECT ");
-
-			// Specify columns
-			for (i, field) in fields.iter().enumerate() {
-				field.push_column_name(&mut query)?;
-				if i != fields.len() - 1 {
-					query.push(", ");
-				}
-			}
-			query.push(" ");
-
-			// Specify table
-			let table = util_db::table_name(&collection.name_id);
-			query.push(format!(
-				r#"FROM "{schema}"."{table}" "#,
-				schema = ais(&schema_name)?,
-				table = ais(&table)?
-			));
-
-			// Specify filters
-			query.push("WHERE ");
-			push_filters(&collection, &mut query, &fetch.filters)?;
-			query.push(" ");
-
-			// Run query
-			tracing::info!(sql = ?query.sql(), "running get");
-			let rows = query.build().fetch_all(pg_data).await?;
-
-			let mut fetched_entries = Vec::new();
-			for row in rows {
-				internal_assert_eq!(fields.len(), row.len());
-
-				// Decode response
-				let mut entry = HashMap::new();
-				for (i, field) in fields.iter().enumerate() {
-					let value = field.get_column(&row, i)?;
-					entry.insert(field.field_name_id().to_string(), value);
-				}
-
-				fetched_entries.push(db::query_run::response::FetchEntry { entry });
-			}
+			cass_data
+				.execute(
+					get_entry::prepare(&cass_data).await?,
+					(database_id, get.collection, entry_ids),
+				)
+				.await?
+				.rows_typed::<GetRow>()?
+				.collect::<Result<Vec<_>, _>>()?
+				.into_iter()
+				.map(Into::into)
+				.collect();
 
 			Ok(db::query_run::Response {
 				fetched_entries,

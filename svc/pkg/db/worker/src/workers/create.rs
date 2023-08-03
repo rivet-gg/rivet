@@ -12,19 +12,6 @@ async fn worker(ctx: OperationContext<db::msg::create::Message>) -> GlobalResult
 	let database_id = internal_unwrap!(ctx.database_id).as_uuid();
 	let owner_team_id = internal_unwrap!(ctx.owner_team_id).as_uuid();
 
-	// Generate shorter random string to use as the database identifier
-	//
-	// This helps keep database names shorter than a full UUID.
-	let database_id_short = {
-		let mut rng = rand::thread_rng();
-		(0..8)
-			.map(|_| {
-				let idx = rng.gen_range(0..CHARSET.len());
-				CHARSET[idx] as char
-			})
-			.collect::<String>()
-	};
-
 	// Serialize default schema
 	let default_schema = backend::db::Schema {
 		collections: Vec::new(),
@@ -35,12 +22,11 @@ async fn worker(ctx: OperationContext<db::msg::create::Message>) -> GlobalResult
 	// Save database
 	sqlx::query(indoc!(
 		"
-		INSERT INTO databases (database_id, database_id_short, owner_team_id, name_id, create_ts, schema)
+		INSERT INTO databases (database_id, owner_team_id, name_id, create_ts, schema)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		"
 	))
 	.bind(database_id)
-	.bind(database_id_short)
 	.bind(owner_team_id)
 	.bind(&ctx.name_id)
 	.bind(ctx.ts())

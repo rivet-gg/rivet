@@ -20,7 +20,7 @@ async fn worker(ctx: OperationContext<db::msg::schema_apply::Message>) -> Global
 		Box::pin(async move { update_schema(client, tx, now, database_id, schema).await })
 	})
 	.await?;
-	let (database_id_short, merged_schema) = match update_schema_res {
+	let merged_schema = match update_schema_res {
 		Ok(x) => x,
 		Err(error_code) => {
 			return fail(ctx.chirp(), database_id, error_code).await;
@@ -43,11 +43,11 @@ async fn update_schema(
 	now: i64,
 	database_id: Uuid,
 	new_schema: backend::db::Schema,
-) -> GlobalResult<Result<(String, backend::db::Schema), db::msg::schema_apply_fail::ErrorCode>> {
+) -> GlobalResult<Result<backend::db::Schema, db::msg::schema_apply_fail::ErrorCode>> {
 	// Read schema
-	let (database_id_short, old_schema_buf) = sqlx::query_as::<_, (String, Vec<u8>)>(indoc!(
+	let (old_schema_buf,) = sqlx::query_as::<_, (String, Vec<u8>)>(indoc!(
 		"
-		SELECT database_id_short, schema
+		SELECT schema
 		FROM databases
 		WHERE database_id = $1
 		FOR UPDATE
@@ -97,7 +97,7 @@ async fn update_schema(
 	.execute(&mut *tx)
 	.await?;
 
-	Ok(Ok((database_id_short, merged_schema)))
+	Ok(Ok(merged_schema))
 }
 
 fn merge_schemas(

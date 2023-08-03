@@ -27,11 +27,10 @@ message GameVersionConfigMeta {
 // Database
 message Database {
 	rivet.common.Uuid database_id = 1;
-	string database_id_short = 2;
-	rivet.common.Uuid owner_team_id = 3;
-	string name_id = 4;
-	int64 create_ts = 5;
-	Schema schema = 6;
+	rivet.common.Uuid owner_team_id = 2;
+	string name_id = 3;
+	int64 create_ts = 4;
+	Schema schema = 5;
 }
 
 message Schema {
@@ -102,7 +101,7 @@ message GroupBy {
 message Query {
 	message Get {
 		string collection = 1;
-		string entry_id = 2;
+		repeated string entry_ids = 2;
 	}
 
 	message Insert {
