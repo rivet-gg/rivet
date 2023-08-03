@@ -1,4 +1,5 @@
 mod error;
+mod macros;
 mod metrics;
 mod pools;
 pub mod utils;
@@ -7,14 +8,14 @@ use rand::prelude::SliceRandom;
 use std::{collections::HashMap, env, fmt::Debug, str::FromStr, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
 
-use crate::pools::{CrdbPool, NatsPool, PoolsInner, PostgresPool, RedisPool};
+use crate::pools::{CassandraPool, CrdbPool, NatsPool, PoolsInner, PostgresPool, RedisPool};
 
 pub mod prelude {
 	pub use async_nats as nats;
 	pub use redis;
 	pub use sqlx;
 
-	pub use crate::pools::{CrdbPool, NatsPool, PostgresPool, RedisConn, RedisPool};
+	pub use crate::pools::{CassandraPool, CrdbPool, NatsPool, PostgresPool, RedisConn, RedisPool};
 }
 
 pub use crate::{error::Error, pools::Pools};
@@ -29,6 +30,7 @@ pub async fn from_env(client_name: impl ToString + Debug) -> Result<Pools, Error
 		nats: nats_from_env(client_name.clone()).await?,
 		crdb: crdb_from_env(client_name.clone())?,
 		postgres: postgres_from_env(client_name.clone())?,
+		cassandra: cassandra_from_env().await?,
 		redis: redis_from_env().await?,
 	});
 	pool.clone().start(token);
@@ -193,6 +195,54 @@ fn postgres_from_env(_client_name: String) -> Result<HashMap<String, PostgresPoo
 	}
 
 	Ok(postgres)
+}
+
+#[tracing::instrument]
+async fn cassandra_from_env() -> Result<HashMap<String, CassandraPool>, Error> {
+	let mut cassandra = HashMap::new();
+	for (key, nodes_str) in env::vars() {
+		if let Some(svc_name_screaming) = key.strip_prefix("CASSANDRA_NODES_") {
+			let svc_name = svc_name_screaming.to_lowercase().replace("_", "-");
+
+			let nodes = nodes_str.split(",");
+
+			let keyspace =
+				if let Ok(x) = env::var(format!("CASSANDRA_KEYSPACE_{}", svc_name_screaming)) {
+					x
+				} else {
+					continue;
+				};
+
+			let username =
+				if let Ok(x) = env::var(format!("CASSANDRA_USERNAME_{}", svc_name_screaming)) {
+					x
+				} else {
+					continue;
+				};
+
+			let password =
+				if let Ok(x) = env::var(format!("CASSANDRA_PASSWORD_{}", svc_name_screaming)) {
+					x
+				} else {
+					continue;
+				};
+
+			let mut session_builder = scylla::SessionBuilder::new();
+			session_builder = session_builder
+				.use_keyspace(&keyspace, false)
+				.user(username, password);
+			for node in nodes {
+				session_builder = session_builder.known_node(node);
+			}
+			tracing::debug!(nodes = %nodes_str, "scylla session creating");
+			let session = session_builder.build().await.map_err(Error::BuildScylla)?;
+			tracing::debug!(nodes = %nodes_str, "scylla session created");
+
+			cassandra.insert(svc_name, Arc::new(session));
+		}
+	}
+
+	Ok(cassandra)
 }
 
 #[tracing::instrument]

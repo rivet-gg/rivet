@@ -9,6 +9,9 @@ pub enum Error {
 	#[error("missing postgres pool: {key:?}")]
 	MissingPostgresPool { key: Option<String> },
 
+	#[error("missing cassandra pool: {key:?}")]
+	MissingCassandraPool { key: Option<String> },
+
 	#[error("missing redis pool: {key:?}")]
 	MissingRedisPool { key: Option<String> },
 
@@ -29,4 +32,7 @@ pub enum Error {
 
 	#[error("build sqlx: {0}")]
 	BuildSqlx(sqlx::Error),
+
+	#[error("build scylla: {0}")]
+	BuildScylla(scylla::transport::errors::NewSessionError),
 }

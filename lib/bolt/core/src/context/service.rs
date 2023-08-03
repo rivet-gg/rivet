@@ -508,6 +508,21 @@ impl ServiceContextData {
 			.collect()
 	}
 
+	pub async fn cassandra_dependencies(&self) -> Vec<ServiceContext> {
+		self.dependencies()
+			.await
+			.iter()
+			.filter(|svc| {
+				if let RuntimeKind::Cassandra { .. } = svc.config().runtime {
+					true
+				} else {
+					false
+				}
+			})
+			.cloned()
+			.collect()
+	}
+
 	pub async fn redis_dependencies(&self) -> Vec<ServiceContext> {
 		self.dependencies()
 			.await

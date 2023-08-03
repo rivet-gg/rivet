@@ -388,6 +388,7 @@ async fn build_svc(svc_ctx: &ServiceContext, optimization: BuildOptimization) {
 		RuntimeKind::CRDB { .. }
 		| RuntimeKind::ClickHouse { .. }
 		| RuntimeKind::Postgres { .. }
+		| RuntimeKind::Cassandra { .. }
 		| RuntimeKind::Redis { .. }
 		| RuntimeKind::S3 { .. }
 		| RuntimeKind::Nats { .. } => {

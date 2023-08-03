@@ -17,6 +17,12 @@ tokio = { version = "1.21", features = ["tracing"] }
 tokio-util = "0.6"
 tracing = "0.1"
 
+[dependencies.scylla]
+version = "0.9"
+features = [
+	"ssl"
+]
+
 [dependencies.sqlx]
 version = "0.6"
 default-features = false

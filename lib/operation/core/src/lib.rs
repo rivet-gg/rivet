@@ -270,6 +270,10 @@ where
 		self.conn.postgres(key).await
 	}
 
+	pub async fn cassandra(&self, key: &str) -> Result<CassandraPool, rivet_pools::Error> {
+		self.conn.cassandra(key).await
+	}
+
 	pub async fn redis_cache(&self) -> Result<RedisPool, rivet_pools::Error> {
 		self.conn.redis_cache().await
 	}

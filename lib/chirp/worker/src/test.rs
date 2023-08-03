@@ -59,6 +59,10 @@ impl TestCtx {
 		self.op_ctx.postgres(key).await
 	}
 
+	pub async fn cassandra(&self, key: &str) -> Result<CassandraPool, rivet_pools::Error> {
+		self.op_ctx.cassandra(key).await
+	}
+
 	pub async fn redis_cache(&self) -> Result<RedisConn, rivet_pools::Error> {
 		self.op_ctx.redis_cache().await
 	}

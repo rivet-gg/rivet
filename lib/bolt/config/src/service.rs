@@ -119,6 +119,8 @@ pub enum RuntimeKind {
 	ClickHouse {},
 	#[serde(rename = "postgres")]
 	Postgres {},
+	#[serde(rename = "cassandra")]
+	Cassandra {},
 	#[serde(rename = "redis")]
 	Redis {
 		// TODO: Validate index is unique
@@ -238,6 +240,7 @@ impl RuntimeKind {
 			RuntimeKind::CRDB { .. } => "crdb",
 			RuntimeKind::ClickHouse { .. } => "clickhouse",
 			RuntimeKind::Postgres { .. } => "postgres",
+			RuntimeKind::Cassandra { .. } => "cassandra",
 			RuntimeKind::Redis { .. } => "redis",
 			RuntimeKind::S3 { .. } => "s3",
 			RuntimeKind::Nats { .. } => "nats",
@@ -252,6 +255,7 @@ impl RuntimeKind {
 				RuntimeKind::CRDB { .. }
 				| RuntimeKind::ClickHouse { .. }
 				| RuntimeKind::Postgres { .. }
+				| RuntimeKind::Cassandra { .. }
 				| RuntimeKind::S3 { .. },
 				ComponentClass::Database,
 			) => true,
