@@ -5,6 +5,7 @@ use tokio::task::block_in_place;
 use crate::{
 	config::service::RuntimeKind,
 	context::{ProjectContext, ServiceContext},
+	dep,
 	utils::db_conn::DatabaseConnection,
 };
 
@@ -54,21 +55,18 @@ pub async fn shell(ctx: &ProjectContext, svc: &ServiceContext, query: Option<&st
 			let (hostname, port) = host.split_once(":").unwrap();
 
 			rivet_term::status::progress("Connecting to Cockroach", &db_name);
-			if let Some(query) = query {
-				block_in_place(|| {
-					cmd!("psql", "-h", hostname, "-p", port, "-U", "root", db_name, "-c", query,)
-						// See https://github.com/cockroachdb/cockroach/issues/37129#issuecomment-600115995
-						.env("PGCLIENTENCODING", "utf-8")
-						.run()
-				})?;
-			} else {
-				block_in_place(|| {
-					cmd!("psql", "-h", hostname, "-p", port, "-U", "root", db_name)
-						// See https://github.com/cockroachdb/cockroach/issues/37129#issuecomment-600115995
-						.env("PGCLIENTENCODING", "utf-8")
-						.run()
-				})?;
-			}
+			dep::postgres::cli::exec(
+				dep::postgres::cli::Credentials {
+					hostname,
+					port: port.parse().unwrap(),
+					username: "root",
+					password: None,
+					db_name: &db_name,
+				},
+				dep::postgres::cli::Compatability::Cockroach,
+				query,
+			)
+			.await?;
 		}
 		RuntimeKind::ClickHouse { .. } => {
 			let db_name = svc.clickhouse_db_name();
@@ -126,39 +124,18 @@ pub async fn shell(ctx: &ProjectContext, svc: &ServiceContext, query: Option<&st
 			let password = url.password().unwrap();
 
 			rivet_term::status::progress("Connecting to Postgres", &db_name);
-			if let Some(query) = query {
-				block_in_place(|| {
-					cmd!(
-						"psql",
-						"-h",
-						hostname,
-						"-p",
-						port.to_string(),
-						"-U",
-						username,
-						db_name,
-						"-c",
-						query,
-					)
-					.env("PGPASSWORD", password)
-					.run()
-				})?;
-			} else {
-				block_in_place(|| {
-					cmd!(
-						"psql",
-						"-h",
-						hostname,
-						"-p",
-						port.to_string(),
-						"-U",
-						username,
-						db_name
-					)
-					.env("PGPASSWORD", password)
-					.run()
-				})?;
-			}
+			dep::postgres::cli::exec(
+				dep::postgres::cli::Credentials {
+					hostname,
+					port,
+					username: username,
+					password: Some(password),
+					db_name: &db_name,
+				},
+				dep::postgres::cli::Compatability::Native,
+				query,
+			)
+			.await?;
 		}
 		x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 	}

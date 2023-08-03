@@ -6,6 +6,7 @@ use tokio::task::block_in_place;
 
 use crate::{
 	context::{ProjectContext, ServiceContext},
+	dep,
 	utils::{self, db_conn::DatabaseConnection},
 };
 
@@ -73,23 +74,18 @@ pub async fn check(_ctx: &ProjectContext, services: &[ServiceContext]) -> Result
 		// Wait for the service to boot
 		rivet_term::status::progress("Waiting for database to start", "");
 		loop {
-			let test_cmd = block_in_place(|| {
-				cmd!(
-					"psql",
-					"-h",
-					"127.0.0.1",
-					"-p",
-					crdb_port.to_string(),
-					"-U",
-					"root",
-					"postgres",
-					"-c",
-					"SELECT 1;"
-				)
-				.stdout_null()
-				.stderr_null()
-				.run()
-			});
+			let test_cmd = dep::postgres::cli::exec(
+				dep::postgres::cli::Credentials {
+					hostname: "127.0.0.1",
+					port: crdb_port,
+					username: "root",
+					password: Some("postgres"),
+					db_name: "postgres",
+				},
+				dep::postgres::cli::Compatability::Cockroach,
+				Some("SELECT 1;"),
+			)
+			.await;
 			if test_cmd.is_ok() {
 				break;
 			}
@@ -183,23 +179,18 @@ pub async fn check(_ctx: &ProjectContext, services: &[ServiceContext]) -> Result
 		// Wait for the service to boot
 		rivet_term::status::progress("Waiting for database to start", "");
 		loop {
-			let test_cmd = block_in_place(|| {
-				cmd!(
-					"psql",
-					"-h",
-					"127.0.0.1",
-					"-p",
-					pg_port.to_string(),
-					"-U",
-					"root",
-					"postgres",
-					"-c",
-					"SELECT 1;"
-				)
-				.stdout_null()
-				.stderr_null()
-				.run()
-			});
+			let test_cmd = dep::postgres::cli::exec(
+				dep::postgres::cli::Credentials {
+					hostname: "127.0.0.1",
+					port: crdb_port,
+					username: "root",
+					password: Some("postgres"),
+					db_name: "postgres",
+				},
+				dep::postgres::cli::Compatability::Native,
+				Some("SELECT 1;"),
+			)
+			.await;
 			if test_cmd.is_ok() {
 				break;
 			}
@@ -210,6 +201,16 @@ pub async fn check(_ctx: &ProjectContext, services: &[ServiceContext]) -> Result
 		Some(container_id)
 	} else {
 		None
+	};
+
+	// Spawn Cassandra test container
+	let cass_container_id = if services
+		.iter()
+		.any(|x| matches!(x.config().runtime, RuntimeKind::Cassandra { .. }))
+	{
+		todo!("cassandra not implemented")
+	} else {
+		Option::<String>::None
 	};
 
 	// Run migrations against test containers
@@ -225,23 +226,18 @@ pub async fn check(_ctx: &ProjectContext, services: &[ServiceContext]) -> Result
 					format!("cockroach://root@127.0.0.1:{crdb_port}/{db_name}?sslmode=disable",);
 
 				// Create database
-				block_in_place(|| {
-					cmd!(
-						"psql",
-						"-h",
-						"127.0.0.1",
-						"-p",
-						crdb_port.to_string(),
-						"-U",
-						"root",
-						"postgres",
-						"-c",
-						format!("CREATE DATABASE IF NOT EXISTS \"{db_name}\";"),
-					)
-					// See https://github.com/cockroachdb/cockroach/issues/37129#issuecomment-600115995
-					.env("PGCLIENTENCODING", "utf-8")
-					.run()
-				})?;
+				dep::postgres::cli::exec(
+					dep::postgres::cli::Credentials {
+						hostname: "127.0.0.1",
+						port: crdb_port,
+						username: "root",
+						password: None,
+						db_name: "postgres",
+					},
+					dep::postgres::cli::Compatability::Cockroach,
+					Some(&format!("CREATE DATABASE IF NOT EXISTS \"{db_name}\";")),
+				)
+				.await?;
 
 				database_url
 			}
@@ -273,23 +269,23 @@ pub async fn check(_ctx: &ProjectContext, services: &[ServiceContext]) -> Result
 					format!("postgres://root@127.0.0.1:{pg_port}/{db_name}?sslmode=disable",);
 
 				// Create database
-				block_in_place(|| {
-					cmd!(
-						"psql",
-						"-h",
-						"127.0.0.1",
-						"-p",
-						pg_port.to_string(),
-						"-U",
-						"root",
-						"postgres",
-						"-c",
-						format!("CREATE DATABASE IF NOT EXISTS \"{db_name}\";"),
-					)
-					.run()
-				})?;
+				dep::postgres::cli::exec(
+					dep::postgres::cli::Credentials {
+						hostname: "127.0.0.1",
+						port: pg_port,
+						username: "root",
+						password: None,
+						db_name: "postgres",
+					},
+					dep::postgres::cli::Compatability::Native,
+					Some(&format!("CREATE DATABASE \"{db_name}\";")),
+				)
+				.await?;
 
 				database_url
+			}
+			RuntimeKind::Cassandra {} => {
+				todo!()
 			}
 			x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 		};
@@ -323,6 +319,10 @@ pub async fn check(_ctx: &ProjectContext, services: &[ServiceContext]) -> Result
 		rivet_term::status::progress("Killing Postgres container", "");
 		block_in_place(|| cmd!("docker", "stop", "-t", "0", id).run())?;
 	}
+	if let Some(id) = cass_container_id {
+		rivet_term::status::progress("Killing Cassandra container", "");
+		block_in_place(|| cmd!("docker", "stop", "-t", "0", id).run())?;
+	}
 
 	Ok(())
 }
@@ -350,23 +350,18 @@ pub async fn up(ctx: &ProjectContext, services: &[ServiceContext]) -> Result<()>
 				let (hostname, port) = host.split_once(":").unwrap();
 
 				rivet_term::status::progress("Creating database", &db_name);
-				block_in_place(|| {
-					cmd!(
-						"psql",
-						"-h",
+				dep::postgres::cli::exec(
+					dep::postgres::cli::Credentials {
 						hostname,
-						"-p",
-						port,
-						"-U",
-						"root",
-						"postgres",
-						"-c",
-						format!("CREATE DATABASE IF NOT EXISTS \"{db_name}\";"),
-					)
-					// See https://github.com/cockroachdb/cockroach/issues/37129#issuecomment-600115995
-					.env("PGCLIENTENCODING", "utf-8")
-					.run()
-				})?;
+						port: port.parse()?,
+						username: "root",
+						password: Some("postgres"),
+						db_name: "postgres",
+					},
+					dep::postgres::cli::Compatability::Cockroach,
+					Some(&format!("CREATE DATABASE IF NOT EXISTS \"{db_name}\";")),
+				)
+				.await?;
 			}
 			RuntimeKind::ClickHouse { .. } => {
 				let db_name = svc.clickhouse_db_name();
@@ -411,22 +406,18 @@ pub async fn up(ctx: &ProjectContext, services: &[ServiceContext]) -> Result<()>
 
 				// HACK: Ignore error since there is no `CREATE DATABASE IF NOT EXISTS` in Postgres
 				rivet_term::status::progress("Creating database", &db_name);
-				let _ = block_in_place(|| {
-					cmd!(
-						"psql",
-						"-h",
+				let _ = dep::postgres::cli::exec(
+					dep::postgres::cli::Credentials {
 						hostname,
-						"-p",
-						port.to_string(),
-						"-U",
+						port,
 						username,
-						default_db_name,
-						"-c",
-						format!("CREATE DATABASE \"{db_name}\";"),
-					)
-					.env("PGPASSWORD", password)
-					.run()
-				});
+						password: Some(password),
+						db_name: default_db_name,
+					},
+					dep::postgres::cli::Compatability::Native,
+					Some(&format!("CREATE DATABASE \"{db_name}\";")),
+				)
+				.await;
 			}
 			x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 		}
