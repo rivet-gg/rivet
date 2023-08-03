@@ -18,13 +18,15 @@ async fn schema_apply(ctx: TestCtx) {
 			collections: vec![
 				backend::db::Collection {
 					name_id: "test".into(),
-					fields: vec![
-						backend::db::Field {
+					entry_schema: r#"{"type":"object","properties":{}}"#.into(),
+					indexes: vec![
+						backend::db::Index {
 							name_id: "test".into(),
-							r#type: backend::db::field::Type::String.into(),
-							optional: false,
-						},
-					],
+							group_by: vec![],
+							order_by: vec![],
+							include_entry: true,
+						}
+					]
 				},
 			],
 		}),

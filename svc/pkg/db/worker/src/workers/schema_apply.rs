@@ -206,21 +206,21 @@ fn merge_schemas(
 }
 
 fn check_index_eq(a: &backend::db::Index, b: &backend::db::Index) -> bool {
-	a.group_by.len() == a.group_by.len()
-		&& a.group_by.iter().zip(a.group_by.iter()).all(|(a, b)| {
-			a.field_path.as_ref().map(|x| x.field_path)
-				== b.field_path.as_ref().map(|x| x.field_path)
-		}) && a.order_by.len() == a.order_by.len()
-		&& a.order_by.iter().zip(a.order_by.iter()).any(|(a, b)| {
-			a.field_path != b.field_path
+	a.group_by.len() == b.group_by.len()
+		&& a.group_by.iter().zip(b.group_by.iter()).all(|(a, b)| {
+			a.field_path.as_ref().map(|x| &x.field_path)
+				== b.field_path.as_ref().map(|x| &x.field_path)
+		}) && a.order_by.len() == b.order_by.len()
+		&& a.order_by.iter().zip(b.order_by.iter()).any(|(a, b)| {
+			a.field_path == b.field_path
 				&& a.field_type == b.field_type
-				&& a.direction != b.direction
-		}) && a.include_entry != a.include_entry
+				&& a.direction == b.direction
+		}) && a.include_entry == b.include_entry
 }
 
 fn validate_field_path(
 	field_path: &FieldPath,
-) -> Result<(), db::msg::schema_apply_fail::ErrorCode::FieldPathEmpty> {
+) -> Result<(), db::msg::schema_apply_fail::ErrorCode> {
 	if field_path.field_path.is_empty() {
 		return Err(db::msg::schema_apply_fail::ErrorCode::FieldPathEmpty);
 	}

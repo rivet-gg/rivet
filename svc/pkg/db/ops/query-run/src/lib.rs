@@ -13,7 +13,7 @@ pub async fn handle(
 	ctx: OperationContext<db::query_run::Request>,
 ) -> GlobalResult<db::query_run::Response> {
 	let crdb = ctx.crdb("db-db").await?;
-	let pg_data = ctx.postgres("db-db-data").await?;
+	let cass_data = ctx.cass("db-db-data").await?;
 
 	let database_id = internal_unwrap!(ctx.database_id).as_uuid();
 	let query = internal_unwrap!(ctx.query);
@@ -36,13 +36,13 @@ pub async fn handle(
 	let schema = backend::db::Schema::decode(schema_buf.as_slice())?;
 
 	// Run query
-	let res = run_query(&pg_data, &database_id_short, &schema, query).await?;
+	let res = run_query(&cass_data, &database_id_short, &schema, query).await?;
 
 	Ok(res)
 }
 
 async fn run_query(
-	pg_data: &PostgresPool,
+	cass_data: &CassPool,
 	database_id_short: &str,
 	schema: &backend::db::Schema,
 	query: &backend::db::Query,
