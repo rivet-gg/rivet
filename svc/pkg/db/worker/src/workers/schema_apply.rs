@@ -45,7 +45,7 @@ async fn update_schema(
 	new_schema: backend::db::Schema,
 ) -> GlobalResult<Result<backend::db::Schema, db::msg::schema_apply_fail::ErrorCode>> {
 	// Read schema
-	let (old_schema_buf,) = sqlx::query_as::<_, (String, Vec<u8>)>(indoc!(
+	let (old_schema_buf,) = sqlx::query_as::<_, (Vec<u8>,)>(indoc!(
 		"
 		SELECT schema
 		FROM databases

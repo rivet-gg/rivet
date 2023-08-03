@@ -19,6 +19,6 @@ message Response {
 	}
 
 	repeated Entry entries = 1;
-	repeated rivet.common.Uuid inserted_entry_ids = 2;
+	repeated rivet.common.Uuid entry_ids = 2;
 	uint64 entries_affected = 3;
 }

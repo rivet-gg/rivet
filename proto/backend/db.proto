@@ -111,7 +111,7 @@ message Query {
 		}
 
 		string collection = 1;
-		repeated string entries = 2;
+		repeated Entry entries = 2;
 	}
 
 	message Update {

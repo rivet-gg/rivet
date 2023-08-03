@@ -1040,6 +1040,49 @@ impl ServiceContextData {
 			));
 		}
 
+		// Cassandra
+		for cass_dep in self.cass_dependencies().await {
+			// Read URL
+			let url_str = project_ctx
+				.read_secret(&["cassandra", &cass_dep.name(), "url"])
+				.await?;
+
+			// Parse URL
+			let url = url::Url::parse(&url_str)?;
+			let hostname = url.host_str().unwrap();
+			let port = url.port().unwrap(); // TOOD: Use port
+
+			// Parse `username` and `password` from query
+			let query = url.query().unwrap();
+			let username = query
+				.split("&")
+				.find(|x| x.starts_with("username="))
+				.unwrap()
+				.trim_start_matches("username=");
+			let password = query
+				.split("&")
+				.find(|x| x.starts_with("password="))
+				.unwrap()
+				.trim_start_matches("password=");
+
+			env.push((
+				format!("CASSANDRA_NODES_{}", cass_dep.name_screaming_snake()),
+				format!("{}:{}", hostname, port),
+			));
+			env.push((
+				format!("CASSANDRA_KEYSPACE_{}", cass_dep.name_screaming_snake()),
+				cass_dep.cass_keyspace(),
+			));
+			env.push((
+				format!("CASSANDRA_USERNAME_{}", cass_dep.name_screaming_snake()),
+				username.to_string(),
+			));
+			env.push((
+				format!("CASSANDRA_PASSWORD_{}", cass_dep.name_screaming_snake()),
+				password.to_string(),
+			));
+		}
+
 		// Expose all S3 endpoints to services that need it
 		let s3_deps = if self.depends_on_s3() {
 			project_ctx.all_services().await.to_vec()

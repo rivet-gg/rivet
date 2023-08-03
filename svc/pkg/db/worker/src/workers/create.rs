@@ -23,7 +23,7 @@ async fn worker(ctx: OperationContext<db::msg::create::Message>) -> GlobalResult
 	sqlx::query(indoc!(
 		"
 		INSERT INTO databases (database_id, owner_team_id, name_id, create_ts, schema)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		VALUES ($1, $2, $3, $4, $5)
 		"
 	))
 	.bind(database_id)

@@ -1,6 +1,6 @@
+use futures_util::{StreamExt, TryStreamExt};
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
-use sqlx::Row;
 use std::{collections::HashMap, convert::TryInto};
 use util_db::{ais, entry_id::EntryId};
 
@@ -105,7 +105,43 @@ async fn run_query(
 			})
 		}
 		backend::db::query::Kind::Insert(insert) => {
-			todo!()
+			let collection = get_collection(schema, &insert.collection)?;
+
+			// TODO: Reduce clones
+			// TODO: This has a problem if one entry fails to insert but the rest succeed
+			// Insert entries
+			let entry_ids = futures_util::stream::iter(insert.entries.clone())
+				.map({
+					let cass_data = cass_data.clone();
+					let collection = insert.collection.clone();
+					move |entry| {
+						let cass_data = cass_data.clone();
+						let collection = collection.clone();
+
+						let value = serde_json::from_str(&entry.value)?;
+						let value_bson = bson::to_vec(&value)?;
+
+						let entry_id = Uuid::new_v4();
+
+						GlobalResult::Ok(async move {
+							cass_data
+								.execute(
+									insert_entry::prepare(&cass_data).await?,
+									(database_id, collection, entry_id, value_bson),
+								)
+								.await?;
+							GlobalResult::Ok(common::Uuid::from(entry_id))
+						})
+					}
+				})
+				.try_buffer_unordered(16)
+				.try_collect::<Vec<_>>()
+				.await?;
+
+			Ok(db::query_run::Response {
+				entry_ids,
+				..Default::default()
+			})
 		}
 		backend::db::query::Kind::Update(update) => {
 			todo!()

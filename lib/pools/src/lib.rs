@@ -202,31 +202,31 @@ fn postgres_from_env(_client_name: String) -> Result<HashMap<String, PostgresPoo
 async fn cass_from_env() -> Result<HashMap<String, CassPool>, Error> {
 	let mut cass = HashMap::new();
 	for (key, nodes_str) in env::vars() {
-		if let Some(svc_name_screaming) = key.strip_prefix("CASS_NODES_") {
+		if let Some(svc_name_screaming) = key.strip_prefix("CASSANDRA_NODES_") {
 			let svc_name = svc_name_screaming.to_lowercase().replace("_", "-");
 
 			let nodes = nodes_str.split(",");
 
-			let keyspace = if let Ok(x) = env::var(format!("CASS_KEYSPACE_{}", svc_name_screaming))
-			{
-				x
-			} else {
-				continue;
-			};
+			let keyspace =
+				if let Ok(x) = env::var(format!("CASSANDRA_KEYSPACE_{}", svc_name_screaming)) {
+					x
+				} else {
+					continue;
+				};
 
-			let username = if let Ok(x) = env::var(format!("CASS_USERNAME_{}", svc_name_screaming))
-			{
-				x
-			} else {
-				continue;
-			};
+			let username =
+				if let Ok(x) = env::var(format!("CASSANDRA_USERNAME_{}", svc_name_screaming)) {
+					x
+				} else {
+					continue;
+				};
 
-			let password = if let Ok(x) = env::var(format!("CASS_PASSWORD_{}", svc_name_screaming))
-			{
-				x
-			} else {
-				continue;
-			};
+			let password =
+				if let Ok(x) = env::var(format!("CASSANDRA_PASSWORD_{}", svc_name_screaming)) {
+					x
+				} else {
+					continue;
+				};
 
 			let mut session_builder = scylla::SessionBuilder::new();
 			session_builder = session_builder
