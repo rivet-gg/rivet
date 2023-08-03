@@ -158,7 +158,7 @@ fn merge_schemas(
 					return Ok(Err(err));
 				}
 
-				if group_by_paths.insert(&internal_unwrap!(group_by.field_path).field_path) {
+				if !group_by_paths.insert(&internal_unwrap!(group_by.field_path).field_path) {
 					return Ok(Err(db::msg::schema_apply_fail::ErrorCode::DuplicateGroupBy));
 				}
 			}
@@ -171,6 +171,7 @@ fn merge_schemas(
 			for order_by in &new_index.order_by {
 				// TODO: Validate field path matches valid entry schema
 				// TODO: Validate field type & direction type
+				internal_assert_eq!(order_by.field_type, 0, "sorting not implemented yet");
 				if let Err(err) = validate_field_path(internal_unwrap!(order_by.field_path)) {
 					return Ok(Err(err));
 				}

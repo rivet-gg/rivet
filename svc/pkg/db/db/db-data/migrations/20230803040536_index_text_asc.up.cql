@@ -2,7 +2,7 @@ CREATE TABLE kv_index_text_asc (
 	database_id uuid,
 	collection text,
 	"index" text,
-	group_by frozen<map<text, text>>,
+	group_by frozen<map<list<text>, text>>,
 	rank_0 text,
 	entry_id uuid,
 	entry blob,

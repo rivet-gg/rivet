@@ -1,6 +1,12 @@
 use chirp_worker::prelude::*;
-use proto::backend::{self, pkg::*};
+use proto::backend::{self, db::FieldPath, pkg::*};
 use serde_json::json;
+
+fn field_path(path: &[&str]) -> Option<FieldPath> {
+	Some(FieldPath {
+		field_path: path.iter().map(|s| s.to_string()).collect(),
+	})
+}
 
 #[worker_test]
 async fn basic(ctx: TestCtx) {
@@ -22,7 +28,34 @@ async fn basic(ctx: TestCtx) {
 				backend::db::Collection {
 					name_id: "test".into(),
 					entry_schema: r#"{"type":"object", "properties":{}}"#.into(),
-					indexes: vec![],
+					indexes: vec![
+						backend::db::Index {
+							name_id: "by_nothing".into(),
+							group_by: vec![],
+							order_by: vec![],
+							include_entry: true,
+						},
+						backend::db::Index {
+							name_id: "by_my_int".into(),
+							group_by: vec![backend::db::GroupBySchema {
+								field_path: field_path(&["my_int"]),
+							}],
+							order_by: vec![],
+							include_entry: true,
+						},
+						backend::db::Index {
+							name_id: "by_my_int_order_float".into(),
+							group_by: vec![backend::db::GroupBySchema {
+								field_path: field_path(&["my_int"]),
+							}],
+							order_by: vec![backend::db::OrderBySchema {
+								field_path: field_path(&["my_float"]),
+								field_type: backend::db::group_by_schema::FieldType::Float as i32,
+								direction: backend::db::group_by_schema::Direction::Asc as i32,
+							}],
+							include_entry: true,
+						},
+					],
 				},
 			],
 		}),

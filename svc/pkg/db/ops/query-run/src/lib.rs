@@ -1,6 +1,8 @@
 use futures_util::{StreamExt, TryStreamExt};
-use proto::backend::{self, pkg::*};
+use proto::backend::{self, db::FieldPath, pkg::*};
 use rivet_operation::prelude::*;
+use scylla::frame::value::MaybeUnset;
+use serde_json::Value as JsonValue;
 use std::{collections::HashMap, convert::TryInto};
 use util_db::{ais, entry_id::EntryId};
 
@@ -15,7 +17,7 @@ impl TryInto<db::query_run::response::Entry> for GetRow {
 
 	fn try_into(self) -> GlobalResult<db::query_run::response::Entry> {
 		// Convert value to JSON string
-		let value = bson::from_slice::<serde_json::Value>(self.value.as_slice())?;
+		let value = bson::from_slice::<JsonValue>(self.value.as_slice())?;
 		let json = serde_json::to_string(&value)?;
 
 		Ok(db::query_run::response::Entry {
@@ -37,6 +39,13 @@ rivet_pools::cass_prepared_statement!(insert_entry => indoc!(
 	"
 	INSERT INTO kv (database_id, collection, entry_id, value)
 	VALUES (?, ?, ?, ?)
+	"
+));
+
+rivet_pools::cass_prepared_statement!(insert_entry_index => indoc!(
+	"
+	INSERT INTO kv_index (database_id, collection, \"index\", group_by, entry_id, entry)
+	VALUES (?, ?, ?, ?, ?, ?)
 	"
 ));
 
@@ -113,25 +122,16 @@ async fn run_query(
 			let entry_ids = futures_util::stream::iter(insert.entries.clone())
 				.map({
 					let cass_data = cass_data.clone();
-					let collection = insert.collection.clone();
+					let collection = collection.clone();
 					move |entry| {
 						let cass_data = cass_data.clone();
-						let collection = collection.clone();
 
-						let value = serde_json::from_str::<serde_json::Value>(&entry.value)?;
-						let value_bson = bson::to_vec(&value)?;
-
-						let entry_id = Uuid::new_v4();
-
-						GlobalResult::Ok(async move {
-							cass_data
-								.execute(
-									insert_entry::prepare(&cass_data).await?,
-									(database_id, collection, entry_id, value_bson),
-								)
-								.await?;
-							GlobalResult::Ok(common::Uuid::from(entry_id))
-						})
+						GlobalResult::Ok(insert_entry(
+							cass_data,
+							database_id,
+							collection.clone(),
+							entry.value,
+						))
 					}
 				})
 				.try_buffer_unordered(16)
@@ -153,6 +153,122 @@ async fn run_query(
 			todo!()
 		}
 	}
+}
+
+async fn insert_entry(
+	cass_data: CassPool,
+	database_id: Uuid,
+	collection: backend::db::Collection,
+	value_str: String,
+) -> GlobalResult<common::Uuid> {
+	let entry_id = Uuid::new_v4();
+
+	// TODO: Do this in batch?
+
+	// Deserialize value
+	let value = serde_json::from_str::<JsonValue>(&value_str)?;
+	let value_bson = bson::to_vec(&value)?;
+
+	// Insert primary
+	cass_data
+		.execute(
+			insert_entry::prepare(&cass_data).await?,
+			(database_id, &collection.name_id, entry_id, &value_bson),
+		)
+		.await?;
+
+	// Inset indexes
+	for index in &collection.indexes {
+		// Build group by map
+		let mut group_by_map = HashMap::<Vec<String>, String>::new();
+		for group_by in &index.group_by {
+			let group_key = internal_unwrap!(group_by.field_path).field_path.clone();
+			let group_value = lookup_field_path(&value, internal_unwrap!(group_by.field_path))?;
+			let group_value_str = stringify_single_json_value_deterministic(group_value)?;
+			group_by_map.insert(group_key, group_value_str);
+		}
+
+		// Determine if we should also insert the entry's value
+		let entry = if index.include_entry {
+			MaybeUnset::Set(&value_bson)
+		} else {
+			MaybeUnset::Unset
+		};
+
+		// Run query
+		let d = database_id;
+		let c = &collection.name_id;
+		let i = &index.name_id;
+		let g = &group_by_map;
+		let ei = entry_id;
+		let e = entry;
+		if index.order_by.is_empty() {
+			cass_data
+				.execute(
+					insert_entry_index::prepare(&cass_data).await?,
+					(d, c, i, g, ei, e),
+				)
+				.await?;
+		} else if index.order_by.len() == 1 {
+			todo!()
+		} else {
+			internal_panic!("unreachable")
+		}
+	}
+
+	GlobalResult::Ok(common::Uuid::from(entry_id))
+}
+
+fn lookup_field_path<'a>(
+	mut value: &'a JsonValue,
+	field_path: &'a FieldPath,
+) -> GlobalResult<&'a JsonValue> {
+	lookup_field_path_inner(value, field_path.field_path.as_slice())
+}
+
+fn lookup_field_path_inner<'a>(
+	value: &'a JsonValue,
+	field_path: &'a [String],
+) -> GlobalResult<&'a JsonValue> {
+	if field_path.is_empty() {
+		return Ok(value);
+	}
+	let field = &field_path[0];
+	let field_path = &field_path[1..];
+	match value {
+		JsonValue::Object(obj) => {
+			let value = internal_unwrap_owned!(obj.get(field));
+			lookup_field_path_inner(value, field_path)
+		}
+		JsonValue::Array(arr) => {
+			let index = field.parse::<usize>()?;
+			let value = internal_unwrap_owned!(arr.get(index));
+			lookup_field_path_inner(value, field_path)
+		}
+		_ => internal_panic!("field not found"),
+	}
+}
+
+/// Converts a JSON value to string and throws error if it's a collection or non-deterministic
+/// (e.g. floating point number).
+fn stringify_single_json_value_deterministic(value: &JsonValue) -> GlobalResult<String> {
+	internal_assert!(
+		matches!(
+			value,
+			JsonValue::Null | JsonValue::Bool(_) | JsonValue::Number(_) | JsonValue::String(_)
+		),
+		"unsupported group by type"
+	);
+	if let JsonValue::Number(n) = value {
+		internal_assert!(
+			n.is_i64() || n.is_u64(),
+			"cannot use floating point numbers as group by keys"
+		);
+	}
+
+	let value_str = serde_json::to_string(value)?;
+
+	Ok(value_str)
 }
 
 /// Returns a collection from a schema.
