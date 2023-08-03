@@ -130,7 +130,7 @@ impl DatabaseConnection {
 			}
 			RuntimeKind::Cassandra { .. } => {
 				let mut url = self.cass_url.clone().unwrap();
-				url.set_path(&format!("/{}", service.cass_db_name()));
+				url.set_path(&format!("/{}", service.cass_keyspace()));
 				Ok(url.to_string())
 			}
 			x @ _ => bail!("cannot migrate this type of service: {x:?}"),

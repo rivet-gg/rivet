@@ -419,6 +419,43 @@ pub async fn up(ctx: &ProjectContext, services: &[ServiceContext]) -> Result<()>
 				)
 				.await;
 			}
+			RuntimeKind::Cassandra { .. } => {
+				let db_name = svc.crdb_db_name();
+				rivet_term::status::progress("Migrating Cassandra", &db_name);
+
+				let url = conn.cass_url.as_ref().unwrap();
+				let hostname = url.host_str().unwrap();
+				let port = url.port().unwrap();
+				let default_keyspace = url.path().trim_start_matches('/');
+
+				// Parse `username` and `password` from query
+				let query = url.query().unwrap();
+				let username = query
+					.split("&")
+					.find(|x| x.starts_with("username="))
+					.unwrap()
+					.trim_start_matches("username=");
+				let password = query
+					.split("&")
+					.find(|x| x.starts_with("password="))
+					.unwrap()
+					.trim_start_matches("password=");
+
+				// HACK: Ignore error since there is no `CREATE DATABASE IF NOT EXISTS` in Postgres
+				rivet_term::status::progress("Creating database", &db_name);
+				let replication_factor = svc.cass_replication_factor().await;
+				dep::cassandra::cli::exec(
+					dep::cassandra::cli::Credentials {
+						hostname,
+						port,
+						username,
+						password: Some(password),
+						keyspace: default_keyspace,
+					},
+					Some(&format!("CREATE KEYSPACE IF NOT EXISTS \"{db_name}\" WITH replication = {{'class': 'NetworkTopologyStrategy', 'replication_factor': {replication_factor}}};")),
+				)
+				.await?;
+			}
 			x @ _ => bail!("cannot migrate this type of service: {x:?}"),
 		}
 

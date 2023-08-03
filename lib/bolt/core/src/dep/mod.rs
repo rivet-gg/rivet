@@ -1,4 +1,5 @@
 pub mod cargo;
+pub mod cassandra;
 pub mod cloudflare;
 pub mod consul;
 pub mod docker;

@@ -128,11 +128,32 @@ pub async fn shell(ctx: &ProjectContext, svc: &ServiceContext, query: Option<&st
 				dep::postgres::cli::Credentials {
 					hostname,
 					port,
-					username: username,
+					username,
 					password: Some(password),
 					db_name: &db_name,
 				},
 				dep::postgres::cli::Compatability::Native,
+				query,
+			)
+			.await?;
+		}
+		RuntimeKind::Cassandra { .. } => {
+			let keyspace = svc.cass_keyspace();
+			let url = conn.cass_url.as_ref().unwrap();
+			let hostname = url.host_str().unwrap();
+			let port = url.port().unwrap();
+			let username = url.username();
+			let password = url.password().unwrap();
+
+			rivet_term::status::progress("Connecting to Cassandra", &keyspace);
+			dep::cassandra::cli::exec(
+				dep::cassandra::cli::Credentials {
+					hostname,
+					port,
+					username,
+					password: Some(password),
+					keyspace: &keyspace,
+				},
 				query,
 			)
 			.await?;

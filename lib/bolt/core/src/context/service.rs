@@ -259,8 +259,16 @@ impl ServiceContextData {
 		self.name_snake()
 	}
 
-	pub fn cass_db_name(&self) -> String {
+	pub fn cass_keyspace(&self) -> String {
 		self.name_snake()
+	}
+
+	pub async fn cass_replication_factor(&self) -> usize {
+		let project_ctx = self.project().await;
+		match &project_ctx.ns().cluster.kind {
+			config::ns::ClusterKind::SingleNode { .. } => 1,
+			config::ns::ClusterKind::Distributed { .. } => 3,
+		}
 	}
 
 	pub fn redis_db_name(&self) -> String {
