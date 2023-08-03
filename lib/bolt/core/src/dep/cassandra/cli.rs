@@ -18,6 +18,8 @@ pub async fn exec<'a>(creds: Credentials<'a>, query: Option<&'a str>) -> Result<
 				"docker",
 				"run",
 				"-it",
+				"--network",
+				"host",
 				"--entrypoint",
 				"/bin/cqlsh",
 				"scylladb/scylla",
@@ -29,6 +31,7 @@ pub async fn exec<'a>(creds: Credentials<'a>, query: Option<&'a str>) -> Result<
 				creds.username,
 				"-p",
 				password,
+				"-e",
 				query
 			)
 			.run()
@@ -39,6 +42,8 @@ pub async fn exec<'a>(creds: Credentials<'a>, query: Option<&'a str>) -> Result<
 				"docker",
 				"run",
 				"-it",
+				"--network",
+				"host",
 				"--entrypoint",
 				"/bin/cqlsh",
 				"scylladb/scylla",

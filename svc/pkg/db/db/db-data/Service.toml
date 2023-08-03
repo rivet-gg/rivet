@@ -2,6 +2,6 @@
 name = "db-db-data"
 
 [runtime]
-kind = "postgres"
+kind = "cassandra"
 
 [database]
