@@ -1,7 +1,7 @@
 use api_helper::{anchor::WatchIndexQuery, ctx::Ctx};
 use proto::backend;
 use rivet_cloud_server::models;
-use rivet_convert::{ApiInto, ApiTryInto};
+use rivet_convert::ApiInto;
 use rivet_operation::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +14,7 @@ pub async fn convert(
 	_body: models::ConvertGroupRequest,
 ) -> GlobalResult<models::ConvertGroupResponse> {
 	// Disabled until we go public
-	panic_with!(API_FORBIDDEN)
+	panic_with!(API_FORBIDDEN, reason = "Closed beta");
 
 	// ctx.auth().check_team_owner(ctx.op_ctx(), group_id).await?;
 

@@ -64,6 +64,9 @@ pub async fn up_services<T: AsRef<str>>(
 	svc_names: &[T],
 	opts: UpOpts,
 ) -> Result<Vec<ServiceContext>> {
+	let event = utils::telemetry::build_event(ctx, "bolt_up").await?;
+	utils::telemetry::capture_event(ctx, event).await?;
+
 	// let run_context = RunContext::Service;
 	let build_context = BuildContext::Bin {
 		optimization: ctx.build_optimization(),
@@ -167,7 +170,6 @@ pub async fn up_services<T: AsRef<str>>(
 				cargo::cli::build(
 					ctx,
 					cargo::cli::BuildOpts {
-						root: ctx.path(),
 						build_calls: svcs_by_workspace
 							.iter()
 							.map(|(workspace_path, svc_names)| cargo::cli::BuildCall {
@@ -175,9 +177,13 @@ pub async fn up_services<T: AsRef<str>>(
 								bins: &svc_names,
 							})
 							.collect::<Vec<_>>(),
-						build_method: match &ctx.ns().deploy.kind {
-							config::ns::DeployKind::Local { .. } => cargo::cli::BuildMethod::Native,
-							config::ns::DeployKind::Cluster { .. } => cargo::cli::BuildMethod::Musl,
+						build_method: match &ctx.ns().cluster.kind {
+							config::ns::ClusterKind::SingleNode { .. } => {
+								cargo::cli::BuildMethod::Native
+							}
+							config::ns::ClusterKind::Distributed { .. } => {
+								cargo::cli::BuildMethod::Musl
+							}
 						},
 						release: ctx.build_optimization() == BuildOptimization::Release,
 						jobs: ctx.config_local().rust.num_jobs,
@@ -354,7 +360,6 @@ async fn build_svc(svc_ctx: &ServiceContext, optimization: BuildOptimization) {
 				cargo::cli::build(
 					&project_ctx,
 					cargo::cli::BuildOpts {
-						root: svc_ctx.project().await.path(),
 						build_calls: vec![cargo::cli::BuildCall {
 							path: svc_ctx
 								.workspace_path()
@@ -362,9 +367,13 @@ async fn build_svc(svc_ctx: &ServiceContext, optimization: BuildOptimization) {
 								.unwrap(),
 							bins: &[svc_ctx.cargo_name().expect("no cargo name")],
 						}],
-						build_method: match &project_ctx.ns().deploy.kind {
-							config::ns::DeployKind::Local { .. } => cargo::cli::BuildMethod::Native,
-							config::ns::DeployKind::Cluster { .. } => cargo::cli::BuildMethod::Musl,
+						build_method: match &project_ctx.ns().cluster.kind {
+							config::ns::ClusterKind::SingleNode { .. } => {
+								cargo::cli::BuildMethod::Native
+							}
+							config::ns::ClusterKind::Distributed { .. } => {
+								cargo::cli::BuildMethod::Musl
+							}
 						},
 						release: optimization == BuildOptimization::Release,
 						jobs: project_ctx.config_local().rust.num_jobs,

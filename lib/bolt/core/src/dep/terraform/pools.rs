@@ -185,10 +185,24 @@ pub async fn build_pools(ctx: &ProjectContext) -> Result<HashMap<String, Pool>> 
 			.build()?,
 	);
 
+	let mut svc_roles = vec!["docker", "nomad-client", "consul-client"];
+	// Add logging roles
+	if ctx.ns().logging.is_some()
+		&& ctx
+			.read_secret_opt(&["cloudflare", "access", "proxy", "client_id"])
+			.await?
+			.is_some()
+		&& ctx
+			.read_secret_opt(&["cloudflare", "access", "proxy", "client_secret"])
+			.await?
+			.is_some()
+	{
+		svc_roles.extend(["traefik-cloudflare-proxy", "docker-plugin-loki"]);
+	}
 	pools.insert(
 		"svc".into(),
 		PoolBuilder::default()
-			.roles(vec!["docker", "nomad-client", "consul-client"])
+			.roles(svc_roles)
 			.vpc(true)
 			.local_mode(PoolLocalMode::Locally)
 			.nebula_firewall_inbound(
@@ -686,15 +700,15 @@ fn filter_pools(
 	pools: HashMap<String, Pool>,
 ) -> Result<HashMap<String, Pool>> {
 	// Apply filters
-	match &ctx.ns().deploy.kind {
+	match &ctx.ns().cluster.kind {
 		// Return pools that run in a cluster
-		bolt_config::ns::DeployKind::Cluster { .. } => Ok(pools
+		bolt_config::ns::ClusterKind::Distributed { .. } => Ok(pools
 			.into_iter()
 			.filter(|(_, x)| x.local_mode != PoolLocalMode::LocalOnly)
 			.collect()),
 
 		// Merge pools together to `local` node
-		bolt_config::ns::DeployKind::Local { .. } => {
+		bolt_config::ns::ClusterKind::SingleNode { .. } => {
 			let mut new_pools = HashMap::new();
 
 			// Include normal pools

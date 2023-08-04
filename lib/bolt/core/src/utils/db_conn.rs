@@ -1,13 +1,15 @@
 use anyhow::*;
+use std::collections::HashMap;
 
 use crate::{
 	config::{self, service::RuntimeKind},
 	context::{ProjectContext, ServiceContext},
-	dep::cloudflare,
+	dep::{self, cloudflare},
 	utils,
 };
 
 pub struct DatabaseConnection {
+	pub redis_hosts: HashMap<String, String>,
 	pub cockroach_host: Option<String>,
 	pub clickhouse_host: Option<String>,
 
@@ -23,10 +25,25 @@ impl DatabaseConnection {
 	) -> Result<DatabaseConnection> {
 		// Create tunnels for databases
 		let mut tunnel_configs = Vec::new();
+		let mut redis_hosts = HashMap::new();
 		let mut cockroach_host = None;
 		let mut clickhouse_host = None;
 		for svc in services {
 			match &svc.config().runtime {
+				RuntimeKind::Redis { .. } => {
+					let name = svc.name();
+					let port = dep::redis::server_port(&svc);
+					if !redis_hosts.contains_key(&name) {
+						let host = access_service(
+							&mut tunnel_configs,
+							&ctx,
+							&format!("listen.{name}.service.consul:{port}"),
+							(cloudflare::TunnelProtocol::Tcp, &name),
+						)
+						.await?;
+						redis_hosts.insert(name, host);
+					}
+				}
 				RuntimeKind::CRDB { .. } => {
 					if cockroach_host.is_none() {
 						cockroach_host = Some(
@@ -53,7 +70,7 @@ impl DatabaseConnection {
 						);
 					}
 				}
-				x @ _ => bail!("cannot migrate this type of service: {x:?}"),
+				x @ _ => bail!("cannot connect to this type of service: {x:?}"),
 			}
 		}
 
@@ -65,6 +82,7 @@ impl DatabaseConnection {
 		};
 
 		Ok(DatabaseConnection {
+			redis_hosts,
 			cockroach_host,
 			clickhouse_host,
 			_tunnel: tunnel,
@@ -102,9 +120,9 @@ pub async fn access_service(
 	service_hostname: &str,
 	(tunnel_protocol, tunnel_name): (cloudflare::TunnelProtocol, &str),
 ) -> Result<String> {
-	match &ctx.ns().deploy.kind {
-		config::ns::DeployKind::Local { .. } => Ok(service_hostname.into()),
-		config::ns::DeployKind::Cluster { .. } => {
+	match &ctx.ns().cluster.kind {
+		config::ns::ClusterKind::SingleNode { .. } => Ok(service_hostname.into()),
+		config::ns::ClusterKind::Distributed { .. } => {
 			// Save the tunnel config
 			let local_port = utils::pick_port();
 			tunnel_configs.push(cloudflare::TunnelConfig::new_with_port(

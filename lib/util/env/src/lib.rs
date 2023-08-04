@@ -5,6 +5,20 @@ pub async fn read_secret(key: &[impl AsRef<str>]) -> Result<String, std::env::Va
 	std::env::var(secret_env_var_key(key))
 }
 
+pub async fn read_secret_opt(key: &[impl AsRef<str>]) -> Result<Option<String>, std::env::VarError> {
+	let env_var = read_secret(key).await;
+	
+	match env_var {
+		Ok(v) => Ok(Some(v)),
+		Err(var_error) => {
+			match var_error {
+				std::env::VarError::NotPresent => Ok(None),
+				std::env::VarError::NotUnicode(_) => Err(var_error),
+			}
+		}
+	}
+}
+
 /// Name of env var holding a given secret.
 pub fn secret_env_var_key(key: &[impl AsRef<str>]) -> String {
 	key.iter()
@@ -45,6 +59,7 @@ lazy_static::lazy_static! {
 	static ref NOMAD_DC: Option<String> = std::env::var("NOMAD_DC").ok();
 	static ref REGION: Option<String> = std::env::var("RIVET_REGION").ok();
 	static ref NAMESPACE: Option<String> = std::env::var("RIVET_NAMESPACE").ok();
+	static ref CLUSTER_ID: Option<String> = std::env::var("RIVET_CLUSTER_ID").ok();
 	static ref SOURCE_HASH: Option<String> = std::env::var("RIVET_SOURCE_HASH").ok();
 	static ref DOMAIN_MAIN: Option<String> = std::env::var("RIVET_DOMAIN_MAIN").ok();
 	static ref DOMAIN_CDN: Option<String> = std::env::var("RIVET_DOMAIN_CDN").ok();
@@ -85,6 +100,13 @@ pub fn namespace() -> &'static str {
 	match &*NAMESPACE {
 		Some(x) => x.as_str(),
 		None => panic!("RIVET_NAMESPACE"),
+	}
+}
+
+pub fn cluster_id() -> &'static str {
+	match &*CLUSTER_ID {
+		Some(x) => x.as_str(),
+		None => panic!("RIVET_CLUSTER_ID"),
 	}
 }
 

@@ -34,7 +34,6 @@ macro_rules! rpc {
 // TODO: @notrace is not very clean, improve this
 #[macro_export]
 macro_rules! msg {
-	// TODO: Update all branches to use `$mod1:ident$(::$mod2:ident)*`
 	(
 		[$container:expr] $mod1:ident$(::$mod2:ident)* ($($param:expr),*)
 		$body:tt
@@ -230,7 +229,7 @@ macro_rules! op {
 		op!([$container] $mod { $($name: $value,)* })
 	};
 
-	// TODO: Does nothing
+	// TODO: Does nothing different
 	([$container:expr] @dont_log_body $($t:tt)*) => {
 		op!([$container] $($t)+)
 	};

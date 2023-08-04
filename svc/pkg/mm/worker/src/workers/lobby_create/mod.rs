@@ -732,7 +732,7 @@ async fn resolve_image_artifact_url(
 			// let http_auth = "job_run_image:XXXX";
 			let http_auth: String = todo!("need to auto-generate password");
 
-			// TODO: Unproxied storage endpoint was removed. Replace with Nebula address. We can't
+			// TODO: Unproxied storage endopint was removed. Replace with Nebula address. We can't
 			// use Consul to resolve this though, since Consul is not installed on the edge nodes.
 			// Pull the image from the CDN region instead of the default region for
 			// faster boot times.
@@ -754,9 +754,12 @@ async fn resolve_image_artifact_url(
 			let bucket_screaming = bucket.to_uppercase().replace('-', "_");
 
 			// Build client
-			let s3_client =
-				s3_util::Client::from_env_opt(&bucket, s3_util::EndpointKind::InternalResolved)
-					.await?;
+			let s3_client = s3_util::Client::from_env_opt(
+				&bucket,
+				s3_util::Provider::default()?,
+				s3_util::EndpointKind::InternalResolved,
+			)
+			.await?;
 
 			let upload_id = internal_unwrap!(upload.upload_id).as_uuid();
 			let presigned_req = s3_client

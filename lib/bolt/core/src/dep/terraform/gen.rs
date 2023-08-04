@@ -146,17 +146,18 @@ async fn vars(ctx: &ProjectContext) {
 	// Namespace
 	vars.insert("namespace".into(), json!(ns));
 
-	match &config.deploy.kind {
-		config::ns::DeployKind::Local {
+	match &config.cluster.kind {
+		config::ns::ClusterKind::SingleNode {
 			public_ip,
 			preferred_subnets,
+			..
 		} => {
 			vars.insert("deploy_method_local".into(), json!(true));
 			vars.insert("deploy_method_cluster".into(), json!(false));
 			vars.insert("public_ip".into(), json!(public_ip));
 			vars.insert("local_preferred_subnets".into(), json!(preferred_subnets));
 		}
-		config::ns::DeployKind::Cluster {
+		config::ns::ClusterKind::Distributed {
 			salt_master_size,
 			nebula_lighthouse_size,
 		} => {
@@ -224,16 +225,6 @@ async fn vars(ctx: &ProjectContext) {
 		}
 	}
 
-	// Logging
-	match &config.logging {
-		Some(config::ns::Logging {
-			provider: config::ns::LoggingProvider::Loki { endpoint },
-		}) => {
-			vars.insert("loki_endpoint".into(), json!(endpoint));
-		}
-		None => {}
-	}
-
 	// Regions
 	vars.insert(
 		"primary_region".into(),
@@ -281,9 +272,9 @@ async fn vars(ctx: &ProjectContext) {
 		let mut extra_dns = Vec::new();
 
 		// Which pool of ingress servers the DNS record will be pointed at
-		let ing_pool = match &ctx.ns().deploy.kind {
-			config::ns::DeployKind::Local { .. } => "local",
-			config::ns::DeployKind::Cluster { .. } => "ing-px",
+		let ing_pool = match &ctx.ns().cluster.kind {
+			config::ns::ClusterKind::SingleNode { .. } => "local",
+			config::ns::ClusterKind::Distributed { .. } => "ing-px",
 		};
 
 		// Add services
@@ -310,7 +301,8 @@ async fn vars(ctx: &ProjectContext) {
 		}
 
 		// Add Minio
-		if let config::ns::S3Provider::Minio { .. } = &ctx.ns().s3.provider {
+		let s3_providers = &ctx.ns().s3.providers;
+		if s3_providers.minio.is_some() {
 			extra_dns.push(json!({
 				"pool": ing_pool,
 				"zone_name": "base",
@@ -387,7 +379,8 @@ async fn vars(ctx: &ProjectContext) {
 
 		vars.insert("s3_buckets".into(), json!(s3_buckets));
 
-		let credentials = ctx.s3_credentials().await.unwrap();
+		let (default_s3_provider, _) = ctx.default_s3_provider().unwrap();
+		let credentials = ctx.s3_credentials(default_s3_provider).await.unwrap();
 		vars.insert(
 			"s3_persistent_access_key_id".into(),
 			json!(credentials.access_key_id),

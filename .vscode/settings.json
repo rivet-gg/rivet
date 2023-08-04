@@ -26,5 +26,14 @@
 	"files.watcherExclude": {
 		"**/target/**": true
 	},
-	"python.formatting.provider": "black"
+	"python.formatting.provider": "black",
+	"grammarly.selectors": [
+		{
+			"language": "markdown",
+			"scheme": "file"
+		}
+	],
+	"rust-analyzer.cargo.extraEnv": {
+		"RUSTFLAGS": "--cfg tokio_unstable"
+	}
 }

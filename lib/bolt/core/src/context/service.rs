@@ -15,7 +15,7 @@ use crate::{
 		self,
 		service::{RuntimeKind, ServiceKind},
 	},
-	context::{self, BuildContext, ProjectContext, RunContext},
+	context::{self, BuildContext, ProjectContext, RunContext, S3Provider},
 	dep::{self, cloudflare, s3},
 	utils,
 };
@@ -299,6 +299,10 @@ impl ServiceContextData {
 		// self.name().starts_with("upload-")
 	}
 
+	pub fn depends_on_s3_backfill(&self) -> bool {
+		self.name() == "upload-provider-fill"
+	}
+
 	pub fn depends_on_cloudflare(&self) -> bool {
 		true
 		// 	|| self.name() == "cf-custom-hostname-create"
@@ -352,9 +356,9 @@ impl ServiceContextData {
 	) -> Result<ServiceBuildPlan> {
 		let project_ctx = self.project().await;
 
-		match &project_ctx.ns().deploy.kind {
+		match &project_ctx.ns().cluster.kind {
 			// Build locally
-			config::ns::DeployKind::Local { .. } => {
+			config::ns::ClusterKind::SingleNode { .. } => {
 				// Derive the build path
 				let optimization = match &build_context {
 					BuildContext::Bin { optimization } => optimization,
@@ -378,7 +382,7 @@ impl ServiceContextData {
 				Ok(ServiceBuildPlan::BuildLocally { output_path })
 			}
 			// Build and upload to S3
-			config::ns::DeployKind::Cluster { .. } => {
+			config::ns::ClusterKind::Distributed { .. } => {
 				// Derive the build key
 				let key = self.s3_build_key(build_context).await?;
 
@@ -658,7 +662,7 @@ impl ServiceContextData {
 		// the output binaries are hardcoded to /nix/store.
 		//
 		// The `/nix/store` directory is mounted as a volume.
-		if let config::ns::DeployKind::Local { .. } = project_ctx.ns().deploy.kind {
+		if let config::ns::ClusterKind::SingleNode { .. } = project_ctx.ns().cluster.kind {
 			env.push((
 				"LD_LIBRARY_PATH".into(),
 				std::env::var("LD_LIBRARY_PATH").context("missing LD_LIBRARY_PATH")?,
@@ -706,6 +710,10 @@ impl ServiceContextData {
 		// Generic context
 		env.push(("RIVET_RUN_CONTEXT".into(), run_context.short().into()));
 		env.push(("RIVET_NAMESPACE".into(), project_ctx.ns_id().into()));
+		env.push((
+			"RIVET_CLUSTER_ID".into(),
+			project_ctx.ns().cluster.id.to_string(),
+		));
 
 		if self.enable_tokio_console() {
 			env.push(("TOKIO_CONSOLE_ENABLE".into(), "1".into()));
@@ -937,6 +945,12 @@ impl ServiceContextData {
 			));
 		}
 
+		// Fly
+		if let Some(fly) = &project_ctx.ns().fly {
+			env.push(("FLY_ORGANIZATION_ID".into(), fly.organization_id.clone()));
+			env.push(("FLY_REGION".into(), fly.region.clone()));
+		}
+
 		// CRDB
 		let mut crdb_host = None;
 		for crdb_dep in self.crdb_dependencies().await {
@@ -965,7 +979,7 @@ impl ServiceContextData {
 			env.push((format!("CRDB_URL_{}", crdb_dep.name_screaming_snake()), uri));
 		}
 
-		// Expose all S3 endpoints to services that need it
+		// Expose all S3 endpoints to services that need them
 		let s3_deps = if self.depends_on_s3() {
 			project_ctx.all_services().await.to_vec()
 		} else {
@@ -976,35 +990,56 @@ impl ServiceContextData {
 				continue;
 			}
 
-			let s3_config = project_ctx
-				.clone()
-				.s3_config(project_ctx.clone().s3_credentials().await?)
-				.await?;
+			// Add default provider
+			let default_provider_name = match project_ctx.default_s3_provider()? {
+				(S3Provider::Minio, _) => "MINIO",
+				(S3Provider::Backblaze, _) => "BACKBLAZE",
+				(S3Provider::Aws, _) => "AWS",
+			};
+			env.push((
+				"S3_DEFAULT_PROVIDER".to_string(),
+				default_provider_name.to_string(),
+			));
 
-			env.push((
-				format!("S3_BUCKET_{}", s3_dep.name_screaming_snake()),
-				s3_dep.s3_bucket_name().await,
-			));
-			env.push((
-				format!("S3_ENDPOINT_INTERNAL_{}", s3_dep.name_screaming_snake()),
-				s3_config.endpoint_internal,
-			));
-			env.push((
-				format!("S3_ENDPOINT_EXTERNAL_{}", s3_dep.name_screaming_snake()),
-				s3_config.endpoint_external,
-			));
-			env.push((
-				format!("S3_REGION_{}", s3_dep.name_screaming_snake()),
-				s3_config.region,
-			));
-			env.push((
-				format!("S3_ACCESS_KEY_ID_{}", s3_dep.name_screaming_snake()),
-				s3_config.credentials.access_key_id,
-			));
-			env.push((
-				format!("S3_SECRET_ACCESS_KEY_{}", s3_dep.name_screaming_snake()),
-				s3_config.credentials.access_key_secret,
-			));
+			// Add all configured providers
+			let providers = &project_ctx.ns().s3.providers;
+			if providers.minio.is_some() {
+				add_s3_env(
+					&project_ctx,
+					&mut env,
+					&s3_dep,
+					context::project::S3Provider::Minio,
+				)
+				.await?;
+			}
+			if providers.backblaze.is_some() {
+				add_s3_env(
+					&project_ctx,
+					&mut env,
+					&s3_dep,
+					context::project::S3Provider::Backblaze,
+				)
+				.await?;
+			}
+			if providers.aws.is_some() {
+				add_s3_env(
+					&project_ctx,
+					&mut env,
+					&s3_dep,
+					context::project::S3Provider::Aws,
+				)
+				.await?;
+			}
+		}
+
+		// S3 backfill
+		if self.depends_on_s3_backfill() {
+			if let Some(backfill) = &project_ctx.ns().s3.backfill {
+				env.push((
+					"S3_BACKFILL_PROVIDER".into(),
+					heck::ShoutySnakeCase::to_shouty_snake_case(backfill.as_str()),
+				));
+			}
 		}
 
 		// Runtime-specific
@@ -1016,6 +1051,16 @@ impl ServiceContextData {
 		}
 
 		env.push((
+			"RIVET_TELEMETRY_DISABLE".into(),
+			if project_ctx.ns().rivet.telemetry.disable {
+				"1"
+			} else {
+				"0"
+			}
+			.into(),
+		));
+
+		env.push((
 			"RIVET_API_HUB_ORIGIN_REGEX".into(),
 			project_ctx
 				.ns()
@@ -1024,10 +1069,7 @@ impl ServiceContextData {
 				.hub_origin_regex
 				.clone()
 				.unwrap_or_else(|| {
-					format!(
-						"^https://({base}|hub\\.{base})$",
-						base = project_ctx.domain_main()
-					)
+					format!("^https://hub\\.{base}$", base = project_ctx.domain_main())
 				}),
 		));
 		env.push((
@@ -1142,9 +1184,9 @@ pub async fn access_service(
 	service_hostname: &str,
 	(tunnel_protocol, tunnel_name): (cloudflare::TunnelProtocol, &str),
 ) -> Result<String> {
-	match (run_context, &ctx.ns().deploy.kind) {
+	match (run_context, &ctx.ns().cluster.kind) {
 		// Create tunnels to remote services
-		(RunContext::Test, config::ns::DeployKind::Cluster { .. }) => {
+		(RunContext::Test, config::ns::ClusterKind::Distributed { .. }) => {
 			// Save the tunnel config
 			let local_port = utils::pick_port();
 			tunnel_configs.push(cloudflare::TunnelConfig::new_with_port(
@@ -1157,9 +1199,8 @@ pub async fn access_service(
 			Ok(format!("127.0.0.1:{local_port}"))
 		}
 		// Use the Consul address if either in production or running locally
-		(RunContext::Service, _) | (RunContext::Test, config::ns::DeployKind::Local { .. }) => {
-			Ok(service_hostname.into())
-		}
+		(RunContext::Service, _)
+		| (RunContext::Test, config::ns::ClusterKind::SingleNode { .. }) => Ok(service_hostname.into()),
 	}
 }
 
@@ -1184,8 +1225,8 @@ impl ServiceContextData {
 			.get(&self.name())
 			.cloned()
 			.or_else(|| project_ctx.ns().services.get("default").cloned())
-			.unwrap_or_else(|| match project_ctx.ns().deploy.kind {
-				config::ns::DeployKind::Local { .. } => config::ns::Service {
+			.unwrap_or_else(|| match project_ctx.ns().cluster.kind {
+				config::ns::ClusterKind::SingleNode { .. } => config::ns::Service {
 					count: 1,
 					resources: config::ns::ServiceResources {
 						cpu: config::ns::CpuResources::Cpu(50),
@@ -1193,7 +1234,7 @@ impl ServiceContextData {
 						ephemeral_disk: 128,
 					},
 				},
-				config::ns::DeployKind::Cluster { .. } => config::ns::Service {
+				config::ns::ClusterKind::Distributed { .. } => config::ns::Service {
 					count: if is_singleton { 1 } else { 2 },
 					resources: config::ns::ServiceResources {
 						cpu: config::ns::CpuResources::Cpu(250),
@@ -1209,4 +1250,47 @@ impl ServiceContextData {
 
 		service
 	}
+}
+
+async fn add_s3_env(
+	project_ctx: &ProjectContext,
+	env: &mut Vec<(String, String)>,
+	s3_dep: &Arc<ServiceContextData>,
+	provider: S3Provider,
+) -> Result<()> {
+	let provider_name = match provider {
+		S3Provider::Minio => "MINIO",
+		S3Provider::Backblaze => "BACKBLAZE",
+		S3Provider::Aws => "AWS",
+	};
+	let s3_dep_name = s3_dep.name_screaming_snake();
+	let s3_config = project_ctx.s3_config(provider).await?;
+	let s3_creds = project_ctx.s3_credentials(provider).await?;
+
+	env.push((
+		format!("S3_{}_BUCKET_{}", provider_name, s3_dep_name),
+		s3_dep.s3_bucket_name().await,
+	));
+	env.push((
+		format!("S3_{}_ENDPOINT_INTERNAL_{}", provider_name, s3_dep_name),
+		s3_config.endpoint_internal,
+	));
+	env.push((
+		format!("S3_{}_ENDPOINT_EXTERNAL_{}", provider_name, s3_dep_name),
+		s3_config.endpoint_external,
+	));
+	env.push((
+		format!("S3_{}_REGION_{}", provider_name, s3_dep_name),
+		s3_config.region,
+	));
+	env.push((
+		format!("S3_{}_ACCESS_KEY_ID_{}", provider_name, s3_dep_name),
+		s3_creds.access_key_id,
+	));
+	env.push((
+		format!("S3_{}_SECRET_ACCESS_KEY_{}", provider_name, s3_dep_name),
+		s3_creds.access_key_secret,
+	));
+
+	Ok(())
 }

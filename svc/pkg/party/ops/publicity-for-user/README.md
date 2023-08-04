@@ -1,2 +1,0 @@
-# party-publicity-for-user
-
