@@ -7,7 +7,6 @@ groups:
       - name: fernapi/fern-typescript-node-sdk
         version: 0.7.2
         config:
-          namespaceExport: Rivet
           bundle: true
         output:
           location: npm
