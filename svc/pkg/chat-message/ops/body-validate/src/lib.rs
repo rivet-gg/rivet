@@ -40,9 +40,6 @@ async fn validate(
 			plugin_id,
 			..
 		}) => {
-			if let Some(user_id) = sender_user_id {
-				user_id;
-			}
 			internal_assert!(plugin_id.is_some());
 		}
 		Kind::Text(Text {
