@@ -1,5 +1,5 @@
 {
-    "name": "Debian",
+    "name": "Rivet Dev",
     "build": {
         "dockerfile": "Dockerfile",
         "context": "."
