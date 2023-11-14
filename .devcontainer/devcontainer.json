@@ -4,6 +4,7 @@
         "dockerfile": "Dockerfile",
         "context": "."
     },
+    "remoteUser": "root",
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
             "moby": true,
