@@ -1,14 +1,23 @@
-# Start from the base image
-FROM mcr.microsoft.com/devcontainers/base:bullseye
+# Start from the Nix image
+FROM nixos/nix as builder
 
 # Install Git
-RUN apt-get update && apt-get install -y git
+RUN nix-env -iA nixpkgs.git
 
 # Clone the Rivet repository
 RUN git clone https://github.com/rivet-gg/rivet.git
 
-# # Boot the cluster
-# RUN nix-shell --run "bolt init dev --yes"
+# Change into the repo directory
+WORKDIR /rivet
 
-# # Promote the user to admin
-# RUN nix-shell --run "bolt db sh db-user --query 'UPDATE users SET is_admin = true'"
+# Make sure bolt is set up. We're just using --help to make sure that bolt is
+# set up.
+RUN nix-shell --run "bolt --version"
+
+FROM mcr.microsoft.com/devcontainers/base:bullseye
+
+# Copy the nix cache from the builder stage
+COPY --from=builder /nix /nix
+
+# Set the working directory
+WORKDIR /workspace
