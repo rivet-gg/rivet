@@ -18,9 +18,12 @@ FROM mcr.microsoft.com/devcontainers/base:bullseye
 
 RUN apt-get update \
     && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends git-lfs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get -y install \
+        git-lfs \
+        libssl-dev \
+        pkg-config \
+        build-essential \
+        protobuf-compiler
 
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
