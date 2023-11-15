@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../lib/bolt"
+		}
+	],
+	"settings": {
+		"rust-analyzer.cargo.extraEnv": {
+			"RUSTFLAGS": "--cfg tokio_unstable"
+		}
+	}
+}
