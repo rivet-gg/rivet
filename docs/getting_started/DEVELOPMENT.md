@@ -23,76 +23,46 @@
 > -   https://github.com/rivet-gg/rivet/issues/157
 
 ## Prerequisites
-
-**The following should be installed in a dedicated VM for Rivet.**
-
 -   Debian 11 (other Linux distros untested)
     -   Accessible from public IP
-    -   Recommended: [Firewalls](/docs/getting_started/DEVELOPMENT_FIREWALLS.md)
--   [Cloudflare website](https://developers.cloudflare.com/fundamentals/get-started/setup/add-site/) (free)
--   [Linode account](https://login.linode.com/signup) (more providers coming soon)
+    -   Recommended to configure your [Firewalls](/docs/getting_started/DEVELOPMENT_FIREWALLS.md)
+-   A [Cloudflare account](https://developers.cloudflare.com/fundamentals/get-started/setup/add-site/) (free)
+    - With a top-level domain.
+-   A [Linode](https://login.linode.com/signup) or [OneProvider](https://oneprovider.com/onecloud/pricing) account
+    - On Linode you would require a _Linode 32 GB Shared CPU VM_ for __$192/month__
+    - On OneProvider you would require a _High Performance Instance with 8 vCPU & 32 GB RAM_ for __€45/month__
+-   A [SendGrid account](https://sendgrid.com/)
 
 ## Step 1: Install dependencies
+- [Docker](https://docs.docker.com/engine/install/) _is required to run Rivet services._
+- [Nix package manager](https://nixos.org/download.html) _is required to set up the development environment._
+- [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) _is required to clone Rivet's source code._
 
-### [Docker](https://docs.docker.com/engine/install/)
-
-_Docker is required to run Rivet services._
-
-See [here](https://docs.docker.com/engine/install/) for install instructions.
-
-### [Nix package manager](https://nixos.org/download.html)
-
-_Nix is required to set up the development environment._
-
-Run:
-
-```
-sh <(curl -L https://nixos.org/nix/install) --daemon
-```
-
-### [Git](https://git-scm.com/)
-
-See [here](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) for install instructions.
-
-## Step 2: Clone repository
-
-Run:
-
+## Step 2: Clone the repository
+> **Tip**:
+> Warp may have issues with the Nix installer since it does not use the default shell. [Read more.](https://docs.warp.dev/features/ssh)
 ```
 git clone https://github.com/rivet-gg/rivet.git
 ```
 
-> **Warp compatibility**
->
-> Warp may have issues with the Nix installer since it does not use the default shell. [Read more.](https://docs.warp.dev/features/ssh)
-
-## Step 3: Boot cluster
-
-Run:
-
+## Step 3: Boot the cluster
+> **Tip**:
+> See the `namespaces/dev.toml` and `secrets/dev.toml` file to see the generated namespace configs.
 ```
 nix-shell --run "bolt init dev --yes"
 ```
-
 This will:
-
 1. Prompt you for parameters to generate your cluster's config
 2. Provision required infrastructure for the cluster
 
-Run this command any time you update to a new version of Rivet.
-
-> **Tip**
->
-> See the `namespaces/dev.toml` and `secrets/dev.toml` file to see the generated namespace configs.
-
 ## Step 4: Boot the Rivet Hub
-
 Now, you have to start the hub frontend.
 
 1. Clone the [Rivet Hub](https://github.com/rivet-gg/hub) with
 2. Create a file called `.env` in the root of the `hub` repo
-    - Set `RIVET_API_ENDPOINT=http://localhost:8080` in the `.env` file
-3. Start the hub
+    - Add `RIVET_API_ENDPOINT=http://[YOUR DOMAIN]:8080` to the top of the file (this is commonly http://localhost:8080)
+    - For more guidance follow the docs [here](https://github.com/rivet-gg/hub/blob/main/README.md)
+3. Start the hub; `yarn start`
 4. Visit http://localhost:5080
 5. Register an account with your email
 
@@ -108,7 +78,7 @@ _This command sets all users to admin. We're assuming you're the only user in th
 
 ## Step 6: Create a developer group
 
-You should now see a "Create Group" button on the hub. Proceed to create a group and start developing.
+You should now see a "Create Group" button on the hub. Proceed to create a group and start developing!
 
 ## Next steps
 
