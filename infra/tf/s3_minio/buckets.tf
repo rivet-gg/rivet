@@ -2,10 +2,12 @@
 resource "null_resource" "check_minio" {
 	provisioner "local-exec" {
 		command = <<EOL
-		until curl -sf ${var.s3_providers.minio.endpoint_external}/minio/health/ready; do
-			echo "Waiting for Minio to become reachable..."
-			sleep 1
-		done
+		# until curl -sf ${var.s3_providers.minio.endpoint_external}/minio/health/ready; do
+		# 	echo "Waiting for Minio to become reachable..."
+		#	sleep 1
+		# done
+		sleep 10
+
 		EOL
 	}
 }
