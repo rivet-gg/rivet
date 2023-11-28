@@ -85,3 +85,18 @@ resource "k3d_cluster" "main" {
 	}
 }
 
+# This needs to be run after k3d_cluster.main is created for Prometheus Node
+# Exporter in the Docker container. Details can be found here:
+# https://github.com/rivet-gg/rivet/issues/208
+resource "null_resource" "post_cluster_creation" {
+	depends_on = [k3d_cluster.main]
+
+	provisioner "local-exec" {
+		command = <<EOF
+			until docker ps | grep -q k3d-${k3d_cluster.main.name}-server-0; do
+				sleep 1
+			done
+			docker exec k3d-${k3d_cluster.main.name}-server-0 mount --make-rshared /
+		EOF
+	}
+}

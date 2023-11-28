@@ -120,3 +120,16 @@ Rivet exposes extensive Prometheus metrics on our internal services. Look for th
 ## Alerting
 
 Rivet uses Alert Manager extensively for catching errors before they happen & quickly narrowing down the source of errors. Alerts can be pushed to Slack if the `alertmanager/slack/url` and `alertmanager/slack/channel` secrets are provided. See _infra/tf/k8s_infra/prometheus.tf_.
+
+## Prometheus Node Exporter pod `CreateContainerError`
+
+If you are using the development environment and the `prometheus-node-exporter`
+pod is failing with the `CreateContainerError` error, you'll need to run the
+following script to fix it:
+
+```bash
+scripts/k3s/fix_-_node_-_exporter.sh
+```
+
+You can find more details in [this
+issue](https://github.com/rivet-gg/rivet/issues/208)
