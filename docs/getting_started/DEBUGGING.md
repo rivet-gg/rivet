@@ -128,7 +128,7 @@ pod is failing with the `CreateContainerError` error, you'll need to run the
 following script to fix it:
 
 ```bash
-scripts/k3s/fix_-_node_-_exporter.sh
+scripts/k3s/fix_node_exporter.sh
 ```
 
 You can find more details in [this

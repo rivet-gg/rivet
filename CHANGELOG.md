@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 -   **Infra** Job logs occasionally returning duplicate log lines
+-   **Infra** Prometheus Node Exporter will now start correctly when being run
+    in a container environment during development.
 
 ## [23.1.0] - 2023-10-30
 
