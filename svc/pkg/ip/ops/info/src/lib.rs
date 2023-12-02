@@ -97,8 +97,10 @@ async fn fetch_ip_info_io(
 
 			Some(backend::net::IpInfo {
 				ip: ip_str.to_string(),
-				latitude,
-				longitude,
+				coords: Some(backend::net::Coordinates {
+					latitude,
+					longitude,
+				}),
 			})
 		}
 		IpInfoParsed::Bogon { .. } => {

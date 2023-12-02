@@ -1,0 +1,17 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+# File is used by the openapi-generator cli to generate a go client.
+generatorName: rust
+gitUserId: hashicorp
+gitRepoId: nomad-openapi/clients/rust/reqwest/v1
+inputSpec: /local/v1/openapi.yaml
+outputDir: /local/clients/rust/reqwest/v1
+packageName: nomad_client
+packageVersion: 1.1.4
+library: reqwest
+templateDir: /local/clients/rust/reqwest/v1
+files:
+  README.mustache:
+    templateType: SupportingFiles
+    destinationFilename: README.md

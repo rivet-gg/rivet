@@ -25,6 +25,7 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 		cdn_worker,
 		cf_custom_hostname_worker,
 		cloud_worker,
+		cluster_worker,
 		external_worker,
 		game_user_worker,
 		job_log_worker,

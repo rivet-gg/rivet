@@ -3,9 +3,10 @@ syntax = "proto3";
 package rivet.backend.region;
 
 import "proto/common.proto";
+import "proto/backend/net.proto";
 
 message Region {
-	reserved 13;
+	reserved 10, 11, 13;
 
 	rivet.common.Uuid region_id = 1;
 	bool enabled = 14;
@@ -18,8 +19,8 @@ message Region {
 	string provider_display_name = 7;
 	string region_display_name = 8;
 	string name_id = 9;
-	double latitude = 10;
-	double longitude = 11;
+
+	rivet.backend.net.Coordinates coords = 15;
 }
 
 enum UniversalRegion {
