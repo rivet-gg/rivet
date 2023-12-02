@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package rivet.backend.cluster;
+
+import "proto/common.proto";
+import "proto/backend/net.proto";
+
+message Cluster {
+    rivet.common.Uuid cluster_id = 1;
+    string name_id = 2;
+    repeated Datacenter datacenters = 3;
+
+    optional rivet.common.Uuid owner_team_id = 4;
+}
+
+message Datacenter {
+    rivet.common.Uuid datacenter_id = 1;
+    string name_id = 2;
+    string display_name = 3;
+    rivet.backend.net.Coordinates coords = 4;
+    repeated Hardware hardware = 6;
+    
+    string provider_id = 7;
+    string provider_datacenter = 8;
+
+    repeated Pool pools = 9;
+    uint64 drain_timeout = 10;
+}
+
+message Pool {
+    PoolType pool_type = 1;
+    uint32 desired_count = 2;
+}
+
+message Hardware {
+    string provider_hardware = 1;
+}
+
+enum PoolType {
+    JOB = 0;
+    GG = 1;
+    ATS = 2;
+}

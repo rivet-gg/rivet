@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.cluster.topology_get;
+
+import "proto/common.proto";
+import "proto/backend/module.proto";
+
+message Request {
+	repeated rivet.common.Uuid cluster_ids = 1;
+}
+
+message Response {
+	message Topology {
+		string node_id = 1;
+		float cpu = 2; // % of total
+		float memory = 3; // % of total
+		float disk = 4; // % of total
+	}
+
+	message Cluster {
+		rivet.common.Uuid cluster_id = 1;
+		repeated Topology topologies = 2;
+	}
+
+	repeated Cluster clusters = 1;
+}

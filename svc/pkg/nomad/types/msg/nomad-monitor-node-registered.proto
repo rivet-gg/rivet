@@ -6,9 +6,10 @@ import "proto/common.proto";
 
 /// name = "msg-nomad-monitor-node-registered"
 /// parameters = [
-/// 	{ name = "node_id" },
+/// 	{ name = "nomad_node_id" },
 /// ]
 message Message {
 	rivet.common.Uuid cluster_id = 1;
-	string node_id = 2;
+	rivet.common.Uuid region_id = 2;
+	string node_id = 3;
 }

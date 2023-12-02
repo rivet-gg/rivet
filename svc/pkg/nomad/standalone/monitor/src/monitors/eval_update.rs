@@ -10,57 +10,11 @@ lazy_static::lazy_static! {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct PlanResult {
+pub struct PlanResult {
 	evaluation: nomad_client::models::Evaluation,
 }
 
-#[tracing::instrument(skip_all)]
-pub async fn start(
-	shared_client: chirp_client::SharedClientHandle,
-	redis_job: RedisPool,
-) -> GlobalResult<()> {
-	let redis_index_key = "nomad:monitor_index:nomad_eval_update_monitor";
-
-	let configuration = nomad_util::config_from_env().unwrap();
-	nomad_util::monitor::Monitor::run(
-		configuration,
-		redis_job,
-		redis_index_key,
-		&["Evaluation"],
-		move |event| {
-			let client = shared_client.clone().wrap_new("nomad-eval-update-monitor");
-			async move {
-				if let Some(payload) = event
-					.decode::<PlanResult>("Evaluation", "EvaluationUpdated")
-					.unwrap()
-				{
-					// We can't decode this with serde, so manually deserialize the response
-					let spawn_res = tokio::task::Builder::new()
-						.name("nomad_eval_update_monitor::handle_event")
-						.spawn(handle(client, payload, event.payload.to_string()));
-					if let Err(err) = spawn_res {
-						tracing::error!(?err, "failed to spawn handle_event task");
-					}
-				}
-			}
-		},
-	)
-	.await?;
-
-	Ok(())
-}
-
-#[tracing::instrument(skip_all)]
-async fn handle(client: chirp_client::Client, payload: PlanResult, payload_json: String) {
-	match handle_inner(client, &payload, payload_json).await {
-		Ok(_) => {}
-		Err(err) => {
-			tracing::error!(?err, ?payload, "error handling event");
-		}
-	}
-}
-
-async fn handle_inner(
+pub async fn handle(
 	client: chirp_client::Client,
 	PlanResult { evaluation: eval }: &PlanResult,
 	payload_json: String,

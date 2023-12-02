@@ -198,8 +198,10 @@ fn convert_region(
 		provider_display_name,
 		region_display_name,
 		name_id: name_id.to_owned(),
-		latitude,
-		longitude,
+		coords: Some(backend::net::Coordinates {
+			latitude,
+			longitude,
+		}),
 	})
 }
 
