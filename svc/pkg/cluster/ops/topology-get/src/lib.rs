@@ -49,7 +49,7 @@ pub async fn handle(
 		SELECT
 			cluster_id,
 			nomad_node_id
-		FROM db_cluster_state.servers
+		FROM db_cluster.servers
 		WHERE cluster_id = ANY($1)
 		",
 		cluster_ids

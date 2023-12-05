@@ -31,7 +31,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_undrain::Message>) -
 		"
 		SELECT
 			nomad_node_id
-		FROM db_cluster_state.servers
+		FROM db_cluster.servers
 		WHERE server_id = $1
 		",
 		server_id

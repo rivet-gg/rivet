@@ -1,47 +1,54 @@
-use proto::backend::{self, pkg::*};
-use rivet_operation::prelude::*;
-use serde_json::json;
+use std::net::Ipv4Addr;
+
+use proto::backend::{cluster::PoolType, pkg::*};
 use reqwest::header;
-use openssl::{pkey::PKey, rsa::Rsa};
+use rivet_operation::prelude::*;
 
-struct Server {
-	pub provider_datacenter_id: String,
-	pub pool_type: backend::cluster::PoolType,
-	pub name: String,
-	pub provider_hardware: String,
-	pub vlan_ip: Ipv4Addr,
-	pub volumes: HashMap<String, ServerVolume>,
-	pub tags: Vec<String>,
-}
+mod api;
+use api::*;
 
-pub struct ServerVolume {
-	size: usize,
+struct ServerCtx {
+	provider_datacenter_id: String,
+	pool_type: PoolType,
+	name: String,
+	provider_hardware: String,
+	vlan_ip: Ipv4Addr,
+	tags: Vec<String>,
+	firewall_inbound: Vec<util::net::FirewallRule>,
 }
 
 #[operation(name = "linode-server-provision")]
 pub async fn handle(
 	ctx: OperationContext<linode::server_provision::Request>,
 ) -> GlobalResult<linode::server_provision::Response> {
+	let cluster_id = unwrap!(ctx.cluster_id);
 	let server_id = unwrap!(ctx.server_id).as_uuid();
-	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(ctx.pool_type));
+	let pool_type = unwrap!(PoolType::from_i32(ctx.pool_type));
 
-	let api_token = util::env::read_secret(&["linode", "terraform", "token"]).await?;
+	let cluster_config_res = op!([ctx] cluster_config_get {
+		cluster_ids: vec![cluster_id],
+	})
+	.await?;
+	let cluster_config = unwrap!(cluster_config_res.configs.first());
+	let datacenter = unwrap!(cluster_config
+		.datacenters
+		.iter()
+		.find(|dc| dc.datacenter_id == ctx.datacenter_id));
+	let provider_datacenter_id = datacenter.provider_datacenter_id.clone();
 
-	// Choose best candidate from cluster config
-	let provider_hardware = ;
+	// TODO: Choose best candidate
+	let provider_hardware = unwrap!(datacenter.hardware.first())
+		.provider_hardware
+		.clone();
 
-	let ns = util::env::namespace();
-	let name = format!("{ns}-{provider_datacenter_id}-{pool_type}-{server_id}");
-	
 	// Find next available vlan index
-	let vlan_addr_range = match pool_type {
-		backend::cluster::PoolType::Job => util::net::job::vlan_addr_range(),
-		backend::cluster::PoolType::Gg => util::net::gg::vlan_addr_range(),
-		backend::cluster::PoolType::As => util::net::ats::vlan_addr_range(),
-		
+	let mut vlan_addr_range = match pool_type {
+		PoolType::Job => util::net::job::vlan_addr_range(),
+		PoolType::Gg => util::net::gg::vlan_addr_range(),
+		PoolType::Ats => util::net::ats::vlan_addr_range(),
 	};
-	let max_idx = vlan_addr_range.clone().count();
-	let (network_index,) = sql_fetch_one!(
+	let max_idx = vlan_addr_range.count() as i64;
+	let (network_idx,) = sql_fetch_one!(
 		[ctx, (i64,)]
 		"
 		WITH
@@ -66,65 +73,76 @@ pub async fn handle(
 		SELECT idx FROM get_next_network_idx
 		",
 		max_idx,
-		pool_type,
-		server_idx
+		ctx.pool_type as i64,
+		server_id
 	)
 	.await?;
 	let vlan_ip = unwrap!(vlan_addr_range.nth(network_idx as usize));
 
-	// None configured
-	volumes = vec![];
-
 	let firewall_inbound = match pool_type {
-		backend::cluster::PoolType::Job => util::net::job::FIREWALL,
-		backend::cluster::PoolType::Gg => util::net::gg::FIREWALL,
-		backend::cluster::PoolType::As => util::net::ats::FIREWALL,
+		PoolType::Job => util::net::job::firewall(),
+		PoolType::Gg => util::net::gg::firewall(),
+		PoolType::Ats => util::net::ats::firewall(),
 	};
+
+	let pool_type_str = match pool_type {
+		PoolType::Job => "job",
+		PoolType::Gg => "gg",
+		PoolType::Ats => "ats",
+	};
+
+	let ns = util::env::namespace();
+	let name = format!("{ns}-{provider_datacenter_id}-{pool_type_str}-{server_id}");
 
 	let tags = vec![
 		// HACK: Linode requires tags to be > 3 characters. We extend the namespace to make sure it
 		// meets the minimum length requirement.
 		format!("rivet-{ns}"),
 		format!("{ns}-{provider_datacenter_id}"),
-		format!("{ns}-{pool_type}"),
-		format!("{ns}-{provider_datacenter_id}-{pool_type}"),
+		format!("{ns}-{pool_type_str}"),
+		format!("{ns}-{provider_datacenter_id}-{pool_type_str}"),
 	];
 
-	region_vlan = util::net::region::vlan_addr_range();
-	prefix_len = region_vlan.prefix_len();
+	let server = ServerCtx {
+		provider_datacenter_id,
+		pool_type,
+		name,
+		provider_hardware,
+		vlan_ip,
+		tags,
+		firewall_inbound,
+	};
 
 	// Build HTTP client
+	let api_token = util::env::read_secret(&["linode", "terraform", "token"]).await?;
 	let mut headers = header::HeaderMap::new();
-	headers.insert(header::AUTHORIZATION, header::HeaderValue::from_str(api_token)?);
-	let client = reqwest::Client::builder().default_headers(headers).build()?;
+	headers.insert(
+		header::AUTHORIZATION,
+		header::HeaderValue::from_str(&api_token)?,
+	);
+	headers.insert(
+		header::CONTENT_TYPE,
+		header::HeaderValue::from_static("application/json"),
+	);
+	let client = reqwest::Client::builder()
+		.default_headers(headers)
+		.build()?;
 
-	create_ssh_key(&client, ).await?;
+	let ssh_key = create_ssh_key(&client, &server).await?;
+	let create_instance_res = create_instance(&client, ns, &ssh_key, &server).await?;
+	let linode_id = create_instance_res.id;
+	let create_disks_res = create_disks(
+		&client,
+		&ssh_key,
+		linode_id,
+		create_instance_res.specs.disk,
+		&server,
+	)
+	.await?;
+	create_instance_config(&client, ns, linode_id, &create_disks_res, &server).await?;
+	create_firewall(&client, linode_id, &server).await?;
 
 	Ok(linode::server_provision::Response {
-		provider_server_id: todo!(),
+		provider_server_id: linode_id.to_string(),
 	})
-}
-
-async fn create_ssh_key(client: &request::Client, ) -> GlobalResult<()> {
-	let private_key_openssh = util::env::read_secret(&["ssh", "server", "private_key_openssh"]).await?;
-	let private_key = Rsa::private_key_from_pem(private_key_openssh.as_bytes())?;
-
-    // Extract the public key
-    let public_key = PKey::from_rsa(private_key)?;
-    let public_key_pem = public_key.public_key_to_pem()?;
-	let public_key_str = str::from_utf8(public_key_pem.as_slice())?.trim();
-
-	let res = client
-		.post("https://api.linode.com/v4/profile/sshkeys")
-		.header("content-type", "application/json")
-		.body(json!({
-			"label": server.name,
-			"ssh_key": public_key_str,
-		}))
-		.send()
-		.await?
-		.json::<VerifyResponse>()
-		.await?;
-	
-	Ok(())
 }
