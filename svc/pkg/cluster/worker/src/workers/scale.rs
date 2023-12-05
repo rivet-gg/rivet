@@ -32,7 +32,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::config_update::Message>) ->
 		"
 		SELECT
 			server_id, datacenter_id, pool_type, nomad_node_id, drain_ts
-		FROM db_cluster_state.servers
+		FROM db_cluster.servers
 		WHERE
 			cluster_id = $1 AND
 			cloud_destroy_ts IS NULL

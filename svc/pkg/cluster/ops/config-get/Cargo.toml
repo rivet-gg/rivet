@@ -1,5 +1,5 @@
 [package]
-name = "linode-server-provision"
+name = "cluster-config-get"
 version = "0.0.1"
 edition = "2018"
 authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
@@ -7,14 +7,8 @@ license = "Apache-2.0"
 
 [dependencies]
 chirp-client = { path = "../../../../../lib/chirp/client" }
-rand = "0.8"
+prost = "0.10"
 rivet-operation = { path = "../../../../../lib/operation/core" }
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-openssl = "0.10.61"
-
-cluster-config-get = { path = "../../../cluster/ops/config-get" }
 
 [dependencies.sqlx]
 version = "0.7"

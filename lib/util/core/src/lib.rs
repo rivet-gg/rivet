@@ -15,11 +15,11 @@ pub mod future;
 pub mod geo;
 pub mod glob;
 pub mod math;
+pub mod net;
 pub mod route;
 pub mod sort;
 pub mod timestamp;
 pub mod uuid;
-pub mod net;
 
 #[cfg(feature = "serde")]
 pub mod serde {

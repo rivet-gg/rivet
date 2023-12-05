@@ -13,7 +13,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 		"
 		SELECT
 			provider_server_id
-		FROM db_cluster_state.servers
+		FROM db_cluster.servers
 		WHERE server_id = $1
 		",
 		server_id,
@@ -32,7 +32,16 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 				datacenter_id: ctx.datacenter_id,
 				server_id: ctx.server_id,
 			})
-			.await?;
+			.await;
+
+			if let Err(err) = res {
+				tracing::error!(?err, "failed to provision linode server, destroying gracefully");
+
+				// TODO: 
+				msg!([ctx] cluster::msg::server_destroy() {
+
+				}).await?;
+			}
 
 			res.provider_server_id.clone()
 		}
@@ -41,7 +50,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	sql_execute!(
 		[ctx, &crdb]
 		"
-		UPDATE db_cluster_state.servers
+		UPDATE db_cluster.servers
 		SET provider_server_id = $2
 		WHERE server_id = $1
 		",
