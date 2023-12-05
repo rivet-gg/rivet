@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.linode.server_provision;
+
+import "proto/common.proto";
+
+message Request {
+    rivet.common.Uuid cluster_id = 1;
+    rivet.common.Uuid datacenter_id = 2;
+    rivet.common.Uuid server_id = 3;
+}
+
+message Response {
+    string provider_server_id = 1;
+}

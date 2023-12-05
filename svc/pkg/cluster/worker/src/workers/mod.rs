@@ -1,1 +1,1 @@
-chirp_worker::workers![scale,];
+chirp_worker::workers![server_provision, scale, server_undrain,];

@@ -35,7 +35,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::config_update::Message>) ->
 		FROM db_cluster_state.servers
 		WHERE
 			cluster_id = $1 AND
-			destroy_ts IS NULL
+			cloud_destroy_ts IS NULL
 		",
 		cluster_id
 	)
@@ -137,7 +137,7 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 						.collect::<Vec<_>>(),
 				)
 				.await?;
-		
+
 				// TODO: Sort by cpu usage (using cluster-topology-get), undrain servers with most cpu usage
 				let undrain_candidates = draining_servers.iter().take(undrain_count);
 
@@ -148,11 +148,11 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 						"undraining server"
 					);
 
-					msg!([ctx] cluster::msg::server_undrain(cluster_id, datacenter_id, server_id) {
+					msg!([ctx] cluster::msg::server_undrain(cluster_id, datacenter_id, draining_server.server_id) {
 						cluster_id: config.cluster_id,
 						datacenter_id: dc.datacenter_id,
-						server_id: Some(server_id.into()),
-						pool_type: pool_type as i32,
+						server_id: Some(draining_server.server_id.into()),
+						pool_type: backend::cluster::PoolType::Job as i32,
 					})
 					.await?;
 		
@@ -165,7 +165,6 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 				futures_util::stream::iter(0..provision_count)
 					.map(|_| async {
 						let server_id = Uuid::new_v4();
-						let pool_type = backend::cluster::PoolType::Job;
 		
 						// Write new server to db
 						sql_execute!(
@@ -183,7 +182,7 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 							server_id,
 							datacenter_id,
 							cluster_id,
-							pool_type as i32 as i64,
+							backend::cluster::PoolType::Job as i32 as i64,
 							util::timestamp::now(),
 						)
 						.await?;
@@ -192,7 +191,8 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 							cluster_id: config.cluster_id,
 							datacenter_id: dc.datacenter_id,
 							server_id: Some(server_id.into()),
-							pool_type: pool_type as i32,
+							pool_type: backend::cluster::PoolType::Job as i32,
+							provider: backend::cluster::Provider::Linode as i32,
 						})
 						.await?;
 		

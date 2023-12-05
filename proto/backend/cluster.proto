@@ -13,6 +13,10 @@ message Cluster {
     optional rivet.common.Uuid owner_team_id = 4;
 }
 
+enum Provider {
+    LINODE = 0;
+}
+
 message Datacenter {
     rivet.common.Uuid datacenter_id = 1;
     string name_id = 2;
@@ -20,8 +24,8 @@ message Datacenter {
     rivet.backend.net.Coordinates coords = 4;
     repeated Hardware hardware = 6;
     
-    string provider_id = 7;
-    string provider_datacenter = 8;
+    Provider provider = 7;
+    string provider_datacenter_id = 8;
 
     repeated Pool pools = 9;
     uint64 drain_timeout = 10;

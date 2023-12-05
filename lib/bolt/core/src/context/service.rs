@@ -217,10 +217,6 @@ impl ServiceContextData {
 			.join(self.name())
 	}
 
-	pub async fn gen_proto_path(&self) -> PathBuf {
-		self.gen_path().await.join("proto")
-	}
-
 	pub fn migrations_path(&self) -> PathBuf {
 		self.path().join("migrations")
 	}

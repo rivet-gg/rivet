@@ -1,5 +1,5 @@
 [package]
-name = "cluster-topology-get"
+name = "linode-server-provision"
 version = "0.0.1"
 edition = "2018"
 authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
@@ -7,10 +7,10 @@ license = "Apache-2.0"
 
 [dependencies]
 chirp-client = { path = "../../../../../lib/chirp/client" }
-lazy_static = "1.4"
-nomad_client = { path = "../../../../../lib/nomad-client" }	
-prost = "0.10"
 rivet-operation = { path = "../../../../../lib/operation/core" }
+reqwest = "0.11"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [dependencies.sqlx]
 version = "0.7"
