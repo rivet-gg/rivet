@@ -1,5 +1,5 @@
 [service]
-name = "cluster-config-get"
+name = "cluster-get"
 
 [runtime]
 kind = "rust"

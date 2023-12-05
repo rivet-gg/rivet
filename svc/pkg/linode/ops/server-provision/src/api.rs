@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, str};
+use std::{net::Ipv4Addr, fmt, str};
 
 use openssl::{pkey::PKey, rsa::Rsa};
 use rand::{distributions::Alphanumeric, Rng};
@@ -30,6 +30,8 @@ struct ApiError {
 }
 
 pub async fn create_ssh_key(client: &reqwest::Client, server: &ServerCtx) -> GlobalResult<String> {
+	tracing::info!("creating ssh key");
+	
 	let private_key_openssh =
 		util::env::read_secret(&["ssh", "server", "private_key_openssh"]).await?;
 	let private_key = Rsa::private_key_from_pem(private_key_openssh.as_bytes())?;
@@ -70,6 +72,8 @@ pub async fn create_instance(
 	ssh_key: &str,
 	server: &ServerCtx,
 ) -> GlobalResult<CreateInstanceResponse> {
+	tracing::info!("creating linode instance");
+
 	let res = client
 		.post("https://api.linode.com/v4/linode/instances")
 		.header("content-type", "application/json")
@@ -104,8 +108,9 @@ pub async fn create_disks(
 	ssh_key: &str,
 	linode_id: u64,
 	server_disk_size: u64,
-	server: &ServerCtx,
 ) -> GlobalResult<CreateDisksResponse> {
+	tracing::info!("creating boot disk");
+
 	let boot_disk_res = client
 		.post(format!(
 			"https://api.linode.com/v4/linode/instances/{linode_id}/disks"
@@ -121,6 +126,8 @@ pub async fn create_disks(
 		.send()
 		.await?;
 	let boot_disk_res = parse_response::<CreateDiskResponse>(boot_disk_res).await?;
+
+	tracing::info!("creating swap disk");
 
 	let swap_disk_res = client
 		.post(format!(
@@ -149,6 +156,8 @@ pub async fn create_instance_config(
 	disks: &CreateDisksResponse,
 	server: &ServerCtx,
 ) -> GlobalResult<()> {
+	tracing::info!("creating instance config");
+	
 	let region_vlan = util::net::region::vlan_ip_net();
 	let ipam_address = format!("{}/{}", server.vlan_ip, region_vlan.prefix_len());
 
@@ -156,6 +165,7 @@ pub async fn create_instance_config(
 		.post(format!(
 			"https://api.linode.com/v4/linode/instances/{linode_id}/configs"
 		))
+		.header("content-type", "application/json")
 		.json(&json!({
 			"label": "boot_config",
 			"booted": true,
@@ -191,6 +201,8 @@ pub async fn create_firewall(
 	linode_id: u64,
 	server: &ServerCtx,
 ) -> GlobalResult<()> {
+	tracing::info!("creating firewall");
+	
 	let firewall_inbound = server
 		.firewall_inbound
 		.iter()
@@ -208,7 +220,8 @@ pub async fn create_firewall(
 		.collect::<Vec<_>>();
 
 	let res = client
-		.post(format!("https://api.linode.com/v4/networking/firewalls"))
+		.post("https://api.linode.com/v4/networking/firewalls")
+		.header("content-type", "application/json")
 		.json(&json!({
 			"label": server.name,
 			"rules": {
@@ -226,13 +239,37 @@ pub async fn create_firewall(
 	handle_response(res).await
 }
 
-/// Generates a random string for a secret.
-fn generate_password(length: usize) -> String {
-	rand::thread_rng()
-		.sample_iter(&Alphanumeric)
-		.take(length)
-		.map(char::from)
-		.collect()
+#[derive(Deserialize)]
+pub struct GetPublicIpResponse {
+	ipv4: LinodeIpv4,
+}
+
+#[derive(Deserialize)]
+pub struct LinodeIpv4 {
+	public: LinodeIpv4Config,
+}
+
+#[derive(Deserialize)]
+pub struct LinodeIpv4Config {
+	address: Ipv4Addr,
+}
+
+pub async fn get_public_ip(
+	client: &reqwest::Client,
+	linode_id: u64,
+) -> GlobalResult<Ipv4Addr> {
+	tracing::info!("getting ip");
+	
+	let res = client
+		.get(format!(
+			"https://api.linode.com/v4/linode/instances/{linode_id}/ips"
+		))
+		.send()
+		.await?;
+
+	let res = parse_response::<GetPublicIpResponse>(res).await?;
+
+	Ok(res.ipv4.public.address)
 }
 
 async fn handle_response(res: reqwest::Response) -> GlobalResult<()> {
@@ -250,4 +287,13 @@ async fn parse_response<T: DeserializeOwned>(res: reqwest::Response) -> GlobalRe
 
 	let res = res.json::<T>().await?;
 	Ok(res)
+}
+
+/// Generates a random string for a secret.
+fn generate_password(length: usize) -> String {
+	rand::thread_rng()
+		.sample_iter(&Alphanumeric)
+		.take(length)
+		.map(char::from)
+		.collect()
 }

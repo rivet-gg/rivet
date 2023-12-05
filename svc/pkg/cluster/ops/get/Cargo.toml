@@ -1,5 +1,5 @@
 [package]
-name = "cluster-config-get"
+name = "cluster-get"
 version = "0.0.1"
 edition = "2018"
 authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]

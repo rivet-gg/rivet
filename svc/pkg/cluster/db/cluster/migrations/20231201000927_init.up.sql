@@ -1,5 +1,5 @@
 -- TODO: Separate datacenters into own table?
-CREATE TABLE cluster_config (
+CREATE TABLE clusters (
     cluster_id UUID PRIMARY KEY,
 	config BYTES NOT NULL,
 );
@@ -7,7 +7,7 @@ CREATE TABLE cluster_config (
 CREATE TABLE servers (
 	server_id UUID PRIMARY KEY,
 	datacenter_id UUID NOT NULL,
-    cluster_id UUID NOT NULL REFERENCES cluster_config (cluster_id),
+    cluster_id UUID NOT NULL REFERENCES clusters (cluster_id),
 	server_type INT NOT NULL,
 
 	-- Null until actual server is provisioned

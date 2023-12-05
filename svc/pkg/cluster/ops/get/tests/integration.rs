@@ -3,7 +3,7 @@ use proto::backend::pkg::*;
 
 #[worker_test]
 async fn empty(ctx: TestCtx) {
-	op!([ctx] cluster_config_get {
+	op!([ctx] cluster_get {
 		cluster_ids: vec![todo!()],
 	})
 	.await

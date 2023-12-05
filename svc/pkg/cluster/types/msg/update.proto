@@ -1,14 +1,14 @@
 syntax = "proto3";
 
-package rivet.backend.pkg.cluster.msg.config_update;
+package rivet.backend.pkg.cluster.msg.update;
 
 import "proto/common.proto";
 import "proto/backend/cluster.proto";
 
-/// name = "msg-cluster-config-update"
+/// name = "msg-cluster-update"
 /// parameters = [
 /// 	{ name = "cluster_id" },
 /// ]
 message Message {
-    rivet.backend.cluster.Cluster config = 1;
+    rivet.backend.cluster.Cluster cluster = 1;
 }

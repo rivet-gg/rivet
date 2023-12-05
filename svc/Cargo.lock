@@ -2290,7 +2290,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cluster-config-get"
+name = "cluster-get"
 version = "0.0.1"
 dependencies = [
  "chirp-client",
@@ -2320,6 +2320,7 @@ dependencies = [
  "chirp-client",
  "chirp-worker",
  "chrono",
+ "cluster-get",
  "lazy_static",
  "linode-server-provision",
  "nomad_client",
@@ -4590,7 +4591,6 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
- "cluster-config-get",
  "openssl",
  "rand",
  "reqwest",

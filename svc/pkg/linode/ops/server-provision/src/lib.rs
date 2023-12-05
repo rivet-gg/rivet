@@ -1,6 +1,7 @@
 use std::net::Ipv4Addr;
 
 use proto::backend::{cluster::PoolType, pkg::*};
+use rand::Rng;
 use reqwest::header;
 use rivet_operation::prelude::*;
 
@@ -9,7 +10,6 @@ use api::*;
 
 struct ServerCtx {
 	provider_datacenter_id: String,
-	pool_type: PoolType,
 	name: String,
 	provider_hardware: String,
 	vlan_ip: Ipv4Addr,
@@ -21,25 +21,10 @@ struct ServerCtx {
 pub async fn handle(
 	ctx: OperationContext<linode::server_provision::Request>,
 ) -> GlobalResult<linode::server_provision::Response> {
-	let cluster_id = unwrap!(ctx.cluster_id);
 	let server_id = unwrap!(ctx.server_id).as_uuid();
+	let provider_datacenter_id = ctx.provider_datacenter_id.clone();
 	let pool_type = unwrap!(PoolType::from_i32(ctx.pool_type));
-
-	let cluster_config_res = op!([ctx] cluster_config_get {
-		cluster_ids: vec![cluster_id],
-	})
-	.await?;
-	let cluster_config = unwrap!(cluster_config_res.configs.first());
-	let datacenter = unwrap!(cluster_config
-		.datacenters
-		.iter()
-		.find(|dc| dc.datacenter_id == ctx.datacenter_id));
-	let provider_datacenter_id = datacenter.provider_datacenter_id.clone();
-
-	// TODO: Choose best candidate
-	let provider_hardware = unwrap!(datacenter.hardware.first())
-		.provider_hardware
-		.clone();
+	let provider_hardware = unwrap_ref!(ctx.hardware).provider_hardware.clone();
 
 	// Find next available vlan index
 	let mut vlan_addr_range = match pool_type {
@@ -54,13 +39,13 @@ pub async fn handle(
 		WITH
 			get_next_network_idx AS (
 				SELECT idx
-				FROM generate_series(0, $1) AS s(idx)
+				FROM generate_series(0, $2) AS s(idx)
 				WHERE NOT EXISTS (
 					SELECT 1
 					FROM db_cluster.servers
 					WHERE
 						pool_type = $2 AND
-						network_idx = idx
+						network_idx = mod(idx + $1, $2)
 				)
 				LIMIT 1
 			),
@@ -72,18 +57,14 @@ pub async fn handle(
 			)
 		SELECT idx FROM get_next_network_idx
 		",
+		// Choose a random index to start from for better index spread
+		rand::thread_rng().gen_range(0i64..max_idx),
 		max_idx,
 		ctx.pool_type as i64,
 		server_id
 	)
 	.await?;
 	let vlan_ip = unwrap!(vlan_addr_range.nth(network_idx as usize));
-
-	let firewall_inbound = match pool_type {
-		PoolType::Job => util::net::job::firewall(),
-		PoolType::Gg => util::net::gg::firewall(),
-		PoolType::Ats => util::net::ats::firewall(),
-	};
 
 	let pool_type_str = match pool_type {
 		PoolType::Job => "job",
@@ -103,9 +84,15 @@ pub async fn handle(
 		format!("{ns}-{provider_datacenter_id}-{pool_type_str}"),
 	];
 
+	let firewall_inbound = match pool_type {
+		PoolType::Job => util::net::job::firewall(),
+		PoolType::Gg => util::net::gg::firewall(),
+		PoolType::Ats => util::net::ats::firewall(),
+	};
+
+	// Build context
 	let server = ServerCtx {
 		provider_datacenter_id,
-		pool_type,
 		name,
 		provider_hardware,
 		vlan_ip,
@@ -128,21 +115,19 @@ pub async fn handle(
 		.default_headers(headers)
 		.build()?;
 
+	// Run API calls
 	let ssh_key = create_ssh_key(&client, &server).await?;
 	let create_instance_res = create_instance(&client, ns, &ssh_key, &server).await?;
 	let linode_id = create_instance_res.id;
-	let create_disks_res = create_disks(
-		&client,
-		&ssh_key,
-		linode_id,
-		create_instance_res.specs.disk,
-		&server,
-	)
-	.await?;
+	let create_disks_res =
+		create_disks(&client, &ssh_key, linode_id, create_instance_res.specs.disk).await?;
 	create_instance_config(&client, ns, linode_id, &create_disks_res, &server).await?;
 	create_firewall(&client, linode_id, &server).await?;
+	let public_ip = get_public_ip(&client, linode_id).await?;
 
 	Ok(linode::server_provision::Response {
 		provider_server_id: linode_id.to_string(),
+		vlan_ip: vlan_ip.to_string(),
+		public_ip: public_ip.to_string(),
 	})
 }

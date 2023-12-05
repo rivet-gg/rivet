@@ -22,9 +22,9 @@ struct Server {
 }
 
 #[worker(name = "cluster-scale")]
-async fn worker(ctx: &OperationContext<cluster::msg::config_update::Message>) -> GlobalResult<()> {
-	let config = unwrap_ref!(ctx.config);
-	let cluster_id = unwrap!(config.cluster_id).as_uuid();
+async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> GlobalResult<()> {
+	let cluster = unwrap_ref!(ctx.cluster);
+	let cluster_id = unwrap!(cluster.cluster_id).as_uuid();
 
 	// Get ACTIVE servers
 	let servers = sql_fetch_all!(
@@ -52,7 +52,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::config_update::Message>) ->
 	})
 	.collect::<GlobalResult<Vec<_>>>()?;
 
-	for dc in &config.datacenters {
+	for dc in &cluster.datacenters {
 		let datacenter_id = unwrap!(dc.datacenter_id).as_uuid();
 		let servers_in_dc = servers
 			.iter()
@@ -65,7 +65,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::config_update::Message>) ->
 				backend::cluster::PoolType::Job => {
 					scale_job_servers(
 						ctx.base(),
-						config,
+						cluster,
 						dc,
 						servers_in_dc.clone(),
 						pool.desired_count,
@@ -83,12 +83,12 @@ async fn worker(ctx: &OperationContext<cluster::msg::config_update::Message>) ->
 
 async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	ctx: OperationContext<()>,
-	config: &backend::cluster::Cluster,
+	cluster: &backend::cluster::Cluster,
 	dc: &backend::cluster::Datacenter,
 	servers_in_dc: I,
 	desired_count: u32,
 ) -> GlobalResult<()> {
-	let cluster_id = unwrap!(config.cluster_id).as_uuid();
+	let cluster_id = unwrap!(cluster.cluster_id).as_uuid();
 	let datacenter_id = unwrap!(dc.datacenter_id).as_uuid();
 	let desired_count = desired_count as usize;
 
@@ -149,7 +149,7 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 					);
 
 					msg!([ctx] cluster::msg::server_undrain(cluster_id, datacenter_id, draining_server.server_id) {
-						cluster_id: config.cluster_id,
+						cluster_id: cluster.cluster_id,
 						datacenter_id: dc.datacenter_id,
 						server_id: Some(draining_server.server_id.into()),
 						pool_type: backend::cluster::PoolType::Job as i32,
@@ -188,7 +188,7 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 						.await?;
 		
 						msg!([ctx] cluster::msg::server_provision(cluster_id, datacenter_id, server_id) {
-							cluster_id: config.cluster_id,
+							cluster_id: cluster.cluster_id,
 							datacenter_id: dc.datacenter_id,
 							server_id: Some(server_id.into()),
 							pool_type: backend::cluster::PoolType::Job as i32,

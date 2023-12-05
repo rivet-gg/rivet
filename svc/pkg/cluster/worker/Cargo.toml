@@ -16,6 +16,7 @@ rivet-health-checks = { path = "../../../../lib/health-checks" }
 rivet-metrics = { path = "../../../../lib/metrics" }
 rivet-runtime = { path = "../../../../lib/runtime" }
 
+cluster-get = { path = "../ops/get" }
 linode-server-provision = { path = "../../linode/ops/server-provision" }
 
 [dependencies.sqlx]
