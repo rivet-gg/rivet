@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package rivet.backend.pkg.cluster.config_get;
+package rivet.backend.pkg.cluster.get;
 
 import "proto/common.proto";
 import "proto/backend/cluster.proto";
@@ -10,5 +10,5 @@ message Request {
 }
 
 message Response {
-	repeated rivet.backend.cluster.Cluster configs = 1;
+	repeated rivet.backend.cluster.Cluster clusters = 1;
 }
