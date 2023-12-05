@@ -2296,7 +2296,6 @@ dependencies = [
  "chirp-client",
  "chirp-worker",
  "lazy_static",
- "nomad-util",
  "nomad_client",
  "prost 0.10.4",
  "rivet-operation",
@@ -2311,6 +2310,8 @@ dependencies = [
  "chirp-worker",
  "chrono",
  "lazy_static",
+ "linode-server-provision",
+ "nomad_client",
  "rivet-convert",
  "rivet-health-checks",
  "rivet-metrics",
@@ -4568,6 +4569,16 @@ name = "linked-hash-map"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
+
+[[package]]
+name = "linode-server-provision"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "rivet-operation",
+ "sqlx",
+]
 
 [[package]]
 name = "linux-raw-sys"

@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::*;
 use async_recursion::async_recursion;
-use tokio::{fs, io::AsyncWriteExt};
+use tokio::fs;
 
 use crate::context::ProjectContext;
 
@@ -73,6 +73,31 @@ pub async fn generate(ctx: &mut ProjectContext, opts: TemplateOpts) -> Result<()
 			pkg_name,
 			base_path.display(),
 		);
+	}
+
+	// Touch types lib to force it to rebuild generated proto when making a new package
+	if create_pkg {
+		let lib_file = base_path
+			.join("lib")
+			.join("types")
+			.join("build")
+			.join("src")
+			.join("lib.rs");
+		let alt_lib_file = base_path
+			.join("lib")
+			.join("types")
+			.join("src")
+			.join("lib.rs");
+		fs::OpenOptions::new()
+			.create(true)
+			.write(true)
+			.open(lib_file)
+			.await?;
+		fs::OpenOptions::new()
+			.create(true)
+			.write(true)
+			.open(alt_lib_file)
+			.await?;
 	}
 
 	// Build templating manager
@@ -274,17 +299,17 @@ async fn generate_worker_partial(
 		rivet_term::status::progress("Editing", worker_mod_path.display());
 		let worker_mod_str = fs::read_to_string(&worker_mod_path).await?;
 
-		let Some(first_line_idx) = worker_mod_str.find("\n") else {
-			bail!("");
+		let Some(bracket_idx) = worker_mod_str.find("[") else {
+			bail!("malformed mod.rs file");
 		};
 
 		fs::write(
 			worker_mod_path,
 			&format!(
 				"{}\n\t{},{}",
-				&worker_mod_str[..first_line_idx],
+				&worker_mod_str[..bracket_idx + 1],
 				snake_name,
-				&worker_mod_str[first_line_idx..]
+				&worker_mod_str[bracket_idx + 1..]
 			),
 		)
 		.await?;

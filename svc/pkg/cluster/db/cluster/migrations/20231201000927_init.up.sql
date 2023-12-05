@@ -1,3 +1,4 @@
+-- TODO: Separate datacenters into own table?
 CREATE TABLE cluster_config (
     cluster_id UUID PRIMARY KEY,
 	config BYTES NOT NULL,
@@ -21,6 +22,6 @@ CREATE TABLE servers (
 	nomad_join_ts INT,
 	-- Null if not draining
 	drain_ts INT,
-	-- When the server was marked to be deleted from the cloud provider
-	destroy_ts INT,
+	-- When the server was marked to be deleted by rivet
+	cloud_destroy_ts INT,
 );
