@@ -1,8 +1,15 @@
--- TODO: Separate datacenters into own table?
 CREATE TABLE clusters (
     cluster_id UUID PRIMARY KEY,
-	config BYTES NOT NULL,
+	name_id TEXT NOT NULL,
+	owner_team_id UUID,
 	create_ts INT NOT NULL
+);
+
+CREATE TABLE datacenters (
+    datacenter_id UUID PRIMARY KEY,
+	cluster_id UUID NOT NULL REFERENCES clusters (cluster_id),
+	config BYTES NOT NULL,
+	INDEX (cluster_id)
 );
 
 CREATE TABLE servers (
@@ -26,4 +33,11 @@ CREATE TABLE servers (
 	drain_ts INT,
 	-- When the server was marked to be deleted by rivet
 	cloud_destroy_ts INT
+);
+
+-- Stores data for destroying linode resources
+CREATE TABLE linode_misc (
+	server_id UUID PRIMARY KEY REFERENCES servers (server_id),
+	ssh_key_id INT NOT NULL,
+	firewall_id INT
 );

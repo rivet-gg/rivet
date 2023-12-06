@@ -33,7 +33,20 @@ struct ApiError {
 	reason: String,
 }
 
-pub async fn create_ssh_key(client: &reqwest::Client, server: &ServerCtx) -> GlobalResult<String> {
+#[derive(Deserialize)]
+struct CreateSshKeyResponse {
+	id: u64,
+}
+
+pub struct SshKeyResponse {
+	pub id: u64,
+	pub public_key: String,
+}
+
+pub async fn create_ssh_key(
+	client: &reqwest::Client,
+	server: &ServerCtx,
+) -> GlobalResult<SshKeyResponse> {
 	tracing::info!("creating linode ssh key");
 
 	let private_key_openssh =
@@ -52,9 +65,12 @@ pub async fn create_ssh_key(client: &reqwest::Client, server: &ServerCtx) -> Glo
 		}))
 		.send()
 		.await?;
-	handle_response(res).await?;
+	let res = parse_response::<CreateSshKeyResponse>(res).await?;
 
-	Ok(public_key.to_string())
+	Ok(SshKeyResponse {
+		id: res.id,
+		public_key,
+	})
 }
 
 #[derive(Deserialize)]
@@ -129,7 +145,7 @@ pub async fn create_disks(
 		.await?;
 	let boot_disk_res = parse_response::<CreateDiskResponse>(boot_disk_res).await?;
 
-	wait_disk_ready(&client, linode_id, boot_disk_res.id).await?;
+	wait_disk_ready(client, linode_id, boot_disk_res.id).await?;
 
 	tracing::info!("creating swap disk");
 
@@ -200,12 +216,17 @@ pub async fn create_instance_config(
 	handle_response(res).await
 }
 
+#[derive(Deserialize)]
+pub struct CreateFirewallResponse {
+	pub id: u64,
+}
+
 pub async fn create_firewall(
 	client: &reqwest::Client,
 	ns: &str,
 	linode_id: u64,
 	server: &ServerCtx,
-) -> GlobalResult<()> {
+) -> GlobalResult<CreateFirewallResponse> {
 	tracing::info!("creating firewall");
 
 	let firewall_inbound = server
@@ -244,7 +265,7 @@ pub async fn create_firewall(
 		.send()
 		.await?;
 
-	handle_response(res).await
+	parse_response(res).await
 }
 
 pub async fn boot_instance(client: &reqwest::Client, linode_id: u64) -> GlobalResult<()> {
@@ -306,10 +327,6 @@ pub async fn wait_disk_ready(
 	disk_id: u64,
 ) -> GlobalResult<()> {
 	tracing::info!("waiting for linode disk to be ready");
-
-	tracing::info!(url=?format!(
-		"https://api.linode.com/v4/linode/instances/{linode_id}/disks/{disk_id}"
-	));
 
 	loop {
 		let res = client
