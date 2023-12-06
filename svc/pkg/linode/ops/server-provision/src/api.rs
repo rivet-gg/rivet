@@ -1,10 +1,10 @@
-use std::{net::Ipv4Addr, fmt, str};
+use std::{fmt, net::Ipv4Addr, str, time::Duration};
 
-use openssl::{pkey::PKey, rsa::Rsa};
 use rand::{distributions::Alphanumeric, Rng};
 use rivet_operation::prelude::*;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::json;
+use ssh_key::PrivateKey;
 
 use crate::ServerCtx;
 
@@ -16,7 +16,11 @@ struct ApiErrorResponse {
 impl fmt::Display for ApiErrorResponse {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		for error in &self.errors {
-			writeln!(f, "{:?}: {}", error.field, error.reason)?;
+			if let Some(field) = &error.field {
+				write!(f, "{:?}: ", field)?;
+			}
+
+			writeln!(f, "{}", error.reason)?;
 		}
 
 		Ok(())
@@ -25,34 +29,32 @@ impl fmt::Display for ApiErrorResponse {
 
 #[derive(Deserialize)]
 struct ApiError {
-	field: String,
+	field: Option<String>,
 	reason: String,
 }
 
 pub async fn create_ssh_key(client: &reqwest::Client, server: &ServerCtx) -> GlobalResult<String> {
-	tracing::info!("creating ssh key");
-	
+	tracing::info!("creating linode ssh key");
+
 	let private_key_openssh =
 		util::env::read_secret(&["ssh", "server", "private_key_openssh"]).await?;
-	let private_key = Rsa::private_key_from_pem(private_key_openssh.as_bytes())?;
+	let private_key = PrivateKey::from_openssh(private_key_openssh.as_bytes())?;
 
 	// Extract the public key
-	let public_key = PKey::from_rsa(private_key)?;
-	let public_key_pem = public_key.public_key_to_pem()?;
-	let public_key_str = str::from_utf8(public_key_pem.as_slice())?.trim();
+	let public_key = private_key.public_key().to_string();
 
 	let res = client
 		.post("https://api.linode.com/v4/profile/sshkeys")
 		.header("content-type", "application/json")
 		.json(&json!({
 			"label": server.name,
-			"ssh_key": public_key_str,
+			"ssh_key": public_key,
 		}))
 		.send()
 		.await?;
 	handle_response(res).await?;
 
-	Ok(public_key_str.to_string())
+	Ok(public_key.to_string())
 }
 
 #[derive(Deserialize)]
@@ -127,6 +129,8 @@ pub async fn create_disks(
 		.await?;
 	let boot_disk_res = parse_response::<CreateDiskResponse>(boot_disk_res).await?;
 
+	wait_disk_ready(&client, linode_id, boot_disk_res.id).await?;
+
 	tracing::info!("creating swap disk");
 
 	let swap_disk_res = client
@@ -157,7 +161,7 @@ pub async fn create_instance_config(
 	server: &ServerCtx,
 ) -> GlobalResult<()> {
 	tracing::info!("creating instance config");
-	
+
 	let region_vlan = util::net::region::vlan_ip_net();
 	let ipam_address = format!("{}/{}", server.vlan_ip, region_vlan.prefix_len());
 
@@ -198,11 +202,12 @@ pub async fn create_instance_config(
 
 pub async fn create_firewall(
 	client: &reqwest::Client,
+	ns: &str,
 	linode_id: u64,
 	server: &ServerCtx,
 ) -> GlobalResult<()> {
 	tracing::info!("creating firewall");
-	
+
 	let firewall_inbound = server
 		.firewall_inbound
 		.iter()
@@ -212,9 +217,11 @@ pub async fn create_firewall(
 				"action": "ACCEPT",
 				"protocol": rule.protocol.to_uppercase(),
 				"ports": rule.ports,
+				"addresses": {
+					"ipv4": rule.inbound_ipv4_cidr,
+					"ipv6": rule.inbound_ipv6_cidr,
+				},
 
-				"ipv4": rule.inbound_ipv4_cidr,
-				"ipv6": rule.inbound_ipv6_cidr,
 			})
 		})
 		.collect::<Vec<_>>();
@@ -223,7 +230,8 @@ pub async fn create_firewall(
 		.post("https://api.linode.com/v4/networking/firewalls")
 		.header("content-type", "application/json")
 		.json(&json!({
-			"label": server.name,
+			// Label doesn't matter
+			"label": format!("{ns}-{}", generate_password(16)),
 			"rules": {
 				"inbound": firewall_inbound,
 				"inbound_policy": "DROP",
@@ -239,6 +247,97 @@ pub async fn create_firewall(
 	handle_response(res).await
 }
 
+pub async fn boot_instance(client: &reqwest::Client, linode_id: u64) -> GlobalResult<()> {
+	tracing::info!("booting instance");
+
+	let res = client
+		.post(format!(
+			"https://api.linode.com/v4/linode/instances/{linode_id}/boot"
+		))
+		.send()
+		.await?;
+
+	handle_response(res).await?;
+
+	Ok(())
+}
+
+#[derive(Deserialize)]
+pub struct LinodeInstanceResponse {
+	status: String,
+}
+
+// Helpful: https://www.linode.com/community/questions/11588/linodeerrorsapierror-400-linode-busy
+/// Polls linode API until an instance is available.
+pub async fn wait_instance_ready(client: &reqwest::Client, linode_id: u64) -> GlobalResult<()> {
+	tracing::info!("waiting for instance to be ready");
+
+	loop {
+		let res = client
+			.get(format!(
+				"https://api.linode.com/v4/linode/instances/{linode_id}"
+			))
+			.send()
+			.await?;
+		let res = parse_response::<LinodeInstanceResponse>(res).await?;
+
+		// Check if ready
+		match res.status.as_str() {
+			"booting" | "rebooting" | "shutting_down" | "provisioning" | "deleting"
+			| "migrating" | "rebuilding" | "cloning" | "restoring" => {}
+			_ => break,
+		}
+
+		tokio::time::sleep(Duration::from_secs(1)).await;
+	}
+
+	Ok(())
+}
+
+#[derive(Deserialize)]
+pub struct LinodeDiskResponse {
+	status: String,
+}
+
+/// Polls linode API until a linode disk is available.
+pub async fn wait_disk_ready(
+	client: &reqwest::Client,
+	linode_id: u64,
+	disk_id: u64,
+) -> GlobalResult<()> {
+	tracing::info!("waiting for linode disk to be ready");
+
+	tracing::info!(url=?format!(
+		"https://api.linode.com/v4/linode/instances/{linode_id}/disks/{disk_id}"
+	));
+
+	loop {
+		let res = client
+			.get(format!(
+				"https://api.linode.com/v4/linode/instances/{linode_id}/disks/{disk_id}"
+			))
+			.send()
+			.await?;
+
+		// Manually handle the disk showing up as not found yet
+		if res.status() == reqwest::StatusCode::NOT_FOUND {
+			tracing::info!("disk not found yet");
+		} else {
+			let res = parse_response::<LinodeDiskResponse>(res).await?;
+
+			// Check if ready
+			match res.status.as_str() {
+				"not ready" => {}
+				_ => break,
+			}
+		}
+
+		tokio::time::sleep(Duration::from_secs(1)).await;
+	}
+
+	Ok(())
+}
+
 #[derive(Deserialize)]
 pub struct GetPublicIpResponse {
 	ipv4: LinodeIpv4,
@@ -246,7 +345,7 @@ pub struct GetPublicIpResponse {
 
 #[derive(Deserialize)]
 pub struct LinodeIpv4 {
-	public: LinodeIpv4Config,
+	public: Vec<LinodeIpv4Config>,
 }
 
 #[derive(Deserialize)]
@@ -254,12 +353,9 @@ pub struct LinodeIpv4Config {
 	address: Ipv4Addr,
 }
 
-pub async fn get_public_ip(
-	client: &reqwest::Client,
-	linode_id: u64,
-) -> GlobalResult<Ipv4Addr> {
+pub async fn get_public_ip(client: &reqwest::Client, linode_id: u64) -> GlobalResult<Ipv4Addr> {
 	tracing::info!("getting ip");
-	
+
 	let res = client
 		.get(format!(
 			"https://api.linode.com/v4/linode/instances/{linode_id}/ips"
@@ -268,8 +364,9 @@ pub async fn get_public_ip(
 		.await?;
 
 	let res = parse_response::<GetPublicIpResponse>(res).await?;
+	let public = unwrap!(res.ipv4.public.first());
 
-	Ok(res.ipv4.public.address)
+	Ok(public.address)
 }
 
 async fn handle_response(res: reqwest::Response) -> GlobalResult<()> {
@@ -282,6 +379,7 @@ async fn handle_response(res: reqwest::Response) -> GlobalResult<()> {
 
 async fn parse_response<T: DeserializeOwned>(res: reqwest::Response) -> GlobalResult<T> {
 	if !res.status().is_success() {
+		tracing::info!(status=?res.status(), "api request failed");
 		bail_with!(ERROR, error = res.json::<ApiErrorResponse>().await?);
 	}
 

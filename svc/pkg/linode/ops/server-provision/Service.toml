@@ -7,5 +7,5 @@ kind = "rust"
 [operation]
 
 [secrets]
-"linode/terraform/token" = {}
+"linode/token" = {}
 "ssh/server/private_key_openssh" = {}

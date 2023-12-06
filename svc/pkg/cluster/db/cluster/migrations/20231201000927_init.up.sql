@@ -2,13 +2,14 @@
 CREATE TABLE clusters (
     cluster_id UUID PRIMARY KEY,
 	config BYTES NOT NULL,
+	create_ts INT NOT NULL
 );
 
 CREATE TABLE servers (
 	server_id UUID PRIMARY KEY,
 	datacenter_id UUID NOT NULL,
     cluster_id UUID NOT NULL REFERENCES clusters (cluster_id),
-	server_type INT NOT NULL,
+	pool_type INT NOT NULL,
 
 	-- Null until actual server is provisioned
 	provider_server_id TEXT,
@@ -24,5 +25,5 @@ CREATE TABLE servers (
 	-- Null if not draining
 	drain_ts INT,
 	-- When the server was marked to be deleted by rivet
-	cloud_destroy_ts INT,
+	cloud_destroy_ts INT
 );

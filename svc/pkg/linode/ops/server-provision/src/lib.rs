@@ -44,15 +44,15 @@ pub async fn handle(
 					SELECT 1
 					FROM db_cluster.servers
 					WHERE
-						pool_type = $2 AND
+						pool_type = $3 AND
 						network_idx = mod(idx + $1, $2)
 				)
 				LIMIT 1
 			),
 			update_network_idx AS (
 				UPDATE db_cluster.servers
-				SET network_idx = (SELECT idx FROM get_next_network_idx)
-				WHERE server_id = $3
+				SET network_idx = mod((SELECT idx FROM get_next_network_idx) + $1, $2)
+				WHERE server_id = $4
 				RETURNING 1
 			)
 		SELECT idx FROM get_next_network_idx
@@ -101,12 +101,10 @@ pub async fn handle(
 	};
 
 	// Build HTTP client
-	let api_token = util::env::read_secret(&["linode", "terraform", "token"]).await?;
+	let api_token = util::env::read_secret(&["linode", "token"]).await?;
+	let auth = format!("Bearer {}", api_token,);
 	let mut headers = header::HeaderMap::new();
-	headers.insert(
-		header::AUTHORIZATION,
-		header::HeaderValue::from_str(&api_token)?,
-	);
+	headers.insert(header::AUTHORIZATION, header::HeaderValue::from_str(&auth)?);
 	headers.insert(
 		header::CONTENT_TYPE,
 		header::HeaderValue::from_static("application/json"),
@@ -119,10 +117,12 @@ pub async fn handle(
 	let ssh_key = create_ssh_key(&client, &server).await?;
 	let create_instance_res = create_instance(&client, ns, &ssh_key, &server).await?;
 	let linode_id = create_instance_res.id;
+	wait_instance_ready(&client, linode_id).await?;
 	let create_disks_res =
 		create_disks(&client, &ssh_key, linode_id, create_instance_res.specs.disk).await?;
 	create_instance_config(&client, ns, linode_id, &create_disks_res, &server).await?;
-	create_firewall(&client, linode_id, &server).await?;
+	create_firewall(&client, ns, linode_id, &server).await?;
+	boot_instance(&client, linode_id).await?;
 	let public_ip = get_public_ip(&client, linode_id).await?;
 
 	Ok(linode::server_provision::Response {
