@@ -8,8 +8,7 @@ import "proto/backend/net.proto";
 message Cluster {
     rivet.common.Uuid cluster_id = 1;
     string name_id = 2;
-    repeated Datacenter datacenters = 3;
-
+    int64 create_ts = 3;
     optional rivet.common.Uuid owner_team_id = 4;
 }
 
@@ -19,9 +18,10 @@ enum Provider {
 
 message Datacenter {
     rivet.common.Uuid datacenter_id = 1;
-    string name_id = 2;
-    string display_name = 3;
-    rivet.backend.net.Coordinates coords = 4;
+    rivet.common.Uuid cluster_id = 2;
+    string name_id = 3;
+    string display_name = 4;
+    rivet.backend.net.Coordinates coords = 5;
     repeated Hardware hardware = 6;
     
     Provider provider = 7;

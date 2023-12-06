@@ -12,6 +12,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	let crdb = ctx.crdb().await?;
 	
 	let cluster_id = unwrap!(ctx.cluster_id);
+	let datacenter_id = unwrap!(ctx.datacenter_id);
 	let server_id = unwrap!(ctx.server_id).as_uuid();
 	let provider = unwrap!(backend::cluster::Provider::from_i32(ctx.provider));
 	
@@ -33,11 +34,11 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 		return Ok(());
 	};
 	
-	let cluster_res = op!([ctx] cluster_get {
-		cluster_ids: vec![cluster_id],
+	// Fetch datacenter config
+	let datacenter_res = op!([ctx] cluster_datacenter_get {
+		datacenter_ids: vec![datacenter_id],
 	}).await?;
-	let cluster = unwrap!(cluster_res.clusters.first());
-	let datacenter = unwrap!(cluster.datacenters.iter().find(|dc| dc.datacenter_id == ctx.datacenter_id));
+	let datacenter = unwrap!(datacenter_res.datacenters.first());
 
 	let provision_res = match provider {
 		backend::cluster::Provider::Linode => {
@@ -103,11 +104,10 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	)
 	.await?;
 
-	// TODO:
-	// msg!([ctx] cluster::msg::server_install(cluster_id, datacenter_id, server_id) {
-	// 	server_id: ctx.server_id,
-	// })
-	// .await?;
+	msg!([ctx] cluster::msg::server_install(cluster_id, datacenter_id, server_id) {
+		server_id: ctx.server_id,
+	})
+	.await?;
 
 	Ok(())
 }

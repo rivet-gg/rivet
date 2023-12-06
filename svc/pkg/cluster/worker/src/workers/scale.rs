@@ -35,6 +35,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 		FROM db_cluster.servers
 		WHERE
 			cluster_id = $1 AND
+			-- Filters out servers that are being destroyed/already destroyed
 			cloud_destroy_ts IS NULL
 		",
 		cluster_id

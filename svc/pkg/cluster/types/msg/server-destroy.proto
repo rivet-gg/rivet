@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.cluster.msg.server_destroy;
+
+import "proto/common.proto";
+
+/// name = "msg-cluster-server-destroy"
+/// parameters = [
+/// 	{ name = "user_id" },
+/// ]
+message Message {
+
+}

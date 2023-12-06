@@ -47,7 +47,7 @@ async fn basic(ctx: TestCtx) {
 	.unwrap();
 
 	// Create server
-	op!([ctx] linode_server_provision {
+	let res = op!([ctx] linode_server_provision {
 		server_id: Some(server_id.into()),
 		provider_datacenter_id: "us-southeast".to_string(),
 		hardware: Some(backend::cluster::Hardware {
@@ -72,7 +72,13 @@ async fn basic(ctx: TestCtx) {
 	.await
 	.unwrap();
 
-	// Destroy server after test is complete so we don't litter
+	op!([ctx] linode_server_destroy {
+		server_id: Some(server_id.into()),
+	})
+	.await
+	.unwrap();
+
+	// Should do nothing
 	op!([ctx] linode_server_destroy {
 		server_id: Some(server_id.into()),
 	})

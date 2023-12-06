@@ -17,10 +17,17 @@ struct ServerCtx {
 	firewall_inbound: Vec<util::net::FirewallRule>,
 }
 
+struct RestResponse {
+	linode_id: u64,
+	firewall_id: u64,
+	public_ip: Ipv4Addr,
+}
+
 #[operation(name = "linode-server-provision")]
 pub async fn handle(
 	ctx: OperationContext<linode::server_provision::Request>,
 ) -> GlobalResult<linode::server_provision::Response> {
+	let crdb = ctx.crdb().await?;
 	let server_id = unwrap!(ctx.server_id).as_uuid();
 	let provider_datacenter_id = ctx.provider_datacenter_id.clone();
 	let pool_type = unwrap!(PoolType::from_i32(ctx.pool_type));
@@ -34,7 +41,7 @@ pub async fn handle(
 	};
 	let max_idx = vlan_addr_range.count() as i64;
 	let (network_idx,) = sql_fetch_one!(
-		[ctx, (i64,)]
+		[ctx, (i64,), &crdb]
 		"
 		WITH
 			get_next_network_idx AS (
@@ -105,29 +112,71 @@ pub async fn handle(
 	let auth = format!("Bearer {}", api_token,);
 	let mut headers = header::HeaderMap::new();
 	headers.insert(header::AUTHORIZATION, header::HeaderValue::from_str(&auth)?);
-	headers.insert(
-		header::CONTENT_TYPE,
-		header::HeaderValue::from_static("application/json"),
-	);
 	let client = reqwest::Client::builder()
 		.default_headers(headers)
 		.build()?;
 
-	// Run API calls
-	let ssh_key = create_ssh_key(&client, &server).await?;
-	let create_instance_res = create_instance(&client, ns, &ssh_key, &server).await?;
-	let linode_id = create_instance_res.id;
-	wait_instance_ready(&client, linode_id).await?;
-	let create_disks_res =
-		create_disks(&client, &ssh_key, linode_id, create_instance_res.specs.disk).await?;
-	create_instance_config(&client, ns, linode_id, &create_disks_res, &server).await?;
-	create_firewall(&client, ns, linode_id, &server).await?;
-	boot_instance(&client, linode_id).await?;
-	let public_ip = get_public_ip(&client, linode_id).await?;
+	// Create SSH key
+	let ssh_key_res = create_ssh_key(&client, &server).await?;
+
+	// Run the rest of the API calls. This is done in an isolated manner so that if any errors occur here,
+	// the ssh key id can still be written to database.
+	let rest_res = async {
+		let create_instance_res =
+			create_instance(&client, ns, &ssh_key_res.public_key, &server).await?;
+		let linode_id = create_instance_res.id;
+
+		wait_instance_ready(&client, linode_id).await?;
+
+		let create_disks_res = create_disks(
+			&client,
+			&ssh_key_res.public_key,
+			linode_id,
+			create_instance_res.specs.disk,
+		)
+		.await?;
+
+		create_instance_config(&client, ns, linode_id, &create_disks_res, &server).await?;
+
+		let firewall_res = create_firewall(&client, ns, linode_id, &server).await?;
+
+		boot_instance(&client, linode_id).await?;
+
+		let public_ip = get_public_ip(&client, linode_id).await?;
+
+		GlobalResult::Ok(RestResponse {
+			linode_id,
+			firewall_id: firewall_res.id,
+			public_ip,
+		})
+	}
+	.await;
+
+	// Extract firewall_id as `Option`
+	let firewall_id = rest_res.as_ref().ok().map(|res| res.firewall_id as i64);
+
+	// These values are used when destroying resources
+	sql_execute!(
+		[ctx, &crdb]
+		"
+		INSERT INTO db_cluster.linode_misc (
+			server_id,
+			ssh_key_id,
+			firewall_id
+		)
+		VALUES ($1, $2, $3)
+		",
+		server_id,
+		ssh_key_res.id as i64,
+		firewall_id
+	)
+	.await?;
+
+	let rest_res = rest_res?;
 
 	Ok(linode::server_provision::Response {
-		provider_server_id: linode_id.to_string(),
+		provider_server_id: rest_res.linode_id.to_string(),
 		vlan_ip: vlan_ip.to_string(),
-		public_ip: public_ip.to_string(),
+		public_ip: rest_res.public_ip.to_string(),
 	})
 }
