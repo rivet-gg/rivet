@@ -2,7 +2,7 @@ use anyhow::Result;
 use bolt_config::ns::ClusterKind::{Distributed, SingleNode};
 use indoc::{formatdoc, indoc};
 use serde_json::json;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tokio::fs;
 
 use crate::{
@@ -495,47 +495,25 @@ async fn vars(ctx: &ProjectContext) {
 		let regions = &config
 			.fake_pools
 			.iter()
-			.map(|pool| &pool.region)
-			.collect::<Vec<_>>();
+			.filter_map(|pool| match config.regions.get(&pool.region) {
+				Some(region) => Some((pool.region.clone(), region.provider_region.clone())),
+				None => None,
+			})
+			.collect::<HashSet<_>>();
 
-		// let public_ip = ctx.domain_main_api();
-		let public_ip = match &config.cluster.kind {
-			SingleNode { public_ip, .. } => public_ip.to_owned(),
-			Distributed {} => ctx.domain_main_api().unwrap(),
-		};
+		// let public_ip = ctx.domain_main_api().expect("");
+		let public_ip = "api.rivet.gg";
 
-		let public_ip = "api.rivet.gg/status";
-
-		let json = json!(regions
+		vars.insert("betteruptime_monitors".into(), json!(regions
 			.iter()
-			.map(|region| {
+			.map(|(region, provider_region)| {
 				json!({
-					// https://status.api.rivet.gg/v1/matchmaker?region=lnd-atl
-					"url": format!("https://{}/v1/matchmaker?region={}", public_ip, region),
-					"public_name": "test".to_string(),
-					// Need to add bearer
+					// eg. https://api.rivet.gg/status/matchmaker?region=lnd-atl
+					"url": format!("https://{}/status/matchmaker?region={}", public_ip, region),
+					"public_name": provider_region,
 				})
 			})
-			.collect::<Vec<_>>());
-
-		let json_string: String = serde_json::to_string(&json).unwrap();
-
-		dbg!(json_string);
-
-		vars.insert(
-			"betteruptime_monitors".into(),
-			json!(regions
-				.iter()
-				.map(|region| {
-					json!({
-						// https://status.api.rivet.gg/v1/matchmaker?region=lnd-atl
-						"url": format!("{}/v1/matchmaker?region={}", public_ip, region),
-						"public_name": "test".to_string(),
-						// Need to add bearer
-					})
-				})
-				.collect::<Vec<_>>()),
-		);
+			.collect::<Vec<_>>()));
 
 		vars.insert(
 			"betteruptime_company".into(),
