@@ -5,11 +5,6 @@ terraform {
 			source = "alekc/kubectl"
 			version = ">= 2.0.2"
 		}
-
-		betteruptime = {
-			source = "BetterStackHQ/better-uptime"
-			version = "0.4.0"
-		}
 	}
 }
 
