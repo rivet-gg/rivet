@@ -20,10 +20,9 @@ pub fn summary(
 	dev_team: &backend::team::Team,
 ) -> GlobalResult<models::GameSummary> {
 	let game_url = state
-		.prod_config
-		.domains
-		.first()
-		.map(|d| d.domain.clone())
+		.prod_cdn_config
+		.as_ref()
+		.and_then(|x| x.domains.first().map(|x| x.domain.clone()))
 		.unwrap_or_else(|| game.url.clone());
 
 	Ok(models::GameSummary {

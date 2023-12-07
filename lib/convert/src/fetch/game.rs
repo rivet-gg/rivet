@@ -10,7 +10,7 @@ use types::rivet::{
 use crate::convert;
 
 pub struct GameState {
-	pub prod_config: backend::cdn::NamespaceConfig,
+	pub prod_cdn_config: Option<backend::cdn::NamespaceConfig>,
 	pub total_player_count: u32,
 }
 
@@ -87,7 +87,7 @@ pub async fn state(
 	game_ids: Vec<common::Uuid>,
 ) -> GlobalResult<HashMap<Uuid, GameState>> {
 	let namespaces_res = op!([ctx] game_namespace_list {
-		game_ids: game_ids,
+		game_ids: game_ids.clone(),
 	})
 	.await?;
 	let all_namespace_ids = namespaces_res
@@ -124,28 +124,35 @@ pub async fn state(
 	})
 	.await?;
 
-	let cdn_configs = cdn_namespaces_res
-		.namespaces
+	let states = game_ids
 		.iter()
-		.map(|ns| {
-			let namespace_id = unwrap_ref!(ns.namespace_id).as_uuid();
-			let game_id = unwrap!(prod_namespaces.get(&namespace_id));
-			let config = unwrap_ref!(ns.config).clone();
+		.map(|game_id| {
+			let prod_ns = game_namespaces_res
+				.namespaces
+				.iter()
+				.find(|x| x.game_id.map_or(false, |x| x == *game_id) && x.name_id == "prod");
+			let prod_ns = unwrap!(prod_ns, "missing prod ns for game");
+
+			let prod_cdn_config = cdn_namespaces_res
+				.namespaces
+				.iter()
+				.find(|cdn_ns| cdn_ns.namespace_id == prod_ns.namespace_id)
+				.and_then(|x| x.config.clone());
 
 			// Fetch all namespace ids for game
-			let game_id_proto = Some(Into::<common::Uuid>::into(*game_id));
-			let all_namespace_ids = &unwrap!(namespaces_res
+			let game_namespace_ids = &unwrap!(namespaces_res
 				.games
 				.iter()
-				.find(|game| game.game_id == game_id_proto))
+				.find(|game| game.game_id.map_or(false, |x| x == *game_id)))
 			.namespace_ids;
 
+			// Calculate total player count
 			let total_player_count = player_count_res
 				.namespaces
 				.iter()
 				.filter(|ns1| {
 					// Make sure this namespace belongs to this game
-					all_namespace_ids.iter().any(|ns2_id| {
+					game_namespace_ids.iter().any(|ns2_id| {
 						ns1.namespace_id
 							.as_ref()
 							.map_or(false, |ns1_id| ns1_id == ns2_id)
@@ -155,16 +162,16 @@ pub async fn state(
 				.fold(0u32, |acc, x| acc + x.player_count);
 
 			Ok((
-				*game_id,
+				game_id.as_uuid(),
 				GameState {
-					prod_config: config,
+					prod_cdn_config,
 					total_player_count,
 				},
 			))
 		})
 		.collect::<GlobalResult<HashMap<_, _>>>()?;
 
-	Ok(cdn_configs)
+	Ok(states)
 }
 
 pub async fn region_summaries(
