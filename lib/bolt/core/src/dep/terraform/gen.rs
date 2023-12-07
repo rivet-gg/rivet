@@ -1,4 +1,5 @@
 use anyhow::Result;
+use bolt_config::ns::ClusterKind::{Distributed, SingleNode};
 use indoc::{formatdoc, indoc};
 use serde_json::json;
 use std::collections::HashMap;
@@ -147,7 +148,7 @@ async fn vars(ctx: &ProjectContext) {
 	vars.insert("minio_port".into(), json!(null));
 
 	match &config.cluster.kind {
-		ns::ClusterKind::SingleNode {
+		SingleNode {
 			public_ip,
 			api_http_port,
 			api_https_port,
@@ -169,7 +170,7 @@ async fn vars(ctx: &ProjectContext) {
 				vars.insert("minio_port".into(), json!(null));
 			}
 		}
-		ns::ClusterKind::Distributed {} => {
+		Distributed {} => {
 			vars.insert("deploy_method_local".into(), json!(false));
 			vars.insert("deploy_method_cluster".into(), json!(true));
 		}
@@ -481,6 +482,65 @@ async fn vars(ctx: &ProjectContext) {
 			json!(ctx.default_s3_provider().unwrap().0.as_str()),
 		);
 		vars.insert("s3_providers".into(), s3_providers(ctx).await.unwrap());
+	}
+
+	// BetterUptime
+	if let Some(better_uptime) = &config.betteruptime_company {
+		// Make sure there is at least one pool
+		if config.fake_pools.is_empty() {
+			panic!("BetterUptime requires at least one pool, otherwise it will not be able to monitor the service");
+		}
+
+		// Load all the regions of pools
+		let regions = &config
+			.fake_pools
+			.iter()
+			.map(|pool| &pool.region)
+			.collect::<Vec<_>>();
+
+		// let public_ip = ctx.domain_main_api();
+		let public_ip = match &config.cluster.kind {
+			SingleNode { public_ip, .. } => public_ip.to_owned(),
+			Distributed {} => ctx.domain_main_api().unwrap(),
+		};
+
+		let public_ip = "api.rivet.gg/status";
+
+		let json = json!(regions
+			.iter()
+			.map(|region| {
+				json!({
+					// https://status.api.rivet.gg/v1/matchmaker?region=lnd-atl
+					"url": format!("https://{}/v1/matchmaker?region={}", public_ip, region),
+					"public_name": "test".to_string(),
+					// Need to add bearer
+				})
+			})
+			.collect::<Vec<_>>());
+
+		let json_string: String = serde_json::to_string(&json).unwrap();
+
+		dbg!(json_string);
+
+		vars.insert(
+			"betteruptime_monitors".into(),
+			json!(regions
+				.iter()
+				.map(|region| {
+					json!({
+						// https://status.api.rivet.gg/v1/matchmaker?region=lnd-atl
+						"url": format!("{}/v1/matchmaker?region={}", public_ip, region),
+						"public_name": "test".to_string(),
+						// Need to add bearer
+					})
+				})
+				.collect::<Vec<_>>()),
+		);
+
+		vars.insert(
+			"betteruptime_company".into(),
+			json!(better_uptime.to_owned()),
+		);
 	}
 
 	// Media presets
