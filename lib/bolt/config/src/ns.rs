@@ -17,8 +17,6 @@ pub struct Namespace {
 	#[serde(default)]
 	pub pools: Vec<Pool>,
 	#[serde(default)]
-	pub fake_pools: Vec<Pool>,
-	#[serde(default)]
 	pub terraform: Terraform,
 	pub dns: Option<Dns>,
 	#[serde(default)]

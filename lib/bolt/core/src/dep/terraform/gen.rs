@@ -487,13 +487,13 @@ async fn vars(ctx: &ProjectContext) {
 	// BetterUptime
 	if let Some(better_uptime) = &config.betteruptime_company {
 		// Make sure there is at least one pool
-		if config.fake_pools.is_empty() {
+		if config.pools.is_empty() {
 			panic!("BetterUptime requires at least one pool, otherwise it will not be able to monitor the service");
 		}
 
 		// Load all the regions of pools
 		let regions = &config
-			.fake_pools
+			.pools
 			.iter()
 			.filter_map(|pool| match config.regions.get(&pool.region) {
 				Some(region) => Some((pool.region.clone(), region.provider_region.clone())),
@@ -501,19 +501,23 @@ async fn vars(ctx: &ProjectContext) {
 			})
 			.collect::<HashSet<_>>();
 
-		// let public_ip = ctx.domain_main_api().expect("");
-		let public_ip = "api.rivet.gg";
+		let public_ip = ctx.domain_main_api().unwrap();
 
-		vars.insert("betteruptime_monitors".into(), json!(regions
-			.iter()
-			.map(|(region, provider_region)| {
-				json!({
-					// eg. https://api.rivet.gg/status/matchmaker?region=lnd-atl
-					"url": format!("https://{}/status/matchmaker?region={}", public_ip, region),
-					"public_name": provider_region,
+		vars.insert(
+			"betteruptime_monitors".into(),
+			json!(regions
+				.iter()
+				.map(|(region, provider_region)| {
+					json!({
+						// eg. https://api.rivet.gg/status/matchmaker?region=lnd-atl
+						// "url": format!("https://{}/status/matchmaker?region={}",
+						// public_ip, region),
+						"url": "https://google.ca",
+						"public_name": provider_region,
+					})
 				})
-			})
-			.collect::<Vec<_>>()));
+				.collect::<Vec<_>>()),
+		);
 
 		vars.insert(
 			"betteruptime_company".into(),
