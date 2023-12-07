@@ -45,6 +45,8 @@ pub struct Namespace {
 	pub rust: Rust,
 	#[serde(default)]
 	pub rivet: Rivet,
+	#[serde(default)]
+	pub better_uptime: Option<BetterUptime>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -670,4 +672,12 @@ fn default_minio_port() -> u16 {
 
 fn default_tunnel_port() -> u16 {
 	5000
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(deny_unknown_fields)]
+pub struct BetterUptime {
+	pub company_name: String,
+	pub company_url: String,
+	pub company_subdomain: String,
 }
