@@ -45,6 +45,7 @@ pub struct Namespace {
 	pub rust: Rust,
 	#[serde(default)]
 	pub rivet: Rivet,
+	#[serde(default)]
 	pub betteruptime_company: Option<BetterUptime>,
 }
 

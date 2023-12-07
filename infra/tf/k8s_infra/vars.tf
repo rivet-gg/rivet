@@ -139,6 +139,7 @@ variable "betteruptime_monitors" {
 		url = string
 		public_name = string
 	}))
+	default = []
 }
 
 variable "betteruptime_company" {
@@ -147,4 +148,9 @@ variable "betteruptime_company" {
 		company_url = string
 		company_subdomain = string
 	})
+	default = {
+		company_name = ""
+		company_url = ""
+		company_subdomain = ""
+	}
 }
