@@ -1,4 +1,5 @@
 chirp_worker::workers![
+	create,
 	server_destroy,
 	server_install,
 	server_drain,

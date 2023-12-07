@@ -16,10 +16,11 @@ struct LinodeData {
 pub async fn handle(
 	ctx: OperationContext<linode::server_destroy::Request>,
 ) -> GlobalResult<linode::server_destroy::Response> {
+	let crdb = ctx.crdb().await?;
 	let server_id = unwrap!(ctx.server_id).as_uuid();
 
-	let data = sql_fetch_one!(
-		[ctx, LinodeData]
+	let data = sql_fetch_optional!(
+		[ctx, LinodeData, &crdb]
 		"
 		SELECT provider_server_id, ssh_key_id, firewall_id
 		FROM db_cluster.servers AS s
@@ -30,6 +31,11 @@ pub async fn handle(
 		server_id,
 	)
 	.await?;
+
+	let Some(data) = data else {
+		tracing::warn!("deleting server that doesn't exist");
+		return Ok(linode::server_destroy::Response {});
+	};
 
 	// Build HTTP client
 	let api_token = util::env::read_secret(&["linode", "token"]).await?;
@@ -43,6 +49,17 @@ pub async fn handle(
 	delete_instance(&client, &data.provider_server_id).await?;
 	delete_ssh_key(&client, data.ssh_key_id).await?;
 	delete_firewall(&client, data.firewall_id).await?;
+
+	// Remove record
+	sql_execute!(
+		[ctx, &crdb]
+		"
+		DELETE FROM db_cluster.linode_misc
+		WHERE server_id = $1
+		",
+		server_id,
+	)
+	.await?;
 
 	Ok(linode::server_destroy::Response {})
 }

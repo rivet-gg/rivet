@@ -10,10 +10,10 @@ message Request {
     string provider_datacenter_id = 2;
     rivet.backend.cluster.Hardware hardware = 3;
     rivet.backend.cluster.PoolType pool_type = 4;
+    string vlan_ip = 5;
 }
 
 message Response {
     string provider_server_id = 1;
-    string vlan_ip = 2;
-    string public_ip = 3;
+    string public_ip = 2;
 }

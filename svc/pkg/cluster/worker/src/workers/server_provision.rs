@@ -1,9 +1,9 @@
 use chirp_worker::prelude::*;
-use proto::backend::{self, pkg::*};
+use proto::backend::{self, cluster::PoolType, pkg::*};
+use rand::Rng;
 
 struct ProvisionResponse {
 	provider_server_id: String,
-	vlan_ip: String,
 	public_ip: String,
 }
 
@@ -14,22 +14,23 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	let cluster_id = unwrap!(ctx.cluster_id);
 	let datacenter_id = unwrap!(ctx.datacenter_id);
 	let server_id = unwrap!(ctx.server_id).as_uuid();
+	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(ctx.pool_type));
 	let provider = unwrap!(backend::cluster::Provider::from_i32(ctx.provider));
 	
 	// Check if server is already provisioned
 	// NOTE: sql record already exists before this worker is called
-	let server_row = sql_fetch_one!(
-		[ctx, (Option<String>,), &crdb]
+	let (provider_server_id, vlan_ip) = sql_fetch_one!(
+		[ctx, (Option<String>, Option<String>), &crdb]
 		"
 		SELECT
-			provider_server_id
+			provider_server_id, vlan_ip
 		FROM db_cluster.servers
 		WHERE server_id = $1
 		",
 		server_id,
 	)
 	.await?;
-	if let (Some(provider_server_id),) = server_row {
+	if let Some(provider_server_id) = provider_server_id {
 		tracing::error!(?server_id, ?provider_server_id, "server is already provisioned");
 		return Ok(());
 	};
@@ -40,22 +41,35 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	}).await?;
 	let datacenter = unwrap!(datacenter_res.datacenters.first());
 
+	// If the vlan_ip is set in the database but this message is being run again, that means an attempt to
+	// provision servers failed. Use the vlan_ip that was determined before, otherwise find a new vlan_ip
+	// to use
+	let vlan_ip = if let Some(vlan_ip) = vlan_ip {
+		vlan_ip
+	} else {
+		get_vlan_ip(ctx, &crdb, server_id, pool_type).await?
+	};
+
 	let provision_res = match provider {
 		backend::cluster::Provider::Linode => {
 			let mut hardware_list = datacenter.hardware.iter();
 
-			// Iterate through list of hardware and attempt to schedule a server
+			// Iterate through list of hardware and attempt to schedule a server. Goes to the next
+			// hardware if an error happens during provisioning
 			loop {
 				// List exhausted
 				let Some(hardware) = hardware_list.next() else {
 					break None;
 				};
 
+				tracing::info!("attempting to provision hardware: {}", hardware.provider_hardware);
+
 				let res = op!([ctx] linode_server_provision {
 					server_id: ctx.server_id,
 					provider_datacenter_id: datacenter.provider_datacenter_id.clone(),
 					hardware: Some(hardware.clone()),
 					pool_type: ctx.pool_type,
+					vlan_ip: vlan_ip.clone(),
 				})
 				.await;
 	
@@ -63,30 +77,23 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 					Ok(res) => {
 						break Some(ProvisionResponse {
 							provider_server_id: res.provider_server_id.clone(),
-							vlan_ip: res.vlan_ip.clone(),
 							public_ip: res.public_ip.clone(),
 						})
 					},
 					Err(err) => {
-						tracing::warn!(?err, "failed to provision linode server, destroying gracefully");
+						tracing::warn!(?err, "failed to provision linode server, cleaning up");
 			
-						// TODO: 
-						// op!([ctx] linode_server_destroy {
-						// })
-						// .await?;
-						todo!();
+						op!([ctx] linode_server_destroy {
+							server_id: ctx.server_id,
+						})
+						.await?;
 					}
 				}
 			}
 		}
 	};
 
-	// All attempts to provision failed
-	let Some(provision_res) = provision_res else {
-		tracing::info!(?server_id, "failed to provision server");
-		bail!("failed to provision server");
-	};
-
+	// Update DB regardless of success (have to set vlan_ip)
 	sql_execute!(
 		[ctx, &crdb]
 		"
@@ -98,11 +105,17 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 		WHERE server_id = $1
 		",
 		server_id,
-		provision_res.provider_server_id,
-		provision_res.vlan_ip,
-		provision_res.public_ip,
+		provision_res.as_ref().map(|res| &res.provider_server_id),
+		vlan_ip,
+		provision_res.as_ref().map(|res| &res.public_ip),
 	)
 	.await?;
+
+	// All attempts to provision failed
+	let Some(provision_res) = provision_res else {
+		tracing::info!(?server_id, "failed to provision server");
+		bail!("failed to provision server");
+	};
 
 	msg!([ctx] cluster::msg::server_install(cluster_id, datacenter_id, server_id) {
 		server_id: ctx.server_id,
@@ -110,4 +123,49 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	.await?;
 
 	Ok(())
+}
+
+async fn get_vlan_ip(ctx: &OperationContext<cluster::msg::server_provision::Message>, crdb: &CrdbPool, server_id: Uuid, pool_type: backend::cluster::PoolType) -> GlobalResult<String> {
+	// Find next available vlan index
+	let mut vlan_addr_range = match pool_type {
+		PoolType::Job => util::net::job::vlan_addr_range(),
+		PoolType::Gg => util::net::gg::vlan_addr_range(),
+		PoolType::Ats => util::net::ats::vlan_addr_range(),
+	};
+	let max_idx = vlan_addr_range.count() as i64;
+	let (network_idx,) = sql_fetch_one!(
+		[ctx, (i64,), &crdb]
+		"
+		WITH
+			get_next_network_idx AS (
+				SELECT idx
+				FROM generate_series(0, $2) AS s(idx)
+				WHERE NOT EXISTS (
+					SELECT 1
+					FROM db_cluster.servers
+					WHERE
+						pool_type = $3 AND
+						network_idx = mod(idx + $1, $2)
+				)
+				LIMIT 1
+			),
+			update_network_idx AS (
+				UPDATE db_cluster.servers
+				SET network_idx = mod((SELECT idx FROM get_next_network_idx) + $1, $2)
+				WHERE server_id = $4
+				RETURNING 1
+			)
+		SELECT idx FROM get_next_network_idx
+		",
+		// Choose a random index to start from for better index spread
+		rand::thread_rng().gen_range(0i64..max_idx),
+		max_idx,
+		pool_type as i64,
+		server_id
+	)
+	.await?;
+
+	let vlan_ip = unwrap!(vlan_addr_range.nth(network_idx as usize));
+
+	Ok(vlan_ip.to_string())
 }
