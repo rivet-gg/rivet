@@ -132,3 +132,19 @@ variable "s3_buckets" {
 variable "cdn_cache_size_gb" {
 	type = number
 }
+
+# MARK: BetterUptime
+variable "betteruptime_monitors" {
+	type = list(object({
+		url = string
+		public_name = string
+	}))
+}
+
+variable "betteruptime_company" {
+	type = object({
+		company_name = string
+		company_url = string
+		company_subdomain = string
+	})
+}
