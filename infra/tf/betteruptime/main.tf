@@ -11,21 +11,17 @@ module "betteruptime_secrets" {
 }
 
 resource "betteruptime_status_page" "status_page" {
-	count = length(var.betteruptime_monitors) > 0 ? 1 : 0
-	
-	company_name = var.betteruptime_company.company_name
-	company_url = var.betteruptime_company.company_url
+	company_name = var.betteruptime.company_name
+	company_url = var.betteruptime.company_url
 	timezone = "UTC"
-	subdomain = var.betteruptime_company.company_subdomain
+	subdomain = var.betteruptime.company_subdomain
 	design = "v2"
 	layout = "vertical"
 	theme = "light"
 }
 
 resource "betteruptime_status_page_section" "status_page_section" {
-	count = length(var.betteruptime_monitors) > 0 ? 1 : 0
-
-	status_page_id = betteruptime_status_page.status_page[0].id
+	status_page_id = betteruptime_status_page.status_page.id
 	name = "Matchmaker"
 	position = 0
 }

@@ -1,5 +1,4 @@
 use anyhow::Result;
-use bolt_config::ns::ClusterKind::{Distributed, SingleNode};
 use indoc::{formatdoc, indoc};
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
@@ -148,7 +147,7 @@ async fn vars(ctx: &ProjectContext) {
 	vars.insert("minio_port".into(), json!(null));
 
 	match &config.cluster.kind {
-		SingleNode {
+		ns::ClusterKind::SingleNode {
 			public_ip,
 			api_http_port,
 			api_https_port,
@@ -170,7 +169,7 @@ async fn vars(ctx: &ProjectContext) {
 				vars.insert("minio_port".into(), json!(null));
 			}
 		}
-		Distributed {} => {
+		ns::ClusterKind::Distributed {} => {
 			vars.insert("deploy_method_local".into(), json!(false));
 			vars.insert("deploy_method_cluster".into(), json!(true));
 		}
@@ -485,11 +484,11 @@ async fn vars(ctx: &ProjectContext) {
 	}
 
 	// BetterUptime
-	if let Some(better_uptime) = &config.betteruptime_company {
+	if let Some(betteruptime) = &config.betteruptime {
 		// Make sure there is at least one pool
-		if config.pools.is_empty() {
-			panic!("BetterUptime requires at least one pool, otherwise it will not be able to monitor the service");
-		}
+		// if config.pools.is_empty() {
+		// 	panic!("BetterUptime requires at least one pool, otherwise it will not be able to monitor the service");
+		// }
 
 		// Load all the regions of pools
 		let regions = &config
@@ -501,7 +500,8 @@ async fn vars(ctx: &ProjectContext) {
 			})
 			.collect::<HashSet<_>>();
 
-		let public_ip = ctx.domain_main_api().unwrap();
+		// let public_ip = ctx.domain_main_api().unwrap();
+		let public_ip = "google.ca".to_string();
 
 		vars.insert(
 			"betteruptime_monitors".into(),
@@ -510,19 +510,14 @@ async fn vars(ctx: &ProjectContext) {
 				.map(|(region, provider_region)| {
 					json!({
 						// eg. https://api.rivet.gg/status/matchmaker?region=lnd-atl
-						// "url": format!("https://{}/status/matchmaker?region={}",
-						// public_ip, region),
-						"url": "https://google.ca",
+						"url": format!("https://{}/status/matchmaker?region={}", public_ip, region),
 						"public_name": provider_region,
 					})
 				})
 				.collect::<Vec<_>>()),
 		);
 
-		vars.insert(
-			"betteruptime_company".into(),
-			json!(better_uptime.to_owned()),
-		);
+		vars.insert("betteruptime".into(), json!(betteruptime.to_owned()));
 	}
 
 	// Media presets

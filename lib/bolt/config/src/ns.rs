@@ -46,7 +46,7 @@ pub struct Namespace {
 	#[serde(default)]
 	pub rivet: Rivet,
 	#[serde(default)]
-	pub betteruptime_company: Option<BetterUptime>,
+	pub betteruptime: Option<BetterUptime>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

@@ -266,6 +266,17 @@ pub fn build_plan(
 		}
 	}
 
+	// BetterUptime
+	if ctx.ns().betteruptime.is_some() {
+		plan.push(PlanStep {
+			name_id: "betteruptime",
+			kind: PlanStepKind::Terraform {
+				plan_id: "betteruptime".into(),
+				needs_destroy: true,
+			},
+		});
+	}
+
 	// S3
 	let s3_providers = &ctx.ns().s3.providers;
 	if s3_providers.minio.is_some() {
