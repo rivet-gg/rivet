@@ -86,11 +86,12 @@ pub struct InstanceSpec {
 
 pub async fn create_instance(
 	client: &reqwest::Client,
-	ns: &str,
-	ssh_key: &str,
 	server: &ServerCtx,
+	ssh_key: &str,
 ) -> GlobalResult<CreateInstanceResponse> {
 	tracing::info!("creating linode instance");
+
+	let ns = util::env::namespace();
 
 	let res = client
 		.post("https://api.linode.com/v4/linode/instances")
@@ -171,13 +172,13 @@ pub async fn create_disks(
 
 pub async fn create_instance_config(
 	client: &reqwest::Client,
-	ns: &str,
+	server: &ServerCtx,
 	linode_id: u64,
 	disks: &CreateDisksResponse,
-	server: &ServerCtx,
 ) -> GlobalResult<()> {
 	tracing::info!("creating instance config");
 
+	let ns = util::env::namespace();
 	let region_vlan = util::net::region::vlan_ip_net();
 	let ipam_address = format!("{}/{}", server.vlan_ip, region_vlan.prefix_len());
 
@@ -223,11 +224,12 @@ pub struct CreateFirewallResponse {
 
 pub async fn create_firewall(
 	client: &reqwest::Client,
-	ns: &str,
-	linode_id: u64,
 	server: &ServerCtx,
+	linode_id: u64,
 ) -> GlobalResult<CreateFirewallResponse> {
 	tracing::info!("creating firewall");
+
+	let ns = util::env::namespace();
 
 	let firewall_inbound = server
 		.firewall_inbound
@@ -349,7 +351,7 @@ pub async fn wait_disk_ready(
 			}
 		}
 
-		tokio::time::sleep(Duration::from_secs(1)).await;
+		tokio::time::sleep(Duration::from_secs(3)).await;
 	}
 
 	Ok(())

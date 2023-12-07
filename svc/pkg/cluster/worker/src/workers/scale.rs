@@ -23,6 +23,7 @@ struct Server {
 
 #[worker(name = "cluster-scale")]
 async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> GlobalResult<()> {
+	let crdb = ctx.crdb().await?;
 	let cluster = unwrap_ref!(ctx.cluster);
 	let cluster_id = unwrap!(cluster.cluster_id).as_uuid();
 
@@ -53,7 +54,18 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 	})
 	.collect::<GlobalResult<Vec<_>>>()?;
 
-	for dc in &cluster.datacenters {
+	// Fetch datacenter config
+	let cluster_datacenter_list_res = op!([ctx] cluster_datacenter_list {
+		cluster_ids: vec![cluster_id.into()],
+	}).await?;
+	let datacenter_ids = &unwrap!(cluster_datacenter_list_res.clusters.first()).datacenter_ids;
+
+	let datacenters_res = op!([ctx] cluster_datacenter_get {
+		datacenter_ids: datacenter_ids.clone(),
+	}).await?;
+
+	// Scale all datacenters
+	for dc in &datacenters_res.datacenters {
 		let datacenter_id = unwrap!(dc.datacenter_id).as_uuid();
 		let servers_in_dc = servers
 			.iter()
@@ -65,7 +77,8 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 			match pool_type {
 				backend::cluster::PoolType::Job => {
 					scale_job_servers(
-						ctx.base(),
+						ctx,
+						&crdb,
 						cluster,
 						dc,
 						servers_in_dc.clone(),
@@ -83,7 +96,8 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 }
 
 async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
-	ctx: OperationContext<()>,
+	ctx: &OperationContext<cluster::msg::update::Message>,
+	crdb: &CrdbPool,
 	cluster: &backend::cluster::Cluster,
 	dc: &backend::cluster::Datacenter,
 	servers_in_dc: I,
@@ -156,20 +170,20 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 						pool_type: backend::cluster::PoolType::Job as i32,
 					})
 					.await?;
-		
-					todo!();
 				}
 			}
 
 			// Create new servers
 			if provision_count != 0 {
+				tracing::info!(count=%provision_count, "provisioning servers");
+
 				futures_util::stream::iter(0..provision_count)
 					.map(|_| async {
 						let server_id = Uuid::new_v4();
 		
 						// Write new server to db
 						sql_execute!(
-							[ctx]
+							[ctx, &crdb]
 							"
 							INSERT INTO db_cluster.servers (
 								server_id,

@@ -2,23 +2,9 @@ use chirp_worker::prelude::*;
 use proto::backend::pkg::*;
 use nomad_client::{models, apis::{configuration::Configuration, nodes_api}};
 
-// TODO: Remove once nomad-client is updated to the hashicorp openapi client everywhere in the codebase
-pub fn config_from_env() -> GlobalResult<Configuration> {
-	let nomad_url = unwrap!(
-		std::env::var("NOMAD_URL").ok(),
-		"no NOMAD_URL env var"
-	);
-	let config = Configuration {
-		base_path: format!("{}/v1", nomad_url),
-		..Default::default()
-	};
-
-	Ok(config)
-}
-
 lazy_static::lazy_static! {
 	static ref NOMAD_CONFIG: Configuration =
-		config_from_env().unwrap();
+		nomad_util::new_config_from_env().unwrap();
 }
 
 #[worker(name = "cluster-server-undrain")]

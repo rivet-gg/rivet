@@ -6,6 +6,16 @@ pub struct FirewallRule {
 	pub inbound_ipv6_cidr: Vec<String>,
 }
 
+pub fn default_firewall() -> FirewallRule {
+	FirewallRule {
+		label: "ssh".into(),
+		ports: "22".into(),
+		protocol: "tcp".into(),
+		inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
+		inbound_ipv6_cidr: vec!["::/0".into()],
+	}
+}
+
 pub mod region {
 	use std::net::Ipv4Addr;
 
@@ -21,7 +31,7 @@ pub mod gg {
 
 	use ipnet::{Ipv4AddrRange, Ipv4Net};
 
-	use super::FirewallRule;
+	use super::{default_firewall, FirewallRule};
 
 	pub fn vlan_ip_net() -> Ipv4Net {
 		Ipv4Net::new(Ipv4Addr::new(10, 0, 0, 0), 26).unwrap()
@@ -33,6 +43,7 @@ pub mod gg {
 
 	pub fn firewall() -> Vec<FirewallRule> {
 		vec![
+			default_firewall(),
 			// HTTP(S)
 			FirewallRule {
 				label: "http-tcp".into(),
@@ -87,7 +98,7 @@ pub mod ats {
 
 	use ipnet::{Ipv4AddrRange, Ipv4Net};
 
-	use super::FirewallRule;
+	use super::{default_firewall, FirewallRule};
 
 	pub fn vlan_ip_net() -> Ipv4Net {
 		Ipv4Net::new(Ipv4Addr::new(10, 0, 0, 64), 26).unwrap()
@@ -98,7 +109,7 @@ pub mod ats {
 	}
 
 	pub fn firewall() -> Vec<FirewallRule> {
-		vec![]
+		vec![default_firewall()]
 	}
 }
 
@@ -109,7 +120,7 @@ pub mod job {
 
 	use ipnet::Ipv4AddrRange;
 
-	use super::FirewallRule;
+	use super::{default_firewall, FirewallRule};
 
 	pub fn vlan_addr_range() -> Ipv4AddrRange {
 		Ipv4AddrRange::new(Ipv4Addr::new(10, 0, 4, 1), Ipv4Addr::new(10, 0, 255, 254))
@@ -117,6 +128,7 @@ pub mod job {
 
 	pub fn firewall() -> Vec<FirewallRule> {
 		vec![
+			default_firewall(),
 			// Ports available to Nomad jobs using the host network
 			FirewallRule {
 				label: "nomad-host-tcp".into(),

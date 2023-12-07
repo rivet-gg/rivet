@@ -1,5 +1,5 @@
 use chirp_worker::prelude::*;
-use proto::backend;
+use proto::backend::{self, pkg::*};
 
 #[worker_test]
 async fn basic(ctx: TestCtx) {
@@ -8,23 +8,19 @@ async fn basic(ctx: TestCtx) {
 	let cluster_id = Uuid::new_v4();
 	let pool_type = backend::cluster::PoolType::Job as i32;
 
-	// Insert fake records
-	sql_execute!(
-		[ctx]
-		"
-		INSERT INTO db_cluster.clusters (
-			cluster_id,
-			config,
-			create_ts
-		)
-		VALUES ($1, $2, $3)
-		",
-		cluster_id,
-		Vec::<u8>::new(),
-		util::timestamp::now(),
-	)
+	// TODO: This might collide if the test fails, its static
+	let vlan_ip = util::net::job::vlan_addr_range().last().unwrap();
+
+	msg!([ctx] cluster::msg::create(cluster_id) -> cluster::msg::create_complete {
+		cluster_id: Some(cluster_id.into()),
+		name_id: util::faker::ident(),
+		owner_team_id: None,
+	})
 	.await
 	.unwrap();
+
+	// Insert fake record to appease foreign key constraint (both sql calls in this test are normally done
+	// by `cluster-server-provision`)
 	sql_execute!(
 		[ctx]
 		"
@@ -47,13 +43,14 @@ async fn basic(ctx: TestCtx) {
 	.unwrap();
 
 	// Create server
-	op!([ctx] linode_server_provision {
+	let res = op!([ctx] linode_server_provision {
 		server_id: Some(server_id.into()),
 		provider_datacenter_id: "us-southeast".to_string(),
 		hardware: Some(backend::cluster::Hardware {
 			provider_hardware: "g6-nanode-1".to_string(),
 		}),
 		pool_type: pool_type,
+		vlan_ip: vlan_ip.to_string(),
 	})
 	.await
 	.unwrap();
