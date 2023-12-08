@@ -1,4 +1,3 @@
-pub mod consts;
 pub mod key;
 
 /// Determines if a Nomad job is dispatched from our run.

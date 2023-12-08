@@ -36,7 +36,6 @@ rivet-term = { git = "https://github.com/rivet-gg/rivet-term.git", rev = "f70f76
 s3-util = { path = "../../s3-util" }
 serde = { version ="1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_yaml = "0.9"
 sha2 = "0.10"
 tempfile = "3.2"
 thiserror = "1.0"
