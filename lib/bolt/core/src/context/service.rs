@@ -329,6 +329,10 @@ impl ServiceContextData {
 		// TODO:
 		true
 	}
+
+	pub fn depends_on_infra(&self) -> bool {
+		self.name() == "cluster-worker" || self.name() == "monolith-worker"
+	}
 }
 
 impl ServiceContextData {
@@ -942,7 +946,7 @@ impl ServiceContextData {
 		} else {
 			Vec::new()
 		};
-	
+
 		for s3_dep in s3_deps {
 			if !matches!(s3_dep.config().runtime, RuntimeKind::S3 { .. }) {
 				continue;
@@ -1208,12 +1212,33 @@ impl ServiceContextData {
 		}
 
 		if self.depends_on_infra() {
-			env.push(("TLS_CERT_LOCALLY_SIGNED_JOB_CERT_PEM".into(),));
-			env.push(("TLS_CERT_LOCALLY_SIGNED_JOB_KEY_PEM".into(),));
-			env.push(("TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM".into(),));
-			env.push(("TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM".into(),));
-			env.push(("TLS_ROOT_CA_CERT_PEM".into(),));
-			env.push(("K8S_TRAEFIK_TUNNEL_EXTERNAL_IP".into(),));
+			let tls = terraform::output::read_tls(&project_ctx).await;
+			let k8s_infra = terraform::output::read_k8s_infra(&project_ctx).await;
+
+			env.push((
+				"TLS_CERT_LOCALLY_SIGNED_JOB_CERT_PEM".into(),
+				tls.tls_cert_locally_signed_job.cert_pem.clone(),
+			));
+			env.push((
+				"TLS_CERT_LOCALLY_SIGNED_JOB_KEY_PEM".into(),
+				tls.tls_cert_locally_signed_job.key_pem.clone(),
+			));
+			env.push((
+				"TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM".into(),
+				tls.tls_cert_letsencrypt_rivet_job.cert_pem.clone(),
+			));
+			env.push((
+				"TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM".into(),
+				tls.tls_cert_letsencrypt_rivet_job.key_pem.clone(),
+			));
+			env.push((
+				"TLS_ROOT_CA_CERT_PEM".into(),
+				(*tls.root_ca_cert_pem).clone(),
+			));
+			env.push((
+				"K8S_TRAEFIK_TUNNEL_EXTERNAL_IP".into(),
+				(*k8s_infra.traefik_tunnel_external_ip).clone(),
+			));
 		}
 
 		Ok(env)
