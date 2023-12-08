@@ -78,14 +78,14 @@ async fn server_install(ctx: TestCtx) {
 	.await
 	.unwrap();
 
-	// tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+	tokio::time::sleep(std::time::Duration::from_secs(10)).await;
 
-	// // Destroy server after test is complete so we don't litter
-	// op!([ctx] linode_server_destroy {
-	// 	server_id: Some(server_id.into()),
-	// })
-	// .await
-	// .unwrap();
+	// Destroy server after test is complete so we don't litter
+	op!([ctx] linode_server_destroy {
+		server_id: Some(server_id.into()),
+	})
+	.await
+	.unwrap();
 }
 
 #[worker_test]

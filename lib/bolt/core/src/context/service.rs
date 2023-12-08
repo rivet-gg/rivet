@@ -937,10 +937,12 @@ impl ServiceContextData {
 
 		// Expose all S3 endpoints to services that need them
 		let s3_deps = if self.depends_on_s3() {
+			// self.s3_dependencies(&run_context).await
 			project_ctx.all_services().await.to_vec()
 		} else {
-			self.s3_dependencies(&run_context).await
+			Vec::new()
 		};
+	
 		for s3_dep in s3_deps {
 			if !matches!(s3_dep.config().runtime, RuntimeKind::S3 { .. }) {
 				continue;
@@ -1163,12 +1165,14 @@ impl ServiceContextData {
 			env.push(("CLICKHOUSE_URL".into(), uri));
 		}
 
-		// Expose S3 endpoints to services that need them
+		// Expose all S3 endpoints to services that need them
 		let s3_deps = if self.depends_on_s3() {
+			// self.s3_dependencies(&run_context).await
 			project_ctx.all_services().await.to_vec()
 		} else {
-			self.s3_dependencies(run_context).await
+			Vec::new()
 		};
+
 		for s3_dep in s3_deps {
 			if !matches!(s3_dep.config().runtime, RuntimeKind::S3 { .. }) {
 				continue;
@@ -1201,6 +1205,15 @@ impl ServiceContextData {
 					.read_secret(&["cloudflare", "terraform", "auth_token"])
 					.await?,
 			));
+		}
+
+		if self.depends_on_infra() {
+			env.push(("TLS_CERT_LOCALLY_SIGNED_JOB_CERT_PEM".into(),));
+			env.push(("TLS_CERT_LOCALLY_SIGNED_JOB_KEY_PEM".into(),));
+			env.push(("TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM".into(),));
+			env.push(("TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM".into(),));
+			env.push(("TLS_ROOT_CA_CERT_PEM".into(),));
+			env.push(("K8S_TRAEFIK_TUNNEL_EXTERNAL_IP".into(),));
 		}
 
 		Ok(env)

@@ -6,17 +6,22 @@ authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
 license = "Apache-2.0"
 
 [dependencies]
-async-ssh2-tokio = "0.8.4"
 chirp-client = { path = "../../../../lib/chirp/client" }
 chirp-worker = { path = "../../../../lib/chirp/worker" }
 chrono = "0.4"
+include_dir = "0.7.3"
+indoc = "1.0"
 lazy_static = "1.4.0"
+maplit = "1.0"
 nomad_client = { path = "../../../../lib/nomad-client" }
 nomad-util = { path = "../../../../lib/nomad-util" }
 rivet-convert = { path = "../../../../lib/convert" }
 rivet-health-checks = { path = "../../../../lib/health-checks" }
 rivet-metrics = { path = "../../../../lib/metrics" }
 rivet-runtime = { path = "../../../../lib/runtime" }
+s3-util = { path = "../../../../lib/s3-util" }
+serde_yaml = "0.9"
+ssh2 = "0.9.4"
 
 cluster-datacenter-get = { path = "../ops/datacenter-get" }
 cluster-datacenter-list = { path = "../ops/datacenter-list" }

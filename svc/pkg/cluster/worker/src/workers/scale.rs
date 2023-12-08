@@ -72,43 +72,36 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 			.filter(|server| server.datacenter_id == datacenter_id);
 
 		for pool in &dc.pools {
-			let pool_type = unwrap!(backend::cluster::PoolType::from_i32(pool.pool_type));
-
-			match pool_type {
-				backend::cluster::PoolType::Job => {
-					scale_job_servers(
-						ctx,
-						&crdb,
-						cluster,
-						dc,
-						servers_in_dc.clone(),
-						pool.desired_count,
-					)
-					.await?
-				}
-				backend::cluster::PoolType::Gg => todo!(),
-				backend::cluster::PoolType::Ats => todo!(),
-			}
+			scale_servers(
+				ctx,
+				&crdb,
+				cluster,
+				dc,
+				servers_in_dc.clone(),
+				&pool,
+			)
+			.await?;
 		}
 	}
 
 	Ok(())
 }
 
-async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
+async fn scale_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	ctx: &OperationContext<cluster::msg::update::Message>,
 	crdb: &CrdbPool,
 	cluster: &backend::cluster::Cluster,
 	dc: &backend::cluster::Datacenter,
 	servers_in_dc: I,
-	desired_count: u32,
+	pool: &backend::cluster::Pool,
 ) -> GlobalResult<()> {
 	let cluster_id = unwrap!(cluster.cluster_id).as_uuid();
 	let datacenter_id = unwrap!(dc.datacenter_id).as_uuid();
-	let desired_count = desired_count as usize;
+	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(pool.pool_type));
+	let desired_count = pool.desired_count as usize;
 
 	let job_servers = servers_in_dc
-		.filter(|server| matches!(server.pool_type, backend::cluster::PoolType::Job));
+		.filter(|server| server.pool_type == pool_type);
 	let draining_servers = job_servers.clone().filter(|server| server.is_draining).collect::<Vec<_>>();
 	let active_server_count = job_servers.count() - draining_servers.len();
 
@@ -121,8 +114,12 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 				desired=%desired_count,
 				"scaling down"
 			);
-		
-			todo!();
+
+			match pool_type {
+				backend::cluster::PoolType::Job => todo!(),
+				backend::cluster::PoolType::Gg => todo!(),
+				backend::cluster::PoolType::Ats => todo!(),
+			}
 		}
 		Ordering::Less => {
 			tracing::info!(
@@ -167,7 +164,7 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 						cluster_id: cluster.cluster_id,
 						datacenter_id: dc.datacenter_id,
 						server_id: Some(draining_server.server_id.into()),
-						pool_type: backend::cluster::PoolType::Job as i32,
+						pool_type: pool.pool_type,
 					})
 					.await?;
 				}
@@ -197,7 +194,7 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 							server_id,
 							datacenter_id,
 							cluster_id,
-							backend::cluster::PoolType::Job as i32 as i64,
+							pool.pool_type as i64,
 							util::timestamp::now(),
 						)
 						.await?;
@@ -206,8 +203,8 @@ async fn scale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 							cluster_id: cluster.cluster_id,
 							datacenter_id: dc.datacenter_id,
 							server_id: Some(server_id.into()),
-							pool_type: backend::cluster::PoolType::Job as i32,
-							provider: backend::cluster::Provider::Linode as i32,
+							pool_type: pool.pool_type,
+							provider: dc.provider,
 						})
 						.await?;
 		

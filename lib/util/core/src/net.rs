@@ -31,7 +31,7 @@ pub mod gg {
 
 	use ipnet::{Ipv4AddrRange, Ipv4Net};
 
-	use super::{default_firewall, FirewallRule};
+	use super::{default_firewall, FirewallRule, job};
 
 	pub fn vlan_ip_net() -> Ipv4Net {
 		Ipv4Net::new(Ipv4Addr::new(10, 0, 0, 0), 26).unwrap()
@@ -76,7 +76,7 @@ pub mod gg {
 			// Dynamic TCP
 			FirewallRule {
 				label: "dynamic-tcp".into(),
-				ports: "20000-31999".into(),
+				ports: format!("{}-{}", job::MIN_INGRESS_PORT_TCP, job::MAX_INGRESS_PORT_TCP),
 				protocol: "tcp".into(),
 				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
 				inbound_ipv6_cidr: vec!["::/0".into()],
@@ -84,7 +84,7 @@ pub mod gg {
 			// Dynamic UDP
 			FirewallRule {
 				label: "dynamic-udp".into(),
-				ports: "20000-31999".into(),
+				ports: format!("{}-{}", job::MIN_INGRESS_PORT_UDP, job::MAX_INGRESS_PORT_UDP),
 				protocol: "udp".into(),
 				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
 				inbound_ipv6_cidr: vec!["::/0".into()],
@@ -122,6 +122,16 @@ pub mod job {
 
 	use super::{default_firewall, FirewallRule};
 
+	// Port ranges for the load balancer hosts
+	// 20000-26000 are for traffic from gg on LAN
+	// 26000-31999 is for host networking only
+	pub const MIN_INGRESS_PORT_TCP: u16 = 20000;
+	pub const MIN_HOST_PORT_TCP: u16 = 26000;
+	pub const MAX_INGRESS_PORT_TCP: u16 = 31999;
+	pub const MIN_INGRESS_PORT_UDP: u16 = 20000;
+	pub const MIN_HOST_PORT_UDP: u16 = 26000;
+	pub const MAX_INGRESS_PORT_UDP: u16 = 31999;
+
 	pub fn vlan_addr_range() -> Ipv4AddrRange {
 		Ipv4AddrRange::new(Ipv4Addr::new(10, 0, 4, 1), Ipv4Addr::new(10, 0, 255, 254))
 	}
@@ -132,14 +142,14 @@ pub mod job {
 			// Ports available to Nomad jobs using the host network
 			FirewallRule {
 				label: "nomad-host-tcp".into(),
-				ports: "26000-31999".into(),
+				ports: format!("{}-{}", MIN_HOST_PORT_TCP, MAX_INGRESS_PORT_TCP),
 				protocol: "tcp".into(),
 				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
 				inbound_ipv6_cidr: vec!["::/0".into()],
 			},
 			FirewallRule {
 				label: "nomad-host-udp".into(),
-				ports: "26000-31999".into(),
+				ports: format!("{}-{}", MIN_HOST_PORT_UDP, MAX_INGRESS_PORT_UDP),
 				protocol: "udp".into(),
 				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
 				inbound_ipv6_cidr: vec!["::/0".into()],

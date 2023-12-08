@@ -1,15 +1,11 @@
-use std::collections::HashMap;
+use std::{env, collections::HashMap};
 
-use anyhow::{Context, Result};
-use indexmap::IndexMap;
+use chirp_worker::prelude::*;
+use include_dir::{include_dir, Dir};
 use indoc::{formatdoc, indoc};
-use serde_json::json;
-use tokio::fs;
+use s3_util::Provider;
 
-use crate::{
-	context::ProjectContext,
-	dep::terraform::{net, output::Cert, servers::Server},
-};
+use super::ServerCtx;
 
 /// Service that gets exposed from the Traefik tunnel.
 pub struct TunnelService {
@@ -99,11 +95,11 @@ pub fn cni_plugins() -> String {
 	include_str!("files/cni_plugins.sh").to_string()
 }
 
-pub fn nomad(server: &Server) -> String {
+pub fn nomad(server: &ServerCtx) -> String {
 	let servers = &["127.0.0.1:5000", "127.0.0.1:5001", "127.0.0.1:5002"];
 
 	include_str!("files/nomad.sh")
-		.replace("__REGION_ID__", &server.region_id)
+		.replace("__REGION_ID__", &server.universal_region_str)
 		.replace("__NODE_NAME__", &server.name)
 		// HACK: Hardcoded to Linode
 		.replace("__PUBLIC_IFACE__", "eth0")
@@ -118,8 +114,8 @@ pub fn nomad(server: &Server) -> String {
 				.collect::<Vec<_>>()
 				.join(", "),
 		)
-		.replace("__GG_VLAN_SUBNET__", &net::gg::vlan_ip_net().to_string())
-		.replace("__ATS_VLAN_SUBNET__", &net::ats::vlan_ip_net().to_string())
+		.replace("__GG_VLAN_SUBNET__", &util::net::gg::vlan_ip_net().to_string())
+		.replace("__ATS_VLAN_SUBNET__", &util::net::ats::vlan_ip_net().to_string())
 }
 
 /// Installs Traefik, but does not create the Traefik service.
@@ -127,18 +123,23 @@ pub fn traefik() -> String {
 	include_str!("files/traefik.sh").to_string()
 }
 
+pub struct TlsCert {
+	pub cert_pem: String,
+	pub key_pem: String,
+}
+
 pub struct TraefikInstance {
 	pub name: String,
 	pub static_config: String,
 	pub dynamic_config: String,
-	pub tls_certs: IndexMap<String, Cert>,
-	pub tcp_server_transports: IndexMap<String, ServerTransport>,
+	pub tls_certs: HashMap<String, TlsCert>,
+	pub tcp_server_transports: HashMap<String, ServerTransport>,
 }
 
 pub struct ServerTransport {
 	pub server_name: String,
 	pub root_cas: Vec<String>,
-	pub certs: Vec<Cert>,
+	pub certs: Vec<TlsCert>,
 }
 
 /// Creates a Traefik instance.
@@ -244,30 +245,32 @@ pub fn traefik_instance(config: TraefikInstance) -> String {
 }
 
 pub fn traefik_tunnel(
-	_ctx: &ProjectContext,
-	k8s_infra: &crate::dep::terraform::output::K8sInfra,
-	tls: &crate::dep::terraform::output::Tls,
-) -> String {
+) -> GlobalResult<String> {
 	// Build transports for each service
-	let mut tcp_server_transports = IndexMap::new();
+	let mut tcp_server_transports = HashMap::new();
 	for TunnelService { name, .. } in TUNNEL_SERVICES {
 		tcp_server_transports.insert(
 			name.to_string(),
 			ServerTransport {
 				server_name: format!("{name}.tunnel.rivet.gg"),
-				root_cas: vec![(*tls.root_ca_cert_pem).clone()],
-				certs: vec![(*tls.tls_cert_locally_signed_job).clone()],
+				root_cas: vec![env::var("TLS_ROOT_CA_CERT_PEM")?],
+				certs: vec![
+					TlsCert {
+						cert_pem: env::var("TLS_CERT_LOCALLY_SIGNED_JOB_CERT_PEM")?,
+						key_pem: env::var("TLS_CERT_LOCALLY_SIGNED_JOB_KEY_PEM")?,
+					},
+				],
 			},
 		);
 	}
 
-	traefik_instance(TraefikInstance {
+	Ok(traefik_instance(TraefikInstance {
 		name: "tunnel".into(),
 		static_config: tunnel_traefik_static_config(),
-		dynamic_config: tunnel_traefik_dynamic_config(&*k8s_infra.traefik_tunnel_external_ip),
+		dynamic_config: tunnel_traefik_dynamic_config(&env::var("K8S_TRAEFIK_TUNNEL_EXTERNAL_IP")?),
 		tls_certs: Default::default(),
 		tcp_server_transports,
-	})
+	}))
 }
 
 fn tunnel_traefik_static_config() -> String {
@@ -315,7 +318,7 @@ fn tunnel_traefik_dynamic_config(tunnel_external_ip: &str) -> String {
 }
 
 pub struct VectorConfig {
-	pub prometheus_targets: IndexMap<String, VectorPrometheusTarget>,
+	pub prometheus_targets: HashMap<String, VectorPrometheusTarget>,
 }
 
 pub struct VectorPrometheusTarget {
@@ -373,9 +376,9 @@ pub fn vector(config: &VectorConfig) -> String {
 	include_str!("files/vector.sh").replace("__VECTOR_CONFIG__", &config_str)
 }
 
-pub async fn traffic_server(ctx: &ProjectContext, server: &Server) -> Result<String> {
+pub async fn traffic_server(server: &ServerCtx) -> GlobalResult<String> {
 	// Write config to files
-	let config = traffic_server_config(ctx, server).await?;
+	let config = traffic_server_config(server).await?;
 	let mut config_scripts = config
 		.into_iter()
 		.map(|(k, v)| format!("cat << 'EOF' > /etc/trafficserver/{k}\n{v}\nEOF\n"))
@@ -403,31 +406,26 @@ pub async fn traffic_server(ctx: &ProjectContext, server: &Server) -> Result<Str
 	Ok(script)
 }
 
+static traffic_server_config_dir: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/src/workers/server_install/install_scripts/files/traffic_server");
+
 async fn traffic_server_config(
-	ctx: &ProjectContext,
-	server: &Server,
-) -> Result<Vec<(String, String)>> {
-	let config_dir = ctx
-		.path()
-		.join("infra")
-		.join("misc")
-		.join("game_guard")
-		.join("traffic_server");
+	server: &ServerCtx,
+) -> GlobalResult<Vec<(String, String)>> {
 
 	// Static files
 	let mut config_files = Vec::<(String, String)>::new();
-	let mut static_dir = fs::read_dir(config_dir.join("etc")).await?;
-	while let Some(entry) = static_dir.next_entry().await? {
-		let meta = entry.metadata().await?;
-		if meta.is_file() {
-			let key = entry
-				.path()
-				.file_name()
-				.context("path.file_name")?
+	for entry in traffic_server_config_dir.entries() {
+		if let Some(file) = entry.as_file() {
+			let key = unwrap!(
+				unwrap!(file
+					.path()
+					.file_name()
+				)
 				.to_str()
-				.context("as_str")?
-				.to_string();
-			let value = fs::read_to_string(entry.path()).await?;
+			)
+			.to_string();
+			
+			let value = unwrap!(file.contents_utf8());
 			let value = value.replace("__VLAN_IP__", &server.vlan_ip.to_string());
 			config_files.push((key, value));
 		}
@@ -442,20 +440,20 @@ async fn traffic_server_config(
 
 	// Remap & S3
 	let mut remap = String::new();
-	let (default_s3_provider, _) = ctx.default_s3_provider()?;
-	if ctx.ns().s3.providers.minio.is_some() {
-		let output = gen_s3_provider(ctx, s3_util::Provider::Minio, default_s3_provider).await?;
+	let default_s3_provider = Provider::default()?;
+	if s3_util::s3_provider_active("bucket-build", Provider::Minio) {
+		let output = gen_s3_provider(Provider::Minio, default_s3_provider).await?;
 		remap.push_str(&output.append_remap);
 		config_files.extend(output.config_files);
 	}
-	if ctx.ns().s3.providers.backblaze.is_some() {
+	if s3_util::s3_provider_active("bucket-build", Provider::Backblaze) {
 		let output =
-			gen_s3_provider(ctx, s3_util::Provider::Backblaze, default_s3_provider).await?;
+			gen_s3_provider(Provider::Backblaze, default_s3_provider).await?;
 		remap.push_str(&output.append_remap);
 		config_files.extend(output.config_files);
 	}
-	if ctx.ns().s3.providers.aws.is_some() {
-		let output = gen_s3_provider(ctx, s3_util::Provider::Aws, default_s3_provider).await?;
+	if s3_util::s3_provider_active("bucket-build", Provider::Aws) {
+		let output = gen_s3_provider(Provider::Aws, default_s3_provider).await?;
 		remap.push_str(&output.append_remap);
 		config_files.extend(output.config_files);
 	}
@@ -473,14 +471,14 @@ struct GenRemapS3ProviderOutput {
 }
 
 async fn gen_s3_provider(
-	ctx: &ProjectContext,
-	provider: s3_util::Provider,
-	default_s3_provider: s3_util::Provider,
-) -> Result<GenRemapS3ProviderOutput> {
+	provider: Provider,
+	default_s3_provider: Provider,
+) -> GlobalResult<GenRemapS3ProviderOutput> {
 	let mut remap = String::new();
 	let provider_name = provider.as_str();
-	let config = ctx.s3_config(provider).await?;
-	let creds = ctx.s3_credentials(provider).await?;
+	let endpoint_external = s3_util::s3_endpoint_external("bucket-build", provider)?;
+	let region = s3_util::s3_region("bucket-build", provider)?;
+	let (access_key_id, secret_access_key) = s3_util::s3_credentials("bucket-build", provider)?;
 
 	// Build plugin chain
 	let plugins = format!("@plugin=tslua.so @pparam=/etc/trafficserver/strip_headers.lua @plugin=s3_auth.so @pparam=--config @pparam=s3_auth_v4_{provider_name}.config");
@@ -488,14 +486,12 @@ async fn gen_s3_provider(
 	// Add remap
 	remap.push_str(&format!(
 		"map /s3-cache/{provider_name} {endpoint_external} {plugins}\n",
-		endpoint_external = config.endpoint_external
 	));
 
 	// Add default route
 	if default_s3_provider == provider {
 		remap.push_str(&format!(
 			"map /s3-cache {endpoint_external} {plugins}\n",
-			endpoint_external = config.endpoint_external,
 		));
 	}
 
@@ -505,13 +501,11 @@ async fn gen_s3_provider(
 		format!("s3_auth_v4_{provider_name}.config"),
 		formatdoc!(
 			r#"
-			access_key={access_key}
-			secret_key={secret_key}
+			access_key={access_key_id}
+			secret_key={secret_access_key}
 			version=4
 			v4-region-map=s3_region_map_{provider_name}.config
 			"#,
-			access_key = creds.access_key_id,
-			secret_key = creds.access_key_secret,
 		),
 	));
 	config_files.push((
@@ -521,8 +515,8 @@ async fn gen_s3_provider(
 			# Default region
 			{s3_host}: {s3_region}
 			"#,
-			s3_host = config.endpoint_external.split_once("://").unwrap().1,
-			s3_region = config.region,
+			s3_host = endpoint_external.split_once("://").unwrap().1,
+			s3_region = region,
 		),
 	));
 
@@ -532,109 +526,3 @@ async fn gen_s3_provider(
 	})
 }
 
-pub fn envoy() -> String {
-	include_str!("files/envoy.sh").to_string()
-}
-
-pub fn outbound_proxy(server: &Server, all_servers: &HashMap<String, Server>) -> Result<String> {
-	// Build ATS endpoints
-	let mut ats_servers = all_servers
-		.values()
-		.filter(|x| server.region_id == x.region_id && x.pool_id == "ats")
-		.collect::<Vec<_>>();
-	// Use the same sorting as ATS for consistent Maglev hashing
-	ats_servers.sort_by_key(|x| x.index);
-	let ats_endpoints = ats_servers
-		.iter()
-		.map(|x| {
-			json!({
-				"endpoint": {
-					"address": {
-						"socket_address": {
-							"address": x.vlan_ip.to_string(),
-							"port_value": 8080
-						}
-					}
-				}
-			})
-		})
-		.collect::<Vec<_>>();
-
-	// Build config
-	let config = json!({
-		"static_resources": {
-			"listeners": [{
-				"name": "ats",
-				"address": {
-					"socket_address": {
-						"address": "0.0.0.0",
-						"port_value": 8080
-					}
-				},
-				"filter_chains": [{
-					"filters": [{
-						"name": "envoy.filters.network.http_connection_manager",
-						"typed_config": {
-							"@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
-							"stat_prefix": "ingress_http",
-							"route_config": {
-								"name": "local_route",
-								"virtual_hosts": [
-									{
-										"name": "backend",
-										"domains": ["*"],
-										"routes": [{
-											"match": { "prefix": "/" },
-											"route": {
-												"cluster": "ats_backend",
-												"hash_policy": [{
-													"header": { "header_name": ":path" }
-												}]
-											}
-										}]
-									}
-								]
-							},
-							"http_filters": [
-								{
-									"name": "envoy.filters.http.router",
-									"typed_config": {
-										"@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
-									}
-								}
-							]
-						}
-					}]
-				}]
-			}],
-			"clusters": [{
-				"name": "ats_backend",
-				"connect_timeout": "1s",
-				// Use consistent hashing to reliably send the same request to the same server
-				//
-				// In order for this to work, the load balancer must be configured with the same:
-				// - Table size
-				// - List of backend nodes (in the same order)
-				// - Hash key for each endpoint (uses the host by default)
-				//
-				// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#arch-overview-load-balancing-types-maglev
-				"lb_policy": "MAGLEV",
-				"maglev_lb_config": {
-					// Ensure the same table size for consistent hashing across load balancers
-					"table_size": 65537
-				},
-				"load_assignment": {
-					"cluster_name": "ats_backend",
-					"endpoints": [
-						{
-							"lb_endpoints": ats_endpoints
-						}
-					]
-				}
-			}]
-		}
-	});
-
-	let yaml_config = serde_yaml::to_string(&config)?;
-	Ok(include_str!("files/outbound_proxy.sh").replace("__ENVOY_CONFIG__", &yaml_config))
-}

@@ -352,7 +352,7 @@ async fn choose_ingress_port(
 					ctx,
 					tx,
 					proxied_port.proxy_protocol,
-					util_job::consts::MIN_INGRESS_PORT_TCP..=util_job::consts::MAX_INGRESS_PORT_TCP,
+					util::net::job::MIN_INGRESS_PORT_TCP..=util::net::job::MAX_INGRESS_PORT_TCP,
 				)
 				.await?
 			}
@@ -361,7 +361,7 @@ async fn choose_ingress_port(
 					ctx,
 					tx,
 					proxied_port.proxy_protocol,
-					util_job::consts::MIN_INGRESS_PORT_UDP..=util_job::consts::MAX_INGRESS_PORT_UDP,
+					util::net::job::MIN_INGRESS_PORT_UDP..=util::net::job::MAX_INGRESS_PORT_UDP,
 				)
 				.await?
 			}
