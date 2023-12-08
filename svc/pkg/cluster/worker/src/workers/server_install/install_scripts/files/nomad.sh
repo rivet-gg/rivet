@@ -379,9 +379,6 @@ client {
 	}
 
 	meta {
-		# See https://github.com/hashicorp/nomad/issues/9887
-		"connect.sidecar_image" = "envoyproxy/envoy:v1.18.3"
-
 		"pool-id" = "job"
 		"network-vlan-ipv4" = "__VLAN_IP__"
 		"network-public-ipv4" = "${PUBLIC_IP}"
