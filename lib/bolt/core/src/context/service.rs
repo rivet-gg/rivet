@@ -91,8 +91,16 @@ impl ServiceContextData {
 			Ok(v) => v,
 			Err(_) => return None,
 		};
-		let config = toml::from_str::<config::service::ServiceConfig>(&config_str)
-			.expect(&format!("failed to read config: {}", path.display()));
+		let config = match toml::from_str::<config::service::ServiceConfig>(&config_str) {
+			Result::Ok(x) => x,
+			Result::Err(err) => {
+				panic!(
+					"failed to parse namespace config ({}): {}",
+					path.display(),
+					err.message()
+				);
+			}
+		};
 
 		let cargo_path = path.join("Cargo.toml");
 		let cargo = match fs::read_to_string(&cargo_path).await {
@@ -713,7 +721,6 @@ impl ServiceContextData {
 	pub async fn env(&self, run_context: &RunContext) -> Result<Vec<(String, String)>> {
 		let project_ctx = self.project().await;
 
-		let region_id = project_ctx.primary_region_or_local();
 		let mut env = Vec::new();
 
 		// HACK: Link to dynamically linked libraries in /nix/store
@@ -748,7 +755,6 @@ impl ServiceContextData {
 		// Provide default Nomad variables if in test
 		if matches!(run_context, RunContext::Test { .. }) {
 			env.push(("KUBERNETES_REGION".into(), "global".into()));
-			env.push(("KUBERNETES_DC".into(), region_id.clone()));
 			env.push((
 				"KUBERNETES_TASK_DIR".into(),
 				project_ctx.gen_path().display().to_string(),
@@ -819,15 +825,6 @@ impl ServiceContextData {
 				));
 			}
 		}
-
-		// Pools
-		if !project_ctx.ns().pools.is_empty() {
-			env.push(("RIVET_HAS_POOLS".into(), "1".into()));
-		}
-
-		// Regions
-		env.push(("RIVET_REGION".into(), region_id.clone()));
-		env.push(("RIVET_PRIMARY_REGION".into(), project_ctx.primary_region()));
 
 		// Networking
 		if matches!(run_context, RunContext::Service { .. }) {
@@ -1003,15 +1000,18 @@ impl ServiceContextData {
 		if project_ctx.ns().rivet.upload.nsfw_error_verbose {
 			env.push(("RIVET_UPLOAD_NSFW_ERROR_VERBOSE".into(), "1".into()));
 		}
-		env.push((
-			"RIVET_DS_BUILD_DELIVERY_METHOD".into(),
-			project_ctx
-				.ns()
-				.rivet
-				.dynamic_servers
-				.build_delivery_method
-				.to_string(),
-		));
+
+		// Dynamic servers
+		if let Some(dynamic_servers) = &project_ctx.ns().rivet.dynamic_servers {
+			env.push((
+				"RIVET_DEFAULT_CLUSTER_CONFIG".into(),
+				serde_json::to_string(&dynamic_servers.cluster)?,
+			));
+			env.push((
+				"RIVET_DS_BUILD_DELIVERY_METHOD".into(),
+				dynamic_servers.build_delivery_method.to_string(),
+			));
+		}
 
 		// Sort env by keys so it's always in the same order
 		env.sort_by_cached_key(|x| x.0.clone());

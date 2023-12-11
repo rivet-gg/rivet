@@ -21,14 +21,13 @@ message Datacenter {
     rivet.common.Uuid cluster_id = 2;
     string name_id = 3;
     string display_name = 4;
-    rivet.backend.net.Coordinates coords = 5;
-    repeated Hardware hardware = 6;
+    repeated Hardware hardware = 5;
     
-    Provider provider = 7;
-    string provider_datacenter_id = 8;
+    Provider provider = 6;
+    string provider_datacenter_id = 7;
 
-    repeated Pool pools = 9;
-    uint64 drain_timeout = 10;
+    repeated Pool pools = 8;
+    uint64 drain_timeout = 9;
 }
 
 message Pool {

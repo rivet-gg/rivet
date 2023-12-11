@@ -1,5 +1,5 @@
 [service]
-name = "region-config-get"
+name = "cluster-datacenter-location-get"
 
 [runtime]
 kind = "rust"

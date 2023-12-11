@@ -10,5 +10,5 @@ import "proto/backend/cluster.proto";
 /// 	{ name = "cluster_id" },
 /// ]
 message Message {
-    rivet.backend.cluster.Cluster cluster = 1;
+    rivet.common.Uuid cluster_id = 1;
 }

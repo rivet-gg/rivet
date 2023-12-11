@@ -24,8 +24,7 @@ struct Server {
 #[worker(name = "cluster-scale")]
 async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
-	let cluster = unwrap_ref!(ctx.cluster);
-	let cluster_id = unwrap!(cluster.cluster_id).as_uuid();
+	let cluster_id = unwrap!(ctx.cluster_id).as_uuid();
 
 	// Get ACTIVE servers
 	let servers = sql_fetch_all!(
@@ -39,7 +38,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 			-- Filters out servers that are being destroyed/already destroyed
 			cloud_destroy_ts IS NULL
 		",
-		cluster_id
+		cluster_id,
 	)
 	.await?
 	.into_iter()
@@ -75,7 +74,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 			scale_servers(
 				ctx,
 				&crdb,
-				cluster,
+				cluster_id,
 				dc,
 				servers_in_dc.clone(),
 				pool,
@@ -90,12 +89,11 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 async fn scale_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	ctx: &OperationContext<cluster::msg::update::Message>,
 	crdb: &CrdbPool,
-	cluster: &backend::cluster::Cluster,
+	cluster_id: Uuid,
 	dc: &backend::cluster::Datacenter,
 	servers_in_dc: I,
 	pool: &backend::cluster::Pool,
 ) -> GlobalResult<()> {
-	let cluster_id = unwrap!(cluster.cluster_id).as_uuid();
 	let datacenter_id = unwrap!(dc.datacenter_id).as_uuid();
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(pool.pool_type));
 	let desired_count = pool.desired_count as usize;
@@ -197,7 +195,7 @@ async fn scale_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 						.await?;
 		
 						msg!([ctx] cluster::msg::server_provision(server_id) {
-							cluster_id: cluster.cluster_id,
+							cluster_id: ctx.cluster_id,
 							datacenter_id: dc.datacenter_id,
 							server_id: Some(server_id.into()),
 							pool_type: pool.pool_type,
