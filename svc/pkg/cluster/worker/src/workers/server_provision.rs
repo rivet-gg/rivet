@@ -112,12 +112,13 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	.await?;
 
 	// All attempts to provision failed
-	let Some(provision_res) = provision_res else {
+	if provision_res.is_none() {
 		tracing::info!(?server_id, "failed to provision server");
 		bail!("failed to provision server");
-	};
+	}
 
-	msg!([ctx] cluster::msg::server_install(cluster_id, datacenter_id, server_id) {
+	// Install components
+	msg!([ctx] cluster::msg::server_install(server_id) {
 		server_id: ctx.server_id,
 	})
 	.await?;

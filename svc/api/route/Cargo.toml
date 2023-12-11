@@ -38,8 +38,6 @@ util-cdn = { package = "rivet-util-cdn", path = "../../pkg/cdn/util" }
 util-job = { package = "rivet-util-job", path = "../../pkg/job/util" }
 uuid = { version = "1", features = ["v4"] }
 
-region-resolve = { path = "../../pkg/region/ops/resolve" }
-
 [dev-dependencies]
 rivet-connection = { path = "../../../lib/connection" }
 rivet-route = { path = "../../../lib/smithy-output/api-route/rust" }

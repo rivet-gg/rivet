@@ -6,8 +6,6 @@ import "proto/common.proto";
 
 /// name = "msg-cluster-server-install"
 /// parameters = [
-/// 	{ name = "cluster_id" },
-/// 	{ name = "datacenter_id" },
 /// 	{ name = "server_id" },
 /// ]
 message Message {

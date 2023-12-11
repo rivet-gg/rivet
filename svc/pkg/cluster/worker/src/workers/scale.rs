@@ -78,7 +78,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 				cluster,
 				dc,
 				servers_in_dc.clone(),
-				&pool,
+				pool,
 			)
 			.await?;
 		}
@@ -160,11 +160,8 @@ async fn scale_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 						"undraining server"
 					);
 
-					msg!([ctx] cluster::msg::server_undrain(cluster_id, datacenter_id, draining_server.server_id) {
-						cluster_id: cluster.cluster_id,
-						datacenter_id: dc.datacenter_id,
+					msg!([ctx] cluster::msg::server_undrain(draining_server.server_id) {
 						server_id: Some(draining_server.server_id.into()),
-						pool_type: pool.pool_type,
 					})
 					.await?;
 				}
@@ -199,7 +196,7 @@ async fn scale_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 						)
 						.await?;
 		
-						msg!([ctx] cluster::msg::server_provision(cluster_id, datacenter_id, server_id) {
+						msg!([ctx] cluster::msg::server_provision(server_id) {
 							cluster_id: cluster.cluster_id,
 							datacenter_id: dc.datacenter_id,
 							server_id: Some(server_id.into()),

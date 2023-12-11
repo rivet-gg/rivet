@@ -22,6 +22,7 @@ rivet-runtime = { path = "../../../../lib/runtime" }
 s3-util = { path = "../../../../lib/s3-util" }
 serde_yaml = "0.9"
 ssh2 = "0.9.4"
+util-cluster = { package = "rivet-util-cluster", path = "../util" }
 
 cluster-datacenter-get = { path = "../ops/datacenter-get" }
 cluster-datacenter-list = { path = "../ops/datacenter-list" }
