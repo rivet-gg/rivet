@@ -330,7 +330,7 @@ mkdir -p /etc/nomad.d
 # Copy HCL files
 cat << EOF > /etc/nomad.d/common.hcl
 region = "global"
-datacenter = "__REGION_ID__"
+datacenter = "__DATACENTER_ID__"
 data_dir = "/opt/nomad/data"
 name = "__NODE_NAME__"
 
@@ -379,7 +379,11 @@ client {
 	}
 
 	meta {
-		"pool-id" = "job"
+		"pool-type" = "job"
+		"server-id" = "__SERVER_ID__"
+		"datacenter-id" = "__DATACENTER_ID__"
+		"cluster-id" = "__CLUSTER_ID__"
+
 		"network-vlan-ipv4" = "__VLAN_IP__"
 		"network-public-ipv4" = "${PUBLIC_IP}"
 	}

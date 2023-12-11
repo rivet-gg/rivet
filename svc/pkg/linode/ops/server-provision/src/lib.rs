@@ -32,14 +32,17 @@ pub async fn handle(
 	let pool_type = unwrap!(PoolType::from_i32(ctx.pool_type));
 	let provider_hardware = unwrap_ref!(ctx.hardware).provider_hardware.clone();
 
+	let ns = util::env::namespace();
 	let pool_type_str = match pool_type {
 		PoolType::Job => "job",
 		PoolType::Gg => "gg",
 		PoolType::Ats => "ats",
 	};
 
-	let ns = util::env::namespace();
-	let name = format!("{ns}-{provider_datacenter_id}-{pool_type_str}-{server_id}");
+	let name = format!(
+		"{}-{server_id}",
+		util_cluster::server_name(&provider_datacenter_id, pool_type)
+	);
 
 	let tags = vec![
 		// HACK: Linode requires tags to be > 3 characters. We extend the namespace to make sure it

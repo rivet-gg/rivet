@@ -1,4 +1,4 @@
-use std::{net::Ipv4Addr, env, collections::HashMap};
+use std::{env, collections::HashMap};
 
 use chirp_worker::prelude::*;
 use proto::backend;
@@ -6,8 +6,10 @@ use maplit::hashmap;
 use indoc::formatdoc;
 
 pub struct ServerCtx {
+	pub server_id: Uuid,
+	pub datacenter_id: Uuid,
+	pub cluster_id: Uuid,
 	pub provider_datacenter_id: String,
-	pub universal_region_str: String,
 	pub name: String,
 	pub pool_type: backend::cluster::PoolType,
 	pub vlan_ip: String,
@@ -98,9 +100,9 @@ pub async fn gen(
 async fn gg_traefik_static_config(server: &ServerCtx) -> GlobalResult<String> {
 	let api_route_token = &util::env::read_secret(&["rivet", "api_route", "token"]).await?;
 	let http_provider_endpoint = format!(
-		"http://127.0.0.1:{port}/traefik/config/game-guard?token={api_route_token}&region={region}",
+		"http://127.0.0.1:{port}/traefik/config/game-guard?token={api_route_token}&datacenter={datacenter}",
 		port = components::TUNNEL_API_ROUTE_PORT,
-		region = server.universal_region_str
+		datacenter = server.datacenter_id
 	);
 
 	let mut config = formatdoc!(

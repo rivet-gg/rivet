@@ -6,7 +6,7 @@ import "proto/common.proto";
 
 /// name = "msg-cluster-server-destroy"
 /// parameters = [
-/// 	{ name = "user_id" },
+/// 	{ name = "server_id" },
 /// ]
 message Message {
 
