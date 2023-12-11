@@ -267,11 +267,11 @@ pub fn build_plan(
 	}
 
 	// BetterUptime
-	if ctx.ns().betteruptime.is_some() {
+	if ctx.ns().better_uptime.is_some() {
 		plan.push(PlanStep {
-			name_id: "betteruptime",
+			name_id: "better_uptime",
 			kind: PlanStepKind::Terraform {
-				plan_id: "betteruptime".into(),
+				plan_id: "better_uptime".into(),
 				needs_destroy: true,
 			},
 		});

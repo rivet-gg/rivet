@@ -483,12 +483,12 @@ async fn vars(ctx: &ProjectContext) {
 		vars.insert("s3_providers".into(), s3_providers(ctx).await.unwrap());
 	}
 
-	// BetterUptime
-	if let Some(betteruptime) = &config.betteruptime {
+	// Better Uptime
+	if let Some(better_uptime) = &config.better_uptime {
 		// Make sure there is at least one pool
-		// if config.pools.is_empty() {
-		// 	panic!("BetterUptime requires at least one pool, otherwise it will not be able to monitor the service");
-		// }
+		if config.pools.is_empty() {
+			panic!("Better Uptime requires at least one pool, otherwise it will not be able to monitor the service");
+		}
 
 		// Load all the regions of pools
 		let regions = &config
@@ -504,7 +504,7 @@ async fn vars(ctx: &ProjectContext) {
 		let public_ip = "google.ca".to_string();
 
 		vars.insert(
-			"betteruptime_monitors".into(),
+			"better_uptime_monitors".into(),
 			json!(regions
 				.iter()
 				.map(|(region, provider_region)| {
@@ -517,7 +517,7 @@ async fn vars(ctx: &ProjectContext) {
 				.collect::<Vec<_>>()),
 		);
 
-		vars.insert("betteruptime".into(), json!(betteruptime.to_owned()));
+		vars.insert("better_uptime".into(), json!(better_uptime.to_owned()));
 	}
 
 	// Media presets

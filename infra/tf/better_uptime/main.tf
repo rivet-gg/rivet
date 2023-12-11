@@ -1,5 +1,5 @@
 provider "betteruptime" {
-	api_token = module.betteruptime_secrets.values["betteruptime/token"]
+	api_token = module.betteruptime_secrets.values["better_uptime/token"]
 }
 
 module "betteruptime_secrets" {
