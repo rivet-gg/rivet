@@ -1,4 +1,5 @@
 chirp_worker::workers![
+	datacenter_create,
 	create,
 	server_destroy,
 	server_install,

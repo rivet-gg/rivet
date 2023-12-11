@@ -9,6 +9,9 @@ CREATE TABLE datacenters (
     datacenter_id UUID PRIMARY KEY,
 	cluster_id UUID NOT NULL REFERENCES clusters (cluster_id),
 	config BYTES NOT NULL,
+	name_id TEXT NOT NULL,
+
+	UNIQUE (cluster_id, name_id),
 	INDEX (cluster_id)
 );
 

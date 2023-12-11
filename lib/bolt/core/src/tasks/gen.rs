@@ -189,7 +189,7 @@ fn update_libs<'a>(lib_path: &'a Path) -> BoxFuture<'a, ()> {
 	async move {
 		let mut lib_dir = fs::read_dir(lib_path).await.unwrap();
 		while let Some(entry) = lib_dir.next_entry().await.unwrap() {
-			if !entry.metadata().await.unwrap().is_dir() {
+			if !entry.metadata().await.unwrap().is_dir() || entry.file_name() == "nomad-client" {
 				continue;
 			}
 

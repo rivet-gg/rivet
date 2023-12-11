@@ -328,9 +328,6 @@ types:
       provider:
         docs: The server provider of this region.
         type: string
-      universal_region:
-        docs: A universal region label given to this region.
-        type: UniversalRegion
       provider_display_name:
         docs: Represent a resource's readable display name.
         type: string

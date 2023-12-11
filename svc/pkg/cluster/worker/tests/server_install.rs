@@ -66,10 +66,6 @@ async fn setup(
 		cluster_id: Some(cluster_id.into()),
 		name_id: util::faker::ident(),
 		display_name: util::faker::ident(),
-		coords: Some(backend::net::Coordinates {
-			latitude: 0.0,
-			longitude: 0.0,
-		}),
 		hardware: vec![backend::cluster::Hardware {
 			provider_hardware: "g6-nanode-1".to_string(),
 		}],
