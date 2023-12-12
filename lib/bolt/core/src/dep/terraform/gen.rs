@@ -485,6 +485,11 @@ async fn vars(ctx: &ProjectContext) {
 
 	// Better Uptime
 	if let Some(better_uptime) = &config.better_uptime {
+		// Make sure DNS is enabled
+		if config.dns.is_none() {
+			panic!("Better Uptime requires DNS to be enabled, since it uses subdomains to monitor services");
+		}
+
 		// Make sure there is at least one pool
 		if config.pools.is_empty() {
 			panic!("Better Uptime requires at least one pool, otherwise it will not be able to monitor the service");
@@ -500,8 +505,7 @@ async fn vars(ctx: &ProjectContext) {
 			})
 			.collect::<HashSet<_>>();
 
-		// let public_ip = ctx.domain_main_api().unwrap();
-		let public_ip = "google.ca".to_string();
+		let public_ip = ctx.origin_api();
 
 		vars.insert(
 			"better_uptime_monitors".into(),
