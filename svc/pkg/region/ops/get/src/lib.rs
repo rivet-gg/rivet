@@ -7,7 +7,7 @@ async fn convert_datacenter(
 	datacenter: backend::cluster::Datacenter,
 	locations: &[cluster::datacenter_location_get::response::Datacenter],
 ) -> GlobalResult<backend::region::Region> {
-	let datacenter_id = unwrap!(datacenter.datacenter_id).as_uuid();
+	let datacenter_id = unwrap_ref!(datacenter.datacenter_id).as_uuid();
 	let provider = unwrap!(backend::cluster::Provider::from_i32(datacenter.provider));
 
 	let coords = locations

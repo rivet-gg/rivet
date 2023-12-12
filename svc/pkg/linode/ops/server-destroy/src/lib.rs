@@ -17,7 +17,7 @@ pub async fn handle(
 	ctx: OperationContext<linode::server_destroy::Request>,
 ) -> GlobalResult<linode::server_destroy::Response> {
 	let crdb = ctx.crdb().await?;
-	let server_id = unwrap!(ctx.server_id).as_uuid();
+	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
 	let data = sql_fetch_optional!(
 		[ctx, LinodeData, &crdb]

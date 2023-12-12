@@ -18,7 +18,7 @@ struct Server {
 
 #[worker(name = "cluster-server-install", timeout = 150)]
 async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -> GlobalResult<()> {
-	let server_id = unwrap!(ctx.server_id).as_uuid();
+	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 	
 	let row = sql_fetch_optional!(
 		[ctx, Server]

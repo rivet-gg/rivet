@@ -11,9 +11,9 @@ struct ProvisionResponse {
 async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
 	
-	let cluster_id = unwrap!(ctx.cluster_id);
-	let datacenter_id = unwrap!(ctx.datacenter_id);
-	let server_id = unwrap!(ctx.server_id).as_uuid();
+	let cluster_id = unwrap_ref!(ctx.cluster_id);
+	let datacenter_id = unwrap_ref!(ctx.datacenter_id);
+	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(ctx.pool_type));
 	let provider = unwrap!(backend::cluster::Provider::from_i32(ctx.provider));
 	
