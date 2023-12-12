@@ -38,6 +38,18 @@ pub fn default_cluster_id() -> Uuid {
 	Uuid::nil()
 }
 
+pub fn var(name: impl AsRef<str>) -> Result<String, EnvVarError> {
+	let env_var = std::env::var(name.as_ref());
+	
+	match env_var {
+		Ok(v) => Ok(v),
+		Err(var_error) => match var_error {
+			std::env::VarError::NotPresent => Err(EnvVarError::Missing(name.as_ref().to_string())),
+			_ => Err(EnvVarError::Invalid(var_error)),
+		},
+	}
+}
+
 /// Where this code is being written from. This is derived from the `RIVET_RUN_CONTEXT` environment
 /// variable.
 ///
@@ -182,10 +194,7 @@ pub mod cloudflare {
 	pub fn auth_token() -> &'static str {
 		match &*CLOUDFLARE_AUTH_TOKEN {
 			Some(x) => x.as_str(),
-			None => panic!(
-				"{}",
-				EnvVarError::Missing("CLOUDFLARE_AUTH_TOKEN".to_string())
-			),
+			None => panic!("{}", EnvVarError::Missing("CLOUDFLARE_AUTH_TOKEN".to_string())),
 		}
 	}
 
@@ -229,7 +238,9 @@ pub async fn read_secret(key: &[impl AsRef<str>]) -> Result<String, EnvVarError>
 	var(secret_env_var_key(key))
 }
 
-pub async fn read_secret_opt(key: &[impl AsRef<str>]) -> Result<Option<String>, EnvVarError> {
+pub async fn read_secret_opt(
+	key: &[impl AsRef<str>],
+) -> Result<Option<String>, EnvVarError> {
 	let env_var = read_secret(key).await;
 
 	match env_var {

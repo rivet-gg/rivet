@@ -103,14 +103,14 @@ async fn handle(
 			tracing::error!(?err, "failed to spawn handle_event task");
 		}
 	} else if let Some(payload) = event
-		.decode::<node_deregistration::NodeDeregistration>("Node", "NodeDeregistration")
+		.decode::<node_drain::NodeDrain>("Node", "NodeDrain")
 		.unwrap()
 	{
-		let client = shared_client.wrap_new("nomad-node-deregistration-monitor");
+		let client = shared_client.wrap_new("nomad-node-drain-monitor");
 		let spawn_res = tokio::task::Builder::new()
-			.name("nomad_node_deregistration_monitor::handle")
+			.name("nomad_node_drain_monitor::handle")
 			.spawn(async move {
-				match node_deregistration::handle(client, &payload).await {
+				match node_drain::handle(client, &payload).await {
 					Ok(_) => {}
 					Err(err) => {
 						tracing::error!(?err, ?payload, "error handling event");

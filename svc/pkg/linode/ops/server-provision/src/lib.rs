@@ -16,12 +16,6 @@ struct ServerCtx {
 	firewall_inbound: Vec<util::net::FirewallRule>,
 }
 
-struct RestResponse {
-	linode_id: u64,
-	firewall_id: u64,
-	public_ip: Ipv4Addr,
-}
-
 #[operation(name = "linode-server-provision", timeout = 150)]
 pub async fn handle(
 	ctx: OperationContext<linode::server_provision::Request>,
@@ -81,63 +75,70 @@ pub async fn handle(
 	// Create SSH key
 	let ssh_key_res = create_ssh_key(&client, &server).await?;
 
-	// Run the rest of the API calls. This is done in an isolated manner so that if any errors occur here,
-	// the ssh key id can still be written to database.
-	let rest_res = async {
-		let create_instance_res =
-			create_instance(&client, &server, &ssh_key_res.public_key).await?;
-		let linode_id = create_instance_res.id;
-
-		wait_instance_ready(&client, linode_id).await?;
-
-		let create_disks_res = create_disks(
-			&client,
-			&ssh_key_res.public_key,
-			linode_id,
-			create_instance_res.specs.disk,
-		)
-		.await?;
-
-		create_instance_config(&client, &server, linode_id, &create_disks_res).await?;
-
-		let firewall_res = create_firewall(&client, &server, linode_id).await?;
-
-		boot_instance(&client, linode_id).await?;
-
-		let public_ip = get_public_ip(&client, linode_id).await?;
-
-		GlobalResult::Ok(RestResponse {
-			linode_id,
-			firewall_id: firewall_res.id,
-			public_ip,
-		})
-	}
-	.await;
-
-	// Extract firewall_id as `Option`
-	let firewall_id = rest_res.as_ref().ok().map(|res| res.firewall_id as i64);
-
-	// These values are used when destroying resources
+	// Write SSH key id
 	sql_execute!(
 		[ctx, &crdb]
 		"
 		INSERT INTO db_cluster.linode_misc (
 			server_id,
-			ssh_key_id,
-			firewall_id
+			ssh_key_id
 		)
-		VALUES ($1, $2, $3)
+		VALUES ($1, $2)
 		",
 		server_id,
 		ssh_key_res.id as i64,
-		firewall_id
 	)
 	.await?;
 
-	let rest_res = rest_res?;
+	let create_instance_res = create_instance(&client, &server, &ssh_key_res.public_key).await?;
+	let linode_id = create_instance_res.id;
+
+	// Write linode id
+	sql_execute!(
+		[ctx, &crdb]
+		"
+		UPDATE db_cluster.linode_misc
+		SET linode_id = $2
+		WHERE server_id = $1
+		",
+		server_id,
+		linode_id as i64,
+	)
+	.await?;
+
+	wait_instance_ready(&client, linode_id).await?;
+
+	let create_disks_res = create_disks(
+		&client,
+		&ssh_key_res.public_key,
+		linode_id,
+		create_instance_res.specs.disk,
+	)
+	.await?;
+
+	create_instance_config(&client, &server, linode_id, &create_disks_res).await?;
+
+	let firewall_res = create_firewall(&client, &server, linode_id).await?;
+
+	// Write firewall id
+	sql_execute!(
+		[ctx, &crdb]
+		"
+		UPDATE db_cluster.linode_misc
+		SET firewall_id = $2
+		WHERE server_id = $1
+		",
+		server_id,
+		firewall_res.id as i64,
+	)
+	.await?;
+
+	boot_instance(&client, linode_id).await?;
+
+	let public_ip = get_public_ip(&client, linode_id).await?;
 
 	Ok(linode::server_provision::Response {
-		provider_server_id: rest_res.linode_id.to_string(),
-		public_ip: rest_res.public_ip.to_string(),
+		provider_server_id: linode_id.to_string(),
+		public_ip: public_ip.to_string(),
 	})
 }

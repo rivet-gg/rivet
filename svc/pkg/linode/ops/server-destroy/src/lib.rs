@@ -7,9 +7,9 @@ use api::*;
 
 #[derive(sqlx::FromRow)]
 struct LinodeData {
-	provider_server_id: String,
 	ssh_key_id: i64,
-	firewall_id: i64,
+	linode_id: Option<i64>,
+	firewall_id: Option<i64>,
 }
 
 #[operation(name = "linode-server-destroy")]
@@ -22,11 +22,9 @@ pub async fn handle(
 	let data = sql_fetch_optional!(
 		[ctx, LinodeData, &crdb]
 		"
-		SELECT provider_server_id, ssh_key_id, firewall_id
-		FROM db_cluster.servers AS s
-		INNER JOIN db_cluster.linode_misc AS l
-		ON s.server_id = l.server_id
-		WHERE s.server_id = $1
+		SELECT ssh_key_id, linode_id, firewall_id
+		FROM db_cluster.linode_misc
+		WHERE server_id = $1
 		",
 		server_id,
 	)
@@ -46,9 +44,15 @@ pub async fn handle(
 		.default_headers(headers)
 		.build()?;
 
-	delete_instance(&client, &data.provider_server_id).await?;
+	if let Some(linode_id) = data.linode_id {
+		delete_instance(&client, linode_id).await?;
+	}
+
 	delete_ssh_key(&client, data.ssh_key_id).await?;
-	delete_firewall(&client, data.firewall_id).await?;
+
+	if let Some(firewall_id) = data.firewall_id {
+		delete_firewall(&client, firewall_id).await?;
+	}
 
 	// Remove record
 	sql_execute!(

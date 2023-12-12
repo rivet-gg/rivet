@@ -104,7 +104,7 @@ async fn scale_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	let active_server_count = job_servers.count() - draining_servers.len();
 
 	match desired_count.cmp(&active_server_count) {
-		Ordering::Greater => {
+		Ordering::Less => {
 			tracing::info!(
 				?datacenter_id,
 				active=%active_server_count,
@@ -119,7 +119,7 @@ async fn scale_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 				backend::cluster::PoolType::Ats => todo!(),
 			}
 		}
-		Ordering::Less => {
+		Ordering::Greater => {
 			tracing::info!(
 				?datacenter_id,
 				active=%active_server_count,
@@ -129,7 +129,7 @@ async fn scale_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 			);
 	
 			let undrain_count = (desired_count - active_server_count).min(draining_servers.len());
-			let provision_count = desired_count - undrain_count - active_server_count;
+			let provision_count = desired_count - active_server_count - undrain_count;
 
 			// Undrain servers
 			if undrain_count != 0 {

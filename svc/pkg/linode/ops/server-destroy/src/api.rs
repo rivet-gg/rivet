@@ -43,7 +43,7 @@ pub async fn delete_ssh_key(client: &reqwest::Client, ssh_key_id: i64) -> Global
 	Ok(())
 }
 
-pub async fn delete_instance(client: &reqwest::Client, linode_id: &str) -> GlobalResult<()> {
+pub async fn delete_instance(client: &reqwest::Client, linode_id: i64) -> GlobalResult<()> {
 	tracing::info!("deleting linode instance");
 
 	let res = client
