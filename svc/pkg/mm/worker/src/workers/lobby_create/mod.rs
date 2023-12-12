@@ -1,8 +1,11 @@
+use std::ops::Deref;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
+
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
 use redis::AsyncCommands;
 use serde_json::json;
-use std::ops::Deref;
 
 mod nomad_job;
 mod oci_config;
@@ -603,7 +606,7 @@ async fn create_docker_job(
 
 	let resolve_perf = ctx.perf().start("resolve-image-artifact-url").await;
 	let build_id = unwrap_ref!(runtime.build_id).as_uuid();
-	let image_artifact_url = resolve_image_artifact_url(ctx, build_id, region).await?;
+	let image_artifact_url = resolve_image_artifact_url(ctx, build_id, region_id).await?;
 	resolve_perf.end();
 
 	// Validate build exists and belongs to this game
@@ -783,7 +786,7 @@ async fn resolve_job_runner_binary_url(
 async fn resolve_image_artifact_url(
 	ctx: &OperationContext<mm::msg::lobby_create::Message>,
 	build_id: Uuid,
-	region: &backend::region::Region,
+	region_id: Uuid,
 ) -> GlobalResult<String> {
 	let build_res = op!([ctx] build_get {
 		build_ids: vec![build_id.into()],
@@ -795,10 +798,10 @@ async fn resolve_image_artifact_url(
 	let build_compression = unwrap!(backend::build::BuildCompression::from_i32(
 		build.compression
 	));
-	let upload_id_proto = unwrap_ref!(build.upload_id);
+	let upload_id_proto = unwrap!(build.upload_id);
 
 	let upload_res = op!([ctx] upload_get {
-		upload_ids: vec![*upload_id_proto],
+		upload_ids: vec![upload_id_proto],
 	})
 	.await?;
 	let upload = unwrap!(upload_res.uploads.first());
@@ -853,9 +856,37 @@ async fn resolve_image_artifact_url(
 		"traffic_server" => {
 			tracing::info!("using traffic server delivery");
 
+			// Hash build id
+			let build_id = unwrap_ref!(build.build_id).as_uuid();
+			let mut hasher = DefaultHasher::new();
+			hasher.write(build_id.as_bytes());
+			let hash = hasher.finish() as i64;
+			
+			// Get vlan ip from build id hash for consistent routing
+			let (ats_vlan_ip,) = sql_fetch_one!(
+				[ctx, (String,)]
+				"
+				SELECT
+					vlan_ip
+				FROM db_cluster.servers
+				WHERE
+					datacenter_id = $1 AND
+					pool_type = $2 AND
+					vlan_ip IS NOT NULL
+				OFFSET abs($3 % COUNT(*))
+				LIMIT 1
+				",
+				// NOTE: region_id is just the old name for datacenter_id
+				&region_id,
+				backend::cluster::PoolType::Ats as i32 as i64,
+				hash,
+			)
+			.await?;
+
 			let upload_id = unwrap_ref!(upload.upload_id).as_uuid();
 			let addr = format!(
-				"http://127.0.0.1:8080/s3-cache/{provider}/{namespace}-bucket-build/{upload_id}/{file_name}",
+				"http://{vlan_ip}:8080/s3-cache/{provider}/{namespace}-bucket-build/{upload_id}/{file_name}",
+				vlan_ip = ats_vlan_ip,
 				provider = heck::KebabCase::to_kebab_case(provider.as_str()),
 				namespace = util::env::namespace(),
 				upload_id = upload_id,
@@ -866,7 +897,7 @@ async fn resolve_image_artifact_url(
 			Ok(addr)
 		}
 		_ => {
-			bail!("invalid RIVET_DS_BUILD_DELIVERY_METHOD")
+			bail!("invalid RIVET_DS_BUILD_DELIVERY_METHOD");
 		}
 	}
 }

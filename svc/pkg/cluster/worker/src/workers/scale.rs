@@ -24,7 +24,7 @@ struct Server {
 #[worker(name = "cluster-scale")]
 async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
-	let cluster_id = unwrap!(ctx.cluster_id).as_uuid();
+	let cluster_id = unwrap_ref!(ctx.cluster_id).as_uuid();
 
 	// Get ACTIVE servers
 	let servers = sql_fetch_all!(
@@ -65,7 +65,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 
 	// Scale all datacenters
 	for dc in &datacenters_res.datacenters {
-		let datacenter_id = unwrap!(dc.datacenter_id).as_uuid();
+		let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
 		let servers_in_dc = servers
 			.iter()
 			.filter(|server| server.datacenter_id == datacenter_id);
@@ -94,7 +94,7 @@ async fn scale_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	servers_in_dc: I,
 	pool: &backend::cluster::Pool,
 ) -> GlobalResult<()> {
-	let datacenter_id = unwrap!(dc.datacenter_id).as_uuid();
+	let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(pool.pool_type));
 	let desired_count = pool.desired_count as usize;
 

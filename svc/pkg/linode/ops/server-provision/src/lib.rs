@@ -27,7 +27,7 @@ pub async fn handle(
 	ctx: OperationContext<linode::server_provision::Request>,
 ) -> GlobalResult<linode::server_provision::Response> {
 	let crdb = ctx.crdb().await?;
-	let server_id = unwrap!(ctx.server_id).as_uuid();
+	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 	let provider_datacenter_id = ctx.provider_datacenter_id.clone();
 	let pool_type = unwrap!(PoolType::from_i32(ctx.pool_type));
 	let provider_hardware = unwrap_ref!(ctx.hardware).provider_hardware.clone();
