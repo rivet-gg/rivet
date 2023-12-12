@@ -20,6 +20,11 @@ resource "betteruptime_status_page" "status_page" {
 	theme = "light"
 }
 
+output "status_page_domain" {
+  description = "The domain of the Better Uptime status page"
+  value       = betteruptime_status_page.status_page.domain
+}
+
 resource "betteruptime_status_page_section" "status_page_section" {
 	status_page_id = betteruptime_status_page.status_page.id
 	name = "Matchmaker"
