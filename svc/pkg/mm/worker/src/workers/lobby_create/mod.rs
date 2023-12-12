@@ -819,10 +819,7 @@ async fn resolve_image_artifact_url(
 
 	let file_name = util_build::file_name(build_kind, build_compression);
 
-	let mm_lobby_delivery_method = unwrap!(
-		std::env::var("RIVET_DS_BUILD_DELIVERY_METHOD").ok(),
-		"missing RIVET_DS_BUILD_DELIVERY_METHOD"
-	);
+	let mm_lobby_delivery_method = util::env::var("RIVET_DS_BUILD_DELIVERY_METHOD")?;
 	match mm_lobby_delivery_method.as_str() {
 		"s3_direct" => {
 			tracing::info!("using s3 direct delivery");

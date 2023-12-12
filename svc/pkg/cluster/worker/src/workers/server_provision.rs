@@ -11,8 +11,7 @@ struct ProvisionResponse {
 async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
 	
-	let cluster_id = unwrap_ref!(ctx.cluster_id);
-	let datacenter_id = unwrap_ref!(ctx.datacenter_id);
+	let datacenter_id = unwrap!(ctx.datacenter_id);
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(ctx.pool_type));
 	let provider = unwrap!(backend::cluster::Provider::from_i32(ctx.provider));
@@ -83,7 +82,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 					Err(err) => {
 						tracing::warn!(?err, "failed to provision linode server, cleaning up");
 			
-						op!([ctx] linode_server_destroy {
+						msg!([ctx] cluster::msg::server_destroy(server_id) {
 							server_id: ctx.server_id,
 						})
 						.await?;

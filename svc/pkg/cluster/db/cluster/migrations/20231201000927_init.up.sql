@@ -42,5 +42,6 @@ CREATE TABLE servers (
 CREATE TABLE linode_misc (
 	server_id UUID PRIMARY KEY REFERENCES servers (server_id),
 	ssh_key_id INT NOT NULL,
+	linode_id INT,
 	firewall_id INT
 );

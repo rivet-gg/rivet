@@ -65,8 +65,8 @@ pub async fn gen(
 				dynamic_config: String::new(),
 				tls_certs: hashmap! {
 					"letsencrypt_rivet_job".into() => components::TlsCert {
-						cert_pem: env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM")?,
-						key_pem: env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM")?,
+						cert_pem: util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM")?,
+						key_pem: util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM")?,
 					},
 				},
 				tcp_server_transports: Default::default(),

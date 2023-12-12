@@ -1,4 +1,6 @@
 chirp_worker::workers![
+	datacenter_update,
+	nomad_node_registered,
 	datacenter_create,
 	create,
 	server_destroy,

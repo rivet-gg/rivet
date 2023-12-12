@@ -16,11 +16,12 @@ resource "acme_certificate" "rivet_gg" {
 	subject_alternative_names = flatten([
 		"*.${var.domain_main}",
 
-		// Add dedicated subdomains for each region
-		[
-			for region_id, region in var.regions:
-			"*.${region_id}.${var.domain_main}"
-		],
+		# TODO: Dynamic DNS
+		# // Add dedicated subdomains for each region
+		# [
+		# 	for region_id, region in var.regions:
+		# 	"*.${region_id}.${var.domain_main}"
+		# ],
 	])
 	
 	recursive_nameservers = ["1.1.1.1:53", "1.0.0.1:53"]
@@ -66,14 +67,15 @@ resource "acme_certificate" "rivet_job" {
 	account_key_pem = acme_registration.main.account_key_pem
 	common_name = var.domain_job
 	subject_alternative_names = flatten([
-		// Add dedicated subdomains for each region
-		flatten([
-			for region_id, region in var.regions:
-			[
-				"*.lobby.${region_id}.${var.domain_job}",
-				"*.${region_id}.${var.domain_job}",
-			]
-		]),
+		# TODO: Dynamic DNS
+		# # Add dedicated subdomains for each region
+		# flatten([
+		# 	for region_id, region in var.regions:
+		# 	[
+		# 		"*.lobby.${region_id}.${var.domain_job}",
+		# 		"*.${region_id}.${var.domain_job}",
+		# 	]
+		# ]),
 
 		// Add wildcard
 		"*.${var.domain_job}",

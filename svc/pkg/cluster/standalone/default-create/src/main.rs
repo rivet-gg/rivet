@@ -8,5 +8,5 @@ async fn main() -> GlobalResult<()> {
 		.with_span_events(tracing_subscriber::fmt::format::FmtSpan::NONE)
 		.init();
 
-	cluster_default_create::run_from_env().await
+	cluster_default_update::run_from_env().await
 }

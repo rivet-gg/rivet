@@ -9,7 +9,6 @@ import "proto/common.proto";
 /// 	{ name = "nomad_node_id" },
 /// ]
 message Message {
-	rivet.common.Uuid cluster_id = 1;
-	rivet.common.Uuid region_id = 2;
-	string node_id = 3;
+	string node_id = 1;
+	rivet.common.Uuid server_id = 2;
 }
