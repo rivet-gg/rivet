@@ -28,21 +28,11 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_undrain::Message>) -
 		return Ok(());
 	};
 
-	// Fetch datacenter config
-	let datacenter_res = op!([ctx] cluster_datacenter_get {
-		datacenter_ids: vec![datacenter_id.into()],
-	}).await?;
-	let datacenter = unwrap!(datacenter_res.datacenters.first());
-	
-	// TODO: Check for idempotence
 	nodes_api::update_node_drain(
 		&NOMAD_CONFIG,
 		&nomad_node_id,
 		models::NodeUpdateDrainRequest {
-			drain_spec: Some(Box::new(models::DrainSpec {
-				deadline: Some(datacenter.drain_timeout as i64),
-				ignore_system_jobs: None,
-			})),
+			drain_spec: None,
 			mark_eligible: Some(true),
 			meta: None,
 			node_id: Some(nomad_node_id.clone()),

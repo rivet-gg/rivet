@@ -3,11 +3,6 @@ use serde::Deserialize;
 
 use proto::backend::pkg::*;
 
-lazy_static::lazy_static! {
-	static ref NOMAD_CONFIG: nomad_client::apis::configuration::Configuration =
-		nomad_util::config_from_env().unwrap();
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PlanResult {

@@ -32,6 +32,7 @@ pub async fn handle(
 	)
 	.await?;
 
+	// Fill in empty clusters
 	let mut dcs_by_cluster_id = cluster_ids
 		.iter()
 		.map(|cluster_id| (*cluster_id, Vec::new()))

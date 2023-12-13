@@ -1,4 +1,4 @@
-use std::{env, collections::HashMap};
+use std::{collections::HashMap};
 
 use chirp_worker::prelude::*;
 use proto::backend;

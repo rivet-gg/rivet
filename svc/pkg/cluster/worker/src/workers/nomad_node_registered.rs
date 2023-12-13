@@ -13,7 +13,8 @@ async fn worker(ctx: &OperationContext<nomad::msg::monitor_node_registered::Mess
 			nomad_node_id = $2,
 			nomad_join_ts = $3
 		WHERE
-			server_id = $1
+			server_id = $1 AND
+			nomad_node_id IS NULL
 		",
 		&server_id,
 		&ctx.node_id,

@@ -11,7 +11,7 @@ chrono = "0.4"
 futures-util = "0.3"
 indoc = "1.0"
 lazy_static = "1.4"
-nomad-client = "0.0.9"
+nomad_client = { path = "../../../../../lib/nomad-client" }
 nomad-util = { path = "../../../../../lib/nomad-util" }
 prost = "0.10"
 rivet-connection = { path = "../../../../../lib/connection" }

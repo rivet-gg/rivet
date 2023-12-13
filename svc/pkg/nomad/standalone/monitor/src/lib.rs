@@ -11,7 +11,7 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 
 	// Start nomad event monitor
 	let redis_index_key = "nomad:monitor_index";
-	let configuration = nomad_util::config_from_env().unwrap();
+	let configuration = nomad_util::new_config_from_env().unwrap();
 
 	nomad_util::monitor::Monitor::run(
 		configuration,

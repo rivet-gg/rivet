@@ -9,5 +9,5 @@ import "proto/common.proto";
 /// 	{ name = "server_id" },
 /// ]
 message Message {
-
+    rivet.common.Uuid server_id = 1;
 }

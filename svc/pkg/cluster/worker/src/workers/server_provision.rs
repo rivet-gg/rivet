@@ -80,12 +80,9 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 						})
 					},
 					Err(err) => {
-						tracing::warn!(?err, "failed to provision linode server, cleaning up");
+						tracing::warn!(?err, "failed to provision server, cleaning up");
 			
-						msg!([ctx] cluster::msg::server_destroy(server_id) {
-							server_id: ctx.server_id,
-						})
-						.await?;
+						destroy_server(&ctx, server_id).await?;
 					}
 				}
 			}
@@ -119,6 +116,28 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	// Install components
 	msg!([ctx] cluster::msg::server_install(server_id) {
 		server_id: ctx.server_id,
+	})
+	.await?;
+
+	Ok(())
+}
+
+async fn destroy_server(ctx: &OperationContext<cluster::msg::server_provision::Message>, server_id: Uuid) -> GlobalResult<()> {
+	sql_execute!(
+		[ctx]
+		"
+		UPDATE db_cluster.servers
+		SET cloud_destroy_ts = $2
+		WHERE
+			server_id = $1
+		",
+		&server_id,
+		util::timestamp::now(),
+	)
+	.await?;
+
+	msg!([ctx] cluster::msg::server_destroy(server_id) {
+		server_id: Some(server_id.into()),
 	})
 	.await?;
 

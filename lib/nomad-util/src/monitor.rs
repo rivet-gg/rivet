@@ -1,7 +1,7 @@
 use std::{future::Future, pin::Pin};
 
 use futures_util::{Stream, StreamExt};
-use nomad_client::apis::configuration::Configuration;
+use nomad_client_new::apis::configuration::Configuration;
 use redis::AsyncCommands;
 use rivet_pools::prelude::*;
 use serde::{de::DeserializeOwned, Deserialize};
@@ -34,7 +34,7 @@ impl NomadEvent {
 		if self.topic != topic || self.r#type != ty {
 			return Ok(None);
 		}
-
+		
 		let payload = serde_json::from_str(self.payload.get())?;
 
 		Ok(payload)
