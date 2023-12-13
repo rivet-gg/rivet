@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::{collections::HashMap};
 
 use chirp_worker::prelude::*;
 use include_dir::{include_dir, Dir};

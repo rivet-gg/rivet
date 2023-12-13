@@ -120,8 +120,24 @@ async fn update_cluster(
 	cluster_id: Uuid,
 	config: Cluster,
 ) -> GlobalResult<()> {
+	let datacenters_res = op!([ctx] cluster_datacenter_resolve_for_name_id {
+		cluster_id: Some(cluster_id.into()),
+		name_ids: config
+			.datacenters
+			.keys()
+			.cloned()
+			.collect::<Vec<_>>(),
+	})
+	.await?;
+
 	for (name_id, datacenter) in config.datacenters {
-		let datacenter_id = Uuid::new_v4();
+		// Find datacenter id by name id
+		let existing_datacenter = unwrap!(datacenters_res
+			.datacenters
+			.iter()
+			.find(|dc| dc.name_id == name_id));
+		let datacenter_id = unwrap_ref!(existing_datacenter.datacenter_id).as_uuid();
+
 		msg!([ctx] @wait cluster::msg::datacenter_update(datacenter_id) {
 			config: Some(backend::cluster::Datacenter {
 				datacenter_id: Some(datacenter_id.into()),

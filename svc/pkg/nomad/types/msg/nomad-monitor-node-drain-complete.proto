@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.nomad.msg.monitor_node_drain_complete;
+
+import "proto/common.proto";
+
+/// name = "msg-nomad-monitor-node-drain-complete"
+/// parameters = [
+/// 	{ name = "nomad_node_id" },
+/// ]
+message Message {
+	string node_id = 1;
+	rivet.common.Uuid server_id = 2;
+}

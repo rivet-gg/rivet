@@ -2328,11 +2328,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "cluster-datacenter-resolve-for-name-id"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
 name = "cluster-default-update"
 version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "cluster-datacenter-resolve-for-name-id",
  "cluster-get",
  "prost 0.10.4",
  "reqwest",
@@ -5725,8 +5737,8 @@ dependencies = [
  "futures-util",
  "indoc",
  "lazy_static",
- "nomad-client",
  "nomad-util",
+ "nomad_client",
  "prost 0.10.4",
  "rivet-connection",
  "rivet-health-checks",

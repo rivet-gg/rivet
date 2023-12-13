@@ -1,4 +1,5 @@
 chirp_worker::workers![
+	nomad_node_drain_complete,
 	datacenter_update,
 	nomad_node_registered,
 	datacenter_create,

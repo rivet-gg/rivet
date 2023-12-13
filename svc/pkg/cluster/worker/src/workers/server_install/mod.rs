@@ -14,9 +14,10 @@ struct Server {
 	pool_type: i64,
 	public_ip: String,
 	vlan_ip: String,
+	cloud_destroy_ts: Option<i64>,
 }
 
-#[worker(name = "cluster-server-install", timeout = 150)]
+#[worker(name = "cluster-server-install", timeout = 200)]
 async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 	
@@ -24,7 +25,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 		[ctx, Server]
 		"
 		SELECT
-			datacenter_id, cluster_id, pool_type, public_ip, vlan_ip
+			datacenter_id, cluster_id, pool_type, public_ip, vlan_ip, cloud_destroy_ts
 		FROM db_cluster.servers
 		WHERE server_id = $1
 		",
@@ -37,6 +38,11 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 		tracing::error!(?server_id, "attempting to install scripts on a server that doesn't exist");
 		return Ok(());
 	};
+
+	if row.cloud_destroy_ts.is_some() {
+		tracing::info!("server marked for deletion, not installing");
+		return Ok(());
+	}
 	
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(row.pool_type as i32));
 
