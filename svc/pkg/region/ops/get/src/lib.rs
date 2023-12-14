@@ -2,9 +2,8 @@ use futures_util::{StreamExt, TryStreamExt};
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
 
-async fn convert_datacenter(
-	ctx: OperationContext<()>,
-	datacenter: backend::cluster::Datacenter,
+fn convert_datacenter(
+	datacenter: &backend::cluster::Datacenter,
 	locations: &[cluster::datacenter_location_get::response::Datacenter],
 ) -> GlobalResult<backend::region::Region> {
 	let datacenter_id = unwrap_ref!(datacenter.datacenter_id).as_uuid();
@@ -34,6 +33,8 @@ async fn convert_datacenter(
 		region_display_name: datacenter.display_name.clone(),
 		name_id: datacenter.name_id.clone(),
 		coords: Some(coords),
+
+		build_delivery_method: datacenter.build_delivery_method,
 	})
 }
 
@@ -50,11 +51,11 @@ async fn handle(
 		}),
 	)?;
 
-	let regions = futures_util::stream::iter(datacenters_res.datacenters.iter().cloned())
-		.map(|datacenter| convert_datacenter(ctx.base(), datacenter, &locations_res.datacenters))
-		.buffer_unordered(8)
-		.try_collect::<Vec<_>>()
-		.await?;
+	let regions = datacenters_res
+		.datacenters
+		.iter()
+		.map(|dc| convert_datacenter(dc, &locations_res.datacenters))
+		.collect::<GlobalResult<Vec<_>>>()?;
 
 	Ok(region::get::Response { regions })
 }

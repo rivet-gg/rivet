@@ -595,8 +595,6 @@ pub struct Upload {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct DynamicServers {
-	#[serde(default)]
-	pub build_delivery_method: DynamicServersBuildDeliveryMethod,
 	pub cluster: DynamicServersCluster,
 }
 
@@ -616,20 +614,22 @@ pub enum DynamicServersBuildDeliveryMethod {
 pub struct DynamicServersCluster {
 	name_id: String,
 	#[serde(default)]
-	datacenters: HashMap<String, DynamicServersDatacenter>,
+	pub datacenters: HashMap<String, DynamicServersDatacenter>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct DynamicServersDatacenter {
-	display_name: String,
-	hardware: Vec<DynamicServersDatacenterHardware>,
-	provider: DynamicServersProvider,
-	provider_datacenter_name: String,
-	drain_timeout: u32,
+	pub datacenter_id: Uuid,
+	pub display_name: String,
+	pub provider: DynamicServersProvider,
+	pub provider_datacenter_name: String,
+	#[serde(default)]
+	pub build_delivery_method: DynamicServersBuildDeliveryMethod,
+	pub drain_timeout: u32,
 
 	#[serde(default)]
-	pools: HashMap<DynamicServersDatacenterPoolType, DynamicServersDatacenterPool>,
+	pub pools: HashMap<DynamicServersDatacenterPoolType, DynamicServersDatacenterPool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -640,14 +640,15 @@ pub enum DynamicServersProvider {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct DynamicServersDatacenterHardware {
-	name: String,
+pub struct DynamicServersDatacenterPool {
+	pub hardware: Vec<DynamicServersDatacenterHardware>,
+	pub desired_count: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct DynamicServersDatacenterPool {
-	desired_count: u32,
+pub struct DynamicServersDatacenterHardware {
+	pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]

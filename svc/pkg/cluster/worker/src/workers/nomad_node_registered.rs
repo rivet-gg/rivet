@@ -5,7 +5,7 @@ use proto::backend::pkg::*;
 async fn worker(ctx: &OperationContext<nomad::msg::monitor_node_registered::Message>) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
-	let row = sql_execute!(
+	sql_execute!(
 		[ctx]
 		"
 		UPDATE db_cluster.servers

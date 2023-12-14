@@ -8,14 +8,16 @@ struct ProvisionResponse {
 }
 
 #[worker(name = "cluster-server-provision")]
-async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>) -> GlobalResult<()> {
+async fn worker(
+	ctx: &OperationContext<cluster::msg::server_provision::Message>,
+) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
-	
+
 	let datacenter_id = unwrap!(ctx.datacenter_id);
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(ctx.pool_type));
 	let provider = unwrap!(backend::cluster::Provider::from_i32(ctx.provider));
-	
+
 	// Check if server is already provisioned
 	// NOTE: sql record already exists before this worker is called
 	let (provider_server_id, vlan_ip) = sql_fetch_one!(
@@ -30,15 +32,27 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	)
 	.await?;
 	if let Some(provider_server_id) = provider_server_id {
-		tracing::error!(?server_id, ?provider_server_id, "server is already provisioned");
+		tracing::error!(
+			?server_id,
+			?provider_server_id,
+			"server is already provisioned"
+		);
 		return Ok(());
 	};
-	
+
 	// Fetch datacenter config
 	let datacenter_res = op!([ctx] cluster_datacenter_get {
 		datacenter_ids: vec![datacenter_id],
-	}).await?;
+	})
+	.await?;
 	let datacenter = unwrap!(datacenter_res.datacenters.first());
+	let pool = unwrap!(
+		datacenter
+			.pools
+			.iter()
+			.find(|p| p.pool_type == ctx.pool_type),
+		"datacenter does not have this type of pool configured"
+	);
 
 	// If the vlan_ip is set in the database but this message is being run again, that means an attempt to
 	// provision servers failed. Use the vlan_ip that was determined before, otherwise find a new vlan_ip
@@ -51,7 +65,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 
 	let provision_res = match provider {
 		backend::cluster::Provider::Linode => {
-			let mut hardware_list = datacenter.hardware.iter();
+			let mut hardware_list = pool.hardware.iter();
 
 			// Iterate through list of hardware and attempt to schedule a server. Goes to the next
 			// hardware if an error happens during provisioning
@@ -61,7 +75,10 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 					break None;
 				};
 
-				tracing::info!("attempting to provision hardware: {}", hardware.provider_hardware);
+				tracing::info!(
+					"attempting to provision hardware: {}",
+					hardware.provider_hardware
+				);
 
 				let res = op!([ctx] linode_server_provision {
 					server_id: ctx.server_id,
@@ -71,17 +88,17 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 					vlan_ip: vlan_ip.clone(),
 				})
 				.await;
-	
+
 				match res {
 					Ok(res) => {
 						break Some(ProvisionResponse {
 							provider_server_id: res.provider_server_id.clone(),
 							public_ip: res.public_ip.clone(),
 						})
-					},
+					}
 					Err(err) => {
 						tracing::warn!(?err, "failed to provision server, cleaning up");
-			
+
 						destroy_server(&ctx, server_id).await?;
 					}
 				}
@@ -107,7 +124,6 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	)
 	.await?;
 
-	// All attempts to provision failed
 	if provision_res.is_none() {
 		tracing::info!(?server_id, "failed to provision server");
 		bail!("failed to provision server");
@@ -119,32 +135,23 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_provision::Message>)
 	})
 	.await?;
 
-	Ok(())
-}
-
-async fn destroy_server(ctx: &OperationContext<cluster::msg::server_provision::Message>, server_id: Uuid) -> GlobalResult<()> {
-	sql_execute!(
-		[ctx]
-		"
-		UPDATE db_cluster.servers
-		SET cloud_destroy_ts = $2
-		WHERE
-			server_id = $1
-		",
-		&server_id,
-		util::timestamp::now(),
-	)
-	.await?;
-
-	msg!([ctx] cluster::msg::server_destroy(server_id) {
-		server_id: Some(server_id.into()),
-	})
-	.await?;
+	// Create DNS record
+	if matches!(pool_type, backend::cluster::PoolType::Gg) {
+		msg!([ctx] cluster::msg::server_dns_create(server_id) {
+			server_id: ctx.server_id,
+		})
+		.await?;
+	}
 
 	Ok(())
 }
 
-async fn get_vlan_ip(ctx: &OperationContext<cluster::msg::server_provision::Message>, crdb: &CrdbPool, server_id: Uuid, pool_type: backend::cluster::PoolType) -> GlobalResult<String> {
+async fn get_vlan_ip(
+	ctx: &OperationContext<cluster::msg::server_provision::Message>,
+	crdb: &CrdbPool,
+	server_id: Uuid,
+	pool_type: backend::cluster::PoolType,
+) -> GlobalResult<String> {
 	// Find next available vlan index
 	let mut vlan_addr_range = match pool_type {
 		PoolType::Job => util::net::job::vlan_addr_range(),
@@ -187,4 +194,29 @@ async fn get_vlan_ip(ctx: &OperationContext<cluster::msg::server_provision::Mess
 	let vlan_ip = unwrap!(vlan_addr_range.nth(network_idx as usize));
 
 	Ok(vlan_ip.to_string())
+}
+
+async fn destroy_server(
+	ctx: &OperationContext<cluster::msg::server_provision::Message>,
+	server_id: Uuid,
+) -> GlobalResult<()> {
+	sql_execute!(
+		[ctx]
+		"
+		UPDATE db_cluster.servers
+		SET cloud_destroy_ts = $2
+		WHERE
+			server_id = $1
+		",
+		&server_id,
+		util::timestamp::now(),
+	)
+	.await?;
+
+	msg!([ctx] cluster::msg::server_destroy(server_id) {
+		server_id: Some(server_id.into()),
+	})
+	.await?;
+
+	Ok(())
 }

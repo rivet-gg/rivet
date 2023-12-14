@@ -2,8 +2,8 @@ use chirp_worker::prelude::*;
 use proto::backend::pkg::*;
 
 #[worker_test]
-async fn scale(_ctx: TestCtx) {
-	// msg!([ctx] cluster::msg::config_update() {
+async fn server_dns_create(ctx: TestCtx) {
+	// msg!([ctx] cluster::msg::server_dns_create() {
 
 	// })
 	// .await

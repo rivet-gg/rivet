@@ -45,3 +45,9 @@ CREATE TABLE linode_misc (
 	linode_id INT,
 	firewall_id INT
 );
+
+-- Stores data for destroying cloudflare resources
+CREATE TABLE cloudflare_misc (
+	server_id UUID PRIMARY KEY REFERENCES servers (server_id),
+	dns_record_id TEXT NOT NULL
+);

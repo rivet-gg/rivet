@@ -1,25 +1,28 @@
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
+use cloudflare::{endpoints as cf, framework as cf_framework, framework::async_api::ApiClient};
 
 #[derive(sqlx::FromRow)]
 struct Server {
 	datacenter_id: Uuid,
 	provider_server_id: Option<String>,
-	cloud_destroy_ts: Option<i64>,
+	dns_record_id: Option<String>,
 }
 
 #[worker(name = "cluster-server-destroy")]
 async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -> GlobalResult<()> {
+	let crdb = ctx.crdb().await?;
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
 	let server = sql_fetch_one!(
-		[ctx, Server]
+		[ctx, Server, &crdb]
 		"
 		SELECT
-			datacenter_id, provider_server_id, cloud_destroy_ts
-		FROM db_cluster.servers
-		WHERE
-			server_id = $1
+			datacenter_id, provider_server_id, dns_record_id
+		FROM db_cluster.servers as s
+		INNER JOIN db_cluster.cloudflare_misc as cf
+		ON s.server_id = cf.server_id
+		WHERE s.server_id = $1
 		",
 		&server_id,
 		util::timestamp::now(),
@@ -48,6 +51,49 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 			.await?;
 		}
 	}
+
+	if let Some(dns_record_id) = server.dns_record_id {
+		tracing::info!(?server_id, "deleting dns record");
+		delete_dns_record(ctx, &crdb, server_id, &dns_record_id).await?;
+	}
+
+	Ok(())
+}
+
+async fn delete_dns_record(
+	ctx: &OperationContext<cluster::msg::server_destroy::Message>,
+	crdb: &CrdbPool,
+	server_id: Uuid,
+	dns_record_id: &str,
+) -> GlobalResult<()> {
+	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
+	let zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
+	
+	// Create cloudflare HTTP client
+	let client = cf_framework::async_api::Client::new(
+		cf_framework::auth::Credentials::UserAuthToken { token: cf_token },
+		Default::default(),
+		cf_framework::Environment::Production,
+	)
+	.map_err(crate::CloudflareError::from)?;
+
+	client
+		.request(&cf::dns::DeleteDnsRecord {
+			zone_identifier: zone_id,
+			identifier: dns_record_id,
+		})
+		.await?;
+
+	// Remove record
+	sql_execute!(
+		[ctx, &crdb]
+		"
+		DELETE FROM db_cluster.cloudflare_misc
+		WHERE server_id = $1
+		",
+		server_id,
+	)
+	.await?;
 
 	Ok(())
 }

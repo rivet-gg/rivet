@@ -29,8 +29,8 @@ async fn worker(ctx: &OperationContext<cluster::msg::datacenter_create::Message>
 	)
 	.await?;
 
-	msg!([ctx] cluster::msg::update(cluster_id) {
-		cluster_id: config.cluster_id,
+	msg!([ctx] cluster::msg::datacenter_scale(datacenter_id) {
+		datacenter_id: config.datacenter_id,
 	}).await?;
 
 	Ok(())

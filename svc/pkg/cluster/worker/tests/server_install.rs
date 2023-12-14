@@ -11,12 +11,13 @@ async fn server_install(ctx: TestCtx) {
 	let pool_type = backend::cluster::PoolType::Job;
 
 	let (dc, vlan_ip) = setup(&ctx, server_id, datacenter_id, cluster_id, pool_type).await;
+	let pool = dc.pools.first().unwrap();
 
 	// Create server
 	let res = op!([ctx] linode_server_provision {
 		server_id: Some(server_id.into()),
 		provider_datacenter_id: dc.provider_datacenter_id.clone(),
-		hardware: dc.hardware.first().cloned(),
+		hardware: pool.hardware.first().cloned(),
 		pool_type: pool_type as i32,
 		vlan_ip: vlan_ip.to_string(),
 	})
@@ -66,14 +67,19 @@ async fn setup(
 		cluster_id: Some(cluster_id.into()),
 		name_id: util::faker::ident(),
 		display_name: util::faker::ident(),
-		hardware: vec![backend::cluster::Hardware {
-			provider_hardware: "g6-nanode-1".to_string(),
-		}],
 
 		provider: backend::cluster::Provider::Linode as i32,
 		provider_datacenter_id: "us-southeast".to_string(),
 
-		pools: Vec::new(),
+		pools: vec![backend::cluster::Pool {
+			pool_type: pool_type as i32,
+			hardware: vec![backend::cluster::Hardware {
+				provider_hardware: "g6-nanode-1".to_string(),
+			}],
+			desired_count: 0,
+		}],
+
+		build_delivery_method: backend::cluster::BuildDeliveryMethod::TrafficServer as i32,
 		drain_timeout: 0,
 	};
 
@@ -88,29 +94,13 @@ async fn setup(
 	.await
 	.unwrap();
 
-	// Insert fake record to appease foreign key constraint (both sql calls in this test are normally done
-	// by `cluster-server-provision`)
-	sql_execute!(
-		[ctx]
-		"
-		INSERT INTO db_cluster.datacenters (
-			datacenter_id,
-			cluster_id,
-			config
-		)
-		VALUES ($1, $2, $3)
-		",
-		datacenter_id,
-		cluster_id,
-		{
-			let mut buf = Vec::with_capacity(dc.encoded_len());
-			dc.encode(&mut buf)?;
-
-			buf
-		},
-	)
+	msg!([ctx] cluster::msg::datacenter_create(cluster_id) -> cluster::msg::datacenter_scale {
+		config: Some(dc.clone()),
+	})
 	.await
 	.unwrap();
+
+	// Insert fake record to appease foreign key constraint (this is normally done by `cluster-server-provision`)
 	sql_execute!(
 		[ctx]
 		"

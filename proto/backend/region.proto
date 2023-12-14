@@ -4,6 +4,7 @@ package rivet.backend.region;
 
 import "proto/common.proto";
 import "proto/backend/net.proto";
+import "proto/backend/cluster.proto";
 
 message Region {
 	reserved 6, 10, 11, 12, 13;
@@ -19,6 +20,9 @@ message Region {
 	string name_id = 9;
 
 	rivet.backend.net.Coordinates coords = 15;
+
+	// INHERITED FROM Datacenter
+	rivet.backend.cluster.BuildDeliveryMethod build_delivery_method = 100;
 }
 
 message Tier {

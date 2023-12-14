@@ -10,5 +10,6 @@ import "proto/backend/cluster.proto";
 /// 	{ name = "datacenter_id" },
 /// ]
 message Message {
+    // TODO: Don't allow updating the entire config
     rivet.backend.cluster.Datacenter config = 1;
 }

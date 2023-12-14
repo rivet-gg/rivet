@@ -2295,6 +2295,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "cloudflare"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0778f99ea7ad39b49b758eb418da7117b93232a5f6a09f9b79a094b77ac88cc2"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.13.1",
+ "cfg-if",
+ "chrono",
+ "http",
+ "percent-encoding",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_qs",
+ "serde_with",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "cluster-datacenter-get"
 version = "0.0.1"
 dependencies = [
@@ -2344,7 +2366,8 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
- "cluster-datacenter-resolve-for-name-id",
+ "cluster-datacenter-get",
+ "cluster-datacenter-list",
  "cluster-get",
  "prost 0.10.4",
  "reqwest",
@@ -2388,9 +2411,11 @@ dependencies = [
 name = "cluster-worker"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "chirp-client",
  "chirp-worker",
  "chrono",
+ "cloudflare",
  "cluster-datacenter-get",
  "cluster-datacenter-list",
  "include_dir",
@@ -2410,6 +2435,7 @@ dependencies = [
  "serde_yaml",
  "sqlx",
  "ssh2",
+ "thiserror",
 ]
 
 [[package]]
@@ -7598,6 +7624,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ae801b7733ca8d6a2b580debe99f67f36826a0f5b8a36055dc6bc40f8d6bc71"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "serde_qs"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8cac3f1e2ca2fe333923a1ae72caca910b98ed0630bb35ef6f8c8517d6e81afa"
+dependencies = [
+ "percent-encoding",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
