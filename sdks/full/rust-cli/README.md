@@ -26,6 +26,7 @@ All URIs are relative to *https://api.rivet.gg*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *AdminApi* | [**admin_login**](docs/AdminApi.md#admin_login) | **POST** /admin/login | 
+*AdminClusterApi* | [**admin_cluster_get_server_ips**](docs/AdminClusterApi.md#admin_cluster_get_server_ips) | **GET** /cluster/server_ips | 
 *AuthIdentityAccessTokenApi* | [**auth_identity_access_token_complete_access_token_verification**](docs/AuthIdentityAccessTokenApi.md#auth_identity_access_token_complete_access_token_verification) | **POST** /auth/identity/access-token/complete-verification | 
 *AuthIdentityEmailApi* | [**auth_identity_email_complete_email_verification**](docs/AuthIdentityEmailApi.md#auth_identity_email_complete_email_verification) | **POST** /auth/identity/email/complete-verification | 
 *AuthIdentityEmailApi* | [**auth_identity_email_start_email_verification**](docs/AuthIdentityEmailApi.md#auth_identity_email_start_email_verification) | **POST** /auth/identity/email/start-verification | 
@@ -163,8 +164,10 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [AdminClusterGetServerIpsResponse](docs/AdminClusterGetServerIpsResponse.md)
  - [AdminLoginRequest](docs/AdminLoginRequest.md)
  - [AdminLoginResponse](docs/AdminLoginResponse.md)
+ - [AdminPoolType](docs/AdminPoolType.md)
  - [AuthCompleteStatus](docs/AuthCompleteStatus.md)
  - [AuthIdentityCompleteAccessTokenVerificationRequest](docs/AuthIdentityCompleteAccessTokenVerificationRequest.md)
  - [AuthIdentityCompleteEmailVerificationRequest](docs/AuthIdentityCompleteEmailVerificationRequest.md)

@@ -1,7 +1,11 @@
+pub mod admin_cluster_get_server_ips_response;
+pub use self::admin_cluster_get_server_ips_response::AdminClusterGetServerIpsResponse;
 pub mod admin_login_request;
 pub use self::admin_login_request::AdminLoginRequest;
 pub mod admin_login_response;
 pub use self::admin_login_response::AdminLoginResponse;
+pub mod admin_pool_type;
+pub use self::admin_pool_type::AdminPoolType;
 pub mod auth_complete_status;
 pub use self::auth_complete_status::AuthCompleteStatus;
 pub mod auth_identity_complete_access_token_verification_request;
