@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.mm.msg.datacenter_closed_set;
+
+import "proto/common.proto";
+
+/// name = "msg-mm-datacenter-closed-set"
+/// parameters = [
+/// 	{ name = "datacenter_id" },
+/// ]
+message Message {
+    rivet.common.Uuid datacenter_id = 1;
+	bool is_closed = 2;
+}

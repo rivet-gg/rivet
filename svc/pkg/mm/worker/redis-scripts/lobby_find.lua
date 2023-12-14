@@ -33,10 +33,19 @@ if query.kind.direct ~= nil then
 	end
 
 	-- Check lobby is not closed
-	-- local is_closed = redis.call('HGET', key_direct_lobby_config, 'c') == '1'
-	-- if is_closed then
-	-- 	return {'err', 'LOBBY_CLOSED'}
-	-- end
+	local config_keys = redis.call('HMGET', key_direct_lobby_config, 'c', 'r')
+	local is_closed = config_keys[1] == '1'
+	if is_closed then
+		return {'err', 'LOBBY_CLOSED'}
+	end
+
+	-- Check datacenter is not closed
+	local region_id = config_keys[2]
+	local key_datacenter_is_closed = '{global}:mm:datacenter:' .. region_id .. ':is_closed'
+	local is_closed = redis.call('GET', key_datacenter_is_closed) == '1'
+	if is_closed then
+		return {'err', 'LOBBY_CLOSED'}
+	end
 
 	-- Get max player count
 	local max_player_count = nil
