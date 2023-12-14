@@ -1,5 +1,6 @@
 use chirp_worker::prelude::*;
 use proto::backend::pkg::*;
+use tokio::task;
 
 lazy_static::lazy_static! {
 	static ref NOMAD_CONFIG: nomad_client::apis::configuration::Configuration =
@@ -15,6 +16,7 @@ struct RunRow {
 
 #[derive(Debug, sqlx::FromRow)]
 struct RunMetaNomadRow {
+	alloc_id: Option<String>,
 	dispatched_job_id: Option<String>,
 }
 
@@ -61,9 +63,7 @@ async fn worker(ctx: &OperationContext<job_run::msg::stop::Message>) -> GlobalRe
 	// functionality if the job dies immediately. You can set it to false to
 	// debug lobbies, but it's preferred to extract metadata from the
 	// job-run-stop lifecycle event.
-	if let Some(dispatched_job_id) = &run_meta_nomad_row
-		.as_ref()
-		.and_then(|x| x.dispatched_job_id.as_ref())
+	if let Some(RunMetaNomadRow { alloc_id, dispatched_job_id: Some(dispatched_job_id) }) = &run_meta_nomad_row
 	{
 		match nomad_client::apis::jobs_api::stop_job(
 			&NOMAD_CONFIG,
@@ -76,7 +76,13 @@ async fn worker(ctx: &OperationContext<job_run::msg::stop::Message>) -> GlobalRe
 		)
 		.await
 		{
-			Ok(_) => tracing::info!("job stopped"),
+			Ok(_) => {
+				tracing::info!("job stopped");
+
+				if let Some(alloc_id) = alloc_id {
+					kill_allocation(region.nomad_region.clone(), alloc_id.clone());
+				}
+			},
 			Err(err) => {
 				tracing::warn!(?err, "error thrown while stopping job, probably a 404, will continue as if stopped normally");
 			}
@@ -153,4 +159,29 @@ async fn update_db(
 	}
 
 	Ok(Some((run_row, run_meta_nomad_row)))
+}
+
+// Kills the allocation after 30 seconds
+fn kill_allocation(nomad_region: String, alloc_id: String) {
+	task::spawn(async move {
+		tokio::time::sleep(util_job::JOB_STOP_TIMEOUT).await;
+
+		tracing::info!(?alloc_id, "manually killing allocation");
+
+		if let Err(err) = nomad_client::apis::allocations_api::signal_allocation(
+			&NOMAD_CONFIG,
+			&alloc_id,
+			None,
+			Some(&nomad_region),
+			None,
+			None,
+			Some(nomad_client::models::AllocSignalRequest {
+				task: None,
+				signal: Some("SIGKILL".to_string()),
+			}),
+		)
+		.await {
+			tracing::warn!(?err, ?alloc_id, "error while trying to manually kill allocation");
+		}
+	});
 }

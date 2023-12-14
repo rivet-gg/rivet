@@ -626,6 +626,7 @@ pub struct DynamicServersDatacenter {
 	pub provider_datacenter_name: String,
 	#[serde(default)]
 	pub build_delivery_method: DynamicServersBuildDeliveryMethod,
+	/// Nomad drain time in seconds.
 	pub drain_timeout: u32,
 
 	#[serde(default)]

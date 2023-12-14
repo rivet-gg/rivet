@@ -27,6 +27,7 @@ message Datacenter {
     
     repeated Pool pools = 7;
     BuildDeliveryMethod build_delivery_method = 8;
+    // Nomad drain time in seconds.
     uint64 drain_timeout = 9;
 }
 
