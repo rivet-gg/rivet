@@ -86,7 +86,9 @@ dependencies = [
  "async_once",
  "chirp-client",
  "chrono",
- "http 0.2.11",
+ "cluster-server-get",
+ "cluster-server-list",
+ "http",
  "hyper",
  "lazy_static",
  "prost 0.10.4",
@@ -95,6 +97,7 @@ dependencies = [
  "rivet-cache",
  "rivet-claims",
  "rivet-connection",
+ "rivet-convert",
  "rivet-health-checks",
  "rivet-matchmaker",
  "rivet-operation",
@@ -2384,6 +2387,28 @@ dependencies = [
 
 [[package]]
 name = "cluster-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-server-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-server-list"
 version = "0.0.1"
 dependencies = [
  "chirp-client",

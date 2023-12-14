@@ -2,6 +2,15 @@ components:
   schemas:
     AccountNumber:
       type: integer
+    AdminClusterGetServerIpsResponse:
+      properties:
+        ips:
+          items:
+            type: string
+          type: array
+      required:
+      - ips
+      type: object
     AdminLoginRequest:
       properties:
         name:
@@ -16,6 +25,12 @@ components:
       required:
       - url
       type: object
+    AdminPoolType:
+      enum:
+      - job
+      - gg
+      - ats
+      type: string
     AuthCompleteStatus:
       description: Represents the state of an external account linking process.
       enum:
@@ -7780,6 +7795,67 @@ paths:
       security: *id001
       tags:
       - CloudUploads
+  /cluster/server_ips:
+    get:
+      operationId: admin_cluster_getServerIps
+      parameters:
+      - in: query
+        name: server_id
+        required: false
+        schema:
+          format: uuid
+          type: string
+      - in: query
+        name: pool
+        required: false
+        schema:
+          $ref: '#/components/schemas/AdminPoolType'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminClusterGetServerIpsResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      tags:
+      - AdminCluster
   /group/groups:
     get:
       description: Returns a list of suggested groups.

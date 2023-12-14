@@ -20,7 +20,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 		SELECT
 			datacenter_id, provider_server_id, dns_record_id
 		FROM db_cluster.servers as s
-		INNER JOIN db_cluster.cloudflare_misc as cf
+		LEFT JOIN db_cluster.cloudflare_misc as cf
 		ON s.server_id = cf.server_id
 		WHERE s.server_id = $1
 		",
