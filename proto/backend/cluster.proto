@@ -21,26 +21,32 @@ message Datacenter {
     rivet.common.Uuid cluster_id = 2;
     string name_id = 3;
     string display_name = 4;
-    repeated Hardware hardware = 5;
     
-    Provider provider = 6;
-    string provider_datacenter_id = 7;
-
-    repeated Pool pools = 8;
+    Provider provider = 5;
+    string provider_datacenter_id = 6;
+    
+    repeated Pool pools = 7;
+    BuildDeliveryMethod build_delivery_method = 8;
     uint64 drain_timeout = 9;
 }
 
 message Pool {
     PoolType pool_type = 1;
-    uint32 desired_count = 2;
-}
-
-message Hardware {
-    string provider_hardware = 1;
+    repeated Hardware hardware = 2;
+    uint32 desired_count = 3;
 }
 
 enum PoolType {
     JOB = 0;
     GG = 1;
     ATS = 2;
+}
+
+message Hardware {
+    string provider_hardware = 1;
+}
+
+enum BuildDeliveryMethod {
+    TRAFFIC_SERVER = 0;
+    S3_DIRECT = 1;
 }

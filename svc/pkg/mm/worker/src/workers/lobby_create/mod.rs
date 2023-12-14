@@ -606,7 +606,7 @@ async fn create_docker_job(
 
 	let resolve_perf = ctx.perf().start("resolve-image-artifact-url").await;
 	let build_id = unwrap_ref!(runtime.build_id).as_uuid();
-	let image_artifact_url = resolve_image_artifact_url(ctx, build_id, region_id).await?;
+	let image_artifact_url = resolve_image_artifact_url(ctx, build_id, region).await?;
 	resolve_perf.end();
 
 	// Validate build exists and belongs to this game
@@ -786,7 +786,7 @@ async fn resolve_job_runner_binary_url(
 async fn resolve_image_artifact_url(
 	ctx: &OperationContext<mm::msg::lobby_create::Message>,
 	build_id: Uuid,
-	region_id: Uuid,
+	region: &backend::region::Region,
 ) -> GlobalResult<String> {
 	let build_res = op!([ctx] build_get {
 		build_ids: vec![build_id.into()],
@@ -819,9 +819,12 @@ async fn resolve_image_artifact_url(
 
 	let file_name = util_build::file_name(build_kind, build_compression);
 
-	let mm_lobby_delivery_method = util::env::var("RIVET_DS_BUILD_DELIVERY_METHOD")?;
-	match mm_lobby_delivery_method.as_str() {
-		"s3_direct" => {
+	let mm_lobby_delivery_method = unwrap!(
+		backend::cluster::BuildDeliveryMethod::from_i32(region.build_delivery_method),
+		"invalid datacenter build delivery method"
+	);
+	match mm_lobby_delivery_method {
+		backend::cluster::BuildDeliveryMethod::S3Direct => {
 			tracing::info!("using s3 direct delivery");
 
 			let bucket = "bucket-build";
@@ -850,8 +853,10 @@ async fn resolve_image_artifact_url(
 
 			Ok(addr_str)
 		}
-		"traffic_server" => {
+		backend::cluster::BuildDeliveryMethod::TrafficServer => {
 			tracing::info!("using traffic server delivery");
+
+			let region_id = unwrap_ref!(region.region_id).as_uuid();
 
 			// Hash build id
 			let build_id = unwrap_ref!(build.build_id).as_uuid();
@@ -892,9 +897,6 @@ async fn resolve_image_artifact_url(
 			tracing::info!(%addr, "resolved artifact s3 url");
 
 			Ok(addr)
-		}
-		_ => {
-			bail!("invalid RIVET_DS_BUILD_DELIVERY_METHOD");
 		}
 	}
 }

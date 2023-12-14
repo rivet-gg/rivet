@@ -5,14 +5,14 @@ use proto::backend::pkg::*;
 async fn worker(ctx: &OperationContext<nomad::msg::monitor_node_drain_complete::Message>) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
-	let (cluster_id,) = sql_fetch_one!(
+	let (datacenter_id,) = sql_fetch_one!(
 		[ctx, (Uuid,)]
 		"
 		UPDATE db_cluster.servers
 		SET cloud_destroy_ts = $2
 		WHERE
 			server_id = $1
-		RETURNING cluster_id
+		RETURNING datacenter_id
 		",
 		&server_id,
 		util::timestamp::now(),
@@ -27,10 +27,10 @@ async fn worker(ctx: &OperationContext<nomad::msg::monitor_node_drain_complete::
 	// In the case of completely deleting an entire datacenter, we would first set the desired count of all
 	// of the pools to 0. However, we cannot delete all of the GG nodes if there are still job nodes draining
 	// because connections may still be open through it. So one GG node is is left in this case (see
-	// `cluster-scale`). This message is published so that `cluster-scale` checks again if there are still
-	// job nodes active, and if not, deletes the last GG node.
-	msg!([ctx] cluster::msg::update(cluster_id) {
-		cluster_id: Some(cluster_id.into()),
+	// `cluster-datacenter-scale`). This message is published so that `cluster-datacenter-scale` checks again
+	// if there are still job nodes active, and if not, deletes the last GG node.
+	msg!([ctx] cluster::msg::datacenter_scale(datacenter_id) {
+		datacenter_id: Some(datacenter_id.into()),
 	})
 	.await?;
 

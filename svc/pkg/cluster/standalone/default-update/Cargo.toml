@@ -20,7 +20,8 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["f
 uuid = { version = "1", features = ["v4"] }
 
 cluster-get = { path = "../../ops/get" }
-cluster-datacenter-resolve-for-name-id = { path = "../../ops/datacenter-resolve-for-name-id" }
+cluster-datacenter-get = { path = "../../ops/datacenter-get" }
+cluster-datacenter-list = { path = "../../ops/datacenter-list" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../../lib/chirp/worker" }

@@ -1,5 +1,3 @@
-use std::net::Ipv4Addr;
-
 use proto::backend::{cluster::PoolType, pkg::*};
 use reqwest::header;
 use rivet_operation::prelude::*;
@@ -33,10 +31,7 @@ pub async fn handle(
 		PoolType::Ats => "ats",
 	};
 
-	let name = format!(
-		"{}-{server_id}",
-		util_cluster::server_name(&provider_datacenter_id, pool_type)
-	);
+	let name = util_cluster::full_server_name(&provider_datacenter_id, pool_type, server_id);
 
 	let tags = vec![
 		// HACK: Linode requires tags to be > 3 characters. We extend the namespace to make sure it

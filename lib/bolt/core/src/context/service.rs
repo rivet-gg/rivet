@@ -1007,10 +1007,6 @@ impl ServiceContextData {
 				"RIVET_DEFAULT_CLUSTER_CONFIG".into(),
 				serde_json::to_string(&dynamic_servers.cluster)?,
 			));
-			env.push((
-				"RIVET_DS_BUILD_DELIVERY_METHOD".into(),
-				dynamic_servers.build_delivery_method.to_string(),
-			));
 		}
 
 		// Sort env by keys so it's always in the same order

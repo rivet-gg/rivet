@@ -12,11 +12,11 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_undrain::Message>) -
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
 	// NOTE: `drain_ts` will already be set to null before this worker is called
-	let (datacenter_id, nomad_node_id,) = sql_fetch_one!(
-		[ctx, (Uuid, Option<String>,)]
+	let (nomad_node_id,) = sql_fetch_one!(
+		[ctx, (Option<String>,)]
 		"
 		SELECT
-			datacenter_id, nomad_node_id
+			nomad_node_id
 		FROM db_cluster.servers
 		WHERE server_id = $1
 		",

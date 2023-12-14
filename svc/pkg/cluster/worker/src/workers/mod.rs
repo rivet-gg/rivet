@@ -1,4 +1,5 @@
 chirp_worker::workers![
+	server_dns_create,
 	nomad_node_drain_complete,
 	datacenter_update,
 	nomad_node_registered,
@@ -8,6 +9,6 @@ chirp_worker::workers![
 	server_install,
 	server_drain,
 	server_provision,
-	scale,
+	datacenter_scale,
 	server_undrain,
 ];

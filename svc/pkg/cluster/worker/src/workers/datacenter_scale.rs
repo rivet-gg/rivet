@@ -7,7 +7,6 @@ use proto::backend::{self, pkg::*};
 #[derive(sqlx::FromRow)]
 struct ServerRow {
 	server_id: Uuid,
-	datacenter_id: Uuid,
 	pool_type: i64,
 	nomad_node_id: Option<String>,
 	drain_ts: Option<i64>,
@@ -15,37 +14,48 @@ struct ServerRow {
 
 struct Server {
 	server_id: Uuid,
-	datacenter_id: Uuid,
 	pool_type: backend::cluster::PoolType,
 	nomad_node_id: Option<String>,
 	is_draining: bool,
 }
 
-#[worker(name = "cluster-scale")]
-async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> GlobalResult<()> {
+#[worker(name = "cluster-datacenter-scale")]
+async fn worker(ctx: &OperationContext<cluster::msg::datacenter_scale::Message>) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
-	let cluster_id = unwrap_ref!(ctx.cluster_id).as_uuid();
+	let datacenter_id = unwrap_ref!(ctx.datacenter_id).as_uuid();
 
-	// Get ACTIVE servers
-	let servers = sql_fetch_all!(
-		[ctx, ServerRow]
-		"
-		SELECT
-			server_id, datacenter_id, pool_type, nomad_node_id, drain_ts
-		FROM db_cluster.servers
-		WHERE
-			cluster_id = $1 AND
-			-- Filters out servers that are being destroyed/already destroyed
-			cloud_destroy_ts IS NULL
-		",
-		cluster_id,
-	)
-	.await?
-	.into_iter()
+	let ((cluster_id,), servers) = tokio::try_join!(
+		sql_fetch_one!(
+			[ctx, (Uuid,)]
+			"
+			SELECT
+				cluster_id
+			FROM db_cluster.datacenters
+			WHERE
+				datacenter_id = $1
+			",
+			datacenter_id,
+		),
+		// Get only ACTIVE servers
+		sql_fetch_all!(
+			[ctx, ServerRow]
+			"
+			SELECT
+				server_id, pool_type, nomad_node_id, drain_ts
+			FROM db_cluster.servers
+			WHERE
+				datacenter_id = $1 AND
+				-- Filters out servers that are being destroyed/already destroyed
+				cloud_destroy_ts IS NULL
+			",
+			datacenter_id,
+		),
+	)?;
+
+	let servers = servers.into_iter()
 	.map(|row| {
 		Ok(Server {
 			server_id: row.server_id,
-			datacenter_id: row.datacenter_id,
 			pool_type: unwrap!(backend::cluster::PoolType::from_i32(row.pool_type as i32)),
 			nomad_node_id: row.nomad_node_id,
 			is_draining: row.drain_ts.is_some(),
@@ -53,62 +63,49 @@ async fn worker(ctx: &OperationContext<cluster::msg::update::Message>) -> Global
 	})
 	.collect::<GlobalResult<Vec<_>>>()?;
 
-	// TODO: Sort servers by cpu usage using cluster-topology-get
+	// TODO: Sort servers by cpu usage using cluster-datacenter-topology-get
 	// servers.sort();
 
 	// Fetch datacenter config
-	let cluster_datacenter_list_res = op!([ctx] cluster_datacenter_list {
-		cluster_ids: vec![cluster_id.into()],
+	let datacenter_res = op!([ctx] cluster_datacenter_get {
+		datacenter_ids: vec![datacenter_id.into()],
 	})
 	.await?;
-	let datacenter_ids = &unwrap!(cluster_datacenter_list_res.clusters.first()).datacenter_ids;
+	let dc = unwrap!(datacenter_res.datacenters.first());
 
-	let datacenters_res = op!([ctx] cluster_datacenter_get {
-		datacenter_ids: datacenter_ids.clone(),
-	})
-	.await?;
-
-	// Scale all datacenters
-	for dc in &datacenters_res.datacenters {
-		let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
-		let servers_in_dc = servers
-			.iter()
-			.filter(|server| server.datacenter_id == datacenter_id);
-
-		for pool in &dc.pools {
-			scale_servers(ctx, &crdb, cluster_id, dc, servers_in_dc.clone(), pool).await?;
-		}
+	for pool in &dc.pools {
+		scale_servers(ctx, &crdb, cluster_id, dc, &servers, pool).await?;
 	}
 
 	Ok(())
 }
 
-async fn scale_servers<'a, I: Iterator<Item = &'a Server> + DoubleEndedIterator + Clone>(
-	ctx: &OperationContext<cluster::msg::update::Message>,
+async fn scale_servers(
+	ctx: &OperationContext<cluster::msg::datacenter_scale::Message>,
 	crdb: &CrdbPool,
 	cluster_id: Uuid,
 	dc: &backend::cluster::Datacenter,
-	servers_in_dc: I,
+	servers: &[Server],
 	pool: &backend::cluster::Pool,
 ) -> GlobalResult<()> {
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(pool.pool_type));
 	let desired_count = pool.desired_count as usize;
 
-	let servers = servers_in_dc.clone().filter(|server| server.pool_type == pool_type);
-	let draining_servers = servers
+	let servers_in_pool = servers.iter().filter(|server| server.pool_type == pool_type);
+	let draining_servers = servers_in_pool
 		.clone()
 		.filter(|server| server.is_draining)
 		.collect::<Vec<_>>();
-	let active_server_count = servers.clone().count() - draining_servers.len();
+	let active_server_count = servers_in_pool.clone().count() - draining_servers.len();
 
 	match desired_count.cmp(&active_server_count) {
 		Ordering::Less => match pool_type {
-			backend::cluster::PoolType::Job => scale_down_job_servers(ctx, crdb, dc, servers, active_server_count, pool).await?,
-			backend::cluster::PoolType::Gg => scale_down_gg_servers(ctx, crdb, dc, servers_in_dc, active_server_count, pool).await?,
-			backend::cluster::PoolType::Ats => scale_down_ats_servers(ctx, crdb, dc, servers, active_server_count, pool).await?,
+			backend::cluster::PoolType::Job => scale_down_job_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool).await?,
+			backend::cluster::PoolType::Gg => scale_down_gg_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool).await?,
+			backend::cluster::PoolType::Ats => scale_down_ats_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool).await?,
 		},
 		Ordering::Greater => {
-			scale_up_servers(ctx, crdb, cluster_id, dc, servers, draining_servers, active_server_count, pool).await?;
+			scale_up_servers(ctx, crdb, cluster_id, dc, draining_servers, active_server_count, pool).await?;
 		}
 		Ordering::Equal => {}
 	}
@@ -117,7 +114,7 @@ async fn scale_servers<'a, I: Iterator<Item = &'a Server> + DoubleEndedIterator 
 }
 
 async fn scale_down_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
-	ctx: &OperationContext<cluster::msg::update::Message>,
+	ctx: &OperationContext<cluster::msg::datacenter_scale::Message>,
 	crdb: &CrdbPool,
 	dc: &backend::cluster::Datacenter,
 	servers: I,
@@ -217,7 +214,7 @@ async fn scale_down_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 }
 
 async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
-	ctx: &OperationContext<cluster::msg::update::Message>,
+	ctx: &OperationContext<cluster::msg::datacenter_scale::Message>,
 	crdb: &CrdbPool,
 	dc: &backend::cluster::Datacenter,
 	servers_in_dc: I,
@@ -287,7 +284,7 @@ async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 }
 
 async fn scale_down_ats_servers<'a, I: Iterator<Item = &'a Server> + DoubleEndedIterator + Clone>(
-	ctx: &OperationContext<cluster::msg::update::Message>,
+	ctx: &OperationContext<cluster::msg::datacenter_scale::Message>,
 	crdb: &CrdbPool,
 	dc: &backend::cluster::Datacenter,
 	servers: I,
@@ -345,12 +342,11 @@ async fn scale_down_ats_servers<'a, I: Iterator<Item = &'a Server> + DoubleEnded
 	Ok(())
 }
 
-async fn scale_up_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
-	ctx: &OperationContext<cluster::msg::update::Message>,
+async fn scale_up_servers(
+	ctx: &OperationContext<cluster::msg::datacenter_scale::Message>,
 	crdb: &CrdbPool,
 	cluster_id: Uuid,
 	dc: &backend::cluster::Datacenter,
-	servers: I,
 	draining_servers: Vec<&Server>,
 	active_server_count: usize,
 	pool: &backend::cluster::Pool,
@@ -434,7 +430,7 @@ async fn scale_up_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 				.await?;
 
 				msg!([ctx] cluster::msg::server_provision(server_id) {
-					cluster_id: ctx.cluster_id,
+					cluster_id: Some(cluster_id.into()),
 					datacenter_id: dc.datacenter_id,
 					server_id: Some(server_id.into()),
 					pool_type: pool.pool_type,

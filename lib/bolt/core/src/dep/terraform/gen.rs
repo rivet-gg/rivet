@@ -273,6 +273,25 @@ async fn vars(ctx: &ProjectContext) {
 		vars.insert("services".into(), json!(services));
 	}
 
+	// Datacenters
+	if let Some(dynamic_servers) = &config.rivet.dynamic_servers {
+		let datacenters = dynamic_servers
+			.cluster
+			.datacenters
+			.iter()
+			.map(|(name_id, dc)| {
+				(
+					name_id,
+					json!({
+						"datacenter_id": dc.datacenter_id,
+					}),
+				)
+			})
+			.collect::<HashMap<_, _>>();
+
+		vars.insert("datacenters".into(), json!(datacenters));
+	}
+
 	// Docker
 	vars.insert(
 		"authenticate_all_docker_hub_pulls".into(),

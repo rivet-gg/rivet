@@ -13,11 +13,12 @@ struct Cluster {
 
 #[derive(Deserialize)]
 struct Datacenter {
+	datacenter_id: Uuid,
 	display_name: String,
-	hardware: Vec<Hardware>,
 	provider: Provider,
 	provider_datacenter_name: String,
 	pools: HashMap<PoolType, Pool>,
+	build_delivery_method: BuildDeliveryMethod,
 	drain_timeout: u64,
 }
 
@@ -36,20 +37,8 @@ impl From<Provider> for backend::cluster::Provider {
 }
 
 #[derive(Deserialize)]
-struct Hardware {
-	name: String,
-}
-
-impl From<Hardware> for backend::cluster::Hardware {
-	fn from(value: Hardware) -> backend::cluster::Hardware {
-		backend::cluster::Hardware {
-			provider_hardware: value.name,
-		}
-	}
-}
-
-#[derive(Deserialize)]
 struct Pool {
+	hardware: Vec<Hardware>,
 	desired_count: u32,
 }
 
@@ -69,6 +58,36 @@ impl From<PoolType> for backend::cluster::PoolType {
 			PoolType::Job => backend::cluster::PoolType::Job,
 			PoolType::Gg => backend::cluster::PoolType::Gg,
 			PoolType::Ats => backend::cluster::PoolType::Ats,
+		}
+	}
+}
+
+#[derive(Deserialize)]
+struct Hardware {
+	name: String,
+}
+
+impl From<Hardware> for backend::cluster::Hardware {
+	fn from(value: Hardware) -> backend::cluster::Hardware {
+		backend::cluster::Hardware {
+			provider_hardware: value.name,
+		}
+	}
+}
+
+#[derive(Deserialize)]
+enum BuildDeliveryMethod {
+	#[serde(rename = "traffic_server")]
+	TrafficServer,
+	#[serde(rename = "s3_direct")]
+	S3Direct,
+}
+
+impl From<BuildDeliveryMethod> for backend::cluster::BuildDeliveryMethod {
+	fn from(value: BuildDeliveryMethod) -> backend::cluster::BuildDeliveryMethod {
+		match value {
+			BuildDeliveryMethod::TrafficServer => backend::cluster::BuildDeliveryMethod::TrafficServer,
+			BuildDeliveryMethod::S3Direct => backend::cluster::BuildDeliveryMethod::S3Direct,
 		}
 	}
 }
@@ -100,107 +119,105 @@ pub async fn run_from_env() -> GlobalResult<()> {
 
 	let cluster_id = util::env::default_cluster_id();
 
-	let cluster_res = op!([ctx] cluster_get {
-		cluster_ids: vec![cluster_id.into()],
+	let (cluster_res, datacenter_list_res) = tokio::try_join!(
+		// Check if cluster already exists
+		op!([ctx] cluster_get {
+			cluster_ids: vec![cluster_id.into()],
+		}),
+		op!([ctx] cluster_datacenter_list {
+			cluster_ids: vec![cluster_id.into()],
+		}),
+	)?;
+
+	// Get all datacenters
+	let cluster = unwrap!(datacenter_list_res.clusters.first());
+	let datacenters_res = op!([ctx] cluster_datacenter_get {
+		datacenter_ids: cluster.datacenter_ids.clone(),
 	})
 	.await?;
 
 	if cluster_res.clusters.is_empty() {
-		create_cluster(&ctx, cluster_id, config).await?;
-	} else {
-		tracing::warn!("default cluster already created, updating");
-		update_cluster(&ctx, cluster_id, config).await?;
+		tracing::warn!("creating default cluster");
+
+		msg!([ctx] cluster::msg::create(cluster_id) -> cluster::msg::create_complete {
+			cluster_id: Some(cluster_id.into()),
+			name_id: config.name_id.clone(),
+			owner_team_id: None,
+		})
+		.await?;
 	}
 
-	Ok(())
-}
-
-async fn update_cluster(
-	ctx: &OperationContext<()>,
-	cluster_id: Uuid,
-	config: Cluster,
-) -> GlobalResult<()> {
-	let datacenters_res = op!([ctx] cluster_datacenter_resolve_for_name_id {
-		cluster_id: Some(cluster_id.into()),
-		name_ids: config
-			.datacenters
-			.keys()
-			.cloned()
-			.collect::<Vec<_>>(),
-	})
-	.await?;
-
-	for (name_id, datacenter) in config.datacenters {
-		// Find datacenter id by name id
-		let existing_datacenter = unwrap!(datacenters_res
-			.datacenters
-			.iter()
-			.find(|dc| dc.name_id == name_id));
+	for existing_datacenter in &datacenters_res.datacenters {
 		let datacenter_id = unwrap_ref!(existing_datacenter.datacenter_id).as_uuid();
 
-		msg!([ctx] @wait cluster::msg::datacenter_update(datacenter_id) {
-			config: Some(backend::cluster::Datacenter {
-				datacenter_id: Some(datacenter_id.into()),
-				cluster_id: Some(cluster_id.into()),
-				name_id,
-				display_name: datacenter.display_name,
-
-				hardware: datacenter.hardware.into_iter().map(Into::into).collect::<Vec<_>>(),
-
-				provider: Into::<backend::cluster::Provider>::into(datacenter.provider) as i32,
-				provider_datacenter_id: datacenter.provider_datacenter_name,
-
-				pools: datacenter.pools.into_iter().map(|(pool_type, pool)| {
-					backend::cluster::Pool {
-						pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
-						desired_count: pool.desired_count,
-					}
-				}).collect::<Vec<_>>(),
-				drain_timeout: datacenter.drain_timeout,
-			}),
-		})
-		.await?;
+		if !config
+			.datacenters
+			.iter()
+			.any(|(_, dc)| dc.datacenter_id == datacenter_id)
+		{
+			// TODO: Delete datacenters
+		}
 	}
 
-	Ok(())
-}
-
-async fn create_cluster(
-	ctx: &OperationContext<()>,
-	cluster_id: Uuid,
-	config: Cluster,
-) -> GlobalResult<()> {
-	msg!([ctx] cluster::msg::create(cluster_id) -> cluster::msg::create_complete {
-		cluster_id: Some(cluster_id.into()),
-		name_id: config.name_id.clone(),
-		owner_team_id: None,
-	})
-	.await?;
-
 	for (name_id, datacenter) in config.datacenters {
-		let datacenter_id = Uuid::new_v4();
-		msg!([ctx] @wait cluster::msg::datacenter_create(datacenter_id) {
-			config: Some(backend::cluster::Datacenter {
-				datacenter_id: Some(datacenter_id.into()),
-				cluster_id: Some(cluster_id.into()),
-				name_id,
-				display_name: datacenter.display_name,
+		let datacenter_id_proto = Some(datacenter.datacenter_id.into());
+		let existing_datacenter = datacenters_res
+			.datacenters
+			.iter()
+			.any(|dc| dc.datacenter_id == datacenter_id_proto);
 
-				hardware: datacenter.hardware.into_iter().map(Into::into).collect::<Vec<_>>(),
+		// Update existing datacenter
+		if existing_datacenter {
+			msg!([ctx] @wait cluster::msg::datacenter_update(datacenter.datacenter_id) {
+				config: Some(backend::cluster::Datacenter {
+					datacenter_id: datacenter_id_proto,
+					cluster_id: Some(cluster_id.into()),
+					name_id,
+					display_name: datacenter.display_name,
 
-				provider: Into::<backend::cluster::Provider>::into(datacenter.provider) as i32,
-				provider_datacenter_id: datacenter.provider_datacenter_name,
+					provider: Into::<backend::cluster::Provider>::into(datacenter.provider) as i32,
+					provider_datacenter_id: datacenter.provider_datacenter_name,
 
-				pools: datacenter.pools.into_iter().map(|(pool_type, pool)| {
-					backend::cluster::Pool {
-						pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
-						desired_count: pool.desired_count,
-					}
-				}).collect::<Vec<_>>(),
-				drain_timeout: datacenter.drain_timeout,
-			}),
-		})
-		.await?;
+					pools: datacenter.pools.into_iter().map(|(pool_type, pool)| {
+						backend::cluster::Pool {
+							pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
+							hardware: pool.hardware.into_iter().map(Into::into).collect::<Vec<_>>(),
+							desired_count: pool.desired_count,
+						}
+					}).collect::<Vec<_>>(),
+
+					build_delivery_method: Into::<backend::cluster::BuildDeliveryMethod>::into(datacenter.build_delivery_method) as i32,
+					drain_timeout: datacenter.drain_timeout,
+				}),
+			})
+			.await?;
+		}
+		// Create new datacenter
+		else {
+			msg!([ctx] @wait cluster::msg::datacenter_create(datacenter.datacenter_id) {
+				config: Some(backend::cluster::Datacenter {
+					datacenter_id: datacenter_id_proto,
+					cluster_id: Some(cluster_id.into()),
+					name_id,
+					display_name: datacenter.display_name,
+
+					provider: Into::<backend::cluster::Provider>::into(datacenter.provider) as i32,
+					provider_datacenter_id: datacenter.provider_datacenter_name,
+
+					pools: datacenter.pools.into_iter().map(|(pool_type, pool)| {
+						backend::cluster::Pool {
+							pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
+							hardware: pool.hardware.into_iter().map(Into::into).collect::<Vec<_>>(),
+							desired_count: pool.desired_count,
+						}
+					}).collect::<Vec<_>>(),
+
+					build_delivery_method: Into::<backend::cluster::BuildDeliveryMethod>::into(datacenter.build_delivery_method) as i32,
+					drain_timeout: datacenter.drain_timeout,
+				}),
+			})
+			.await?;
+		}
 	}
 
 	Ok(())

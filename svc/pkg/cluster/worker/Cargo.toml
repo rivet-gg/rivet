@@ -6,9 +6,11 @@ authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "1.0"
 chirp-client = { path = "../../../../lib/chirp/client" }
 chirp-worker = { path = "../../../../lib/chirp/worker" }
 chrono = "0.4"
+cloudflare = "0.10.1"
 include_dir = "0.7.3"
 indoc = "1.0"
 lazy_static = "1.4.0"
@@ -22,6 +24,7 @@ rivet-runtime = { path = "../../../../lib/runtime" }
 s3-util = { path = "../../../../lib/s3-util" }
 serde_yaml = "0.9"
 ssh2 = "0.9.4"
+thiserror = "1.0"
 util-cluster = { package = "rivet-util-cluster", path = "../util" }
 
 cluster-datacenter-get = { path = "../ops/datacenter-get" }

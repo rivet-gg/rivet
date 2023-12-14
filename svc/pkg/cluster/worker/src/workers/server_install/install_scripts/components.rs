@@ -48,10 +48,12 @@ pub const TUNNEL_SERVICES: &[TunnelService] = &[
 ];
 
 pub fn common() -> String {
-	[
-		format!("apt-get update -y"),
-		format!("apt-get install -y apt-transport-https ca-certificates gnupg2 software-properties-common curl jq unzip"),
-	].join("\n")
+	indoc!(
+		"
+		apt-get update -y
+		apt-get install -y apt-transport-https ca-certificates gnupg2 software-properties-common curl jq unzip
+		"
+	).to_string()
 }
 
 pub fn node_exporter() -> String {
@@ -66,29 +68,29 @@ pub fn docker() -> String {
 }
 
 pub fn lz4() -> String {
-	format!("apt-get install -y lz4")
+	"apt-get install -y lz4".to_string()
 }
 
 pub fn skopeo() -> String {
-	format!("apt-get install -y skopeo")
+	"apt-get install -y skopeo".to_string()
 }
 
 pub fn umoci() -> String {
-	formatdoc!(
+	indoc!(
 		r#"
 		curl -Lf -o /usr/bin/umoci "https://github.com/opencontainers/umoci/releases/download/v0.4.7/umoci.amd64"
 		chmod +x /usr/bin/umoci
 		"#
-	)
+	).to_string()
 }
 
 pub fn cnitool() -> String {
-	formatdoc!(
+	indoc!(
 		r#"
 		curl -Lf -o /usr/bin/cnitool "https://github.com/rivet-gg/cni/releases/download/v1.1.2-build3/cnitool"
 		chmod +x /usr/bin/cnitool
 		"#
-	)
+	).to_string()
 }
 
 pub fn cni_plugins() -> String {

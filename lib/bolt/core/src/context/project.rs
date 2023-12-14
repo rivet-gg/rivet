@@ -1,5 +1,5 @@
 use std::{
-	collections::HashMap,
+	collections::{HashMap, HashSet},
 	path::{Path, PathBuf},
 	process::Command,
 	sync::{Arc, Weak},
@@ -259,6 +259,65 @@ impl ProjectContextData {
 						.any(|p| p.pool == "ats" && p.region == *region_id),
 					"missing ats pool for region {region_id}",
 					region_id = region_id
+				);
+			}
+		}
+
+		if let Some(dynamic_servers) = &self.ns().rivet.dynamic_servers {
+			let mut unique_datacenter_ids = HashSet::new();
+
+			for (name_id, datacenter) in &dynamic_servers.cluster.datacenters {
+				assert!(
+					!unique_datacenter_ids.contains(&datacenter.datacenter_id),
+					"invalid datacenter ({}): datacenter_id not unique",
+					name_id,
+				);
+				unique_datacenter_ids.insert(datacenter.datacenter_id);
+
+				let ats_count = datacenter
+					.pools
+					.get(&config::ns::DynamicServersDatacenterPoolType::Ats)
+					.map(|pool| pool.desired_count)
+					.unwrap_or_default();
+
+				match datacenter.build_delivery_method {
+					config::ns::DynamicServersBuildDeliveryMethod::TrafficServer => {
+						assert_ne!(
+							ats_count, 0,
+							"invalid datacenter ({}): TrafficServer delivery method will not work without ats servers. Either set datacenter.build_delivery_method = \"s3_direct\" to download builds directly from S3 or increase the ATS pool count.",
+							name_id,
+						);
+					}
+					config::ns::DynamicServersBuildDeliveryMethod::S3Direct => {
+						assert_eq!(
+							ats_count, 0,
+							"invalid datacenter ({}): S3Direct delivery method should not be used if ats servers are available",
+							name_id,
+						);
+					}
+				}
+
+				// Validate all required pools exist
+				let gg_count = datacenter
+					.pools
+					.get(&config::ns::DynamicServersDatacenterPoolType::Gg)
+					.map(|pool| pool.desired_count)
+					.unwrap_or_default();
+				assert_ne!(
+					gg_count, 0,
+					"invalid datacenter ({}): missing gg servers",
+					name_id,
+				);
+				let job_count = datacenter
+					.pools
+					.get(&config::ns::DynamicServersDatacenterPoolType::Job)
+					.map(|pool| pool.desired_count)
+					.unwrap_or_default();
+
+				assert_ne!(
+					job_count, 0,
+					"invalid datacenter ({}): missing job servers",
+					name_id,
 				);
 			}
 		}

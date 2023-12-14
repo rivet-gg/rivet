@@ -21,7 +21,7 @@ struct Server {
 async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 	
-	let row = sql_fetch_optional!(
+	let server = sql_fetch_one!(
 		[ctx, Server]
 		"
 		SELECT
@@ -33,39 +33,32 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 	)
 	.await?;
 
-	// Fail gracefully
-	let Some(row) = row else {
-		tracing::error!(?server_id, "attempting to install scripts on a server that doesn't exist");
-		return Ok(());
-	};
-
-	if row.cloud_destroy_ts.is_some() {
+	if server.cloud_destroy_ts.is_some() {
 		tracing::info!("server marked for deletion, not installing");
 		return Ok(());
 	}
 	
-	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(row.pool_type as i32));
+	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(server.pool_type as i32));
 
 	let datacenter_res = op!([ctx] cluster_datacenter_get {
-		datacenter_ids: vec![row.datacenter_id.into()],
+		datacenter_ids: vec![server.datacenter_id.into()],
 	}).await?;
 	let datacenter = unwrap!(datacenter_res.datacenters.first());
 
-	let server = ServerCtx {
+	let server_ctx = ServerCtx {
 		server_id,
-		datacenter_id: row.datacenter_id,
-		cluster_id: row.cluster_id,
+		datacenter_id: server.datacenter_id,
+		cluster_id: server.cluster_id,
 		provider_datacenter_id: datacenter.provider_datacenter_id.clone(),
 		name: util_cluster::server_name(&datacenter.provider_datacenter_id, pool_type),
 		pool_type,
-		vlan_ip: row.vlan_ip,
+		vlan_ip: server.vlan_ip,
 	};
 	
-	let public_ip = row.public_ip;
+	let public_ip = server.public_ip;
 	let private_key_openssh =
 		util::env::read_secret(&["ssh", "server", "private_key_openssh"]).await?;
-		
-	let install_script = install_scripts::gen(&server).await?;
+	let install_script = install_scripts::gen(&server_ctx).await?;
 
 	// Spawn blocking thread for ssh (no async support)
 	tokio::task::spawn_blocking(move || {
