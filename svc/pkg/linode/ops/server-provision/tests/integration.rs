@@ -54,9 +54,6 @@ async fn setup(
 	cluster_id: Uuid,
 	pool_type: backend::cluster::PoolType,
 ) -> Ipv4Addr {
-	// TODO: This might collide if the test fails, its static
-	let vlan_ip = util::net::job::vlan_addr_range().last().unwrap();
-
 	msg!([ctx] cluster::msg::create(cluster_id) -> cluster::msg::create_complete {
 		cluster_id: Some(cluster_id.into()),
 		name_id: util::faker::ident(),
@@ -64,6 +61,9 @@ async fn setup(
 	})
 	.await
 	.unwrap();
+
+	// TODO: This might collide if the test fails, its static
+	let vlan_ip = util::net::job::vlan_addr_range().last().unwrap();
 
 	// Insert fake record to appease foreign key constraint (both sql calls in this test are normally done
 	// by `cluster-server-provision`)

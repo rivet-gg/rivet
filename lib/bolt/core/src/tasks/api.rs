@@ -1,7 +1,6 @@
 use anyhow::*;
 use serde::Deserialize;
 use serde_json::json;
-use uuid::Uuid;
 
 use crate::context::ProjectContext;
 

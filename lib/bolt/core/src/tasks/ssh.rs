@@ -6,7 +6,7 @@ use duct::cmd;
 use futures_util::StreamExt;
 use tokio::task::block_in_place;
 
-use crate::{context::ProjectContext, dep::terraform, tasks};
+use crate::{context::ProjectContext, tasks};
 
 pub struct TempSshKey {
 	tempfile: tempfile::NamedTempFile,

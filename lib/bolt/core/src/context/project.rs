@@ -274,12 +274,14 @@ impl ProjectContextData {
 				);
 				unique_datacenter_ids.insert(datacenter.datacenter_id);
 
-				let ats_count = datacenter
+				let Some(ats_pool) = datacenter
 					.pools
 					.get(&config::ns::DynamicServersDatacenterPoolType::Ats)
-					.map(|pool| pool.desired_count)
-					.unwrap_or_default();
+				else {
+					panic!("invalid datacenter ({}): Missing ATS pool", name_id);
+				};
 
+				let ats_count = ats_pool.desired_count;
 				match datacenter.build_delivery_method {
 					config::ns::DynamicServersBuildDeliveryMethod::TrafficServer => {
 						assert_ne!(
@@ -305,7 +307,7 @@ impl ProjectContextData {
 					.unwrap_or_default();
 				assert_ne!(
 					gg_count, 0,
-					"invalid datacenter ({}): missing gg servers",
+					"invalid datacenter ({}): Missing GG servers",
 					name_id,
 				);
 				let job_count = datacenter
@@ -316,7 +318,7 @@ impl ProjectContextData {
 
 				assert_ne!(
 					job_count, 0,
-					"invalid datacenter ({}): missing job servers",
+					"invalid datacenter ({}): Missing job servers",
 					name_id,
 				);
 			}

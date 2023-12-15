@@ -1,5 +1,5 @@
 use chirp_worker::prelude::*;
-use proto::backend::pkg::*;
+use proto::backend::{self, pkg::*};
 use nomad_client::{models, apis::{configuration::Configuration, nodes_api}};
 
 lazy_static::lazy_static! {
@@ -12,11 +12,11 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_drain::Message>) -> 
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
 	// NOTE: `drain_ts` will already be set to null before this worker is called
-	let (datacenter_id, nomad_node_id,) = sql_fetch_one!(
-		[ctx, (Uuid, Option<String>)]
+	let (datacenter_id, pool_type, nomad_node_id) = sql_fetch_one!(
+		[ctx, (Uuid, i64, Option<String>)]
 		"
 		SELECT
-			datacenter_id, nomad_node_id
+			datacenter_id, pool_type, nomad_node_id
 		FROM db_cluster.servers
 		WHERE server_id = $1
 		",
@@ -24,7 +24,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_drain::Message>) -> 
 	)
 	.await?;
 	let Some(nomad_node_id) = nomad_node_id else {
-		tracing::error!("server does not have nomad running yet, cannot drain");
+		tracing::error!("server does not have nomad running, cannot drain");
 		return Ok(());
 	};
 
@@ -58,12 +58,17 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_drain::Message>) -> 
 	)
 	.await?;
 
-	// Set all lobbies in the datacenter as closed
-	msg!([ctx] mm::msg::datacenter_closed_set(datacenter_id) {
-		datacenter_id: Some(datacenter_id.into()),
-		is_closed: true,
-	})
-	.await?;
+	if let backend::cluster::PoolType::Job =
+		unwrap!(backend::cluster::PoolType::from_i32(pool_type as i32))
+	{
+		// Close datacenter from matchmaker
+		msg!([ctx] mm::msg::datacenter_closed_set(datacenter_id) {
+			datacenter_id: Some(datacenter_id.into()),
+			is_closed: true,
+		})
+		.await?;
+	}
+
 
 	Ok(())
 }

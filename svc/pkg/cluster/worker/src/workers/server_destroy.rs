@@ -57,6 +57,10 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 		delete_dns_record(ctx, &crdb, server_id, &dns_record_id).await?;
 	}
 
+	msg!([ctx] cluster::msg::server_destroy_complete(server_id) {
+		server_id: ctx.server_id,
+	}).await?;
+
 	Ok(())
 }
 

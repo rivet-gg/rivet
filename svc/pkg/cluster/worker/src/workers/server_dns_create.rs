@@ -7,7 +7,6 @@ use cloudflare::{endpoints as cf, framework as cf_framework, framework::async_ap
 #[derive(sqlx::FromRow)]
 struct Server {
 	datacenter_id: Uuid,
-	pool_type: i64,
 	public_ip: String,
 	cloud_destroy_ts: Option<i64>,
 }
@@ -20,7 +19,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_dns_create::Message>
 		[ctx, Server]
 		"
 		SELECT
-			datacenter_id, pool_type, public_ip, cloud_destroy_ts
+			datacenter_id, public_ip, cloud_destroy_ts
 		FROM db_cluster.servers
 		WHERE server_id = $1
 		",
@@ -34,7 +33,6 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_dns_create::Message>
 	}
 	
 	// NOTE: The only pool type that needs DNS records should be GG
-	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(server.pool_type as i32));
 	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
 	let zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
 	let record_name = format!("*.lobby.{}.{}", server.datacenter_id, unwrap!(util::env::domain_job()));
@@ -73,7 +71,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_dns_create::Message>
 		VALUES ($1, $2)
 		",
 		server_id,
-		record_id
+		record_id,
 	)
 	.await?;
 
