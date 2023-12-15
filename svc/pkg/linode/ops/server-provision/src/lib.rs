@@ -33,14 +33,19 @@ pub async fn handle(
 
 	let name = util_cluster::full_server_name(&provider_datacenter_id, pool_type, server_id);
 
-	let tags = vec![
-		// HACK: Linode requires tags to be > 3 characters. We extend the namespace to make sure it
-		// meets the minimum length requirement.
-		format!("rivet-{ns}"),
-		format!("{ns}-{provider_datacenter_id}"),
-		format!("{ns}-{pool_type_str}"),
-		format!("{ns}-{provider_datacenter_id}-{pool_type_str}"),
-	];
+	let tags = ctx
+		.tags
+		.iter()
+		.cloned()
+		.chain([
+			// HACK: Linode requires tags to be > 3 characters. We extend the namespace to make sure it
+			// meets the minimum length requirement.
+			format!("rivet-{ns}"),
+			format!("{ns}-{provider_datacenter_id}"),
+			format!("{ns}-{pool_type_str}"),
+			format!("{ns}-{provider_datacenter_id}-{pool_type_str}"),
+		])
+		.collect::<Vec<_>>();
 
 	let firewall_inbound = match pool_type {
 		PoolType::Job => util::net::job::firewall(),

@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package rivet.backend.pkg.cluster.topology_get;
+package rivet.backend.pkg.cluster.datacenter_topology_get;
 
 import "proto/common.proto";
 
 message Request {
-	repeated rivet.common.Uuid cluster_ids = 1;
+	repeated rivet.common.Uuid datacenter_ids = 1;
 }
 
 message Response {
@@ -17,10 +17,10 @@ message Response {
 		float disk = 5; // % of total
 	}
 
-	message Cluster {
-		rivet.common.Uuid cluster_id = 1;
+	message Datacenter {
+		rivet.common.Uuid datacenter_id = 1;
 		repeated Server servers = 2;
 	}
 
-	repeated Cluster clusters = 1;
+	repeated Datacenter datacenters = 1;
 }

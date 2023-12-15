@@ -371,7 +371,7 @@ client {
 	max_dynamic_port = 25999
 
 	# Intentionally high kill timeout, killing allocations is handled manually
-	max_kill_timeout = "30d"
+	max_kill_timeout = "86400s"
 
 	server_join {
 		retry_join = [

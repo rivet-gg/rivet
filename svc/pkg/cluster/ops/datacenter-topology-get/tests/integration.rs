@@ -3,8 +3,8 @@ use proto::backend::pkg::*;
 
 #[worker_test]
 async fn empty(ctx: TestCtx) {
-	op!([ctx] cluster_datacenter_list {
-		cluster_ids: vec![todo!()],
+	op!([ctx] cluster_datacenter_topology_get {
+		datacenter_ids: vec![],
 	})
 	.await
 	.unwrap();

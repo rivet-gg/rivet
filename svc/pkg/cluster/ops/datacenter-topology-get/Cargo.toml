@@ -1,5 +1,5 @@
 [package]
-name = "cluster-datacenter-list"
+name = "cluster-datacenter-topology-get"
 version = "0.0.1"
 edition = "2018"
 authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
@@ -7,6 +7,9 @@ license = "Apache-2.0"
 
 [dependencies]
 chirp-client = { path = "../../../../../lib/chirp/client" }
+lazy_static = "1.4"
+nomad_client = { path = "../../../../../lib/nomad-client" }	
+nomad-util = { path = "../../../../../lib/nomad-util" }	
 prost = "0.10"
 rivet-operation = { path = "../../../../../lib/operation/core" }
 

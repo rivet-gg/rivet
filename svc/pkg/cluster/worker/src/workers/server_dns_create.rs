@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 
 use chirp_worker::prelude::*;
-use proto::backend::{self, pkg::*};
+use proto::backend::pkg::*;
 use cloudflare::{endpoints as cf, framework as cf_framework, framework::async_api::ApiClient};
 
 #[derive(sqlx::FromRow)]

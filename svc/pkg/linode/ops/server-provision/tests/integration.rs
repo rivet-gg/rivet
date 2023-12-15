@@ -21,6 +21,7 @@ async fn basic(ctx: TestCtx) {
 		}),
 		pool_type: pool_type as i32,
 		vlan_ip: vlan_ip.to_string(),
+		tags: vec!["test".to_string()],
 	})
 	.await
 	.unwrap();
