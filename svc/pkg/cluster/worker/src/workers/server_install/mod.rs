@@ -62,13 +62,17 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 
 	// Spawn blocking thread for ssh (no async support)
 	tokio::task::spawn_blocking(move || {
-		tracing::info!(%public_ip, "connecting ssh");
+		tracing::info!(?server_id, %public_ip, "connecting over ssh");
 		let tcp = TcpStream::connect((public_ip.as_str(), 22))?;
 		let mut sess = Session::new()?;
 		sess.set_tcp_stream(tcp);
-		sess.handshake()?;
+		
+		if let Err(err) = sess.handshake() {
+			tracing::error!(?server_id, ?err, "failed to connect over ssh");
+			retry_bail!("failed to connect over ssh");
+		}
 
-		tracing::info!("connected");
+		tracing::info!(?server_id, "connected");
 
 		sess.userauth_pubkey_memory("root", None, &private_key_openssh, None)?;
 		

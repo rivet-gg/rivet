@@ -29,6 +29,7 @@ util-cluster = { package = "rivet-util-cluster", path = "../util" }
 
 cluster-datacenter-get = { path = "../ops/datacenter-get" }
 cluster-datacenter-list = { path = "../ops/datacenter-list" }
+cluster-datacenter-topology-get = { path = "../ops/datacenter-topology-get" }
 linode-server-destroy = { path = "../../linode/ops/server-destroy" }
 linode-server-provision = { path = "../../linode/ops/server-provision" }
 

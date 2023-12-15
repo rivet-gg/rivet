@@ -2364,6 +2364,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cluster-datacenter-topology-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "lazy_static",
+ "nomad-util",
+ "nomad_client",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
 name = "cluster-default-update"
 version = "0.0.1"
 dependencies = [
@@ -2443,6 +2457,7 @@ dependencies = [
  "cloudflare",
  "cluster-datacenter-get",
  "cluster-datacenter-list",
+ "cluster-datacenter-topology-get",
  "include_dir",
  "indoc",
  "lazy_static",

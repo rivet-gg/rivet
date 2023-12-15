@@ -47,9 +47,6 @@ pub async fn handle(
 	.await?;
 
 	Ok(cluster::server_get::Response {
-		servers: servers
-			.into_iter()
-			.map(Into::into)
-			.collect::<Vec<_>>(),
+		servers: servers.into_iter().map(Into::into).collect::<Vec<_>>(),
 	})
 }

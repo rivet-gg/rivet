@@ -86,6 +86,7 @@ async fn worker(
 					hardware: Some(hardware.clone()),
 					pool_type: ctx.pool_type,
 					vlan_ip: vlan_ip.clone(),
+					tags: ctx.tags.clone(),
 				})
 				.await;
 

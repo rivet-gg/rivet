@@ -1,4 +1,8 @@
-use std::{cmp::Ordering, iter::{DoubleEndedIterator, Iterator}};
+use std::{
+	cmp::Ordering,
+	collections::HashMap,
+	iter::{DoubleEndedIterator, Iterator},
+};
 
 use chirp_worker::prelude::*;
 use futures_util::{StreamExt, TryStreamExt};
@@ -20,22 +24,13 @@ struct Server {
 }
 
 #[worker(name = "cluster-datacenter-scale")]
-async fn worker(ctx: &OperationContext<cluster::msg::datacenter_scale::Message>) -> GlobalResult<()> {
+async fn worker(
+	ctx: &OperationContext<cluster::msg::datacenter_scale::Message>,
+) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
 	let datacenter_id = unwrap_ref!(ctx.datacenter_id).as_uuid();
 
-	let ((cluster_id,), servers) = tokio::try_join!(
-		sql_fetch_one!(
-			[ctx, (Uuid,)]
-			"
-			SELECT
-				cluster_id
-			FROM db_cluster.datacenters
-			WHERE
-				datacenter_id = $1
-			",
-			datacenter_id,
-		),
+	let (servers, datacenter_res, topology_res) = tokio::try_join!(
 		// Get only ACTIVE servers
 		sql_fetch_all!(
 			[ctx, ServerRow]
@@ -46,32 +41,48 @@ async fn worker(ctx: &OperationContext<cluster::msg::datacenter_scale::Message>)
 			WHERE
 				datacenter_id = $1 AND
 				-- Filters out servers that are being destroyed/already destroyed
-				cloud_destroy_ts IS NULL
+				cloud_destroy_ts IS NULL AND
+				taint_ts IS NULL
 			",
 			datacenter_id,
 		),
+		op!([ctx] cluster_datacenter_get {
+			datacenter_ids: vec![datacenter_id.into()],
+		}),
+		op!([ctx] cluster_datacenter_topology_get {
+			datacenter_ids: vec![datacenter_id.into()],
+		}),
 	)?;
 
-	let servers = servers.into_iter()
-	.map(|row| {
-		Ok(Server {
-			server_id: row.server_id,
-			pool_type: unwrap!(backend::cluster::PoolType::from_i32(row.pool_type as i32)),
-			nomad_node_id: row.nomad_node_id,
-			is_draining: row.drain_ts.is_some(),
+	let mut servers = servers
+		.into_iter()
+		.map(|row| {
+			Ok(Server {
+				server_id: row.server_id,
+				pool_type: unwrap!(backend::cluster::PoolType::from_i32(row.pool_type as i32)),
+				nomad_node_id: row.nomad_node_id,
+				is_draining: row.drain_ts.is_some(),
+			})
 		})
-	})
-	.collect::<GlobalResult<Vec<_>>>()?;
+		.collect::<GlobalResult<Vec<_>>>()?;
 
-	// TODO: Sort servers by cpu usage using cluster-datacenter-topology-get
-	// servers.sort();
+	let topology = unwrap!(topology_res.datacenters.first());
+	let topology_by_server = topology
+		.servers
+		.iter()
+		.map(|server| Ok((unwrap_ref!(server.server_id).as_uuid(), server)))
+		.collect::<GlobalResult<HashMap<_, _>>>()?;
 
-	// Fetch datacenter config
-	let datacenter_res = op!([ctx] cluster_datacenter_get {
-		datacenter_ids: vec![datacenter_id.into()],
-	})
-	.await?;
+	// Sort servers by cpu usage using cluster-datacenter-topology-get
+	servers.sort_by(|a, b| {
+		let cpu_a = topology_by_server.get(&a.server_id).map(|x| x.cpu);
+		let cpu_b = topology_by_server.get(&b.server_id).map(|x| x.cpu);
+
+		cmp_floats(cpu_a, cpu_b)
+	});
+
 	let dc = unwrap!(datacenter_res.datacenters.first());
+	let cluster_id = unwrap_ref!(dc.cluster_id).as_uuid();
 
 	for pool in &dc.pools {
 		scale_servers(ctx, &crdb, cluster_id, dc, &servers, pool).await?;
@@ -91,7 +102,9 @@ async fn scale_servers(
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(pool.pool_type));
 	let desired_count = pool.desired_count as usize;
 
-	let servers_in_pool = servers.iter().filter(|server| server.pool_type == pool_type);
+	let servers_in_pool = servers
+		.iter()
+		.filter(|server| server.pool_type == pool_type);
 	let draining_servers = servers_in_pool
 		.clone()
 		.filter(|server| server.is_draining)
@@ -100,12 +113,30 @@ async fn scale_servers(
 
 	match desired_count.cmp(&active_server_count) {
 		Ordering::Less => match pool_type {
-			backend::cluster::PoolType::Job => scale_down_job_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool).await?,
-			backend::cluster::PoolType::Gg => scale_down_gg_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool).await?,
-			backend::cluster::PoolType::Ats => scale_down_ats_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool).await?,
+			backend::cluster::PoolType::Job => {
+				scale_down_job_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool)
+					.await?
+			}
+			backend::cluster::PoolType::Gg => {
+				scale_down_gg_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool)
+					.await?
+			}
+			backend::cluster::PoolType::Ats => {
+				scale_down_ats_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool)
+					.await?
+			}
 		},
 		Ordering::Greater => {
-			scale_up_servers(ctx, crdb, cluster_id, dc, draining_servers, active_server_count, pool).await?;
+			scale_up_servers(
+				ctx,
+				crdb,
+				cluster_id,
+				dc,
+				draining_servers,
+				active_server_count,
+				pool,
+			)
+			.await?;
 		}
 		Ordering::Equal => {}
 	}
@@ -142,8 +173,7 @@ async fn scale_down_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	if destroy_count != 0 {
 		tracing::info!(count=%destroy_count, "destroying servers");
 
-		// Because servers are ordered by cpu usage, this will destroy the servers with the least cpu usage
-		let destroy_candidates = no_nomad_servers.iter().rev().take(destroy_count);
+		let destroy_candidates = no_nomad_servers.iter().take(destroy_count);
 
 		// Mark servers for destruction in db
 		sql_execute!(
@@ -178,7 +208,6 @@ async fn scale_down_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	if drain_count != 0 {
 		tracing::info!(count=%drain_count, "draining servers");
 
-		// Because servers are ordered by cpu usage, this will drain the servers with the least cpu usage
 		let drain_candidates = nomad_servers.iter().rev().take(drain_count);
 
 		// Mark servers as draining in db
@@ -225,7 +254,9 @@ async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	let desired_count = pool.desired_count as usize;
 	let (gg_servers, job_servers) = servers_in_dc
 		.filter(|server| !matches!(server.pool_type, backend::cluster::PoolType::Ats))
-		.partition::<Vec<_>, _>(|server| matches!(server.pool_type, backend::cluster::PoolType::Gg));
+		.partition::<Vec<_>, _>(|server| {
+			matches!(server.pool_type, backend::cluster::PoolType::Gg)
+		});
 
 	tracing::info!(
 		?datacenter_id,
@@ -246,8 +277,7 @@ async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	if destroy_count != 0 {
 		tracing::info!(count=%destroy_count, "destroying servers");
 
-		// Because servers are ordered by cpu usage, this will destroy the servers with the least cpu usage
-		let destroy_candidates = gg_servers.iter().rev().take(destroy_count);
+		let destroy_candidates = gg_servers.iter().take(destroy_count);
 
 		// Mark servers for destruction in db
 		sql_execute!(
@@ -283,7 +313,10 @@ async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	Ok(())
 }
 
-async fn scale_down_ats_servers<'a, I: Iterator<Item = &'a Server> + DoubleEndedIterator + Clone>(
+async fn scale_down_ats_servers<
+	'a,
+	I: Iterator<Item = &'a Server> + DoubleEndedIterator + Clone,
+>(
 	ctx: &OperationContext<cluster::msg::datacenter_scale::Message>,
 	crdb: &CrdbPool,
 	dc: &backend::cluster::Datacenter,
@@ -307,8 +340,7 @@ async fn scale_down_ats_servers<'a, I: Iterator<Item = &'a Server> + DoubleEnded
 	if destroy_count != 0 {
 		tracing::info!(count=%destroy_count, "destroying servers");
 
-		// Because servers are ordered by cpu usage, this will destroy the servers with the least cpu usage
-		let destroy_candidates = servers.rev().take(destroy_count);
+		let destroy_candidates = servers.take(destroy_count);
 
 		// Mark servers for destruction in db
 		sql_execute!(
@@ -435,6 +467,7 @@ async fn scale_up_servers(
 					server_id: Some(server_id.into()),
 					pool_type: pool.pool_type,
 					provider: dc.provider,
+					tags: Vec::new(),
 				})
 				.await?;
 
@@ -446,4 +479,29 @@ async fn scale_up_servers(
 	}
 
 	Ok(())
+}
+
+fn cmp_floats(a: Option<f32>, b: Option<f32>) -> Ordering {
+	match a.partial_cmp(&b) {
+		Some(ord) => ord,
+		None => {
+			if let (Some(a), Some(b)) = (a, b) {
+				if a.is_nan() {
+					if b.is_nan() {
+						Ordering::Equal
+					} else {
+						Ordering::Less
+					}
+				} else if b.is_nan() {
+					Ordering::Greater
+				} else {
+					// unreachable
+					Ordering::Less
+				}
+			} else {
+				// unreachable
+				Ordering::Less
+			}
+		}
+	}
 }

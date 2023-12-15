@@ -27,7 +27,9 @@ pub async fn handle(
 				cluster_id,
 				server_id
 			FROM db_cluster.servers
-			WHERE cluster_id = ANY($1)
+			WHERE
+				cluster_id = ANY($1) AND
+				taint_ts IS NULL
 			",
 			&cluster_ids
 		)
@@ -42,7 +44,8 @@ pub async fn handle(
 			FROM db_cluster.servers
 			WHERE
 				cluster_id = ANY($1) AND
-				cloud_destroy_ts IS NULL
+				cloud_destroy_ts IS NULL AND
+				taint_ts IS NULL
 			",
 			&cluster_ids
 		)

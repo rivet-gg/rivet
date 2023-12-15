@@ -86,7 +86,9 @@ enum BuildDeliveryMethod {
 impl From<BuildDeliveryMethod> for backend::cluster::BuildDeliveryMethod {
 	fn from(value: BuildDeliveryMethod) -> backend::cluster::BuildDeliveryMethod {
 		match value {
-			BuildDeliveryMethod::TrafficServer => backend::cluster::BuildDeliveryMethod::TrafficServer,
+			BuildDeliveryMethod::TrafficServer => {
+				backend::cluster::BuildDeliveryMethod::TrafficServer
+			}
 			BuildDeliveryMethod::S3Direct => backend::cluster::BuildDeliveryMethod::S3Direct,
 		}
 	}
@@ -169,26 +171,15 @@ pub async fn run_from_env() -> GlobalResult<()> {
 		// Update existing datacenter
 		if existing_datacenter {
 			msg!([ctx] @wait cluster::msg::datacenter_update(datacenter.datacenter_id) {
-				config: Some(backend::cluster::Datacenter {
-					datacenter_id: datacenter_id_proto,
-					cluster_id: Some(cluster_id.into()),
-					name_id,
-					display_name: datacenter.display_name,
-
-					provider: Into::<backend::cluster::Provider>::into(datacenter.provider) as i32,
-					provider_datacenter_id: datacenter.provider_datacenter_name,
-
-					pools: datacenter.pools.into_iter().map(|(pool_type, pool)| {
-						backend::cluster::Pool {
-							pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
-							hardware: pool.hardware.into_iter().map(Into::into).collect::<Vec<_>>(),
-							desired_count: pool.desired_count,
-						}
-					}).collect::<Vec<_>>(),
-
-					build_delivery_method: Into::<backend::cluster::BuildDeliveryMethod>::into(datacenter.build_delivery_method) as i32,
-					drain_timeout: datacenter.drain_timeout,
-				}),
+				datacenter_id: datacenter_id_proto,
+				pools: datacenter.pools.into_iter().map(|(pool_type, pool)| {
+					backend::cluster::Pool {
+						pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
+						hardware: pool.hardware.into_iter().map(Into::into).collect::<Vec<_>>(),
+						desired_count: pool.desired_count,
+					}
+				}).collect::<Vec<_>>(),
+				drain_timeout: Some(datacenter.drain_timeout),
 			})
 			.await?;
 		}

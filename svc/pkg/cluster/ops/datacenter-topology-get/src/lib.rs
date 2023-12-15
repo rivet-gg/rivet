@@ -12,7 +12,7 @@ lazy_static::lazy_static! {
 #[derive(sqlx::FromRow)]
 struct Server {
 	server_id: Uuid,
-	cluster_id: Uuid,
+	datacenter_id: Uuid,
 	nomad_node_id: String,
 }
 
@@ -23,12 +23,12 @@ struct Stats {
 	disk: i64,
 }
 
-#[operation(name = "cluster-topology-get")]
+#[operation(name = "cluster-datacenter-topology-get")]
 pub async fn handle(
-	ctx: OperationContext<cluster::topology_get::Request>,
-) -> GlobalResult<cluster::topology_get::Response> {
-	let cluster_ids = ctx
-		.cluster_ids
+	ctx: OperationContext<cluster::datacenter_topology_get::Request>,
+) -> GlobalResult<cluster::datacenter_topology_get::Response> {
+	let datacenter_ids = ctx
+		.datacenter_ids
 		.iter()
 		.map(common::Uuid::as_uuid)
 		.collect::<Vec<_>>();
@@ -37,11 +37,13 @@ pub async fn handle(
 		[ctx, Server]
 		"
 		SELECT
-			server_id, cluster_id, nomad_node_id
+			server_id, datacenter_id, nomad_node_id
 		FROM db_cluster.servers
-		WHERE cluster_id = ANY($1)
+		WHERE
+			datacenter_id = ANY($1) AND
+			nomad_node_id IS NOT NULL
 		",
-		&cluster_ids,
+		&datacenter_ids,
 	)
 	.await?;
 
@@ -84,14 +86,14 @@ pub async fn handle(
 		},
 	)?;
 
-	// Fill in empty clusters
-	let mut clusters = cluster_ids
+	// Fill in empty datacenters
+	let mut datacenters = datacenter_ids
 		.iter()
-		.map(|cluster_id| {
+		.map(|datacenter_id| {
 			(
-				*cluster_id,
-				cluster::topology_get::response::Cluster {
-					cluster_id: Some((*cluster_id).into()),
+				*datacenter_id,
+				cluster::datacenter_topology_get::response::Datacenter {
+					datacenter_id: Some((*datacenter_id).into()),
 					servers: Vec::new(),
 				},
 			)
@@ -137,16 +139,16 @@ pub async fn handle(
 			disk: unwrap!(unwrap_ref!(resources.disk).disk_mb),
 		};
 
-		let cluster = clusters.entry(server.cluster_id).or_insert_with(|| {
-			cluster::topology_get::response::Cluster {
-				cluster_id: Some(server.cluster_id.into()),
+		let datacenter = datacenters.entry(server.datacenter_id).or_insert_with(|| {
+			cluster::datacenter_topology_get::response::Datacenter {
+				datacenter_id: Some(server.datacenter_id.into()),
 				servers: Vec::new(),
 			}
 		});
 
-		cluster
+		datacenter
 			.servers
-			.push(cluster::topology_get::response::Server {
+			.push(cluster::datacenter_topology_get::response::Server {
 				server_id: Some(server.server_id.into()),
 				node_id: server.nomad_node_id,
 				cpu: usage.cpu as f32 / total.cpu as f32,
@@ -155,7 +157,7 @@ pub async fn handle(
 			});
 	}
 
-	Ok(cluster::topology_get::Response {
-		clusters: clusters.into_values().collect::<Vec<_>>(),
+	Ok(cluster::datacenter_topology_get::Response {
+		datacenters: datacenters.into_values().collect::<Vec<_>>(),
 	})
 }
