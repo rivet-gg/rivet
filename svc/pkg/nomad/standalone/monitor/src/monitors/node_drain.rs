@@ -26,9 +26,9 @@ pub async fn handle(
 			.unwrap_or_default();
 
 		if is_last_drain_complete_message {
-			msg!([client] nomad::msg::monitor_node_drain_complete(node_id) {
-				node_id: node_id.to_owned(),
+			msg!([client] nomad::msg::monitor_node_drain_complete(server_id) {
 				server_id: Some(server_id.into()),
+				node_id: node_id.to_owned(),
 			})
 			.await?;
 		}
