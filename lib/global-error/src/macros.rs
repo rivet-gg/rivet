@@ -212,17 +212,90 @@ macro_rules! unwrap_ref {
 }
 pub use unwrap_ref;
 
+/// `AssertionErrorUnwrap` is a trait used for handling unwrapping of `Result`
+/// and `Option` types.
+///
+/// This trait provides a method `assertion_error_unwrap` that takes a `Result`
+/// or `Option` and returns a `Result`. If the original `Result` or `Option` is
+/// `Ok` or `Some`, it returns `Ok` with the unwrapped value. If it's `Err` or
+/// `None`, it returns `Err` with an `AssertionError::Unwrap` that includes a
+/// message and location.
+pub trait AssertionErrorUnwrap {
+	type WrappedType;
+
+	fn assertion_error_unwrap(
+		self,
+		message: &'static str,
+	) -> Result<Self::WrappedType, crate::ext::AssertionError>;
+}
+
+impl<T, E: core::fmt::Debug> AssertionErrorUnwrap for Result<T, E> {
+	type WrappedType = T;
+
+	/// Unwraps a `Result` or `Option`.
+	///
+	/// # Arguments
+	///
+	/// * `self` - The `Result` or `Option` to unwrap.
+	/// * `message` - A message to include in the `AssertionError::Unwrap` if
+	///   `self` is `Err` or `None`.
+	///
+	/// # Returns
+	///
+	/// * `Ok` with the unwrapped value if `self` is `Ok` or `Some`.
+	/// * `Err` with an `AssertionError::Unwrap` that includes `message` and the
+	///   location if `self` is `Err` or `None`.
+	fn assertion_error_unwrap(
+		self,
+		message: &'static str,
+	) -> Result<T, crate::ext::AssertionError> {
+		match self {
+			Ok(t) => Ok(t),
+			Err(e) => Err(crate::ext::AssertionError::Unwrap {
+				message, // format!("{}: {:?}", message, e).as_str(),
+				location: crate::location!(),
+			}),
+		}
+	}
+}
+
+impl<T> AssertionErrorUnwrap for Option<T> {
+	type WrappedType = T;
+
+	fn assertion_error_unwrap(
+		self,
+		message: &'static str,
+	) -> Result<T, crate::ext::AssertionError> {
+		match self {
+			Some(t) => Ok(t),
+			None => Err(Into::into(crate::ext::AssertionError::Unwrap {
+				message,
+				location: crate::location!(),
+			})),
+		}
+	}
+}
+
+/// Unwraps an `Option` and returns the contained value or exits early with an
+/// error.
+///
+/// # Examples
+///
+/// ```
+/// let value = unwrap!(option, "Value must exist");
+/// ```
+///
+/// With a default message:
+///
+/// ```
+/// let value = unwrap!(option);
+/// ```
 #[macro_export]
 macro_rules! unwrap {
 	($expr:expr, $msg:expr) => {{
-		#[allow(match_result_ok)]
-		if let Some(val) = $expr {
-			val
-		} else {
-			return Err(Into::into($crate::ext::AssertionError::Unwrap {
-				message: $msg,
-				location: $crate::location!(),
-			}));
+		match AssertionErrorUnwrap::assertion_error_unwrap($expr, $msg) {
+			Ok(val) => val,
+			Err(err) => return Err(err.into()),
 		}
 	}};
 	($expr:expr $(,)?) => {{

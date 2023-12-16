@@ -16,6 +16,7 @@ pub mod prelude {
 	pub use crate::{
 		ext::*,
 		macros::*,
+		macros::AssertionErrorUnwrap,
 		error::{GlobalError, GlobalResult},
 	};
 }
