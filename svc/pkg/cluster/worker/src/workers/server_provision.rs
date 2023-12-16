@@ -98,7 +98,7 @@ async fn worker(
 						})
 					}
 					Err(err) => {
-						tracing::warn!(?err, "failed to provision server, cleaning up");
+						tracing::warn!(?err, ?server_id, "failed to provision server, cleaning up");
 
 						destroy_server(ctx, server_id).await?;
 					}
