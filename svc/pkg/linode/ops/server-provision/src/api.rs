@@ -263,6 +263,7 @@ pub async fn create_firewall(
 			"devices": {
 				"linodes": [linode_id],
 			},
+			"tags": server.tags,
 		}))
 		.send()
 		.await?;

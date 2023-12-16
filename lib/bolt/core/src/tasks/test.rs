@@ -569,6 +569,7 @@ struct Data {
 	id: u64,
 }
 
+// TODO: This only deletes linodes and firewalls, the ssh key still remains
 async fn cleanup_servers(ctx: &ProjectContext) -> Result<()> {
 	eprintln!();
 	rivet_term::status::progress("Cleaning up servers", "");
@@ -600,45 +601,58 @@ async fn cleanup_servers(ctx: &ProjectContext) -> Result<()> {
 	// Deserialize
 	let res = res.json::<TaggedObjectsListResponse>().await?;
 
-	// Iterate through all objects and filter by linodes
-	futures_util::stream::iter(
-		res.data
-			.into_iter()
-			.filter(|obj| obj._type.as_str() == "linode"),
-	)
-	.map(|object| {
-		let client = client.clone();
-		let id = object.data.id;
+	futures_util::stream::iter(res.data)
+		.map(|object| {
+			let client = client.clone();
+			let obj_type = object._type;
+			let id = object.data.id;
 
-		async move {
-			eprintln!("destroying linode {}", id);
+			async move {
+				eprintln!("destroying {} {}", obj_type, id);
 
-			// Destroy linode
-			let res = client
-				.delete(format!("https://api.linode.com/v4/linode/instances/{}", id))
-				.send()
-				.await?;
+				// Destroy resource
+				let res = match obj_type.as_str() {
+					"linode" => {
+						client
+							.delete(format!("https://api.linode.com/v4/linode/instances/{}", id))
+							.send()
+							.await?
+					}
+					"firewall" => {
+						client
+							.delete(format!(
+								"https://api.linode.com/v4/networking/firewalls/{}",
+								id
+							))
+							.send()
+							.await?
+					}
+					_ => {
+						eprintln!("unknown type tagged with \"test\": {}", obj_type);
+						return Ok(());
+					}
+				};
 
-			if !res.status().is_success() {
-				// Resource does not exist to be deleted, not an error
-				if res.status() == reqwest::StatusCode::NOT_FOUND {
-					eprintln!("linode {} doesn't exist, skipping", id);
-					return Ok(());
+				if !res.status().is_success() {
+					// Resource does not exist to be deleted, not an error
+					if res.status() == reqwest::StatusCode::NOT_FOUND {
+						eprintln!("{} {} doesn't exist, skipping", obj_type, id);
+						return Ok(());
+					}
+
+					bail!(
+						"api request failed ({}):\n{}",
+						res.status(),
+						res.json::<ApiErrorResponse>().await?
+					);
 				}
 
-				bail!(
-					"api request failed ({}):\n{}",
-					res.status(),
-					res.json::<ApiErrorResponse>().await?
-				);
+				Ok(())
 			}
-
-			Ok(())
-		}
-	})
-	.buffer_unordered(8)
-	.try_collect::<Vec<_>>()
-	.await?;
+		})
+		.buffer_unordered(8)
+		.try_collect::<Vec<_>>()
+		.await?;
 
 	Ok(())
 }
