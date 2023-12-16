@@ -20,6 +20,13 @@ struct Server {
 #[worker(name = "cluster-server-install", timeout = 200)]
 async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
+
+	// Check for stale message
+	if ctx.req_dt() > util::duration::hours(1) {
+		tracing::warn!("discarding stale message");
+
+		return Ok(());
+	}
 	
 	let server = sql_fetch_one!(
 		[ctx, Server]
