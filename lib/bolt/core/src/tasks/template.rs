@@ -88,16 +88,28 @@ pub async fn generate(ctx: &mut ProjectContext, opts: TemplateOpts) -> Result<()
 			.join("types")
 			.join("src")
 			.join("lib.rs");
-		fs::OpenOptions::new()
+
+		if let Err(err) = fs::OpenOptions::new()
 			.create(true)
 			.write(true)
 			.open(lib_file)
-			.await?;
-		fs::OpenOptions::new()
+			.await
+		{
+			if !matches!(err.kind(), std::io::ErrorKind::NotFound) {
+				return Err(err.into());
+			}
+		}
+
+		if let Err(err) = fs::OpenOptions::new()
 			.create(true)
 			.write(true)
 			.open(alt_lib_file)
-			.await?;
+			.await
+		{
+			if !matches!(err.kind(), std::io::ErrorKind::NotFound) {
+				return Err(err.into());
+			}
+		}
 	}
 
 	// Build templating manager
@@ -306,7 +318,8 @@ async fn generate_worker_partial(
 		fs::write(
 			worker_mod_path,
 			&format!(
-				"{}\n\t{},{}",
+				"pub mod {};\n{}\n\t{},{}",
+				snake_name,
 				&worker_mod_str[..bracket_idx + 1],
 				snake_name,
 				&worker_mod_str[bracket_idx + 1..]
