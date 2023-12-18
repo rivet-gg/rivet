@@ -4,7 +4,7 @@ use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
 
 #[worker_test]
-async fn datacenter_taint(ctx: TestCtx) {
+async fn datacenter_taint_complete(ctx: TestCtx) {
 	if !util::feature::server_provision() {
 		return;
 	}
@@ -32,7 +32,9 @@ async fn datacenter_taint(ctx: TestCtx) {
 		datacenter_id: Some(datacenter_id.into()),
 		pools: vec![backend::cluster::Pool {
 			pool_type: backend::cluster::PoolType::Job as i32,
-			hardware: Vec::new(),
+			hardware: vec![backend::cluster::Hardware {
+				provider_hardware: "g6-nanode-1".to_string(),
+			}],
 			desired_count: 1,
 		}],
 		drain_timeout: None,
@@ -41,26 +43,31 @@ async fn datacenter_taint(ctx: TestCtx) {
 	.unwrap();
 
 	// Taint datacenter
-	msg!([ctx] cluster::msg::datacenter_taint(datacenter_id) -> cluster::msg::datacenter_scale {
+	msg!([ctx] @notrace cluster::msg::datacenter_taint(datacenter_id) -> cluster::msg::server_destroy(server_id) {
 		datacenter_id: Some(datacenter_id.into()),
-	})
-	.await
-	.unwrap();
+	}).await.unwrap();
 
 	// Validate state
-	let (taint_ts,) = sql_fetch_one!(
-		[ctx, (Option<i64>,)]
+	let server_rows = sql_fetch_all!(
+		[ctx, (Uuid, Option<i64>)]
 		"
-		SELECT taint_ts
+		SELECT server_id, cloud_destroy_ts
 		FROM db_cluster.servers
-		WHERE server_id = $1
+		WHERE datacenter_id = $1
 		",
-		server_id,
+		datacenter_id,
 	)
 	.await
 	.unwrap();
 
-	taint_ts.expect("did not taint server");
+	assert_eq!(2, server_rows.len(), "did not provision new server");
+	assert!(
+		server_rows.iter().any(
+			|(row_server_id, cloud_destroy_ts)| row_server_id == &server_id
+				&& cloud_destroy_ts.is_some()
+		),
+		"did not destroy old server"
+	);
 
 	// Downscale datacenter (so it destroys the new server)
 	msg!([ctx] cluster::msg::datacenter_update(datacenter_id) -> cluster::msg::datacenter_scale {
@@ -113,7 +120,7 @@ async fn setup(
 		}],
 
 		build_delivery_method: backend::cluster::BuildDeliveryMethod::TrafficServer as i32,
-		drain_timeout: 0,
+		drain_timeout: 3600,
 	};
 
 	msg!([ctx] cluster::msg::datacenter_create(datacenter_id) -> cluster::msg::datacenter_scale {

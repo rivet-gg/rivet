@@ -126,7 +126,7 @@ async fn worker(
 	.await?;
 
 	if provision_res.is_none() {
-		tracing::info!(?server_id, "failed to provision server");
+		tracing::info!(?server_id, hardware_options=?pool.hardware.len(), "failed to provision server");
 		bail!("failed to provision server");
 	}
 

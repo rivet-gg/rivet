@@ -1,5 +1,6 @@
 chirp_worker::workers![
 	datacenter_taint,
+	datacenter_taint_complete,
 	server_dns_create,
 	nomad_node_drain_complete,
 	datacenter_update,
