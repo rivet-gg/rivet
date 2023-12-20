@@ -1,24 +1,18 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use chirp_worker::prelude::*;
-use proto::backend;
-use maplit::hashmap;
 use indoc::formatdoc;
-
-pub struct ServerCtx {
-	pub server_id: Uuid,
-	pub datacenter_id: Uuid,
-	pub cluster_id: Uuid,
-	pub provider_datacenter_id: String,
-	pub name: String,
-	pub pool_type: backend::cluster::PoolType,
-	pub vlan_ip: String,
-}
+use maplit::hashmap;
+use proto::backend;
 
 pub mod components;
 
-pub async fn gen(
-	server: &ServerCtx,
+// This script installs all of the software that doesn't need to know anything about the server running
+// it (doesn't need to know server id, datacenter id, vlan ip, etc)
+pub async fn gen_install(
+	pool_type: backend::cluster::PoolType,
+	server_token: &str,
+	initialize_immediately: bool,
 ) -> GlobalResult<String> {
 	let mut script = Vec::new();
 
@@ -40,7 +34,7 @@ pub async fn gen(
 	);
 
 	// MARK: Specific pool components
-	match server.pool_type {
+	match pool_type {
 		backend::cluster::PoolType::Job => {
 			script.push(components::docker());
 			script.push(components::lz4());
@@ -48,8 +42,8 @@ pub async fn gen(
 			script.push(components::umoci());
 			script.push(components::cnitool());
 			script.push(components::cni_plugins());
-			script.push(components::nomad(server));
-	
+			script.push(components::nomad_install());
+
 			prometheus_targets.insert(
 				"nomad".into(),
 				components::VectorPrometheusTarget {
@@ -59,19 +53,6 @@ pub async fn gen(
 			);
 		}
 		backend::cluster::PoolType::Gg => {
-			script.push(components::traefik_instance(components::TraefikInstance {
-				name: "game_guard".into(),
-				static_config: gg_traefik_static_config(server).await?,
-				dynamic_config: String::new(),
-				tls_certs: hashmap! {
-					"letsencrypt_rivet_job".into() => components::TlsCert {
-						cert_pem: util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM")?,
-						key_pem: util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM")?,
-					},
-				},
-				tcp_server_transports: Default::default(),
-			}));
-	
 			prometheus_targets.insert(
 				"game_guard".into(),
 				components::VectorPrometheusTarget {
@@ -82,7 +63,7 @@ pub async fn gen(
 		}
 		backend::cluster::PoolType::Ats => {
 			script.push(components::docker());
-			script.push(components::traffic_server(server).await?);
+			script.push(components::traffic_server_install());
 		}
 	}
 
@@ -92,17 +73,63 @@ pub async fn gen(
 			prometheus_targets,
 		}));
 	}
+	script.push(components::rivet_install_complete(
+		server_token,
+		initialize_immediately,
+	)?);
 
 	let joined = script.join("\n\necho \"======\"\n\n");
 	Ok(format!("#!/usr/bin/env bash\nset -eu\n\n{joined}"))
 }
 
-async fn gg_traefik_static_config(server: &ServerCtx) -> GlobalResult<String> {
+// This script is run by systemd on startup and gets the server's data from the Rivet API
+pub async fn gen_hook(server_token: &str) -> GlobalResult<String> {
+	let mut script = Vec::new();
+
+	script.push(components::rivet_fetch_info(server_token)?);
+
+	let joined = script.join("\n\necho \"======\"\n\n");
+	Ok(format!("#!/usr/bin/env bash\nset -eu\n\n{joined}"))
+}
+
+// This script is templated on the server itself after fetching server data from the Rivet API
+// (see gen_hook) After being templated, it is run.
+pub async fn gen_initialize(pool_type: backend::cluster::PoolType) -> GlobalResult<String> {
+	let mut script = Vec::new();
+
+	// MARK: Specific pool components
+	match pool_type {
+		backend::cluster::PoolType::Job => {
+			script.push(components::nomad_configure());
+		}
+		backend::cluster::PoolType::Gg => {
+			script.push(components::traefik_instance(components::TraefikInstance {
+				name: "game_guard".into(),
+				static_config: gg_traefik_static_config().await?,
+				dynamic_config: String::new(),
+				tls_certs: hashmap! {
+					"letsencrypt_rivet_job".into() => components::TlsCert {
+						cert_pem: util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM")?,
+						key_pem: util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM")?,
+					},
+				},
+				tcp_server_transports: Default::default(),
+			}));
+		}
+		backend::cluster::PoolType::Ats => {
+			script.push(components::traffic_server_configure().await?);
+		}
+	}
+
+	let joined = script.join("\n\necho \"======\"\n\n");
+	Ok(format!("#!/usr/bin/env bash\nset -eu\n\n{joined}"))
+}
+
+async fn gg_traefik_static_config() -> GlobalResult<String> {
 	let api_route_token = &util::env::read_secret(&["rivet", "api_route", "token"]).await?;
 	let http_provider_endpoint = format!(
-		"http://127.0.0.1:{port}/traefik/config/game-guard?token={api_route_token}&datacenter={datacenter}",
+		"http://127.0.0.1:{port}/traefik/config/game-guard?token={api_route_token}&datacenter=__DATACENTER_ID__",
 		port = components::TUNNEL_API_ROUTE_PORT,
-		datacenter = server.datacenter_id,
 	);
 
 	let mut config = formatdoc!(

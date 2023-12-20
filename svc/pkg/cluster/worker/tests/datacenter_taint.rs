@@ -32,7 +32,9 @@ async fn datacenter_taint(ctx: TestCtx) {
 		datacenter_id: Some(datacenter_id.into()),
 		pools: vec![backend::cluster::Pool {
 			pool_type: backend::cluster::PoolType::Job as i32,
-			hardware: Vec::new(),
+			hardware: vec![backend::cluster::Hardware {
+				provider_hardware: "g6-nanode-1".to_string(),
+			}],
 			desired_count: 1,
 		}],
 		drain_timeout: None,
@@ -40,6 +42,8 @@ async fn datacenter_taint(ctx: TestCtx) {
 	.await
 	.unwrap();
 
+	// TODO: The servers brought up by this taint (and subsequent scale) aren't tagged as "test" so they wont
+	// be garbage collected if the test fails
 	// Taint datacenter
 	msg!([ctx] cluster::msg::datacenter_taint(datacenter_id) -> cluster::msg::datacenter_scale {
 		datacenter_id: Some(datacenter_id.into()),

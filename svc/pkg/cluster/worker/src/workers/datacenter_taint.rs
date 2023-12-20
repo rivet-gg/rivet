@@ -1,7 +1,5 @@
-use std::time::Duration;
-
 use chirp_worker::prelude::*;
-use proto::backend::{self, pkg::*};
+use proto::backend::pkg::*;
 
 #[worker(name = "cluster-datacenter-taint", timeout = 200)]
 async fn worker(ctx: &OperationContext<cluster::msg::datacenter_taint::Message>) -> GlobalResult<()> {

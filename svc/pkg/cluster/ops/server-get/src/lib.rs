@@ -7,6 +7,7 @@ struct Server {
 	datacenter_id: Uuid,
 	cluster_id: Uuid,
 	pool_type: i64,
+	vlan_ip: Option<String>,
 	public_ip: Option<String>,
 	cloud_destroy_ts: Option<i64>,
 }
@@ -16,8 +17,9 @@ impl From<Server> for backend::cluster::Server {
 		backend::cluster::Server {
 			server_id: Some(value.server_id.into()),
 			datacenter_id: Some(value.datacenter_id.into()),
-			cluster_id: Some(value.server_id.into()),
+			cluster_id: Some(value.cluster_id.into()),
 			pool_type: value.pool_type as i32,
+			vlan_ip: value.vlan_ip,
 			public_ip: value.public_ip,
 			cloud_destroy_ts: value.cloud_destroy_ts,
 		}
@@ -38,7 +40,13 @@ pub async fn handle(
 		[ctx, Server]
 		"
 		SELECT
-			server_id, datacenter_id, cluster_id, pool_type, public_ip, cloud_destroy_ts
+			server_id,
+			datacenter_id,
+			cluster_id,
+			pool_type,
+			vlan_ip,
+			public_ip,
+			cloud_destroy_ts
 		FROM db_cluster.servers
 		WHERE server_id = ANY($1)
 		",

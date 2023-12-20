@@ -160,6 +160,7 @@ Class | Method | HTTP request | Description
 *PortalGamesApi* | [**portal_games_get_game_profile**](docs/PortalGamesApi.md#portal_games_get_game_profile) | **GET** /portal/games/{game_name_id}/profile | 
 *PortalNotificationsApi* | [**portal_notifications_register_notifications**](docs/PortalNotificationsApi.md#portal_notifications_register_notifications) | **POST** /portal/notifications/register | 
 *PortalNotificationsApi* | [**portal_notifications_unregister_notifications**](docs/PortalNotificationsApi.md#portal_notifications_unregister_notifications) | **DELETE** /portal/notifications/register | 
+*ProvisionServersServersApi* | [**provision_servers_servers_get_server_info**](docs/ProvisionServersServersApi.md#provision_servers_servers_get_server_info) | **GET** /servers/{ip}/info | 
 
 
 ## Documentation For Models
@@ -453,6 +454,7 @@ Class | Method | HTTP request | Description
  - [PortalNotificationRegisterService](docs/PortalNotificationRegisterService.md)
  - [PortalNotificationUnregisterService](docs/PortalNotificationUnregisterService.md)
  - [PortalRegisterNotificationsRequest](docs/PortalRegisterNotificationsRequest.md)
+ - [ProvisionServersGetServerInfoResponse](docs/ProvisionServersGetServerInfoResponse.md)
  - [UploadPrepareFile](docs/UploadPrepareFile.md)
  - [UploadPresignedRequest](docs/UploadPresignedRequest.md)
  - [ValidationError](docs/ValidationError.md)

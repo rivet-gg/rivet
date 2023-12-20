@@ -32,6 +32,7 @@ cluster-datacenter-list = { path = "../ops/datacenter-list" }
 cluster-datacenter-topology-get = { path = "../ops/datacenter-topology-get" }
 linode-server-destroy = { path = "../../linode/ops/server-destroy" }
 linode-server-provision = { path = "../../linode/ops/server-provision" }
+token-create = { path = "../../token/ops/create" }
 
 [dependencies.sqlx]
 version = "0.7"

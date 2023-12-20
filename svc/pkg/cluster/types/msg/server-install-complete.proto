@@ -6,8 +6,9 @@ import "proto/common.proto";
 
 /// name = "msg-cluster-server-install-complete"
 /// parameters = [
-/// 	{ name = "server_id" },
+/// 	{ name = "public_ip" },
 /// ]
 message Message {
-    rivet.common.Uuid server_id = 1;
+    // If set in request
+    optional rivet.common.Uuid server_id = 1;
 }

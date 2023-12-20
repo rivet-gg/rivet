@@ -22,3 +22,16 @@ pub fn full_server_name(
 		server_name(provider_datacenter_id, pool_type),
 	)
 }
+
+pub fn image_variant(provider: backend::cluster::Provider, provider_datacenter_id: &str, pool_type: backend::cluster::PoolType) -> String {
+	let provider_str = match provider {
+		backend::cluster::Provider::Linode => "linode",
+	};
+	let pool_type_str = match pool_type {
+		backend::cluster::PoolType::Job => "job",
+		backend::cluster::PoolType::Gg => "gg",
+		backend::cluster::PoolType::Ats => "ats",
+	};
+
+	format!("{provider_str}-{provider_datacenter_id}-{pool_type_str}")
+}

@@ -89,9 +89,9 @@ pub async fn create_instance(
 	server: &ServerCtx,
 	ssh_key: &str,
 ) -> GlobalResult<CreateInstanceResponse> {
-	tracing::info!("creating linode instance");
-
 	let ns = util::env::namespace();
+
+	tracing::info!("creating linode instance");
 
 	let res = client
 		.post("https://api.linode.com/v4/linode/instances")
@@ -126,6 +126,7 @@ pub async fn create_disks(
 	client: &reqwest::Client,
 	ssh_key: &str,
 	linode_id: u64,
+	image: &str,
 	server_disk_size: u64,
 ) -> GlobalResult<CreateDisksResponse> {
 	tracing::info!("creating boot disk");
@@ -140,7 +141,7 @@ pub async fn create_disks(
 			"size": server_disk_size - 512,
 			"authorized_keys": vec![ssh_key],
 			"root_pass": generate_password(16),
-			"image": "linode/debian11",
+			"image": image,
 		}))
 		.send()
 		.await?;

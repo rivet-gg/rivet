@@ -1,11 +1,9 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use chirp_worker::prelude::*;
 use include_dir::{include_dir, Dir};
 use indoc::{formatdoc, indoc};
 use s3_util::Provider;
-
-use super::ServerCtx;
 
 /// Service that gets exposed from the Traefik tunnel.
 pub struct TunnelService {
@@ -97,17 +95,16 @@ pub fn cni_plugins() -> String {
 	include_str!("files/cni_plugins.sh").to_string()
 }
 
-pub fn nomad(server: &ServerCtx) -> String {
+pub fn nomad_install() -> String {
+	include_str!("files/nomad_install.sh").to_string()
+}
+
+pub fn nomad_configure() -> String {
 	let servers = &["127.0.0.1:5000", "127.0.0.1:5001", "127.0.0.1:5002"];
 
-	include_str!("files/nomad.sh")
-		.replace("__NODE_NAME__", &server.name)
-		.replace("__SERVER_ID__", &server.server_id.to_string())
-		.replace("__DATACENTER_ID__", &server.datacenter_id.to_string())
-		.replace("__CLUSTER_ID__", &server.cluster_id.to_string())
+	include_str!("files/nomad_configure.sh")
 		// HACK: Hardcoded to Linode
 		.replace("__PUBLIC_IFACE__", "eth0")
-		.replace("__VLAN_IP__", &server.vlan_ip.to_string())
 		// HACK: Hardcoded to Linode
 		.replace("__VLAN_IFACE__", "eth1")
 		.replace(
@@ -274,7 +271,9 @@ pub fn traefik_tunnel() -> GlobalResult<String> {
 	Ok(traefik_instance(TraefikInstance {
 		name: "tunnel".into(),
 		static_config: tunnel_traefik_static_config(),
-		dynamic_config: tunnel_traefik_dynamic_config(&util::env::var("K8S_TRAEFIK_TUNNEL_EXTERNAL_IP")?),
+		dynamic_config: tunnel_traefik_dynamic_config(&util::env::var(
+			"K8S_TRAEFIK_TUNNEL_EXTERNAL_IP",
+		)?),
 		tls_certs: Default::default(),
 		tcp_server_transports,
 	}))
@@ -383,9 +382,15 @@ pub fn vector(config: &VectorConfig) -> String {
 	include_str!("files/vector.sh").replace("__VECTOR_CONFIG__", &config_str)
 }
 
-pub async fn traffic_server(server: &ServerCtx) -> GlobalResult<String> {
+const TRAFFIC_SERVER_IMAGE: &str = "ghcr.io/rivet-gg/apache-traffic-server:9934dc2";
+
+pub fn traffic_server_install() -> String {
+	include_str!("files/traffic_server_install.sh").replace("__IMAGE__", TRAFFIC_SERVER_IMAGE)
+}
+
+pub async fn traffic_server_configure() -> GlobalResult<String> {
 	// Write config to files
-	let config = traffic_server_config(server).await?;
+	let config = traffic_server_config().await?;
 	let mut config_scripts = config
 		.into_iter()
 		.map(|(k, v)| format!("cat << 'EOF' > /etc/trafficserver/{k}\n{v}\nEOF\n"))
@@ -403,11 +408,8 @@ pub async fn traffic_server(server: &ServerCtx) -> GlobalResult<String> {
 		.to_string(),
 	);
 
-	let script = include_str!("files/traffic_server.sh")
-		.replace(
-			"__IMAGE__",
-			"ghcr.io/rivet-gg/apache-traffic-server:9934dc2",
-		)
+	let script = include_str!("files/traffic_server_configure.sh")
+		.replace("__IMAGE__", TRAFFIC_SERVER_IMAGE)
 		.replace("__CONFIG__", &config_scripts.join("\n\n"));
 
 	Ok(script)
@@ -417,7 +419,7 @@ static TRAFFIC_SERVER_CONFIG_DIR: Dir<'_> = include_dir!(
 	"$CARGO_MANIFEST_DIR/src/workers/server_install/install_scripts/files/traffic_server"
 );
 
-async fn traffic_server_config(server: &ServerCtx) -> GlobalResult<Vec<(String, String)>> {
+async fn traffic_server_config() -> GlobalResult<Vec<(String, String)>> {
 	// Static files
 	let mut config_files = Vec::<(String, String)>::new();
 	for entry in TRAFFIC_SERVER_CONFIG_DIR.entries() {
@@ -425,8 +427,7 @@ async fn traffic_server_config(server: &ServerCtx) -> GlobalResult<Vec<(String, 
 			let key = unwrap!(unwrap!(file.path().file_name()).to_str()).to_string();
 
 			let value = unwrap!(file.contents_utf8());
-			let value = value.replace("__VLAN_IP__", &server.vlan_ip.to_string());
-			config_files.push((key, value));
+			config_files.push((key, value.to_string()));
 		}
 	}
 
@@ -520,4 +521,27 @@ async fn gen_s3_provider(
 		append_remap: remap,
 		config_files,
 	})
+}
+
+pub fn rivet_install_complete(
+	server_token: &str,
+	initialize_immediately: bool,
+) -> GlobalResult<String> {
+	let domain_main_api = unwrap!(util::env::domain_main_api(), "no cdn");
+
+	Ok(include_str!("files/rivet_install_complete.sh")
+		.replace(
+			"__INITIALIZE_IMMEDIATELY__",
+			&initialize_immediately.to_string(),
+		)
+		.replace("__SERVER_TOKEN__", server_token)
+		.replace("__DOMAIN_MAIN_API__", &domain_main_api))
+}
+
+pub fn rivet_fetch_info(server_token: &str) -> GlobalResult<String> {
+	let domain_main_api = unwrap!(util::env::domain_main_api(), "no cdn");
+
+	Ok(include_str!("files/rivet_fetch_info.sh")
+		.replace("__SERVER_TOKEN__", server_token)
+		.replace("__DOMAIN_MAIN_API__", &domain_main_api))
 }

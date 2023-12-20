@@ -8474,6 +8474,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+  /servers/{ip}/info:
+    get:
+      description: Completes the email verification process.
+      operationId: provision_servers_servers_getServerInfo
+      tags:
+        - ProvisionServersServers
+      parameters:
+        - name: ip
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvisionServersGetServerInfoResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
 components:
   schemas:
     AdminLoginRequest:
@@ -12812,6 +12868,28 @@ components:
           $ref: '#/components/schemas/PortalNotificationRegisterService'
       required:
         - service
+    ProvisionServersGetServerInfoResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        server_id:
+          type: string
+          format: uuid
+        datacenter_id:
+          type: string
+          format: uuid
+        cluster_id:
+          type: string
+          format: uuid
+        vlan_ip:
+          type: string
+      required:
+        - name
+        - server_id
+        - datacenter_id
+        - cluster_id
+        - vlan_ip
     UploadPresignedRequest:
       type: object
       description: >-

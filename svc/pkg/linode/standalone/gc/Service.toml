@@ -1,0 +1,9 @@
+[service]
+name = "linode-gc"
+
+[runtime]
+kind = "rust"
+
+[periodic]
+cron = "0 0 * * *"
+

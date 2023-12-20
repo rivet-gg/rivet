@@ -4221,6 +4221,28 @@ components:
       required:
       - service
       type: object
+    ProvisionServersGetServerInfoResponse:
+      properties:
+        cluster_id:
+          format: uuid
+          type: string
+        datacenter_id:
+          format: uuid
+          type: string
+        name:
+          type: string
+        server_id:
+          format: uuid
+          type: string
+        vlan_ip:
+          type: string
+      required:
+      - name
+      - server_id
+      - datacenter_id
+      - cluster_id
+      - vlan_ip
+      type: object
     Timestamp:
       description: RFC3339 timestamp
       type: string
@@ -12671,6 +12693,62 @@ paths:
       security: *id001
       tags:
       - PortalNotifications
+  /servers/{ip}/info:
+    get:
+      description: Completes the email verification process.
+      operationId: provision_servers_servers_getServerInfo
+      parameters:
+      - in: path
+        name: ip
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvisionServersGetServerInfoResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      tags:
+      - ProvisionServersServers
 servers:
 - description: Production
   url: https://api.rivet.gg

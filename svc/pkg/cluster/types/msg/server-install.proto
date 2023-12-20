@@ -3,11 +3,17 @@ syntax = "proto3";
 package rivet.backend.pkg.cluster.msg.server_install;
 
 import "proto/common.proto";
+import "proto/backend/cluster.proto";
 
 /// name = "msg-cluster-server-install"
 /// parameters = [
-/// 	{ name = "server_id" },
+/// 	{ name = "public_ip" },
 /// ]
 message Message {
-    rivet.common.Uuid server_id = 1;
+    string public_ip = 1;
+    rivet.backend.cluster.PoolType pool_type = 2;
+    // Only if installing on a "server" (see cluster database). Used to check if
+    // the server is currently being deleted
+    optional rivet.common.Uuid server_id = 3;
+    bool initialize_immediately = 4;
 }

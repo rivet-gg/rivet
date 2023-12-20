@@ -11,7 +11,7 @@ import "proto/backend/cluster.proto";
 /// ]
 message Message {
     rivet.common.Uuid datacenter_id = 1;
+    // This property overwrites the existing pool list entirely
     repeated rivet.backend.cluster.Pool pools = 2;
     optional uint64 drain_timeout = 3;
-    // TODO: Any other properties?
 }

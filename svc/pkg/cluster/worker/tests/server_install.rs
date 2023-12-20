@@ -13,6 +13,7 @@ async fn server_install(ctx: TestCtx) {
 
 	let dc = setup(&ctx, server_id, datacenter_id, cluster_id).await;
 
+	// TODO: Fix cluster::msg::server_install_complete (it uses a public ip now)
 	msg!([ctx] cluster::msg::server_provision(server_id) -> cluster::msg::server_install_complete {
 		cluster_id: Some(cluster_id.into()),
 		datacenter_id: Some(datacenter_id.into()),

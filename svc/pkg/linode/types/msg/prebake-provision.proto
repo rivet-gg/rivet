@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.linode.msg.prebake_provision;
+
+import "proto/common.proto";
+
+/// name = "msg-linode-prebake-provision"
+/// parameters = [
+/// 	{ name = "user_id" },
+/// ]
+message Message {
+
+}
