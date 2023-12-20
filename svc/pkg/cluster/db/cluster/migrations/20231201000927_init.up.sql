@@ -36,7 +36,10 @@ CREATE TABLE servers (
 	drain_ts INT,
 	-- When the server was marked to be deleted by rivet
 	cloud_destroy_ts INT,
-	taint_ts INT
+	taint_ts INT,
+
+	-- Used when determining which server this ip belongs to
+	INDEX (public_ip)
 );
 
 -- Stores data for destroying linode resources
@@ -51,4 +54,20 @@ CREATE TABLE linode_misc (
 CREATE TABLE cloudflare_misc (
 	server_id UUID PRIMARY KEY REFERENCES servers (server_id),
 	dns_record_id TEXT NOT NULL
+);
+
+CREATE TABLE server_images (
+	-- A string denoting what type of image this is (ex. "linode-us-southeast-job")
+	variant TEXT PRIMARY KEY,
+	create_ts INT NOT NULL,
+	image_id TEXT,
+);
+
+CREATE TABLE server_images_linode_misc (
+	variant TEXT PRIMARY KEY,
+	linode_id INT NOT NULL,
+	disk_id INT,
+	public_ip TEXT,
+
+	INDEX (public_ip)
 );

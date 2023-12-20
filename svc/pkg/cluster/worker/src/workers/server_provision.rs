@@ -5,6 +5,7 @@ use rand::Rng;
 struct ProvisionResponse {
 	provider_server_id: String,
 	public_ip: String,
+	already_installed: bool,
 }
 
 #[worker(name = "cluster-server-provision")]
@@ -95,6 +96,7 @@ async fn worker(
 						break Some(ProvisionResponse {
 							provider_server_id: res.provider_server_id.clone(),
 							public_ip: res.public_ip.clone(),
+							already_installed: res.already_installed,
 						})
 					}
 					Err(err) => {
@@ -125,23 +127,28 @@ async fn worker(
 	)
 	.await?;
 
-	if provision_res.is_none() {
+	if let Some(provision_res) = provision_res {
+		// Install components
+		if !provision_res.already_installed {
+			msg!([ctx] cluster::msg::server_install(&provision_res.public_ip) {
+				public_ip: provision_res.public_ip,
+				pool_type: ctx.pool_type,
+				server_id: ctx.server_id,
+				initialize_immediately: true,
+			})
+			.await?;
+		}
+	
+		// Create DNS record
+		if matches!(pool_type, backend::cluster::PoolType::Gg) {
+			msg!([ctx] cluster::msg::server_dns_create(server_id) {
+				server_id: ctx.server_id,
+			})
+			.await?;
+		}
+	} else {
 		tracing::info!(?server_id, hardware_options=?pool.hardware.len(), "failed to provision server");
 		bail!("failed to provision server");
-	}
-
-	// Install components
-	msg!([ctx] cluster::msg::server_install(server_id) {
-		server_id: ctx.server_id,
-	})
-	.await?;
-
-	// Create DNS record
-	if matches!(pool_type, backend::cluster::PoolType::Gg) {
-		msg!([ctx] cluster::msg::server_dns_create(server_id) {
-			server_id: ctx.server_id,
-		})
-		.await?;
 	}
 
 	Ok(())

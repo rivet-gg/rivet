@@ -1,0 +1,8 @@
+[service]
+name = "linode-worker"
+
+[runtime]
+kind = "rust"
+
+[consumer]
+

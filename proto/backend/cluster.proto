@@ -57,9 +57,10 @@ message Server {
     rivet.common.Uuid datacenter_id = 2;
     rivet.common.Uuid cluster_id = 3;
     PoolType pool_type = 4;
-    optional string public_ip = 5;
+    optional string vlan_ip = 5;
+    optional string public_ip = 6;
 
-    optional int64 cloud_destroy_ts = 6;
+    optional int64 cloud_destroy_ts = 7;
 
     // TODO: Add the rest
 }

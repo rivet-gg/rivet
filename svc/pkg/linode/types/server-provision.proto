@@ -17,4 +17,5 @@ message Request {
 message Response {
     string provider_server_id = 1;
     string public_ip = 2;
+    bool already_installed = 3;
 }

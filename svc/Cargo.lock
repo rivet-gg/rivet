@@ -783,6 +783,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "api-provision"
+version = "0.0.1"
+dependencies = [
+ "api-helper",
+ "async-trait",
+ "chirp-client",
+ "chrono",
+ "cluster-datacenter-get",
+ "cluster-server-get",
+ "cluster-server-resolve-for-ip",
+ "http",
+ "hyper",
+ "lazy_static",
+ "prost 0.10.4",
+ "rivet-api",
+ "rivet-cache",
+ "rivet-claims",
+ "rivet-health-checks",
+ "rivet-operation",
+ "rivet-pools",
+ "rivet-util-cluster",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "api-route"
 version = "0.0.1"
 dependencies = [
@@ -2433,6 +2465,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cluster-server-resolve-for-ip"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
 name = "cluster-topology-get"
 version = "0.0.1"
 dependencies = [
@@ -2476,6 +2519,7 @@ dependencies = [
  "sqlx",
  "ssh2",
  "thiserror",
+ "token-create",
 ]
 
 [[package]]
@@ -4842,6 +4886,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
 
 [[package]]
+name = "linode-gc"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "rivet-connection",
+ "rivet-health-checks",
+ "rivet-metrics",
+ "rivet-operation",
+ "rivet-runtime",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "linode-server-destroy"
 version = "0.0.1"
 dependencies = [
@@ -4870,6 +4930,20 @@ dependencies = [
  "serde_json",
  "sqlx",
  "ssh-key",
+]
+
+[[package]]
+name = "linode-worker"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "chrono",
+ "lazy_static",
+ "rivet-convert",
+ "rivet-health-checks",
+ "rivet-metrics",
+ "rivet-runtime",
 ]
 
 [[package]]

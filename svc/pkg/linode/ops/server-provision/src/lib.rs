@@ -1,9 +1,8 @@
-use proto::backend::{cluster::PoolType, pkg::*};
+use proto::backend::{self, cluster::PoolType, pkg::*};
 use reqwest::header;
 use rivet_operation::prelude::*;
 
 mod api;
-use api::*;
 
 struct ServerCtx {
 	provider_datacenter_id: String,
@@ -30,7 +29,6 @@ pub async fn handle(
 		PoolType::Gg => "gg",
 		PoolType::Ats => "ats",
 	};
-
 	let name = util_cluster::full_server_name(&provider_datacenter_id, pool_type, server_id);
 
 	let tags = ctx
@@ -73,7 +71,7 @@ pub async fn handle(
 		.build()?;
 
 	// Create SSH key
-	let ssh_key_res = create_ssh_key(&client, &server).await?;
+	let ssh_key_res = api::create_ssh_key(&client, &server).await?;
 
 	// Write SSH key id
 	sql_execute!(
@@ -90,7 +88,8 @@ pub async fn handle(
 	)
 	.await?;
 
-	let create_instance_res = create_instance(&client, &server, &ssh_key_res.public_key).await?;
+	let create_instance_res =
+		api::create_instance(&client, &server, &ssh_key_res.public_key).await?;
 	let linode_id = create_instance_res.id;
 
 	// Write linode id
@@ -106,19 +105,23 @@ pub async fn handle(
 	)
 	.await?;
 
-	wait_instance_ready(&client, linode_id).await?;
+	api::wait_instance_ready(&client, linode_id).await?;
 
-	let create_disks_res = create_disks(
+	let (create_disks_res, used_custom_image) = create_disks(
+		&ctx,
+		&crdb,
 		&client,
+		&server,
+		pool_type,
 		&ssh_key_res.public_key,
 		linode_id,
 		create_instance_res.specs.disk,
 	)
 	.await?;
 
-	create_instance_config(&client, &server, linode_id, &create_disks_res).await?;
+	api::create_instance_config(&client, &server, linode_id, &create_disks_res).await?;
 
-	let firewall_res = create_firewall(&client, &server, linode_id).await?;
+	let firewall_res = api::create_firewall(&client, &server, linode_id).await?;
 
 	// Write firewall id
 	sql_execute!(
@@ -133,12 +136,101 @@ pub async fn handle(
 	)
 	.await?;
 
-	boot_instance(&client, linode_id).await?;
+	api::boot_instance(&client, linode_id).await?;
 
-	let public_ip = get_public_ip(&client, linode_id).await?;
+	let public_ip = api::get_public_ip(&client, linode_id).await?;
 
 	Ok(linode::server_provision::Response {
 		provider_server_id: linode_id.to_string(),
 		public_ip: public_ip.to_string(),
+		already_installed: used_custom_image,
 	})
+}
+
+async fn create_disks(
+	ctx: &OperationContext<linode::server_provision::Request>,
+	crdb: &CrdbPool,
+	client: &reqwest::Client,
+	server: &ServerCtx,
+	pool_type: PoolType,
+	ssh_key: &str,
+	linode_id: u64,
+	server_disk_size: u64,
+) -> GlobalResult<(api::CreateDisksResponse, bool)> {
+	let image_variant = util_cluster::image_variant(
+		backend::cluster::Provider::Linode,
+		&server.provider_hardware,
+		pool_type,
+	);
+	let (custom_image, updated) = get_custom_image(ctx, crdb, &image_variant).await?;
+
+	let used_custom_image = custom_image.is_some();
+	let image = if let Some(custom_image) = custom_image {
+		tracing::info!("using custom image {}", custom_image);
+
+		custom_image
+	} else {
+		tracing::info!("custom image not ready yet, continuing normally");
+
+		"linode/debian11".to_string()
+	};
+
+	// Start custom image creation process
+	if updated {
+		msg!([ctx] linode::msg::prebake_provision(image_variant) {
+			variant: image_variant,
+			pool_type: pool_type as i32,
+		})
+		.await?;
+	}
+
+	let create_disks_res =
+		api::create_disks(client, ssh_key, linode_id, &image, server_disk_size).await?;
+
+	Ok((create_disks_res, used_custom_image))
+}
+
+async fn get_custom_image(
+	ctx: &OperationContext<linode::server_provision::Request>,
+	crdb: &CrdbPool,
+	variant: &str,
+) -> GlobalResult<(Option<String>, bool)> {
+	// Get the custom image id for this server, or insert a record and start creating one
+	let (image_id, updated) = sql_fetch_one!(
+		[ctx, (Option<String>, bool), &crdb]
+		"
+		WITH
+			updated AS (
+				INSERT INTO db_cluster.server_images (
+					variant, create_ts
+				)
+				VALUES ($1, $2)
+				ON CONFLICT (id) DO UPDATE
+					SET
+						image_id = NULL,
+						create_ts = $2
+					WHERE create_ts < $3
+				RETURNING variant
+			),
+			selected AS (
+				SELECT variant, image_id
+				FROM db_cluster.server_images
+				WHERE variant = $1
+			)
+		SELECT
+			selected.image_id AS image_id,
+			(updated.variant IS NOT NULL) AS updated
+		FROM selected
+		FULL OUTER JOIN updated
+		ON selected.variant = updated.variant;
+		",
+		variant,
+		util::timestamp::now(),
+		// 5 month expiration
+		util::timestamp::now() - util::duration::days(5 * 30),
+	)
+	.await?;
+
+	// Updated is true if this specific sql call either reset (if expired) or inserted the row
+	Ok((image_id, updated))
 }
