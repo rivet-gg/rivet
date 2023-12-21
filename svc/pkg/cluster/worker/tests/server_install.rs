@@ -25,6 +25,35 @@ async fn server_install(ctx: TestCtx) {
 	.await
 	.unwrap();
 
+	// Wait for server to have an ip
+	let public_ip = loop {
+		tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
+		let row = sql_fetch_optional!(
+			[ctx, (String,)]
+			"
+			SELECT public_ip
+			FROM db_cluster.servers
+			WHERE
+				server_id = $1 AND
+				public_ip IS NOT NULL
+			",
+			server_id,
+		)
+		.await
+		.unwrap();
+
+		if let Some((public_ip,)) = row {
+			break public_ip;
+		}
+	};
+
+	// Wait for install to complete
+	let mut sub = subscribe!([ctx] cluster::msg::server_install_complete(public_ip))
+		.await
+		.unwrap();
+	sub.next().await.unwrap();
+
 	// Clean up afterwards so we don't litter
 	msg!([ctx] @wait cluster::msg::server_destroy(server_id) {
 		server_id: Some(server_id.into()),

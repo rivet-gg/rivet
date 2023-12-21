@@ -177,7 +177,7 @@ async fn create_disks(
 
 	// Start custom image creation process
 	if updated {
-		msg!([ctx] linode::msg::prebake_provision(image_variant) {
+		msg!([ctx] linode::msg::prebake_provision(&image_variant) {
 			variant: image_variant,
 			pool_type: pool_type as i32,
 		})

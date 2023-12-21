@@ -1,6 +1,9 @@
 use chirp_worker::prelude::*;
+use nomad_client::{
+	apis::{configuration::Configuration, nodes_api},
+	models,
+};
 use proto::backend::pkg::*;
-use nomad_client::{models, apis::{configuration::Configuration, nodes_api}};
 
 lazy_static::lazy_static! {
 	static ref NOMAD_CONFIG: Configuration =
@@ -12,7 +15,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_undrain::Message>) -
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
 	// NOTE: `drain_ts` will already be set to null before this worker is called
-	let (datacenter_id, nomad_node_id,) = sql_fetch_one!(
+	let (datacenter_id, nomad_node_id) = sql_fetch_one!(
 		[ctx, (Uuid, Option<String>)]
 		"
 		SELECT

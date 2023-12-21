@@ -138,7 +138,7 @@ async fn worker(
 			})
 			.await?;
 		}
-	
+
 		// Create DNS record
 		if matches!(pool_type, backend::cluster::PoolType::Gg) {
 			msg!([ctx] cluster::msg::server_dns_create(server_id) {

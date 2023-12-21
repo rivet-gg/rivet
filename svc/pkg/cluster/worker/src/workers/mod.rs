@@ -1,3 +1,18 @@
+pub mod create;
+pub mod datacenter_create;
+pub mod datacenter_scale;
+pub mod datacenter_taint;
+pub mod datacenter_taint_complete;
+pub mod datacenter_update;
+pub mod nomad_node_drain_complete;
+pub mod nomad_node_registered;
+pub mod server_destroy;
+pub mod server_dns_create;
+pub mod server_drain;
+pub mod server_install;
+pub mod server_provision;
+pub mod server_undrain;
+
 chirp_worker::workers![
 	datacenter_taint,
 	datacenter_taint_complete,

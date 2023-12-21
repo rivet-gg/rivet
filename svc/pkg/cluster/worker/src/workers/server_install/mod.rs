@@ -44,7 +44,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 			server_id.as_uuid(),
 		)
 		.await?;
-	
+
 		if server.cloud_destroy_ts.is_some() {
 			tracing::info!("server marked for deletion, not installing");
 			return Ok(());
@@ -52,9 +52,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 	}
 
 	let public_ip = ctx.public_ip.clone();
-	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(
-		ctx.pool_type as i32
-	));
+	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(ctx.pool_type as i32));
 	let private_key_openssh =
 		util::env::read_secret(&["ssh", "server", "private_key_openssh"]).await?;
 
@@ -81,7 +79,8 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 	.await?;
 	let server_token = &unwrap_ref!(token_res.token).token;
 
-	let install_script = install_scripts::install(pool_type, server_token, ctx.initialize_immediately).await?;
+	let install_script =
+		install_scripts::gen_install(pool_type, server_token, ctx.initialize_immediately).await?;
 	let hook_script = install_scripts::gen_hook(server_token).await?;
 	let initialize_script = install_scripts::gen_initialize(pool_type).await?;
 

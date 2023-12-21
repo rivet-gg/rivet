@@ -1,6 +1,9 @@
 use chirp_worker::prelude::*;
+use nomad_client::{
+	apis::{configuration::Configuration, nodes_api},
+	models,
+};
 use proto::backend::pkg::*;
-use nomad_client::{models, apis::{configuration::Configuration, nodes_api}};
 
 lazy_static::lazy_static! {
 	static ref NOMAD_CONFIG: Configuration =
@@ -31,9 +34,10 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_drain::Message>) -> 
 	// Fetch datacenter config
 	let datacenter_res = op!([ctx] cluster_datacenter_get {
 		datacenter_ids: vec![datacenter_id.into()],
-	}).await?;
+	})
+	.await?;
 	let datacenter = unwrap!(datacenter_res.datacenters.first());
-	
+
 	nodes_api::update_node_drain(
 		&NOMAD_CONFIG,
 		&nomad_node_id,

@@ -5,7 +5,7 @@ use proto::backend::pkg::*;
 async fn worker(ctx: &OperationContext<cluster::msg::create::Message>) -> GlobalResult<()> {
 	let cluster_id = unwrap_ref!(ctx.cluster_id).as_uuid();
 	let owner_team_id = ctx.owner_team_id.map(|id| id.as_uuid());
-	
+
 	sql_execute!(
 		[ctx]
 		"
@@ -26,7 +26,8 @@ async fn worker(ctx: &OperationContext<cluster::msg::create::Message>) -> Global
 
 	msg!([ctx] cluster::msg::create_complete(cluster_id) {
 		cluster_id: ctx.cluster_id
-	}).await?;
+	})
+	.await?;
 
 	Ok(())
 }
