@@ -1,6 +1,6 @@
 use chirp_worker::prelude::*;
-use proto::backend::{self, pkg::*};
 use cloudflare::{endpoints as cf, framework as cf_framework, framework::async_api::ApiClient};
+use proto::backend::{self, pkg::*};
 
 #[derive(sqlx::FromRow)]
 struct Server {
@@ -36,11 +36,12 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 
 	let datacenter_res = op!([ctx] cluster_datacenter_get {
 		datacenter_ids: vec![server.datacenter_id.into()],
-	}).await?;
+	})
+	.await?;
 	let datacenter = unwrap!(datacenter_res.datacenters.first());
-	
+
 	let provider = unwrap!(backend::cluster::Provider::from_i32(datacenter.provider));
-	
+
 	match provider {
 		backend::cluster::Provider::Linode => {
 			tracing::info!(?server_id, "destroying linode server");
@@ -59,7 +60,8 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 
 	msg!([ctx] cluster::msg::server_destroy_complete(server_id) {
 		server_id: ctx.server_id,
-	}).await?;
+	})
+	.await?;
 
 	Ok(())
 }
@@ -72,7 +74,7 @@ async fn delete_dns_record(
 ) -> GlobalResult<()> {
 	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
 	let zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
-	
+
 	// Create cloudflare HTTP client
 	let client = cf_framework::async_api::Client::new(
 		cf_framework::auth::Credentials::UserAuthToken { token: cf_token },

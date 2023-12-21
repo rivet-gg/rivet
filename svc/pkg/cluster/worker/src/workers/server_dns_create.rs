@@ -1,8 +1,8 @@
 use std::net::Ipv4Addr;
 
 use chirp_worker::prelude::*;
-use proto::backend::pkg::*;
 use cloudflare::{endpoints as cf, framework as cf_framework, framework::async_api::ApiClient};
+use proto::backend::pkg::*;
 
 #[derive(sqlx::FromRow)]
 struct Server {
@@ -12,9 +12,11 @@ struct Server {
 }
 
 #[worker(name = "cluster-server-dns-create")]
-async fn worker(ctx: &OperationContext<cluster::msg::server_dns_create::Message>) -> GlobalResult<()> {
+async fn worker(
+	ctx: &OperationContext<cluster::msg::server_dns_create::Message>,
+) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
-	
+
 	let server = sql_fetch_one!(
 		[ctx, Server]
 		"
@@ -31,11 +33,15 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_dns_create::Message>
 		tracing::info!("server marked for deletion, not creating dns record");
 		return Ok(());
 	}
-	
+
 	// NOTE: The only pool type that needs DNS records should be GG
 	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
 	let zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
-	let record_name = format!("*.lobby.{}.{}", server.datacenter_id, unwrap!(util::env::domain_job()));
+	let record_name = format!(
+		"*.lobby.{}.{}",
+		server.datacenter_id,
+		unwrap!(util::env::domain_job())
+	);
 	let public_ip = server.public_ip.as_str().parse::<Ipv4Addr>()?;
 
 	// Create cloudflare HTTP client

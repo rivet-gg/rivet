@@ -2,7 +2,9 @@ use chirp_worker::prelude::*;
 use proto::backend::pkg::*;
 
 #[worker(name = "cluster-nomad-node-registered")]
-async fn worker(ctx: &OperationContext<nomad::msg::monitor_node_registered::Message>) -> GlobalResult<()> {
+async fn worker(
+	ctx: &OperationContext<nomad::msg::monitor_node_registered::Message>,
+) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
 	sql_execute!(

@@ -2,7 +2,9 @@ use chirp_worker::prelude::*;
 use proto::backend::pkg::*;
 
 #[worker(name = "cluster-datacenter-taint", timeout = 200)]
-async fn worker(ctx: &OperationContext<cluster::msg::datacenter_taint::Message>) -> GlobalResult<()> {
+async fn worker(
+	ctx: &OperationContext<cluster::msg::datacenter_taint::Message>,
+) -> GlobalResult<()> {
 	let datacenter_id = unwrap_ref!(ctx.datacenter_id).as_uuid();
 
 	// Taint server records

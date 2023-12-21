@@ -3,7 +3,9 @@ use proto::backend::{self, pkg::*};
 
 // We wait until a nomad node is registered before destroying tainted servers
 #[worker(name = "cluster-datacenter-taint-complete")]
-async fn worker(ctx: &OperationContext<nomad::msg::monitor_node_registered::Message>) -> GlobalResult<()> {
+async fn worker(
+	ctx: &OperationContext<nomad::msg::monitor_node_registered::Message>,
+) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
 	// Mark servers for destruction in db
@@ -27,7 +29,7 @@ async fn worker(ctx: &OperationContext<nomad::msg::monitor_node_registered::Mess
 	// Destroy all tainted servers
 	for (server_id, pool_type) in tainted_servers {
 		let pool_type = unwrap!(backend::cluster::PoolType::from_i32(pool_type as i32));
-		
+
 		match pool_type {
 			backend::cluster::PoolType::Job => {
 				msg!([ctx] cluster::msg::server_drain(server_id) {
