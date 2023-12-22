@@ -4891,11 +4891,17 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chrono",
+ "reqwest",
  "rivet-connection",
  "rivet-health-checks",
  "rivet-metrics",
  "rivet-operation",
  "rivet-runtime",
+ "rivet-util-linode",
+ "serde",
+ "serde_json",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -4911,7 +4917,7 @@ dependencies = [
  "reqwest",
  "rivet-operation",
  "rivet-util-cluster",
- "serde",
+ "rivet-util-linode",
  "sqlx",
 ]
 
@@ -4922,14 +4928,11 @@ dependencies = [
  "chirp-client",
  "chirp-worker",
  "linode-server-destroy",
- "rand",
  "reqwest",
  "rivet-operation",
  "rivet-util-cluster",
- "serde",
- "serde_json",
+ "rivet-util-linode",
  "sqlx",
- "ssh-key",
 ]
 
 [[package]]
@@ -4938,12 +4941,12 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
- "chrono",
- "lazy_static",
  "rivet-convert",
  "rivet-health-checks",
  "rivet-metrics",
  "rivet-runtime",
+ "rivet-util-linode",
+ "sqlx",
 ]
 
 [[package]]
@@ -5766,6 +5769,7 @@ dependencies = [
  "job-log-worker",
  "job-run-worker",
  "kv-worker",
+ "linode-worker",
  "mm-worker",
  "module-worker",
  "push-notification-worker",
@@ -7367,6 +7371,19 @@ dependencies = [
 [[package]]
 name = "rivet-util-kv"
 version = "0.1.0"
+
+[[package]]
+name = "rivet-util-linode"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "rand",
+ "reqwest",
+ "rivet-operation",
+ "serde",
+ "serde_json",
+ "ssh-key",
+]
 
 [[package]]
 name = "rivet-util-macros"

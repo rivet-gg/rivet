@@ -1,6 +1,6 @@
-use std::ops::Deref;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
+use std::ops::Deref;
 
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
@@ -863,7 +863,7 @@ async fn resolve_image_artifact_url(
 			let mut hasher = DefaultHasher::new();
 			hasher.write(build_id.as_bytes());
 			let hash = hasher.finish() as i64;
-			
+
 			// Get vlan ip from build id hash for consistent routing
 			let (ats_vlan_ip,) = sql_fetch_one!(
 				[ctx, (String,)]

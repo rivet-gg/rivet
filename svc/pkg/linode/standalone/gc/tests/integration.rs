@@ -12,5 +12,5 @@ async fn basic() {
 
 	let pools = rivet_pools::from_env("linode-gc-test").await.unwrap();
 
-	run_from_env(util::timestamp::now(), pools).await.unwrap();
+	run_from_env(pools).await.unwrap();
 }

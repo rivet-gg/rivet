@@ -1,9 +1,6 @@
 use proto::backend::pkg::*;
-use reqwest::header;
 use rivet_operation::prelude::*;
-
-mod api;
-use api::*;
+use util_linode::api;
 
 #[derive(sqlx::FromRow)]
 struct LinodeData {
@@ -36,22 +33,16 @@ pub async fn handle(
 	};
 
 	// Build HTTP client
-	let api_token = util::env::read_secret(&["linode", "token"]).await?;
-	let auth = format!("Bearer {}", api_token,);
-	let mut headers = header::HeaderMap::new();
-	headers.insert(header::AUTHORIZATION, header::HeaderValue::from_str(&auth)?);
-	let client = reqwest::Client::builder()
-		.default_headers(headers)
-		.build()?;
+	let client = util_linode::Client::new().await?;
 
 	if let Some(linode_id) = data.linode_id {
-		delete_instance(&client, linode_id).await?;
+		api::delete_instance(&client, linode_id).await?;
 	}
 
-	delete_ssh_key(&client, data.ssh_key_id).await?;
+	api::delete_ssh_key(&client, data.ssh_key_id).await?;
 
 	if let Some(firewall_id) = data.firewall_id {
-		delete_firewall(&client, firewall_id).await?;
+		api::delete_firewall(&client, firewall_id).await?;
 	}
 
 	// Remove record

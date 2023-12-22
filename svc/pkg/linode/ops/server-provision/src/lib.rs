@@ -1,17 +1,6 @@
 use proto::backend::{self, cluster::PoolType, pkg::*};
-use reqwest::header;
 use rivet_operation::prelude::*;
-
-mod api;
-
-struct ServerCtx {
-	provider_datacenter_id: String,
-	name: String,
-	provider_hardware: String,
-	vlan_ip: String,
-	tags: Vec<String>,
-	firewall_inbound: Vec<util::net::FirewallRule>,
-}
+use util_linode::api;
 
 #[operation(name = "linode-server-provision", timeout = 150)]
 pub async fn handle(
@@ -52,23 +41,17 @@ pub async fn handle(
 	};
 
 	// Build context
-	let server = ServerCtx {
-		provider_datacenter_id,
+	let server = api::ProvisionCtx {
+		datacenter: provider_datacenter_id,
 		name,
-		provider_hardware,
-		vlan_ip: ctx.vlan_ip.clone(),
+		hardware: provider_hardware,
+		vlan_ip: Some(ctx.vlan_ip.clone()),
 		tags,
 		firewall_inbound,
 	};
 
 	// Build HTTP client
-	let api_token = util::env::read_secret(&["linode", "token"]).await?;
-	let auth = format!("Bearer {}", api_token,);
-	let mut headers = header::HeaderMap::new();
-	headers.insert(header::AUTHORIZATION, header::HeaderValue::from_str(&auth)?);
-	let client = reqwest::Client::builder()
-		.default_headers(headers)
-		.build()?;
+	let client = util_linode::Client::new().await?;
 
 	// Create SSH key
 	let ssh_key_res = api::create_ssh_key(&client, &server).await?;
@@ -150,8 +133,8 @@ pub async fn handle(
 async fn create_disks(
 	ctx: &OperationContext<linode::server_provision::Request>,
 	crdb: &CrdbPool,
-	client: &reqwest::Client,
-	server: &ServerCtx,
+	client: &util_linode::Client,
+	server: &api::ProvisionCtx,
 	pool_type: PoolType,
 	ssh_key: &str,
 	linode_id: u64,
@@ -159,7 +142,7 @@ async fn create_disks(
 ) -> GlobalResult<(api::CreateDisksResponse, bool)> {
 	let image_variant = util_cluster::image_variant(
 		backend::cluster::Provider::Linode,
-		&server.provider_hardware,
+		&server.hardware,
 		pool_type,
 	);
 	let (custom_image, updated) = get_custom_image(ctx, crdb, &image_variant).await?;
@@ -179,6 +162,7 @@ async fn create_disks(
 	if updated {
 		msg!([ctx] linode::msg::prebake_provision(&image_variant) {
 			variant: image_variant,
+			provider_datacenter_id: server.datacenter.clone(),
 			pool_type: pool_type as i32,
 		})
 		.await?;

@@ -6,3 +6,6 @@ kind = "rust"
 
 [consumer]
 
+[secrets]
+"linode/token" = {}
+"ssh/server/private_key_openssh" = {}
