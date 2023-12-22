@@ -15,7 +15,9 @@ struct LobbyRow {
 }
 
 #[worker(name = "mm-datacenter-closed-set")]
-async fn worker(ctx: &OperationContext<mm::msg::datacenter_closed_set::Message>) -> GlobalResult<()> {
+async fn worker(
+	ctx: &OperationContext<mm::msg::datacenter_closed_set::Message>,
+) -> GlobalResult<()> {
 	let datacenter_id = unwrap_ref!(ctx.datacenter_id).as_uuid();
 
 	let lobby_rows = sql_fetch_all!(
@@ -36,14 +38,10 @@ async fn worker(ctx: &OperationContext<mm::msg::datacenter_closed_set::Message>)
 		let mut pipe = redis::pipe();
 		pipe.atomic();
 
-		pipe.set(
-			util_mm::key::datacenter_is_closed(datacenter_id),
-			true,
-		);
+		pipe.set(util_mm::key::datacenter_is_closed(datacenter_id), true);
 
 		for lobby in lobby_rows {
-			pipe
-			.zrem(
+			pipe.zrem(
 				util_mm::key::lobby_available_spots(
 					lobby.namespace_id,
 					datacenter_id,
@@ -63,8 +61,7 @@ async fn worker(ctx: &OperationContext<mm::msg::datacenter_closed_set::Message>)
 			);
 		}
 
-		pipe.query_async(&mut ctx.redis_mm().await?)
-			.await?;
+		pipe.query_async(&mut ctx.redis_mm().await?).await?;
 	} else {
 		let mut script = REDIS_SCRIPT.prepare_invoke();
 
@@ -73,7 +70,8 @@ async fn worker(ctx: &OperationContext<mm::msg::datacenter_closed_set::Message>)
 			.arg(lobby_rows.len());
 
 		for lobby in lobby_rows {
-			script.key(util_mm::key::lobby_config(lobby.lobby_id))
+			script
+				.key(util_mm::key::lobby_config(lobby.lobby_id))
 				.key(util_mm::key::lobby_player_ids(lobby.lobby_id))
 				.key(util_mm::key::lobby_available_spots(
 					lobby.namespace_id,
@@ -91,9 +89,8 @@ async fn worker(ctx: &OperationContext<mm::msg::datacenter_closed_set::Message>)
 				.arg(lobby.max_players_normal)
 				.arg(lobby.max_players_party);
 		}
-		
-		script.invoke_async(&mut ctx.redis_mm().await?)
-			.await?;
+
+		script.invoke_async(&mut ctx.redis_mm().await?).await?;
 	}
 
 	Ok(())

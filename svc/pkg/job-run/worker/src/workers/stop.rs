@@ -63,7 +63,10 @@ async fn worker(ctx: &OperationContext<job_run::msg::stop::Message>) -> GlobalRe
 	// functionality if the job dies immediately. You can set it to false to
 	// debug lobbies, but it's preferred to extract metadata from the
 	// job-run-stop lifecycle event.
-	if let Some(RunMetaNomadRow { alloc_id, dispatched_job_id: Some(dispatched_job_id) }) = &run_meta_nomad_row
+	if let Some(RunMetaNomadRow {
+		alloc_id,
+		dispatched_job_id: Some(dispatched_job_id),
+	}) = &run_meta_nomad_row
 	{
 		match nomad_client::apis::jobs_api::stop_job(
 			&NOMAD_CONFIG,
@@ -82,7 +85,7 @@ async fn worker(ctx: &OperationContext<job_run::msg::stop::Message>) -> GlobalRe
 				if let Some(alloc_id) = alloc_id {
 					kill_allocation(region.nomad_region.clone(), alloc_id.clone());
 				}
-			},
+			}
 			Err(err) => {
 				tracing::warn!(?err, "error thrown while stopping job, probably a 404, will continue as if stopped normally");
 			}
@@ -180,8 +183,13 @@ fn kill_allocation(nomad_region: String, alloc_id: String) {
 				signal: Some("SIGKILL".to_string()),
 			}),
 		)
-		.await {
-			tracing::warn!(?err, ?alloc_id, "error while trying to manually kill allocation");
+		.await
+		{
+			tracing::warn!(
+				?err,
+				?alloc_id,
+				"error while trying to manually kill allocation"
+			);
 		}
 	});
 }

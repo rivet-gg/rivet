@@ -11,5 +11,6 @@ import "proto/backend/cluster.proto";
 /// ]
 message Message {
     string variant = 1;
-    rivet.backend.cluster.PoolType pool_type = 2;
+    string provider_datacenter_id = 2;
+    rivet.backend.cluster.PoolType pool_type = 3;
 }

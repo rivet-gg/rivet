@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use rivet_operation::prelude::*;
 
 fn main() -> GlobalResult<()> {
@@ -25,6 +27,4 @@ async fn start() -> GlobalResult<()> {
 
 		linode_gc::run_from_env(pools.clone()).await?;
 	}
-
-	Ok(())
 }

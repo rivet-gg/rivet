@@ -65,9 +65,13 @@ CREATE TABLE server_images (
 
 CREATE TABLE server_images_linode_misc (
 	variant TEXT PRIMARY KEY,
-	linode_id INT NOT NULL,
+	ssh_key_id INT NOT NULL,
+	linode_id INT,
+	firewall_id INT,
 	disk_id INT,
 	public_ip TEXT,
+	image_id TEXT,
 
-	INDEX (public_ip)
+	INDEX (public_ip),
+	INDEX (image_id)
 );

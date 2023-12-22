@@ -29,6 +29,7 @@ game-user-worker = { path = "../../../game-user/worker" }
 job-log-worker = { path = "../../../job-log/worker" }
 job-run-worker = { path = "../../../job-run/worker" }
 kv-worker = { path = "../../../kv/worker" }
+linode-worker = { path = "../../../linode/worker" }
 mm-worker = { path = "../../../mm/worker" }
 module-worker = { path = "../../../module/worker" }
 push-notification-worker = { path = "../../../push-notification/worker" }
