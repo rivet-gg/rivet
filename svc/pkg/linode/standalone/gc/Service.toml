@@ -4,6 +4,8 @@ name = "linode-gc"
 [runtime]
 kind = "rust"
 
-[periodic]
-cron = "0 0 * * *"
+[headless]
+singleton = true
 
+[secrets]
+"linode/token" = {}

@@ -3,12 +3,15 @@ syntax = "proto3";
 package rivet.backend.pkg.cluster.msg.server_install_complete;
 
 import "proto/common.proto";
+import "proto/backend/cluster.proto";
 
 /// name = "msg-cluster-server-install-complete"
 /// parameters = [
 /// 	{ name = "public_ip" },
 /// ]
 message Message {
-    // If set in request
-    optional rivet.common.Uuid server_id = 1;
+    string ip = 1;
+    // If set in server install message
+    optional rivet.common.Uuid server_id = 2;
+    rivet.backend.cluster.Provider provider = 3;
 }

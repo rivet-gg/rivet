@@ -24,6 +24,7 @@ pub fn full_server_name(
 }
 
 pub fn image_variant(provider: backend::cluster::Provider, provider_datacenter_id: &str, pool_type: backend::cluster::PoolType) -> String {
+	let ns = rivet_util::env::namespace();
 	let provider_str = match provider {
 		backend::cluster::Provider::Linode => "linode",
 	};
@@ -33,5 +34,5 @@ pub fn image_variant(provider: backend::cluster::Provider, provider_datacenter_i
 		backend::cluster::PoolType::Ats => "ats",
 	};
 
-	format!("{provider_str}-{provider_datacenter_id}-{pool_type_str}")
+	format!("{ns}-{provider_str}-{provider_datacenter_id}-{pool_type_str}")
 }

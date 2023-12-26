@@ -13,16 +13,6 @@ mod install_scripts;
 // 6 months
 pub const TOKEN_TTL: i64 = util::duration::days(30 * 6);
 
-#[derive(sqlx::FromRow)]
-struct Server {
-	datacenter_id: Uuid,
-	cluster_id: Uuid,
-	pool_type: i64,
-	public_ip: String,
-	vlan_ip: String,
-	cloud_destroy_ts: Option<i64>,
-}
-
 #[worker(name = "cluster-server-install", timeout = 200)]
 async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -> GlobalResult<()> {
 	// Check for stale message
@@ -33,19 +23,21 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 	}
 
 	if let Some(server_id) = ctx.server_id {
-		let server = sql_fetch_one!(
-			[ctx, Server]
+		let (is_destroying,) = sql_fetch_one!(
+			[ctx, (bool,)]
 			"
-			SELECT
-				datacenter_id, cluster_id, pool_type, public_ip, vlan_ip, cloud_destroy_ts
-			FROM db_cluster.servers
-			WHERE server_id = $1
+			SELECT EXISTS(
+				SELECT 1
+				FROM db_cluster.servers
+				WHERE server_id = $1 AND
+				cloud_destroy_ts IS NOT NULL
+			)
 			",
 			server_id.as_uuid(),
 		)
 		.await?;
 
-		if server.cloud_destroy_ts.is_some() {
+		if is_destroying {
 			tracing::info!("server marked for deletion, not installing");
 			return Ok(());
 		}
@@ -80,7 +72,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 	let server_token = &unwrap_ref!(token_res.token).token;
 
 	let install_script =
-		install_scripts::gen_install(pool_type, server_token, ctx.initialize_immediately).await?;
+		install_scripts::gen_install(pool_type, ctx.initialize_immediately).await?;
 	let hook_script = install_scripts::gen_hook(server_token).await?;
 	let initialize_script = install_scripts::gen_initialize(pool_type).await?;
 
@@ -112,13 +104,16 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 
 		let mut channel = sess.channel_session()?;
 
-		// Update permissions
-		channel.exec("chmod +x /usr/bin/rivet_install.sh")?;
-		channel.exec("chmod +x /usr/bin/rivet_hook.sh")?;
-		channel.exec("chmod +x /usr/bin/rivet_initialize.sh")?;
+		// Cannot run more than one command at a time in a channel, simply combine them
+		let script = [
+			"chmod +x /usr/bin/rivet_install.sh",
+			"chmod +x /usr/bin/rivet_hook.sh",
+			"chmod +x /usr/bin/rivet_initialize.sh",
+			"/usr/bin/rivet_install.sh",
+		]
+		.join(" && ");
 
-		// Run then delete the script
-		channel.exec("/usr/bin/rivet_install.sh || rm /usr/bin/rivet_install.sh")?;
+		channel.exec(&script)?;
 
 		let mut stdout = String::new();
 		channel.read_to_string(&mut stdout)?;
@@ -128,18 +123,20 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 		channel.wait_close()?;
 
 		if channel.exit_status()? != 0 {
-			tracing::info!(%stdout, %stderr, "failed to run script");
+			tracing::error!(%stdout, %stderr, "failed to run script");
 			bail!("failed to run script");
 		}
 
-		tracing::info!("script successful");
+		tracing::info!("install successful");
 
 		GlobalResult::Ok(())
 	})
 	.await??;
 
 	msg!([ctx] cluster::msg::server_install_complete(&ctx.public_ip) {
+		ip: ctx.public_ip.clone(),
 		server_id: ctx.server_id,
+		provider: ctx.provider,
 	})
 	.await?;
 

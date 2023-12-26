@@ -8,7 +8,7 @@ struct ProvisionResponse {
 	already_installed: bool,
 }
 
-#[worker(name = "cluster-server-provision")]
+#[worker(name = "cluster-server-provision", timeout = 150)]
 async fn worker(
 	ctx: &OperationContext<cluster::msg::server_provision::Message>,
 ) -> GlobalResult<()> {
@@ -33,7 +33,7 @@ async fn worker(
 	)
 	.await?;
 	if let Some(provider_server_id) = provider_server_id {
-		tracing::error!(
+		tracing::warn!(
 			?server_id,
 			?provider_server_id,
 			"server is already provisioned"
@@ -134,6 +134,7 @@ async fn worker(
 				public_ip: provision_res.public_ip,
 				pool_type: ctx.pool_type,
 				server_id: ctx.server_id,
+				provider: ctx.provider,
 				initialize_immediately: true,
 			})
 			.await?;
@@ -221,7 +222,9 @@ async fn destroy_server(
 	)
 	.await?;
 
-	msg!([ctx] cluster::msg::server_destroy(server_id) {
+	// Wait for server to complete destroying so we don't get a primary key conflict (the same server id
+	// will be used to try and provision the next hardware option)
+	msg!([ctx] cluster::msg::server_destroy(server_id) -> cluster::msg::server_destroy_complete {
 		server_id: Some(server_id.into()),
 	})
 	.await?;

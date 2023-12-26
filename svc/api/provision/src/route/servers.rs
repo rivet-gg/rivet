@@ -52,19 +52,3 @@ pub async fn info(
 		vlan_ip: unwrap_ref!(server.vlan_ip, "server should have vlan ip by now").clone(),
 	})
 }
-
-// MARK: POST /servers/{}/install-complete
-pub async fn install_complete(
-	ctx: Ctx<Auth>,
-	public_ip: Ipv4Addr,
-	body: serde_json::Value,
-) -> GlobalResult<serde_json::Value> {
-	ctx.auth().server()?;
-
-	msg!([ctx] linode::msg::prebake_install_complete(public_ip) {
-		ip: public_ip.to_string(),
-	})
-	.await?;
-
-	Ok(json!({}))
-}

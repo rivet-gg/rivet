@@ -13,4 +13,5 @@ message Message {
     string variant = 1;
     string provider_datacenter_id = 2;
     rivet.backend.cluster.PoolType pool_type = 3;
+    repeated string tags = 4;
 }

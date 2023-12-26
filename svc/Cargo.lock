@@ -725,6 +725,7 @@ dependencies = [
  "api-matchmaker",
  "api-module",
  "api-portal",
+ "api-provision",
  "api-status",
  "async-trait",
  "chirp-client",

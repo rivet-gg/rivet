@@ -13,4 +13,6 @@ async fn basic() {
 	let pools = rivet_pools::from_env("linode-gc-test").await.unwrap();
 
 	run_from_env(pools).await.unwrap();
+
+	// TODO: Check that image_id was set in `server_images` table
 }

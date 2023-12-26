@@ -15,5 +15,7 @@ message Message {
     // Only if installing on a "server" (see cluster database). Used to check if
     // the server is currently being deleted
     optional rivet.common.Uuid server_id = 3;
-    bool initialize_immediately = 4;
+    // Simply passed to the install complete message
+    rivet.backend.cluster.Provider provider = 4;
+    bool initialize_immediately = 5;
 }

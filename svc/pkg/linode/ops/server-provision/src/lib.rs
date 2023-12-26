@@ -140,13 +140,15 @@ async fn create_disks(
 	linode_id: u64,
 	server_disk_size: u64,
 ) -> GlobalResult<(api::CreateDisksResponse, bool)> {
+	// Try to get custom image (if exists)
 	let image_variant = util_cluster::image_variant(
 		backend::cluster::Provider::Linode,
-		&server.hardware,
+		&server.datacenter,
 		pool_type,
 	);
 	let (custom_image, updated) = get_custom_image(ctx, crdb, &image_variant).await?;
 
+	// Default image
 	let used_custom_image = custom_image.is_some();
 	let image = if let Some(custom_image) = custom_image {
 		tracing::info!("using custom image {}", custom_image);
@@ -164,6 +166,7 @@ async fn create_disks(
 			variant: image_variant,
 			provider_datacenter_id: server.datacenter.clone(),
 			pool_type: pool_type as i32,
+			tags: Vec::new(),
 		})
 		.await?;
 	}
@@ -185,15 +188,15 @@ async fn get_custom_image(
 		"
 		WITH
 			updated AS (
-				INSERT INTO db_cluster.server_images (
+				INSERT INTO db_cluster.server_images AS s (
 					variant, create_ts
 				)
 				VALUES ($1, $2)
-				ON CONFLICT (id) DO UPDATE
+				ON CONFLICT (variant) DO UPDATE
 					SET
 						image_id = NULL,
 						create_ts = $2
-					WHERE create_ts < $3
+					WHERE s.create_ts < $3
 				RETURNING variant
 			),
 			selected AS (

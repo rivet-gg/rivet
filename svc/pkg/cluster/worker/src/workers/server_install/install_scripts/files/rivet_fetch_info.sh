@@ -12,13 +12,13 @@ var1=$(echo $response | jq '.field1')
 var2=$(echo $response | jq '.field2')
 var3=$(echo $response | jq '.nestedField.field3')
 
-# Template install script
-install_script="/usr/bin/rivet_install.sh"
-sed -i "s/__NODE_NAME__/$var1/g" $install_script
-sed -i "s/__SERVER_ID__/$var1/g" $install_script
-sed -i "s/__DATACENTER_ID__/$var1/g" $install_script
-sed -i "s/__CLUSTER_ID__/$var1/g" $install_script
-sed -i "s/__VLAN_IP__/$var1/g" $install_script
+# Template initialize script
+initialize_script="/usr/bin/rivet_initialize.sh"
+sed -i "s/__NODE_NAME__/$var1/g" $initialize_script
+sed -i "s/__SERVER_ID__/$var1/g" $initialize_script
+sed -i "s/__DATACENTER_ID__/$var1/g" $initialize_script
+sed -i "s/__CLUSTER_ID__/$var1/g" $initialize_script
+sed -i "s/__VLAN_IP__/$var1/g" $initialize_script
 
-# Run install script
-./$install_script
+# Run initialize script
+"$initialize_script"

@@ -1,5 +1,5 @@
 use chirp_worker::prelude::*;
-use proto::backend::pkg::*;
+use proto::backend::{self, pkg::*};
 use util_linode::api;
 
 #[worker(name = "linode-prebake-provision")]
@@ -9,8 +9,13 @@ async fn worker(
 	let crdb = ctx.crdb().await?;
 
 	let ns = util::env::namespace();
-	let name = format!("{ns}-{}", ctx.variant);
-	let tags = vec!["prebake".to_string(), format!("rivet-{ns}"), name.clone()];
+	let name = ctx.variant.clone();
+	let tags = ctx
+		.tags
+		.iter()
+		.cloned()
+		.chain([format!("rivet-{ns}"), "prebake".to_string(), name.clone()])
+		.collect::<Vec<_>>();
 
 	// Build context
 	let prebake_server = api::ProvisionCtx {
@@ -32,6 +37,7 @@ async fn worker(
 				public_ip: public_ip,
 				pool_type: ctx.pool_type,
 				server_id: None,
+				provider: backend::cluster::Provider::Linode as i32,
 				initialize_immediately: false,
 			})
 			.await?;
@@ -128,7 +134,7 @@ async fn provision(
 		UPDATE db_cluster.server_images_linode_misc
 		SET
 			disk_id = $2,
-			public_ip = $3,
+			public_ip = $3
 		WHERE variant = $1
 		",
 		&ctx.variant,
