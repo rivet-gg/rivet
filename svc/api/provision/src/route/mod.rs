@@ -25,11 +25,5 @@ define_router! {
 				internal_endpoint: true,
 			),
 		},
-		"servers" / Ipv4Addr / "install-complete": {
-			POST: servers::install_complete(
-				body: serde_json::Value,
-				internal_endpoint: true,
-			),
-		},
 	},
 }

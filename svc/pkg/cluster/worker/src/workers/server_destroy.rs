@@ -5,7 +5,6 @@ use proto::backend::{self, pkg::*};
 #[derive(sqlx::FromRow)]
 struct Server {
 	datacenter_id: Uuid,
-	provider_server_id: Option<String>,
 	dns_record_id: Option<String>,
 }
 
@@ -18,9 +17,9 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 		[ctx, Server, &crdb]
 		"
 		SELECT
-			datacenter_id, provider_server_id, dns_record_id
-		FROM db_cluster.servers as s
-		LEFT JOIN db_cluster.cloudflare_misc as cf
+			datacenter_id, dns_record_id
+		FROM db_cluster.servers AS s
+		LEFT JOIN db_cluster.cloudflare_misc AS cf
 		ON s.server_id = cf.server_id
 		WHERE s.server_id = $1
 		",
@@ -28,11 +27,6 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 		util::timestamp::now(),
 	)
 	.await?;
-
-	// We wait for the install process to complete to make sure the destroy is clean
-	if server.provider_server_id.is_none() {
-		retry_bail!("server install process is not complete, retrying");
-	}
 
 	let datacenter_res = op!([ctx] cluster_datacenter_get {
 		datacenter_ids: vec![server.datacenter_id.into()],

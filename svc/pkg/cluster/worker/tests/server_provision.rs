@@ -24,7 +24,6 @@ async fn server_provision(ctx: TestCtx) {
 	.await
 	.unwrap();
 
-	// TODO: Update the rest of the tests to use polling
 	// Wait for server to have an ip
 	loop {
 		tokio::time::sleep(std::time::Duration::from_secs(5)).await;

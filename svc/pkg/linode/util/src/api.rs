@@ -177,7 +177,7 @@ pub async fn create_instance_config(
 	};
 
 	client
-		.post(
+		.post_no_res(
 			&format!("/linode/instances/{linode_id}/configs"),
 			json!({
 				"label": "boot_config",
@@ -254,7 +254,7 @@ pub async fn boot_instance(client: &Client, linode_id: u64) -> GlobalResult<()> 
 	tracing::info!("booting instance");
 
 	client
-		.post(&format!("/linode/instances/{linode_id}/boot"), json!({}))
+		.post_no_res(&format!("/linode/instances/{linode_id}/boot"), json!({}))
 		.await
 }
 
@@ -298,7 +298,9 @@ pub async fn wait_disk_ready(client: &Client, linode_id: u64, disk_id: u64) -> G
 	loop {
 		let res = client
 			.inner()
-			.get(&format!("/linode/instances/{linode_id}/disks/{disk_id}"))
+			.get(&format!(
+				"https://api.linode.com/v4/linode/instances/{linode_id}/disks/{disk_id}"
+			))
 			.send()
 			.await?;
 
@@ -361,10 +363,10 @@ pub async fn delete_ssh_key(client: &Client, ssh_key_id: i64) -> GlobalResult<()
 }
 
 pub async fn delete_instance(client: &Client, linode_id: i64) -> GlobalResult<()> {
-	tracing::info!("deleting linode instance");
+	tracing::info!(?linode_id, "deleting linode instance");
 
 	client
-		.delete(&format!("linode/instances/{linode_id}"))
+		.delete(&format!("/linode/instances/{linode_id}"))
 		.await
 }
 
@@ -372,7 +374,7 @@ pub async fn delete_firewall(client: &Client, firewall_id: i64) -> GlobalResult<
 	tracing::info!("deleting firewall");
 
 	client
-		.delete(&format!("networking/firewalls/{firewall_id}"))
+		.delete(&format!("/networking/firewalls/{firewall_id}"))
 		.await
 }
 
@@ -380,7 +382,7 @@ pub async fn shut_down(client: &Client, linode_id: i64) -> GlobalResult<()> {
 	tracing::info!("shutting down instance");
 
 	client
-		.post(
+		.post_no_res(
 			&format!("/linode/instances/{linode_id}/shutdown"),
 			json!({}),
 		)
@@ -389,7 +391,7 @@ pub async fn shut_down(client: &Client, linode_id: i64) -> GlobalResult<()> {
 
 #[derive(Deserialize)]
 pub struct CreateCustomImageResponse {
-	pub id: u64,
+	pub id: String,
 }
 
 pub async fn create_custom_image(
@@ -424,21 +426,29 @@ pub struct ListCustomImagesResponse {
 #[derive(Deserialize)]
 pub struct CustomImage {
 	pub id: String,
+	pub created_by: Option<String>,
 	#[serde(deserialize_with = "deserialize_date")]
 	pub created: DateTime<Utc>,
 }
 
 pub async fn list_custom_images(client: &Client) -> GlobalResult<Vec<CustomImage>> {
+	tracing::info!("listing custom images");
+
 	let res = client.get::<ListCustomImagesResponse>("/images").await?;
 
-	Ok(res.data)
+	Ok(res.data.into_iter().filter(|img| {
+		img.created_by.as_ref()
+			.map(|created_by| created_by != "linode")
+			.unwrap_or_default()
+	}).collect::<Vec<_	>>())
 }
 
 fn deserialize_date<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
 where
 	D: Deserializer<'de>,
 {
-	let s = String::deserialize(deserializer)?;
+	// Add Z timezone specifier
+	let s = format!("{}Z", String::deserialize(deserializer)?);
 	DateTime::parse_from_rfc3339(&s)
 		.map_err(serde::de::Error::custom)
 		.map(|dt| dt.with_timezone(&Utc))

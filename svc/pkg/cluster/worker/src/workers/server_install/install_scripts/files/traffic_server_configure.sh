@@ -9,6 +9,7 @@ mkdir -p /etc/trafficserver /var/cache/trafficserver /run/trafficserver /var/log
 # Write config
 __CONFIG__
 
+# NOTE: the /run directory is often mounted as a tmpfs and thus will not retain its permissions after a reboot.
 # Change owner
 chown -R trafficserver:trafficserver /etc/trafficserver /var/cache/trafficserver /run/trafficserver /var/log/trafficserver
 

@@ -421,15 +421,8 @@ static TRAFFIC_SERVER_CONFIG_DIR: Dir<'_> = include_dir!(
 
 async fn traffic_server_config() -> GlobalResult<Vec<(String, String)>> {
 	// Static files
-	let mut config_files = Vec::<(String, String)>::new();
-	for entry in TRAFFIC_SERVER_CONFIG_DIR.entries() {
-		if let Some(file) = entry.as_file() {
-			let key = unwrap!(unwrap!(file.path().file_name()).to_str()).to_string();
-
-			let value = unwrap!(file.contents_utf8());
-			config_files.push((key, value.to_string()));
-		}
-	}
+	let mut config_files = Vec::new();
+	collect_config_files(&TRAFFIC_SERVER_CONFIG_DIR, &mut config_files)?;
 
 	// Storage (default value of 64 gets overwritten in config script)
 	let volume_size = 64;
@@ -459,6 +452,25 @@ async fn traffic_server_config() -> GlobalResult<Vec<(String, String)>> {
 	config_files.push(("remap.config".to_string(), remap));
 
 	Ok(config_files)
+}
+
+fn collect_config_files(
+	dir: &include_dir::Dir,
+	config_files: &mut Vec<(String, String)>,
+) -> GlobalResult<()> {
+	for entry in dir.entries() {
+		match entry {
+			include_dir::DirEntry::File(file) => {
+				let key = unwrap!(unwrap!(file.path().file_name()).to_str()).to_string();
+
+				let value = unwrap!(file.contents_utf8());
+				config_files.push((key, value.to_string()));
+			}
+			include_dir::DirEntry::Dir(dir) => collect_config_files(dir, config_files)?,
+		}
+	}
+
+	Ok(())
 }
 
 struct GenRemapS3ProviderOutput {
@@ -523,19 +535,16 @@ async fn gen_s3_provider(
 	})
 }
 
-pub fn rivet_install_complete(
-	server_token: &str,
-	initialize_immediately: bool,
-) -> GlobalResult<String> {
+pub fn rivet_create_hook(initialize_immediately: bool) -> GlobalResult<String> {
 	let domain_main_api = unwrap!(util::env::domain_main_api(), "no cdn");
+	let mut script =
+		include_str!("files/rivet_create_hook.sh").replace("__DOMAIN_MAIN_API__", &domain_main_api);
 
-	Ok(include_str!("files/rivet_install_complete.sh")
-		.replace(
-			"__INITIALIZE_IMMEDIATELY__",
-			&initialize_immediately.to_string(),
-		)
-		.replace("__SERVER_TOKEN__", server_token)
-		.replace("__DOMAIN_MAIN_API__", &domain_main_api))
+	if initialize_immediately {
+		script.push_str("systemctl start rivet_hook\n");
+	}
+
+	Ok(script)
 }
 
 pub fn rivet_fetch_info(server_token: &str) -> GlobalResult<String> {

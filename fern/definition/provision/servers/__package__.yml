@@ -11,13 +11,6 @@ service:
         ip:
           type: string
       response: GetServerInfoResponse
-    serverInstallComplete:
-      path: /{ip}/install-complete
-      method: POST
-      path-parameters:
-        ip:
-          type: string
-      response: GetServerInfoResponse
 
 types:
   GetServerInfoResponse:

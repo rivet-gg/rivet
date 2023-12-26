@@ -28,7 +28,7 @@ async fn worker(
 	// Build HTTP client
 	let client = util_linode::Client::new().await?;
 
-	// Shut down server
+	// Shut down server before creating custom image
 	api::shut_down(&client, prebake_server.linode_id).await?;
 
 	let create_image_res =
@@ -43,7 +43,7 @@ async fn worker(
 		WHERE variant = $1
 		",
 		&prebake_server.variant,
-		create_image_res.id as i64,
+		create_image_res.id,
 	)
 	.await?;
 

@@ -16,7 +16,7 @@ async fn datacenter_taint(ctx: TestCtx) {
 	let dc = setup(&ctx, server_id, datacenter_id, cluster_id).await;
 
 	// Manually create a server
-	msg!([ctx] cluster::msg::server_provision(server_id) -> cluster::msg::server_install {
+	msg!([ctx] cluster::msg::server_provision(server_id) {
 		cluster_id: Some(cluster_id.into()),
 		datacenter_id: Some(datacenter_id.into()),
 		server_id: Some(server_id.into()),
@@ -26,6 +26,31 @@ async fn datacenter_taint(ctx: TestCtx) {
 	})
 	.await
 	.unwrap();
+
+	// Wait for server to have an ip
+	loop {
+		tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
+		let (exists,) = sql_fetch_one!(
+			[ctx, (bool,)]
+			"
+			SELECT EXISTS (
+				SELECT 1
+				FROM db_cluster.servers
+				WHERE
+					server_id = $1 AND
+					public_ip IS NOT NULL
+			)
+			",
+			server_id,
+		)
+		.await
+		.unwrap();
+
+		if exists {
+			break;
+		}
+	}
 
 	// Increase desired count (this wont provision anything, we manually created a server)
 	msg!([ctx] cluster::msg::datacenter_update(datacenter_id) -> cluster::msg::datacenter_scale {

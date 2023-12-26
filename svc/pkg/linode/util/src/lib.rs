@@ -91,6 +91,7 @@ impl Client {
 					}
 					reqwest::StatusCode::NOT_FOUND => {
 						if skip_404 {
+							tracing::info!("resource not found");
 							break Ok(res);
 						}
 					}
@@ -146,6 +147,20 @@ impl Client {
 			.await?;
 
 		res.json::<T>().await.map_err(|err| err.into())
+	}
+
+	pub async fn post_no_res(&self, endpoint: &str, body: serde_json::Value) -> GlobalResult<()> {
+		self
+			.request(
+				self.inner
+					.post(&format!("https://api.linode.com/v4{endpoint}"))
+					.header("content-type", "application/json"),
+				Some(body),
+				false,
+			)
+			.await?;
+
+		Ok(())
 	}
 }
 

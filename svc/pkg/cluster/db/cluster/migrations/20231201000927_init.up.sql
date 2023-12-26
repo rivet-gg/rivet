@@ -60,7 +60,7 @@ CREATE TABLE server_images (
 	-- A string denoting what type of image this is (ex. "linode-us-southeast-job")
 	variant TEXT PRIMARY KEY,
 	create_ts INT NOT NULL,
-	image_id TEXT,
+	image_id TEXT
 );
 
 CREATE TABLE server_images_linode_misc (

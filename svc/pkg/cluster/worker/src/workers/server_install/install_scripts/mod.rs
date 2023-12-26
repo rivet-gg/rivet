@@ -11,7 +11,6 @@ pub mod components;
 // it (doesn't need to know server id, datacenter id, vlan ip, etc)
 pub async fn gen_install(
 	pool_type: backend::cluster::PoolType,
-	server_token: &str,
 	initialize_immediately: bool,
 ) -> GlobalResult<String> {
 	let mut script = Vec::new();
@@ -73,10 +72,7 @@ pub async fn gen_install(
 			prometheus_targets,
 		}));
 	}
-	script.push(components::rivet_install_complete(
-		server_token,
-		initialize_immediately,
-	)?);
+	script.push(components::rivet_create_hook(initialize_immediately)?);
 
 	let joined = script.join("\n\necho \"======\"\n\n");
 	Ok(format!("#!/usr/bin/env bash\nset -eu\n\n{joined}"))

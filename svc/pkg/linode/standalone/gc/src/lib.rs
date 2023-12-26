@@ -30,7 +30,8 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
 
 	let filter = json!({
-		"status": "available"
+		"status": "available",
+		"type": "manual"
 	});
 	let mut headers = header::HeaderMap::new();
 	headers.insert(
@@ -50,9 +51,7 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 		.into_iter()
 		.map(|x| x.id.clone())
 		.collect::<Vec<_>>();
-	if image_ids.is_empty() {
-		return Ok(());
-	} else if image_ids.len() == 100 {
+	if image_ids.len() == 100 {
 		tracing::warn!("page limit reached, new images may not be returned");
 	}
 
@@ -66,6 +65,10 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 		image_ids,
 	)
 	.await?;
+
+	if prebake_servers.is_empty() {
+		return Ok(());
+	}
 
 	let variants = prebake_servers
 		.iter()
@@ -121,6 +124,11 @@ async fn delete_expired_images(
 		.iter()
 		.filter(|img| img.created < expiration);
 
+	let expired_images_count = expired_images.clone().count();
+	if expired_images_count != 0 {
+		tracing::info!(count=?expired_images_count, "deleting expired images");
+	}
+
 	futures_util::stream::iter(expired_images)
 		.map(|img| {
 			let client = client.clone();
@@ -134,7 +142,6 @@ async fn delete_expired_images(
 	Ok(())
 }
 
-// NOTE: This is not durable
 async fn destroy(client: &util_linode::Client, server: &PrebakeServer) -> GlobalResult<()> {
 	if let Some(linode_id) = server.linode_id {
 		api::delete_instance(client, linode_id).await?;
