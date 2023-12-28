@@ -186,8 +186,17 @@ fn gen_cleanup_task() -> nomad_client::models::Task {
 			dest_path: Some("local/cleanup.py".into()),
 			embedded_tmpl: Some(formatdoc!(
 				r#"
+				import socket
+				origGetAddrInfo = socket.getaddrinfo
+
+				def getAddrInfoWrapper(host, port, family=0, socktype=0, proto=0, flags=0):
+					return origGetAddrInfo(host, port, socket.AF_INET, socktype, proto, flags)
+
+				# Rplace the original socket.getaddrinfo by our version
+				socket.getaddrinfo = getAddrInfoWrapper
+
 				import ssl
-				import urllib.request, json, os, mimetypes, sys
+				import urllib.request, json, os, mimetypes, sys, socket
 
 				BEARER = '{{{{env "NOMAD_META_JOB_RUN_TOKEN"}}}}'
 

@@ -229,6 +229,7 @@ dependencies = [
  "cloud-namespace-token-public-create",
  "cloud-version-get",
  "cloud-version-publish",
+ "cluster-datacenter-list",
  "custom-user-avatar-list-for-game",
  "custom-user-avatar-upload-complete",
  "faker-region",
@@ -5331,6 +5332,7 @@ dependencies = [
  "rivet-util-job",
  "rivet-util-mm",
  "s3-util",
+ "sqlx",
  "tier-list",
  "upload-get",
 ]
@@ -8679,8 +8681,11 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "cluster-datacenter-get",
+ "cluster-datacenter-list",
  "prost 0.10.4",
  "rivet-operation",
+ "rivet-util-linode",
 ]
 
 [[package]]

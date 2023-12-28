@@ -183,7 +183,7 @@ async fn setup(ctx: &TestCtx) -> Setup {
 }
 
 #[worker_test]
-async fn lobby_create(ctx: TestCtx) {
+async fn single_lobby_create(ctx: TestCtx) {
 	if !util::feature::job_run() {
 		return;
 	}
