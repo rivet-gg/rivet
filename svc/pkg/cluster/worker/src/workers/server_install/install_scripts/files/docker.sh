@@ -4,10 +4,6 @@ curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
 # Add Docker repository
 echo 'deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable' > /etc/apt/sources.list.d/docker.list
 
-# Install Docker
-apt-get update -y
-apt-get install -y docker-ce docker-ce-cli containerd.io
-
 # Add daemon.json
 # 
 # Enable live restore in order to ensure that container stay alive
@@ -26,6 +22,9 @@ cat << 'EOF' > /etc/docker/daemon.json
 }
 EOF
 
+# Install Docker
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io
+
 # Test Docker installation
 docker run hello-world
-

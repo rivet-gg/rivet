@@ -373,9 +373,7 @@ async fn fetch_version(
 	})
 	.await?;
 
-	let version = unwrap_ref!(get_res.versions.first(), "version not found")
-		.deref()
-		.clone();
+	let version = unwrap!(get_res.versions.first(), "version not found").clone();
 
 	Ok(version)
 }
@@ -868,15 +866,21 @@ async fn resolve_image_artifact_url(
 			let (ats_vlan_ip,) = sql_fetch_one!(
 				[ctx, (String,)]
 				"
-				SELECT
-					vlan_ip
-				FROM db_cluster.servers
-				WHERE
-					datacenter_id = $1 AND
-					pool_type = $2 AND
-					vlan_ip IS NOT NULL AND
-					cloud_destroy_ts IS NULL
-				OFFSET abs($3 % COUNT(*))
+				WITH sel AS (
+					-- Select candidate vlan ips
+					SELECT
+						vlan_ip
+					FROM db_cluster.servers
+					WHERE
+						datacenter_id = $1 AND
+						pool_type = $2 AND
+						vlan_ip IS NOT NULL AND
+						cloud_destroy_ts IS NULL	
+				)
+				SELECT vlan_ip
+				FROM sel
+				-- Use mod to make sure the hash stays within bounds
+				OFFSET abs($3 % (SELECT COUNT(*) from sel))
 				LIMIT 1
 				",
 				// NOTE: region_id is just the old name for datacenter_id

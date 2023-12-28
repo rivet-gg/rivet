@@ -9,3 +9,6 @@ license = "Apache-2.0"
 uuid = { version = "1", features = ["v4", "serde"] }
 rivet-util = { path = "../../../../lib/util/core" }
 types = { path = "../../../../lib/types/core" }
+
+[build-dependencies]
+tokio = { version = "1.29" }
