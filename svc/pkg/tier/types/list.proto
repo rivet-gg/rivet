@@ -17,3 +17,15 @@ message Response {
 
 	repeated Region regions = 1;
 }
+
+message CacheInstanceTypes {
+	repeated CacheInstanceType instance_types = 1;
+}
+
+message CacheInstanceType {
+	string id = 1;
+	uint64 memory = 2;
+	uint64 disk = 3;
+	uint64 vcpus = 4;
+	uint64 network_out = 5;
+}

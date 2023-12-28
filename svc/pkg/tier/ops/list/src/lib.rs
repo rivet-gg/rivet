@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
+use util_linode::api;
 
 // See pkr/static/nomad-config.hcl.tpl client.reserved
 const RESERVE_SYSTEM_CPU: u64 = 500;
@@ -38,23 +41,92 @@ impl GameNodeConfig {
 	}
 }
 
-/// Returns the default game node config.
-fn get_game_node_config() -> GameNodeConfig {
-	// TODO: CPU should be different based on the provider. For now, we use the
-	// minimum value from tf/prod/config.tf
+#[operation(name = "tier-list")]
+async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier::list::Response> {
+	let datacenters_res = op!([ctx] cluster_datacenter_get {
+		datacenter_ids: ctx.region_ids.clone(),
+	})
+	.await?;
 
+	// Build HTTP client
+	let client = util_linode::Client::new().await?;
+
+	// Get hardware stats from linode and cache
+	let instance_types_res = ctx
+		.cache()
+		.ttl(util::duration::days(1))
+		.fetch_one_proto("instance_type", "linode", {
+			let client = client.clone();
+			move |mut cache, key| {
+				let client = client.clone();
+				async move {
+					let api_res = api::list_instance_types(&client).await?;
+
+					cache.resolve(
+						&key,
+						tier::list::CacheInstanceTypes {
+							instance_types: api_res.into_iter().map(Into::into).collect::<Vec<_>>(),
+						},
+					);
+
+					Ok(cache)
+				}
+			}
+		})
+		.await?;
+	let instance_types = unwrap!(instance_types_res)
+		.instance_types
+		.into_iter()
+		.map(|ty| (ty.id.clone(), ty))
+		.collect::<HashMap<_, _>>();
+
+	let regions = datacenters_res
+		.datacenters
+		.iter()
+		.map(|datacenter| {
+			let job_pool = unwrap!(
+				datacenter
+					.pools
+					.iter()
+					.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32),
+				"no job pool"
+			);
+			let hardware = &unwrap!(job_pool.hardware.first(), "no hardware").provider_hardware;
+			let instance_type = unwrap!(
+				instance_types.get(hardware),
+				"datacenter hardware stats not found"
+			);
+
+			Ok(tier::list::response::Region {
+				region_id: datacenter.datacenter_id,
+				tiers: vec![
+					generate_tier(instance_type, "basic-4d1", 4, 1),
+					generate_tier(instance_type, "basic-2d1", 2, 1),
+					generate_tier(instance_type, "basic-1d1", 1, 1),
+					generate_tier(instance_type, "basic-1d2", 1, 2),
+					generate_tier(instance_type, "basic-1d4", 1, 4),
+					generate_tier(instance_type, "basic-1d8", 1, 8),
+					generate_tier(instance_type, "basic-1d16", 1, 16),
+				],
+			})
+		})
+		.collect::<GlobalResult<Vec<_>>>()?;
+
+	Ok(tier::list::Response { regions })
+}
+
+/// Returns the default game node config.
+fn get_game_node_config(instance_type: &tier::list::CacheInstanceType) -> GameNodeConfig {
 	// Multiply config for 2 core, 4 GB to scale up to the 4 core, 8 GB
 	// plan
 	let mut config = GameNodeConfig {
-		cpu_cores: 4,
+		cpu_cores: instance_type.vcpus,
 		// DigitalOcean: 7,984
 		// Linode: 7,996
 		cpu: 7900,
-		// DigitalOcean: 7,957
-		// Linode: 7,934
-		memory: 7900,
-		disk: 64_000,
-		bandwidth: 2_000_000,
+		memory: instance_type.memory,
+		disk: instance_type.disk,
+		bandwidth: instance_type.network_out * 1000,
 	};
 
 	// Remove reserved resources
@@ -64,37 +136,13 @@ fn get_game_node_config() -> GameNodeConfig {
 	config
 }
 
-#[operation(name = "tier-list")]
-async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier::list::Response> {
-	let region_ids = ctx
-		.region_ids
-		.iter()
-		.map(common::Uuid::as_uuid)
-		.collect::<Vec<_>>();
-
-	let tiers = vec![
-		generate_tier("basic-4d1", 4, 1),
-		generate_tier("basic-2d1", 2, 1),
-		generate_tier("basic-1d1", 1, 1),
-		generate_tier("basic-1d2", 1, 2),
-		generate_tier("basic-1d4", 1, 4),
-		generate_tier("basic-1d8", 1, 8),
-		generate_tier("basic-1d16", 1, 16),
-	];
-
-	Ok(tier::list::Response {
-		regions: region_ids
-			.into_iter()
-			.map(|region_id| tier::list::response::Region {
-				region_id: Some(region_id.into()),
-				tiers: tiers.clone(),
-			})
-			.collect::<Vec<_>>(),
-	})
-}
-
-fn generate_tier(name: &str, numerator: u64, denominator: u64) -> backend::region::Tier {
-	let c = get_game_node_config();
+fn generate_tier(
+	instance_type: &tier::list::CacheInstanceType,
+	name: &str,
+	numerator: u64,
+	denominator: u64,
+) -> backend::region::Tier {
+	let c = get_game_node_config(instance_type);
 
 	backend::region::Tier {
 		tier_name_id: name.into(),

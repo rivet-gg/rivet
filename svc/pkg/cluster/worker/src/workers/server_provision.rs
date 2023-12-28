@@ -21,11 +21,11 @@ async fn worker(
 
 	// Check if server is already provisioned
 	// NOTE: sql record already exists before this worker is called
-	let (provider_server_id, vlan_ip) = sql_fetch_one!(
-		[ctx, (Option<String>, Option<String>), &crdb]
+	let (provider_server_id, destroyed) = sql_fetch_one!(
+		[ctx, (Option<String>, bool), &crdb]
 		"
 		SELECT
-			provider_server_id, vlan_ip
+			provider_server_id, cloud_destroy_ts IS NOT NULL
 		FROM db_cluster.servers
 		WHERE server_id = $1
 		",
@@ -39,7 +39,14 @@ async fn worker(
 			"server is already provisioned"
 		);
 		return Ok(());
-	};
+	}
+	if destroyed {
+		tracing::warn!(
+			?server_id,
+			"attempting to provision a destroyed server. likely failed/timed out during provisioning and was retried"
+		);
+		return Ok(());
+	}
 
 	// Fetch datacenter config
 	let datacenter_res = op!([ctx] cluster_datacenter_get {
@@ -55,14 +62,8 @@ async fn worker(
 		"datacenter does not have this type of pool configured"
 	);
 
-	// If the vlan_ip is set in the database but this message is being run again, that means an attempt to
-	// provision servers failed. Use the vlan_ip that was determined before, otherwise find a new vlan_ip
-	// to use
-	let vlan_ip = if let Some(vlan_ip) = vlan_ip {
-		vlan_ip
-	} else {
-		get_vlan_ip(ctx, &crdb, server_id, pool_type).await?
-	};
+	// Get a new vlan ip
+	let vlan_ip = get_vlan_ip(ctx, &crdb, server_id, pool_type).await?;
 
 	let provision_res = match provider {
 		backend::cluster::Provider::Linode => {

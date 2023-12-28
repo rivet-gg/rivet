@@ -1,10 +1,9 @@
 use std::net::Ipv4Addr;
 
 use api_helper::{anchor::WatchIndexQuery, ctx::Ctx};
-use proto::backend::{self, pkg::*};
+use proto::backend;
 use rivet_api::models;
 use rivet_operation::prelude::*;
-use serde_json::json;
 
 use crate::auth::Auth;
 
@@ -40,9 +39,13 @@ pub async fn info(
 	let datacenter = unwrap!(datacenter_res.datacenters.first());
 
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(
-		server.pool_type as i32
+		server.pool_type
 	));
-	let name = util_cluster::server_name(&datacenter.provider_datacenter_id, pool_type);
+	let name = util_cluster::full_server_name(
+		&datacenter.provider_datacenter_id,
+		pool_type,
+		server_id.as_uuid(),
+	);
 
 	Ok(models::ProvisionServersGetServerInfoResponse {
 		name,

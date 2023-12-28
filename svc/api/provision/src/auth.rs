@@ -28,7 +28,7 @@ impl ApiAuth for Auth {
 		})
 	}
 
-	async fn rate_limit(rate_limit_ctx: AuthRateLimitCtx<'_>) -> GlobalResult<()> {
+	async fn rate_limit(_rate_limit_ctx: AuthRateLimitCtx<'_>) -> GlobalResult<()> {
 		Ok(())
 	}
 }

@@ -874,7 +874,8 @@ async fn resolve_image_artifact_url(
 				WHERE
 					datacenter_id = $1 AND
 					pool_type = $2 AND
-					vlan_ip IS NOT NULL
+					vlan_ip IS NOT NULL AND
+					cloud_destroy_ts IS NULL
 				OFFSET abs($3 % COUNT(*))
 				LIMIT 1
 				",

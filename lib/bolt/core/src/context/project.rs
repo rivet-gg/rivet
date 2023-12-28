@@ -208,61 +208,6 @@ impl ProjectContextData {
 		}
 
 		// MARK: Dynamic Servers
-		// Validate the build delivery method
-		if !self.ns().pools.is_empty() {
-			let ats_count = self.ns().pools.iter().filter(|p| p.pool == "ats").count();
-			match self.ns().rivet.dynamic_servers.build_delivery_method {
-				config::ns::DynamicServersBuildDeliveryMethod::TrafficServer => {
-					assert_ne!(ats_count, 0, "TrafficServer delivery method will not work without ats servers in each region. either set rivet.dynamic_servers.build_delivery_method = \"S3Direct\" to download builds directly from S3 or add an ATS pool to each region.");
-				}
-				config::ns::DynamicServersBuildDeliveryMethod::S3Direct => {
-					assert_eq!(
-						ats_count, 0,
-						"S3Direct delivery method should not be used if ats servers are available"
-					);
-				}
-			}
-		}
-
-		// MARK: Pools
-		for region_id in self.ns().regions.keys() {
-			// Skip empty regions
-			if !self.ns().pools.iter().any(|p| p.region == *region_id) {
-				continue;
-			}
-
-			// Validate all required pools exist
-			assert!(
-				self.ns()
-					.pools
-					.iter()
-					.any(|p| p.pool == "gg" && p.region == *region_id),
-				"missing gg pool for region {region_id}",
-				region_id = region_id
-			);
-			assert!(
-				self.ns()
-					.pools
-					.iter()
-					.any(|p| p.pool == "job" && p.region == *region_id),
-				"missing job pool for region {region_id}",
-				region_id = region_id
-			);
-			if matches!(
-				self.ns().rivet.dynamic_servers.build_delivery_method,
-				config::ns::DynamicServersBuildDeliveryMethod::TrafficServer
-			) {
-				assert!(
-					self.ns()
-						.pools
-						.iter()
-						.any(|p| p.pool == "ats" && p.region == *region_id),
-					"missing ats pool for region {region_id}",
-					region_id = region_id
-				);
-			}
-		}
-
 		if let Some(dynamic_servers) = &self.ns().rivet.dynamic_servers {
 			let mut unique_datacenter_ids = HashSet::new();
 
@@ -281,6 +226,7 @@ impl ProjectContextData {
 					panic!("invalid datacenter ({}): Missing ATS pool", name_id);
 				};
 
+				// Validate the build delivery method
 				let ats_count = ats_pool.desired_count;
 				match datacenter.build_delivery_method {
 					config::ns::DynamicServersBuildDeliveryMethod::TrafficServer => {

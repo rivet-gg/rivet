@@ -99,7 +99,7 @@ impl Client {
 				}
 
 				tracing::info!(status=?res.status(), "api request failed");
-				bail_with!(ERROR, error = res.json::<ApiErrorResponse>().await?);
+				bail!(res.json::<ApiErrorResponse>().await?.to_string());
 			}
 
 			break Ok(res);
@@ -150,15 +150,14 @@ impl Client {
 	}
 
 	pub async fn post_no_res(&self, endpoint: &str, body: serde_json::Value) -> GlobalResult<()> {
-		self
-			.request(
-				self.inner
-					.post(&format!("https://api.linode.com/v4{endpoint}"))
-					.header("content-type", "application/json"),
-				Some(body),
-				false,
-			)
-			.await?;
+		self.request(
+			self.inner
+				.post(&format!("https://api.linode.com/v4{endpoint}"))
+				.header("content-type", "application/json"),
+			Some(body),
+			false,
+		)
+		.await?;
 
 		Ok(())
 	}

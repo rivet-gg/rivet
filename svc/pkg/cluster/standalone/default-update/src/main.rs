@@ -8,5 +8,10 @@ async fn main() -> GlobalResult<()> {
 		.with_span_events(tracing_subscriber::fmt::format::FmtSpan::NONE)
 		.init();
 
+	// TODO: When running bolt up, this service gets created first before `cluster-worker` so the messages
+	// sent from here are received but effectively forgotten because `cluster-worker` gets restarted
+	// immediately afterwards.
+	tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+
 	cluster_default_update::run_from_env().await
 }

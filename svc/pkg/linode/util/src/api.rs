@@ -1,6 +1,7 @@
 use std::{net::Ipv4Addr, str, time::Duration};
 
 use chrono::{DateTime, Utc};
+use proto::backend::pkg::*;
 use rivet_operation::prelude::*;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
@@ -436,11 +437,52 @@ pub async fn list_custom_images(client: &Client) -> GlobalResult<Vec<CustomImage
 
 	let res = client.get::<ListCustomImagesResponse>("/images").await?;
 
-	Ok(res.data.into_iter().filter(|img| {
-		img.created_by.as_ref()
-			.map(|created_by| created_by != "linode")
-			.unwrap_or_default()
-	}).collect::<Vec<_	>>())
+	Ok(res
+		.data
+		.into_iter()
+		.filter(|img| {
+			img.created_by
+				.as_ref()
+				.map(|created_by| created_by != "linode")
+				.unwrap_or_default()
+		})
+		.collect::<Vec<_>>())
+}
+
+#[derive(Deserialize)]
+pub struct ListInstanceTypesResponse {
+	pub data: Vec<InstanceType>,
+}
+
+#[derive(Deserialize)]
+pub struct InstanceType {
+	pub id: String,
+	pub memory: u64,
+	pub disk: u64,
+	pub vcpus: u64,
+	pub network_out: u64,
+}
+
+impl From<InstanceType> for tier::list::CacheInstanceType {
+	fn from(value: InstanceType) -> Self {
+		tier::list::CacheInstanceType {
+			id: value.id,
+			memory: value.memory,
+			disk: value.disk,
+			vcpus: value.vcpus,
+			network_out: value.network_out,
+		}
+	}
+}
+
+pub async fn list_instance_types(client: &Client) -> GlobalResult<Vec<InstanceType>> {
+	tracing::info!("listing instance types");
+
+	let res = client
+		.get::<ListInstanceTypesResponse>("/linode/types")
+		.await?;
+
+	Ok(res.data)
 }
 
 fn deserialize_date<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
