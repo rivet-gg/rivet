@@ -122,7 +122,7 @@ async fn update_db(
 	let run_meta_nomad_row = sql_fetch_optional!(
 		[ctx, RunMetaNomadRow, @tx tx]
 		"
-		SELECT dispatched_job_id
+		SELECT alloc_id, dispatched_job_id
 		FROM db_job_state.run_meta_nomad
 		WHERE run_id = $1
 		FOR UPDATE
