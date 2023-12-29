@@ -141,6 +141,8 @@ async fn generate_root(path: &Path) {
 							entry = entry.file_name().into_string().unwrap()
 						));
 
+						eprintln!("--- {}", entry.path().display());
+
 						// Remove services' Cargo.lock files in favor of the shared svc
 						// Cargo.toml
 						let _ = fs::remove_file(entry.path().join("Cargo.lock")).await;
@@ -189,7 +191,7 @@ fn update_libs<'a>(lib_path: &'a Path) -> BoxFuture<'a, ()> {
 	async move {
 		let mut lib_dir = fs::read_dir(lib_path).await.unwrap();
 		while let Some(entry) = lib_dir.next_entry().await.unwrap() {
-			if !entry.metadata().await.unwrap().is_dir() {
+			if !entry.metadata().await.unwrap().is_dir() || entry.file_name() == "nomad-client" {
 				continue;
 			}
 
