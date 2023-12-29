@@ -71,7 +71,7 @@ async fn matchmaker_find() {
 
 	ctx.http_client
 		.matchmaker()
-		.region(util::env::region())
+		.region("local")
 		.send()
 		.await
 		.unwrap();

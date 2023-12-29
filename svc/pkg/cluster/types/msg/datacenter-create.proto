@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.cluster.msg.datacenter_create;
+
+import "proto/common.proto";
+import "proto/backend/cluster.proto";
+
+/// name = "msg-cluster-datacenter-create"
+/// parameters = [
+/// 	{ name = "datacenter_id" },
+/// ]
+message Message {
+    rivet.backend.cluster.Datacenter config = 1;
+}

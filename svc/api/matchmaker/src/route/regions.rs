@@ -1,4 +1,5 @@
 use api_helper::{anchor::WatchIndexQuery, ctx::Ctx};
+use proto::backend;
 use rivet_matchmaker_server::models;
 use rivet_operation::prelude::*;
 use std::collections::HashSet;
@@ -16,7 +17,7 @@ pub async fn list(
 	if ctx.auth().game_ns_dev_option()?.is_some() {
 		return Ok(models::ListRegionsResponse {
 			regions: vec![models::RegionInfo {
-				region_id: util::env::region().into(),
+				region_id: "local".into(),
 				provider_display_name: "Your Computer".into(),
 				region_display_name: "Local".into(),
 				datacenter_coord: models::Coord {
@@ -69,8 +70,10 @@ pub async fn list(
 			if let Some((lat, long)) = coords {
 				let res = op!([ctx] region_recommend {
 					region_ids: enabled_region_ids.clone(),
-					latitude: Some(lat),
-					longitude: Some(long),
+					coords: Some(backend::net::Coordinates {
+						latitude: lat,
+						longitude: long,
+					}),
 					..Default::default()
 				})
 				.await?;
@@ -94,7 +97,7 @@ pub async fn list(
 				None
 			};
 
-			Ok(utils::build_region(region, recommend))
+			utils::build_region(region, recommend)
 		})
 		.collect::<GlobalResult<Vec<_>>>()?;
 

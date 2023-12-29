@@ -1,3 +1,4 @@
+mod datacenter_closed_set;
 mod lobby_cleanup;
 mod lobby_closed_set;
 mod lobby_create;
@@ -15,6 +16,7 @@ mod player_register;
 mod player_remove;
 
 chirp_worker::workers![
+	datacenter_closed_set,
 	lobby_cleanup,
 	lobby_closed_set,
 	lobby_create,

@@ -220,19 +220,6 @@ async fn vars(ctx: &ProjectContext) {
 		}
 	}
 
-	// Regions
-	vars.insert(
-		"primary_region".into(),
-		json!(ctx.primary_region_or_local()),
-	);
-
-	let regions = super::regions::build_regions(&ctx).unwrap();
-	vars.insert("regions".into(), json!(&regions));
-
-	// Pools
-	let pools = super::pools::build_pools(&ctx).await.unwrap();
-	vars.insert("pools".into(), json!(&pools));
-
 	// Tunnels
 	if let Some(ns::Dns {
 		provider: Some(ns::DnsProvider::Cloudflare { access, .. }),
@@ -255,31 +242,6 @@ async fn vars(ctx: &ProjectContext) {
 		vars.insert("tunnels".into(), json!(&tunnels));
 	}
 
-	// Servers
-	let servers = super::servers::build_servers(&ctx, &regions, &pools).unwrap();
-	vars.insert("servers".into(), json!(servers));
-
-	if dep::terraform::cli::has_applied(ctx, "k8s_infra").await
-		&& dep::terraform::cli::has_applied(ctx, "tls").await
-	{
-		let k8s_infra = dep::terraform::output::read_k8s_infra(ctx).await;
-		let tls = dep::terraform::output::read_tls(ctx).await;
-
-		let mut server_install_scripts = HashMap::new();
-		for (k, v) in &servers {
-			server_install_scripts.insert(
-				k.clone(),
-				super::install_scripts::gen(ctx, v, &servers, &k8s_infra, &tls)
-					.await
-					.unwrap(),
-			);
-		}
-		vars.insert(
-			"server_install_scripts".into(),
-			json!(server_install_scripts),
-		);
-	}
-
 	// Services
 	{
 		let mut services = HashMap::new();
@@ -296,6 +258,25 @@ async fn vars(ctx: &ProjectContext) {
 			);
 		}
 		vars.insert("services".into(), json!(services));
+	}
+
+	// Datacenters
+	if let Some(dynamic_servers) = &config.rivet.dynamic_servers {
+		let datacenters = dynamic_servers
+			.cluster
+			.datacenters
+			.iter()
+			.map(|(name_id, dc)| {
+				(
+					name_id,
+					json!({
+						"datacenter_id": dc.datacenter_id,
+					}),
+				)
+			})
+			.collect::<HashMap<_, _>>();
+
+		vars.insert("datacenters".into(), json!(datacenters));
 	}
 
 	// Docker

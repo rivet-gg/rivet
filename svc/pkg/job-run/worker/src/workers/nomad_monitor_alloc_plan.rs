@@ -44,7 +44,7 @@ struct RunData {
 
 #[worker(name = "job-run-nomad-monitor-alloc-plan")]
 async fn worker(
-	ctx: &OperationContext<job_run::msg::nomad_monitor_alloc_plan::Message>,
+	ctx: &OperationContext<nomad::msg::monitor_alloc_plan::Message>,
 ) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
 	let mut redis_job = ctx.redis_job().await?;
@@ -208,7 +208,7 @@ struct DbOutput {
 /// Returns `None` if the run could not be found.
 #[tracing::instrument(skip_all)]
 async fn update_db(
-	ctx: OperationContext<job_run::msg::nomad_monitor_alloc_plan::Message>,
+	ctx: OperationContext<nomad::msg::monitor_alloc_plan::Message>,
 	tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
 	now: i64,
 	RunData {

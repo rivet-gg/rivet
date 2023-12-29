@@ -58,10 +58,12 @@ impl __RouterConfig {
 			return true;
 		};
 
-		tracing::info!("trying prefix {prefix}");
+		tracing::debug!("trying prefix {prefix}");
 
 		match self.path_segments.last() {
 			Some(segment) if segment == prefix => {
+				tracing::debug!("matched");
+				
 				self.path_segments.pop();
 				true
 			}

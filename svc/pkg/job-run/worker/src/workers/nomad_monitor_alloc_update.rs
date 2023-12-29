@@ -17,7 +17,7 @@ enum TaskState {
 
 #[worker(name = "job-run-nomad-monitor-alloc-update")]
 async fn worker(
-	ctx: &OperationContext<job_run::msg::nomad_monitor_alloc_update::Message>,
+	ctx: &OperationContext<nomad::msg::monitor_alloc_update::Message>,
 ) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
 

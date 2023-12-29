@@ -203,6 +203,16 @@ pub fn player_auto_remove() -> String {
 	format!("{{global}}:mm:player:auto_remove")
 }
 
+/// is closed
+pub fn datacenter_is_closed(
+	datacenter_id: Uuid,
+) -> String {
+	format!(
+		"{{global}}:mm:datacenter:{}:is_closed",
+		datacenter_id,
+	)
+}
+
 // Placeholder key
 pub fn empty() -> String {
 	"{global}".to_string()

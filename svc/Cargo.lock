@@ -104,6 +104,8 @@ dependencies = [
  "async_once",
  "chirp-client",
  "chrono",
+ "cluster-server-get",
+ "cluster-server-list",
  "http",
  "hyper",
  "lazy_static",
@@ -113,6 +115,7 @@ dependencies = [
  "rivet-cache",
  "rivet-claims",
  "rivet-connection",
+ "rivet-convert",
  "rivet-health-checks",
  "rivet-matchmaker",
  "rivet-operation",
@@ -244,6 +247,7 @@ dependencies = [
  "cloud-namespace-token-public-create",
  "cloud-version-get",
  "cloud-version-publish",
+ "cluster-datacenter-list",
  "custom-user-avatar-list-for-game",
  "custom-user-avatar-upload-complete",
  "faker-region",
@@ -741,6 +745,7 @@ dependencies = [
  "api-matchmaker",
  "api-module",
  "api-portal",
+ "api-provision",
  "api-status",
  "async-trait",
  "chirp-client",
@@ -800,6 +805,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "api-provision"
+version = "0.0.1"
+dependencies = [
+ "api-helper",
+ "async-trait",
+ "chirp-client",
+ "chrono",
+ "cluster-datacenter-get",
+ "cluster-server-get",
+ "cluster-server-resolve-for-ip",
+ "http",
+ "hyper",
+ "lazy_static",
+ "prost 0.10.4",
+ "rivet-api",
+ "rivet-cache",
+ "rivet-claims",
+ "rivet-health-checks",
+ "rivet-operation",
+ "rivet-pools",
+ "rivet-util-cluster",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "api-route"
 version = "0.0.1"
 dependencies = [
@@ -822,7 +859,6 @@ dependencies = [
  "hyper",
  "lazy_static",
  "prost 0.10.4",
- "region-resolve",
  "reqwest",
  "rivet-cache",
  "rivet-claims",
@@ -839,7 +875,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
- "toml 0.5.11",
  "tracing",
  "tracing-subscriber",
  "url",
@@ -1363,6 +1398,12 @@ dependencies = [
  "object",
  "rustc-demangle",
 ]
+
+[[package]]
+name = "base16ct"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
 
 [[package]]
 name = "base64"
@@ -2298,6 +2339,199 @@ dependencies = [
 ]
 
 [[package]]
+name = "cloudflare"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0778f99ea7ad39b49b758eb418da7117b93232a5f6a09f9b79a094b77ac88cc2"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.13.1",
+ "cfg-if",
+ "chrono",
+ "http",
+ "percent-encoding",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_qs",
+ "serde_with",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "cluster-datacenter-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-datacenter-list"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-datacenter-location-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "ip-info",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-datacenter-resolve-for-name-id"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-datacenter-topology-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "lazy_static",
+ "nomad-util",
+ "nomad_client",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-default-update"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "cluster-datacenter-get",
+ "cluster-datacenter-list",
+ "cluster-get",
+ "prost 0.10.4",
+ "reqwest",
+ "rivet-connection",
+ "rivet-operation",
+ "rivet-pools",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "cluster-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-server-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-server-list"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-server-resolve-for-ip"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-topology-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "lazy_static",
+ "nomad-util",
+ "nomad_client",
+ "prost 0.10.4",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "cluster-worker"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "chirp-client",
+ "chirp-worker",
+ "chrono",
+ "cloudflare",
+ "cluster-datacenter-get",
+ "cluster-datacenter-list",
+ "cluster-datacenter-topology-get",
+ "include_dir",
+ "indoc",
+ "lazy_static",
+ "linode-server-destroy",
+ "linode-server-provision",
+ "maplit",
+ "nomad-util",
+ "nomad_client",
+ "rivet-convert",
+ "rivet-health-checks",
+ "rivet-metrics",
+ "rivet-runtime",
+ "rivet-util-cluster",
+ "s3-util",
+ "serde_yaml",
+ "sqlx",
+ "ssh2",
+ "thiserror",
+ "token-create",
+]
+
+[[package]]
 name = "combine"
 version = "4.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2451,6 +2685,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "crypto-bigint"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0dc92fb57ca44df6db8059111ab3af99a63d5d0f8375d9972e319a379c6bab76"
+dependencies = [
+ "generic-array",
+ "rand_core",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
 name = "crypto-common"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2592,7 +2838,7 @@ dependencies = [
  "hashbrown 0.14.2",
  "lock_api",
  "once_cell",
- "parking_lot_core",
+ "parking_lot_core 0.9.9",
 ]
 
 [[package]]
@@ -2655,6 +2901,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
+name = "ecdsa"
+version = "0.16.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee27f32b5c5292967d2d4a9d7f1e0b0aed2c15daded5a60300e4abb9d8020bca"
+dependencies = [
+ "der",
+ "digest",
+ "elliptic-curve",
+ "rfc6979",
+ "signature",
+ "spki",
+]
+
+[[package]]
 name = "ed25519"
 version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2682,6 +2942,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "elliptic-curve"
+version = "0.13.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5e6043086bf7973472e0c7dff2142ea0b680d30e18d9cc40f267efbf222bd47"
+dependencies = [
+ "base16ct",
+ "crypto-bigint",
+ "digest",
+ "ff",
+ "generic-array",
+ "group",
+ "pkcs8",
+ "rand_core",
+ "sec1",
+ "subtle",
+ "zeroize",
 ]
 
 [[package]]
@@ -3035,6 +3314,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ff"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ded41244b729663b1e574f1b4fb731469f69f79c17667b5d776b16cda0479449"
+dependencies = [
+ "rand_core",
+ "subtle",
+]
+
+[[package]]
 name = "fiat-crypto"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3171,7 +3460,7 @@ checksum = "1d930c203dd0b6ff06e0201a4a2fe9149b43c684fd4420555b26d21b1a02956f"
 dependencies = [
  "futures-core",
  "lock_api",
- "parking_lot",
+ "parking_lot 0.12.1",
 ]
 
 [[package]]
@@ -3659,6 +3948,7 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
+ "zeroize",
 ]
 
 [[package]]
@@ -3708,7 +3998,7 @@ dependencies = [
  "futures-timer",
  "no-std-compat",
  "nonzero_ext",
- "parking_lot",
+ "parking_lot 0.12.1",
  "quanta",
  "rand",
  "smallvec",
@@ -3724,6 +4014,17 @@ dependencies = [
  "serde_json",
  "toml 0.5.11",
  "yaml-rust",
+]
+
+[[package]]
+name = "group"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0f9ef7462f7c099f518d754361858f86d8a07af53ba9af0fe635bbccb151a63"
+dependencies = [
+ "ff",
+ "rand_core",
+ "subtle",
 ]
 
 [[package]]
@@ -4103,6 +4404,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "include_dir"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18762faeff7122e89e0857b02f7ce6fcc0d101d5e9ad2ad7846cc01d61b7f19e"
+dependencies = [
+ "include_dir_macros",
+]
+
+[[package]]
+name = "include_dir_macros"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b139284b5cf57ecfa712bcc66950bb635b31aff41c188e8a4cfc758eca374a3f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4167,6 +4487,9 @@ name = "ipnet"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f518f335dce6725a761382244631d86cf0ccb2863413590b31338feb467f9c3"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "itertools"
@@ -4288,33 +4611,6 @@ dependencies = [
  "rivet-util-job",
  "serde",
  "serde_urlencoded",
-]
-
-[[package]]
-name = "job-run-nomad-monitor"
-version = "0.0.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "chrono",
- "futures-util",
- "indoc",
- "lazy_static",
- "nomad-client",
- "nomad-util",
- "prost 0.10.4",
- "rivet-connection",
- "rivet-health-checks",
- "rivet-metrics",
- "rivet-operation",
- "rivet-pools",
- "rivet-runtime",
- "rivet-util-job",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -4500,10 +4796,100 @@ dependencies = [
 ]
 
 [[package]]
+name = "libssh2-sys"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dc8a030b787e2119a731f1951d6a773e2280c660f8ec4b0f5e1505a386e71ee"
+dependencies = [
+ "cc",
+ "libc",
+ "libz-sys",
+ "openssl-sys",
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
+name = "libz-sys"
+version = "1.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d97137b25e321a73eef1418d1d5d2eda4d77e12813f8e6dead84bc52c5870a7b"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
 name = "linked-hash-map"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
+
+[[package]]
+name = "linode-gc"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "chrono",
+ "reqwest",
+ "rivet-connection",
+ "rivet-health-checks",
+ "rivet-metrics",
+ "rivet-operation",
+ "rivet-runtime",
+ "rivet-util-linode",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "linode-server-destroy"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "linode-server-provision",
+ "reqwest",
+ "rivet-operation",
+ "rivet-util-cluster",
+ "rivet-util-linode",
+ "sqlx",
+]
+
+[[package]]
+name = "linode-server-provision"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "linode-server-destroy",
+ "reqwest",
+ "rivet-operation",
+ "rivet-util-cluster",
+ "rivet-util-linode",
+ "sqlx",
+]
+
+[[package]]
+name = "linode-worker"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "rivet-convert",
+ "rivet-health-checks",
+ "rivet-metrics",
+ "rivet-runtime",
+ "rivet-util-linode",
+ "sqlx",
+]
 
 [[package]]
 name = "linux-raw-sys"
@@ -4832,6 +5218,7 @@ dependencies = [
  "rivet-util-job",
  "rivet-util-mm",
  "s3-util",
+ "sqlx",
  "tier-list",
  "upload-get",
 ]
@@ -5265,11 +5652,13 @@ dependencies = [
  "cf-custom-hostname-worker",
  "chirp-client",
  "cloud-worker",
+ "cluster-worker",
  "external-worker",
  "game-user-worker",
  "job-log-worker",
  "job-run-worker",
  "kv-worker",
+ "linode-worker",
  "mm-worker",
  "module-worker",
  "push-notification-worker",
@@ -5362,6 +5751,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "nomad-monitor"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "chrono",
+ "futures-util",
+ "indoc",
+ "lazy_static",
+ "nomad-util",
+ "nomad_client",
+ "prost 0.10.4",
+ "rivet-connection",
+ "rivet-health-checks",
+ "rivet-metrics",
+ "rivet-operation",
+ "rivet-pools",
+ "rivet-runtime",
+ "rivet-util-job",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "nomad-util"
 version = "0.1.0"
 dependencies = [
@@ -5369,6 +5785,7 @@ dependencies = [
  "bytes",
  "futures-util",
  "nomad-client",
+ "nomad_client",
  "reqwest",
  "rivet-pools",
  "serde",
@@ -5376,6 +5793,17 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "nomad_client"
+version = "1.1.4"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "url",
 ]
 
 [[package]]
@@ -5502,9 +5930,9 @@ checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
 
 [[package]]
 name = "openssl"
-version = "0.10.57"
+version = "0.10.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bac25ee399abb46215765b1cb35bc0212377e58a061560d8b29b024fd0430e7c"
+checksum = "6b8419dc8cc6d866deb801274bba2e6f8f6108c1bb7fcc10ee5ab864931dbb45"
 dependencies = [
  "bitflags 2.4.1",
  "cfg-if",
@@ -5534,9 +5962,9 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.93"
+version = "0.9.97"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db4d56a4c0478783083cfafcc42493dd4a981d41669da64b4572a2a089b51b1d"
+checksum = "c3eaad34cdd97d81de97964fc7f29e2d104f483840d906ef56daa1912338460b"
 dependencies = [
  "cc",
  "libc",
@@ -5557,13 +5985,76 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
+name = "p256"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9863ad85fa8f4460f9c48cb909d38a0d689dba1f6f6988a5e3e0d31071bcd4b"
+dependencies = [
+ "ecdsa",
+ "elliptic-curve",
+ "primeorder",
+ "sha2",
+]
+
+[[package]]
+name = "p384"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70786f51bcc69f6a4c0360e063a4cac5419ef7c5cd5b3c99ad70f3be5ba79209"
+dependencies = [
+ "ecdsa",
+ "elliptic-curve",
+ "primeorder",
+ "sha2",
+]
+
+[[package]]
+name = "p521"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fc9e2161f1f215afdfce23677034ae137bbd45016a880c2eb3ba8eb95f085b2"
+dependencies = [
+ "base16ct",
+ "ecdsa",
+ "elliptic-curve",
+ "primeorder",
+ "rand_core",
+ "sha2",
+]
+
+[[package]]
+name = "parking_lot"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d17b78036a60663b797adeaee46f5c9dfebb86948d1255007a1d6be0271ff99"
+dependencies = [
+ "instant",
+ "lock_api",
+ "parking_lot_core 0.8.6",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3742b2c103b9f06bc9fff0a37ff4912935851bee6d36f3c02bcc755bcfec228f"
 dependencies = [
  "lock_api",
- "parking_lot_core",
+ "parking_lot_core 0.9.9",
+]
+
+[[package]]
+name = "parking_lot_core"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60a2cfe6f0ad2bfc16aefa463b497d5c7a5ecd44a23efa72aa342d90177356dc"
+dependencies = [
+ "cfg-if",
+ "instant",
+ "libc",
+ "redox_syscall 0.2.16",
+ "smallvec",
+ "winapi",
 ]
 
 [[package]]
@@ -5574,7 +6065,7 @@ checksum = "4c42a9226546d68acdd9c0a280d17ce19bfe27a46bf68784e4066115788d008e"
 dependencies = [
  "cfg-if",
  "libc",
- "redox_syscall",
+ "redox_syscall 0.4.1",
  "smallvec",
  "windows-targets",
 ]
@@ -5773,6 +6264,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "primeorder"
+version = "0.13.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "353e1ca18966c16d9deb1c69278edbc5f194139612772bd9537af60ac231e1e6"
+dependencies = [
+ "elliptic-curve",
+]
+
+[[package]]
 name = "proc-macro-error"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5827,7 +6327,7 @@ dependencies = [
  "fnv",
  "lazy_static",
  "memchr",
- "parking_lot",
+ "parking_lot 0.12.1",
  "protobuf",
  "thiserror",
 ]
@@ -6048,6 +6548,15 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb5a58c1855b4b6819d59012155603f0b22ad30cad752600aadfcb695265519a"
+dependencies = [
+ "bitflags 1.3.2",
+]
+
+[[package]]
+name = "redox_syscall"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4722d768eff46b75989dd134e5c353f0d6296e5aaa3132e776cbdb56be7731aa"
@@ -6100,25 +6609,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
-name = "region-config-get"
-version = "0.0.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "rivet-operation",
- "serde",
- "sqlx",
-]
-
-[[package]]
 name = "region-get"
 version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "cluster-datacenter-get",
+ "cluster-datacenter-location-get",
  "faker-region",
  "prost 0.10.4",
- "region-config-get",
  "rivet-operation",
  "sqlx",
 ]
@@ -6129,9 +6628,9 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "cluster-datacenter-list",
  "faker-region",
  "prost 0.10.4",
- "region-config-get",
  "rivet-operation",
  "sqlx",
 ]
@@ -6157,9 +6656,10 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "cluster-datacenter-get",
+ "cluster-datacenter-list",
  "faker-region",
  "prost 0.10.4",
- "region-config-get",
  "region-get",
  "rivet-operation",
  "sqlx",
@@ -6209,6 +6709,16 @@ dependencies = [
  "web-sys",
  "webpki-roots 0.25.2",
  "winreg",
+]
+
+[[package]]
+name = "rfc6979"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8dd2a808d456c4a54e300a23e9f5a67e122c3024119acbfd73e3bf664491cb2"
+dependencies = [
+ "hmac",
+ "subtle",
 ]
 
 [[package]]
@@ -6653,6 +7163,7 @@ dependencies = [
  "chrono",
  "futures-util",
  "global-error",
+ "ipnet",
  "lazy_static",
  "rand",
  "regex",
@@ -6686,10 +7197,22 @@ name = "rivet-util-cdn"
 version = "0.1.0"
 
 [[package]]
+name = "rivet-util-cluster"
+version = "0.1.0"
+dependencies = [
+ "rivet-util",
+ "tokio",
+ "types",
+ "uuid",
+]
+
+[[package]]
 name = "rivet-util-env"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]
@@ -6710,6 +7233,19 @@ dependencies = [
 [[package]]
 name = "rivet-util-kv"
 version = "0.1.0"
+
+[[package]]
+name = "rivet-util-linode"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "rand",
+ "reqwest",
+ "rivet-operation",
+ "serde",
+ "serde_json",
+ "ssh-key",
+]
 
 [[package]]
 name = "rivet-util-macros"
@@ -6775,6 +7311,7 @@ dependencies = [
  "pkcs1",
  "pkcs8",
  "rand_core",
+ "sha2",
  "signature",
  "spki",
  "subtle",
@@ -6973,6 +7510,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sec1"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3e97a565f76233a6003f9f5c54be1d9c5bdfa3eccfb189469f11ec4901c47dc"
+dependencies = [
+ "base16ct",
+ "der",
+ "generic-array",
+ "pkcs8",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
 name = "security-framework"
 version = "2.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7062,6 +7613,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_qs"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8cac3f1e2ca2fe333923a1ae72caca910b98ed0630bb35ef6f8c8517d6e81afa"
+dependencies = [
+ "percent-encoding",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "serde_repr"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7119,6 +7681,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.38",
+]
+
+[[package]]
+name = "serde_yaml"
+version = "0.9.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cc7a1570e38322cfe4154732e5110f887ea57e22b76f4bfd32b5bdd3368666c"
+dependencies = [
+ "indexmap 2.0.2",
+ "itoa 1.0.9",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
 ]
 
 [[package]]
@@ -7481,6 +8056,59 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "ssh-cipher"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "caac132742f0d33c3af65bfcde7f6aa8f62f0e991d80db99149eb9d44708784f"
+dependencies = [
+ "cipher",
+ "ssh-encoding",
+]
+
+[[package]]
+name = "ssh-encoding"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb9242b9ef4108a78e8cd1a2c98e193ef372437f8c22be363075233321dd4a15"
+dependencies = [
+ "base64ct",
+ "pem-rfc7468",
+ "sha2",
+]
+
+[[package]]
+name = "ssh-key"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c51901eb883a5b442b506a1f8fa483d143f3bab513fe721e398ec56c77624feb"
+dependencies = [
+ "p256",
+ "p384",
+ "p521",
+ "rand_core",
+ "rsa",
+ "sec1",
+ "sha2",
+ "signature",
+ "ssh-cipher",
+ "ssh-encoding",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "ssh2"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7fe461910559f6d5604c3731d00d2aafc4a83d1665922e280f42f9a168d5455"
+dependencies = [
+ "bitflags 1.3.2",
+ "libc",
+ "libssh2-sys",
+ "parking_lot 0.11.2",
 ]
 
 [[package]]
@@ -7974,7 +8602,7 @@ checksum = "7ef1adac450ad7f4b3c28589471ade84f25f731a7a0fe30d71dfa9f60fd808e5"
 dependencies = [
  "cfg-if",
  "fastrand 2.0.1",
- "redox_syscall",
+ "redox_syscall 0.4.1",
  "rustix",
  "windows-sys",
 ]
@@ -8015,8 +8643,11 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "cluster-datacenter-get",
+ "cluster-datacenter-list",
  "prost 0.10.4",
  "rivet-operation",
+ "rivet-util-linode",
 ]
 
 [[package]]
@@ -8129,7 +8760,7 @@ dependencies = [
  "libc",
  "mio",
  "num_cpus",
- "parking_lot",
+ "parking_lot 0.12.1",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2 0.5.5",
@@ -8514,6 +9145,12 @@ name = "unicode_categories"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39ec24b3121d976906ece63c9daad25b85969647682eee313cb5779fdd69e14e"
+
+[[package]]
+name = "unsafe-libyaml"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f28467d3e1d3c6586d8f25fa243f544f5800fec42d97032474e17222c2b75cfa"
 
 [[package]]
 name = "untrusted"
@@ -9435,6 +10072,6 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.6.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a0956f1ba7c7909bfb66c2e9e4124ab6f6482560f6628b5aaeba39207c9aad9"
+checksum = "525b4ec142c6b68a2d10f01f7bbf6755599ca3f81ea53b8431b7dd348f5fdb2d"

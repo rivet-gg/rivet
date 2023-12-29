@@ -60,6 +60,67 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AdminLoginRequest'
+  /cluster/server_ips:
+    get:
+      operationId: admin_cluster_getServerIps
+      tags:
+        - AdminCluster
+      parameters:
+        - name: server_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: pool
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AdminPoolType'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminClusterGetServerIpsResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
   /cloud/bootstrap:
     get:
       description: Returns the basic information required to use the cloud APIs.
@@ -8333,6 +8394,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+  /servers/{ip}/info:
+    get:
+      description: Completes the email verification process.
+      operationId: provision_servers_servers_getServerInfo
+      tags:
+        - ProvisionServersServers
+      parameters:
+        - name: ip
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvisionServersGetServerInfoResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
 components:
   schemas:
     AdminLoginRequest:
@@ -8349,6 +8466,15 @@ components:
           type: string
       required:
         - url
+    AdminClusterGetServerIpsResponse:
+      type: object
+      properties:
+        ips:
+          type: array
+          items:
+            type: string
+      required:
+        - ips
     CloudBootstrapResponse:
       type: object
       properties:
@@ -9264,6 +9390,12 @@ components:
         data: {}
       required:
         - data
+    AdminPoolType:
+      type: string
+      enum:
+        - job
+        - gg
+        - ats
     AuthCompleteStatus:
       type: string
       enum:
@@ -9842,9 +9974,6 @@ components:
         provider:
           type: string
           description: The server provider of this region.
-        universal_region:
-          $ref: '#/components/schemas/CloudUniversalRegion'
-          description: A universal region label given to this region.
         provider_display_name:
           type: string
           description: Represent a resource's readable display name.
@@ -9855,7 +9984,6 @@ components:
         - region_id
         - region_name_id
         - provider
-        - universal_region
         - provider_display_name
         - region_display_name
     CloudGroupBillingSummary:
@@ -12661,6 +12789,28 @@ components:
           $ref: '#/components/schemas/PortalNotificationRegisterService'
       required:
         - service
+    ProvisionServersGetServerInfoResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        server_id:
+          type: string
+          format: uuid
+        datacenter_id:
+          type: string
+          format: uuid
+        cluster_id:
+          type: string
+          format: uuid
+        vlan_ip:
+          type: string
+      required:
+        - name
+        - server_id
+        - datacenter_id
+        - cluster_id
+        - vlan_ip
     UploadPresignedRequest:
       type: object
       description: >

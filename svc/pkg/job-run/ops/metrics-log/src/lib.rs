@@ -44,7 +44,7 @@ impl QueryTiming {
 async fn handle(
 	ctx: OperationContext<job_run::metrics_log::Request>,
 ) -> GlobalResult<job_run::metrics_log::Response> {
-	let prometheus_url = std::env::var("PROMETHEUS_URL")?;
+	let prometheus_url = util::env::var("PROMETHEUS_URL")?;
 
 	let mut metrics = Vec::new();
 

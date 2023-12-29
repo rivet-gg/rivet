@@ -7,3 +7,5 @@ license = "Apache-2.0"
 
 [dependencies]
 lazy_static = "1.4"
+uuid = { version = "1", features = ["v4"] }
+thiserror = "1.0"

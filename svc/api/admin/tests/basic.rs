@@ -53,10 +53,3 @@ impl Ctx {
 		&self.op_ctx
 	}
 }
-
-#[tokio::test(flavor = "multi_thread")]
-async fn convert_team() {
-	let ctx = Ctx::init().await;
-
-	todo!()
-}

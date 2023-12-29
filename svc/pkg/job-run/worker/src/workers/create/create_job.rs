@@ -187,7 +187,7 @@ fn gen_cleanup_task() -> nomad_client::models::Task {
 			embedded_tmpl: Some(formatdoc!(
 				r#"
 				import ssl
-				import urllib.request, json, os, mimetypes, sys
+				import urllib.request, json, os, mimetypes, sys, socket
 
 				BEARER = '{{{{env "NOMAD_META_JOB_RUN_TOKEN"}}}}'
 

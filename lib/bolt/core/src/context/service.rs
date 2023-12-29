@@ -91,8 +91,16 @@ impl ServiceContextData {
 			Ok(v) => v,
 			Err(_) => return None,
 		};
-		let config = toml::from_str::<config::service::ServiceConfig>(&config_str)
-			.expect(&format!("failed to read config: {}", path.display()));
+		let config = match toml::from_str::<config::service::ServiceConfig>(&config_str) {
+			Result::Ok(x) => x,
+			Result::Err(err) => {
+				panic!(
+					"failed to parse namespace config ({}): {}",
+					path.display(),
+					err.message()
+				);
+			}
+		};
 
 		let cargo_path = path.join("Cargo.toml");
 		let cargo = match fs::read_to_string(&cargo_path).await {
@@ -217,10 +225,6 @@ impl ServiceContextData {
 			.join(self.name())
 	}
 
-	pub async fn gen_proto_path(&self) -> PathBuf {
-		self.gen_path().await.join("proto")
-	}
-
 	pub fn migrations_path(&self) -> PathBuf {
 		self.path().join("migrations")
 	}
@@ -330,6 +334,10 @@ impl ServiceContextData {
 	pub fn depends_on_captcha(&self) -> bool {
 		// TODO:
 		true
+	}
+
+	pub fn depends_on_infra(&self) -> bool {
+		self.name() == "cluster-worker" || self.name() == "monolith-worker"
 	}
 }
 
@@ -684,8 +692,6 @@ impl ServiceContextData {
 			.recursive_dependencies(&[self.name()], run_context)
 			.await
 			.into_iter()
-			// Filter filter services to include only operations, since these run in-process
-			.filter(|x| **x == *self || matches!(x.config().kind, ServiceKind::Operation { .. }))
 			// Aggregate secrets from all dependencies
 			.flat_map(|x| x.config().secrets.clone().into_iter())
 			// Convert keys to string array
@@ -703,7 +709,6 @@ impl ServiceContextData {
 	pub async fn env(&self, run_context: &RunContext) -> Result<Vec<(String, String)>> {
 		let project_ctx = self.project().await;
 
-		let region_id = project_ctx.primary_region_or_local();
 		let mut env = Vec::new();
 
 		// HACK: Link to dynamically linked libraries in /nix/store
@@ -739,7 +744,6 @@ impl ServiceContextData {
 		// Provide default Nomad variables if in test
 		if matches!(run_context, RunContext::Test { .. }) {
 			env.push(("KUBERNETES_REGION".into(), "global".into()));
-			env.push(("KUBERNETES_DC".into(), region_id.clone()));
 			env.push((
 				"KUBERNETES_TASK_DIR".into(),
 				project_ctx.gen_path().display().to_string(),
@@ -805,15 +809,6 @@ impl ServiceContextData {
 				));
 			}
 		}
-
-		// Pools
-		if !project_ctx.ns().pools.is_empty() {
-			env.push(("RIVET_HAS_POOLS".into(), "1".into()));
-		}
-
-		// Regions
-		env.push(("RIVET_REGION".into(), region_id.clone()));
-		env.push(("RIVET_PRIMARY_REGION".into(), project_ctx.primary_region()));
 
 		// Networking
 		if matches!(run_context, RunContext::Service { .. }) {
@@ -946,10 +941,12 @@ impl ServiceContextData {
 
 		// Expose all S3 endpoints to services that need them
 		let s3_deps = if self.depends_on_s3() {
+			// self.s3_dependencies(&run_context).await
 			project_ctx.all_services().await.to_vec()
 		} else {
-			self.s3_dependencies(&run_context).await
+			Vec::new()
 		};
+
 		for s3_dep in s3_deps {
 			if !matches!(s3_dep.config().runtime, RuntimeKind::S3 { .. }) {
 				continue;
@@ -1006,15 +1003,14 @@ impl ServiceContextData {
 		if project_ctx.ns().rivet.upload.nsfw_error_verbose {
 			env.push(("RIVET_UPLOAD_NSFW_ERROR_VERBSOE".into(), "1".into()));
 		}
-		env.push((
-			"RIVET_DS_BUILD_DELIVERY_METHOD".into(),
-			project_ctx
-				.ns()
-				.rivet
-				.dynamic_servers
-				.build_delivery_method
-				.to_string(),
-		));
+
+		// Dynamic servers
+		if let Some(dynamic_servers) = &project_ctx.ns().rivet.dynamic_servers {
+			env.push((
+				"RIVET_DEFAULT_CLUSTER_CONFIG".into(),
+				serde_json::to_string(&dynamic_servers.cluster)?,
+			));
+		}
 
 		// Sort env by keys so it's always in the same order
 		env.sort_by_cached_key(|x| x.0.clone());
@@ -1156,12 +1152,14 @@ impl ServiceContextData {
 			));
 		}
 
-		// Expose S3 endpoints to services that need them
+		// Expose all S3 endpoints to services that need them
 		let s3_deps = if self.depends_on_s3() {
+			// self.s3_dependencies(&run_context).await
 			project_ctx.all_services().await.to_vec()
 		} else {
-			self.s3_dependencies(run_context).await
+			Vec::new()
 		};
+
 		for s3_dep in s3_deps {
 			if !matches!(s3_dep.config().runtime, RuntimeKind::S3 { .. }) {
 				continue;
@@ -1193,6 +1191,36 @@ impl ServiceContextData {
 				project_ctx
 					.read_secret(&["cloudflare", "terraform", "auth_token"])
 					.await?,
+			));
+		}
+
+		if self.depends_on_infra() {
+			let tls = terraform::output::read_tls(&project_ctx).await;
+			let k8s_infra = terraform::output::read_k8s_infra(&project_ctx).await;
+
+			env.push((
+				"TLS_CERT_LOCALLY_SIGNED_JOB_CERT_PEM".into(),
+				tls.tls_cert_locally_signed_job.cert_pem.clone(),
+			));
+			env.push((
+				"TLS_CERT_LOCALLY_SIGNED_JOB_KEY_PEM".into(),
+				tls.tls_cert_locally_signed_job.key_pem.clone(),
+			));
+			env.push((
+				"TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM".into(),
+				tls.tls_cert_letsencrypt_rivet_job.cert_pem.clone(),
+			));
+			env.push((
+				"TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM".into(),
+				tls.tls_cert_letsencrypt_rivet_job.key_pem.clone(),
+			));
+			env.push((
+				"TLS_ROOT_CA_CERT_PEM".into(),
+				(*tls.root_ca_cert_pem).clone(),
+			));
+			env.push((
+				"K8S_TRAEFIK_TUNNEL_EXTERNAL_IP".into(),
+				(*k8s_infra.traefik_tunnel_external_ip).clone(),
 			));
 		}
 

@@ -1,8 +1,11 @@
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
+use std::ops::Deref;
+
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
 use redis::AsyncCommands;
 use serde_json::json;
-use std::ops::Deref;
 
 mod nomad_job;
 mod oci_config;
@@ -357,9 +360,7 @@ async fn fetch_version(
 	})
 	.await?;
 
-	let version = unwrap_ref!(get_res.versions.first(), "version not found")
-		.deref()
-		.clone();
+	let version = unwrap!(get_res.versions.first(), "version not found").clone();
 
 	Ok(version)
 }
@@ -755,10 +756,10 @@ async fn resolve_image_artifact_url(
 	let build_compression = unwrap!(backend::build::BuildCompression::from_i32(
 		build.compression
 	));
-	let upload_id_proto = unwrap_ref!(build.upload_id);
+	let upload_id_proto = unwrap!(build.upload_id);
 
 	let upload_res = op!([ctx] upload_get {
-		upload_ids: vec![*upload_id_proto],
+		upload_ids: vec![upload_id_proto],
 	})
 	.await?;
 	let upload = unwrap!(upload_res.uploads.first());
@@ -777,11 +778,11 @@ async fn resolve_image_artifact_url(
 	let file_name = util_build::file_name(build_kind, build_compression);
 
 	let mm_lobby_delivery_method = unwrap!(
-		std::env::var("RIVET_DS_BUILD_DELIVERY_METHOD").ok(),
-		"missing RIVET_DS_BUILD_DELIVERY_METHOD"
+		backend::cluster::BuildDeliveryMethod::from_i32(region.build_delivery_method),
+		"invalid datacenter build delivery method"
 	);
-	match mm_lobby_delivery_method.as_str() {
-		"s3_direct" => {
+	match mm_lobby_delivery_method {
+		backend::cluster::BuildDeliveryMethod::S3Direct => {
 			tracing::info!("using s3 direct delivery");
 
 			let bucket = "bucket-build";
@@ -810,12 +811,49 @@ async fn resolve_image_artifact_url(
 
 			Ok(addr_str)
 		}
-		"traffic_server" => {
+		backend::cluster::BuildDeliveryMethod::TrafficServer => {
 			tracing::info!("using traffic server delivery");
+
+			let region_id = unwrap_ref!(region.region_id).as_uuid();
+
+			// Hash build id
+			let build_id = unwrap_ref!(build.build_id).as_uuid();
+			let mut hasher = DefaultHasher::new();
+			hasher.write(build_id.as_bytes());
+			let hash = hasher.finish() as i64;
+
+			// Get vlan ip from build id hash for consistent routing
+			let (ats_vlan_ip,) = sql_fetch_one!(
+				[ctx, (String,)]
+				"
+				WITH sel AS (
+					-- Select candidate vlan ips
+					SELECT
+						vlan_ip
+					FROM db_cluster.servers
+					WHERE
+						datacenter_id = $1 AND
+						pool_type = $2 AND
+						vlan_ip IS NOT NULL AND
+						cloud_destroy_ts IS NULL	
+				)
+				SELECT vlan_ip
+				FROM sel
+				-- Use mod to make sure the hash stays within bounds
+				OFFSET abs($3 % (SELECT COUNT(*) from sel))
+				LIMIT 1
+				",
+				// NOTE: region_id is just the old name for datacenter_id
+				&region_id,
+				backend::cluster::PoolType::Ats as i32 as i64,
+				hash,
+			)
+			.await?;
 
 			let upload_id = unwrap_ref!(upload.upload_id).as_uuid();
 			let addr = format!(
-				"http://127.0.0.1:8080/s3-cache/{provider}/{namespace}-bucket-build/{upload_id}/{file_name}",
+				"http://{vlan_ip}:8080/s3-cache/{provider}/{namespace}-bucket-build/{upload_id}/{file_name}",
+				vlan_ip = ats_vlan_ip,
 				provider = heck::KebabCase::to_kebab_case(provider.as_str()),
 				namespace = util::env::namespace(),
 				upload_id = upload_id,
@@ -824,9 +862,6 @@ async fn resolve_image_artifact_url(
 			tracing::info!(%addr, "resolved artifact s3 url");
 
 			Ok(addr)
-		}
-		_ => {
-			bail!("invalid RIVET_DS_BUILD_DELIVERY_METHOD")
 		}
 	}
 }

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [23.2.0-rc.2] - Unreleased
 
+### Added
+
+-   **Infra** Automatic server provisioning system ([Read more](/docs/packages/cluster/SERVER_PROVISIONING.md)).
+
 ### Changed
 
 -   **Matchmaker** Allow excluding `matchmaker.regions` in order to enable all regions

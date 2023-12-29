@@ -124,7 +124,7 @@ async fn worker(ctx: &OperationContext<job_run::msg::create::Message>) -> Global
 	run_job_perf.end();
 
 	let db_write_perf = ctx.perf().start("write-to-db-after-run").await;
-	write_to_db_after_run(&ctx, run_id, &nomad_dispatched_job_id).await?;
+	write_to_db_after_run(ctx, run_id, &nomad_dispatched_job_id).await?;
 	db_write_perf.end();
 
 	// HACK: Wait for Treafik to pick up the new job. 500 ms is the polling interval for the
@@ -133,12 +133,6 @@ async fn worker(ctx: &OperationContext<job_run::msg::create::Message>) -> Global
 
 	msg!([ctx] job_run::msg::create_complete(run_id) {
 		run_id: Some(run_id.into()),
-	})
-	.await?;
-
-	msg!([ctx] job_run::msg::nomad_dispatched_job(run_id, &nomad_dispatched_job_id) {
-		run_id: Some(run_id.into()),
-		dispatched_job_id: nomad_dispatched_job_id.clone(),
 	})
 	.await?;
 
@@ -352,7 +346,7 @@ async fn choose_ingress_port(
 					ctx,
 					tx,
 					proxied_port.proxy_protocol,
-					util_job::consts::MIN_INGRESS_PORT_TCP..=util_job::consts::MAX_INGRESS_PORT_TCP,
+					util::net::job::MIN_INGRESS_PORT_TCP..=util::net::job::MAX_INGRESS_PORT_TCP,
 				)
 				.await?
 			}
@@ -361,7 +355,7 @@ async fn choose_ingress_port(
 					ctx,
 					tx,
 					proxied_port.proxy_protocol,
-					util_job::consts::MIN_INGRESS_PORT_UDP..=util_job::consts::MAX_INGRESS_PORT_UDP,
+					util::net::job::MIN_INGRESS_PORT_UDP..=util::net::job::MAX_INGRESS_PORT_UDP,
 				)
 				.await?
 			}
