@@ -38,9 +38,7 @@ pub async fn info(
 	.await?;
 	let datacenter = unwrap!(datacenter_res.datacenters.first());
 
-	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(
-		server.pool_type
-	));
+	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(server.pool_type));
 	let name = util_cluster::full_server_name(
 		&datacenter.provider_datacenter_id,
 		pool_type,
