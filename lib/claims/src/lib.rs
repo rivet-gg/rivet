@@ -4,7 +4,7 @@ use prost::Message;
 use std::{convert::TryFrom, sync::Arc};
 
 mod schema {
-	pub use types::rivet::{backend, claims::*, common};
+	pub use types::rivet::{backend, claims::*};
 }
 
 macro_rules! expect_two {

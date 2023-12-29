@@ -1,6 +1,5 @@
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
-use rivet_pools::prelude::*;
 
 #[derive(sqlx::FromRow)]
 struct UserRow {
