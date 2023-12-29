@@ -12,9 +12,10 @@ pub async fn list_tiers(
 ) -> GlobalResult<models::CloudGetRegionTiersResponse> {
 	let datacenters_res = op!([ctx] cluster_datacenter_list {
 		cluster_ids: vec![util::env::default_cluster_id().into()],
-	}).await?;
+	})
+	.await?;
 	let cluster = unwrap!(datacenters_res.clusters.first());
-	
+
 	let res = op!([ctx] tier_list {
 		region_ids: cluster.datacenter_ids.clone(),
 	})
