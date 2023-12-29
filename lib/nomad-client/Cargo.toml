@@ -1,9 +1,8 @@
 [package]
 name = "nomad_client"
 version = "1.1.4"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
+authors = ["OpenAPI Generator team and contributors"]
 edition = "2018"
-license = "Apache-2.0"
 
 [dependencies]
 serde = "^1.0"
