@@ -141,8 +141,6 @@ async fn generate_root(path: &Path) {
 							entry = entry.file_name().into_string().unwrap()
 						));
 
-						eprintln!("--- {}", entry.path().display());
-
 						// Remove services' Cargo.lock files in favor of the shared svc
 						// Cargo.toml
 						let _ = fs::remove_file(entry.path().join("Cargo.lock")).await;
