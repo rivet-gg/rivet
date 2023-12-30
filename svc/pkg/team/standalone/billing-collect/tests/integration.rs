@@ -1,10 +1,9 @@
-use chirp_worker::prelude::*;
-use indoc::indoc;
-use proto::backend::pkg::*;
-
 use std::time::Duration;
 
 use ::team_billing_collect::run_from_env;
+use chirp_worker::prelude::*;
+use indoc::indoc;
+use proto::backend::pkg::*;
 
 #[tokio::test]
 async fn all() {

@@ -1,14 +1,13 @@
 // TODO: Move this file to a common place, since this isn't specific to Terraform
 
-use anyhow::Result;
-use derive_builder::Builder;
-
-use ipnet::Ipv4AddrRange;
-use serde::Serialize;
 use std::collections::HashMap;
 
-use super::net;
+use anyhow::Result;
+use derive_builder::Builder;
+use ipnet::Ipv4AddrRange;
+use serde::Serialize;
 
+use super::net;
 use crate::context::ProjectContext;
 
 #[derive(Serialize, Clone, Builder)]

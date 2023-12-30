@@ -2,7 +2,7 @@ use chirp_worker::prelude::*;
 use proto::backend::{
 	self,
 	pkg::{
-		mm::{msg::lobby_find::message::Query, msg::lobby_find_fail::ErrorCode},
+		mm::msg::{lobby_find::message::Query, lobby_find_fail::ErrorCode},
 		*,
 	},
 };

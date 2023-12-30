@@ -1,8 +1,9 @@
+use std::ops::Deref;
+
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
 use redis::AsyncCommands;
 use serde_json::json;
-use std::ops::Deref;
 
 mod nomad_job;
 mod oci_config;

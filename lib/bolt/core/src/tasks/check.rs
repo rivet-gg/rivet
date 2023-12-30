@@ -1,7 +1,8 @@
 use std::{collections::HashMap, path::Path, process::Command, sync::Arc};
 
 use crate::{
-	context::ProjectContext, context::ServiceContextData, tasks,
+	context::{ProjectContext, ServiceContextData},
+	tasks,
 	utils::command_helper::CommandHelper,
 };
 

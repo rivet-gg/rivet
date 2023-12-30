@@ -5,7 +5,7 @@ use proto::backend::{
 	self,
 	matchmaker::query::JoinKind,
 	pkg::{
-		mm::{msg::lobby_find::message::Query, msg::lobby_find_fail::ErrorCode},
+		mm::msg::{lobby_find::message::Query, lobby_find_fail::ErrorCode},
 		*,
 	},
 };

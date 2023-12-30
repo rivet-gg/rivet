@@ -1,5 +1,8 @@
 use chirp_worker::prelude::*;
-use proto::backend::{self, pkg::mm::msg::lobby_find_fail::ErrorCode, pkg::*};
+use proto::backend::{
+	self,
+	pkg::{mm::msg::lobby_find_fail::ErrorCode, *},
+};
 use serde_json::json;
 
 use super::fail;

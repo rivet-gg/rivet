@@ -1,12 +1,12 @@
-use proto::backend::{self, pkg::*};
-use rivet_operation::prelude::*;
-use serde_json::{json, Value};
 use std::{collections::HashMap, str::FromStr, sync::Once, time::Duration};
 
+use proto::backend::{self, pkg::*};
 use rivet_api::{
 	apis::{configuration::Configuration, *},
 	models,
 };
+use rivet_operation::prelude::*;
+use serde_json::{json, Value};
 
 const LOBBY_GROUP_NAME_ID: &str = "test";
 
