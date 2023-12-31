@@ -1,7 +1,7 @@
 use anyhow::Result;
 use indoc::{formatdoc, indoc};
 use serde_json::json;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tokio::fs;
 
 use crate::{
@@ -481,6 +481,47 @@ async fn vars(ctx: &ProjectContext) {
 			json!(ctx.default_s3_provider().unwrap().0.as_str()),
 		);
 		vars.insert("s3_providers".into(), s3_providers(ctx).await.unwrap());
+	}
+
+	// Better Uptime
+	if let Some(better_uptime) = &config.better_uptime {
+		// Make sure DNS is enabled
+		if config.dns.is_none() {
+			panic!("Better Uptime requires DNS to be enabled, since it uses subdomains to monitor services");
+		}
+
+		// Make sure there is at least one pool
+		if config.pools.is_empty() {
+			panic!("Better Uptime requires at least one pool, otherwise it will not be able to monitor the service");
+		}
+
+		// Load all the regions of pools
+		let regions = &config
+			.pools
+			.iter()
+			.filter_map(|pool| match config.regions.get(&pool.region) {
+				Some(region) => Some((pool.region.clone(), region.provider_region.clone())),
+				None => None,
+			})
+			.collect::<HashSet<_>>();
+
+		let public_ip = ctx.origin_api();
+
+		vars.insert(
+			"better_uptime_monitors".into(),
+			json!(regions
+				.iter()
+				.map(|(region, provider_region)| {
+					json!({
+						// eg. https://api.rivet.gg/status/matchmaker?region=lnd-atl
+						"url": format!("https://{}/status/matchmaker?region={}", public_ip, region),
+						"public_name": provider_region,
+					})
+				})
+				.collect::<Vec<_>>()),
+		);
+
+		vars.insert("better_uptime".into(), json!(better_uptime.to_owned()));
 	}
 
 	// Media presets
