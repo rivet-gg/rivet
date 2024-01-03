@@ -28,15 +28,5 @@ export declare class Groups {
      * @throws {@link Rivet.BadRequestError}
      */
     validate(request: Rivet.cloud.ValidateGroupRequest, requestOptions?: Groups.RequestOptions): Promise<Rivet.cloud.ValidateGroupResponse>;
-    /**
-     * Converts the given group into a developer group.
-     * @throws {@link Rivet.InternalError}
-     * @throws {@link Rivet.RateLimitError}
-     * @throws {@link Rivet.ForbiddenError}
-     * @throws {@link Rivet.UnauthorizedError}
-     * @throws {@link Rivet.NotFoundError}
-     * @throws {@link Rivet.BadRequestError}
-     */
-    convertGroup(groupId: string, requestOptions?: Groups.RequestOptions): Promise<void>;
     protected _getAuthorizationHeader(): Promise<string | undefined>;
 }
