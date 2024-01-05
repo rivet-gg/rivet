@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -   **Matchmaker** Allow excluding `matchmaker.regions` in order to enable all regions
 -   **Matchmaker** Lowered internal overhead of log shipping for lobbies
+-   **Matchmaker** Game mode names are now more lenient to include capital letters & underscores
 -   **API** Return `API_REQUEST_TIMEOUT` error after 50s (see `docs/infrastructure/API_TIMEOUTS.md` for context)
 -   Lower long poll timeout from 60s -> 40s
 
@@ -25,8 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 -   **Infra** runc rootfs is now a writable file system
--   **Matchmaker** Fix logs not shipping if lobby exits immediately
+-   **Matchmaker** Logs not shipping if lobby exits immediately
+-   **Matchmaker** Returning `lnd-atl` instead of `dev-lcl` as the mocked mocked region ID in the region list
 -   **API** 520 error when long polling
+-   **api-cloud** Returning wrong domain for `domains.cdn`
 
 ## [23.2.0-rc.1] - 2023-12-01
 

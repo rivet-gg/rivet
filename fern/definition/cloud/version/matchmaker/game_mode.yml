@@ -48,6 +48,9 @@ types:
       dockerfile:
         docs: _Configures Rivet CLI behavior. Has no effect on server behavior._
         type: optional<string>
+      build_args:
+        docs: _Configures Rivet CLI behavior. Has no effect on server behavior._
+        type: optional<map<string, string>>
       image:
         docs: _Configures Rivet CLI behavior. Has no effect on server behavior._
         type: optional<string>
@@ -95,6 +98,8 @@ types:
 
   GameModeIdentityRequirement:
     docs: >-
+      **Deprecated**
+
       The registration requirement for a user when joining/finding/creating a
       lobby. "None" allows for connections without an identity.
     enum:
@@ -153,4 +158,8 @@ types:
       enable_private:
         docs: Defaults to true when unset.
         type: optional<boolean>
-      max_lobbies_per_identity: optional<integer>
+      max_lobbies_per_identity:
+        docs: >-
+          **Deprecated**
+
+        type: optional<integer>
