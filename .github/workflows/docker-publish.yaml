@@ -1,6 +1,8 @@
 name: docker-publish
 
-on: push
+on:
+  - push
+  - pull_request
 
 jobs:
   rivet-local-binary-artifact-runner:

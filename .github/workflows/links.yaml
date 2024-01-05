@@ -1,6 +1,8 @@
 name: link-checker
 
-on: push
+on:
+  - push
+  - pull_request
 
 jobs:
   linkChecker:
