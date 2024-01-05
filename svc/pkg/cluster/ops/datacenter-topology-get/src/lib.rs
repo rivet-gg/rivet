@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryInto};
 
 use nomad_client::apis::{allocations_api, configuration::Configuration, nodes_api};
 use proto::backend::pkg::*;
@@ -14,13 +14,6 @@ struct Server {
 	server_id: Uuid,
 	datacenter_id: Uuid,
 	nomad_node_id: String,
-}
-
-#[derive(Default)]
-struct Stats {
-	cpu: i64,
-	memory: i64,
-	disk: i64,
 }
 
 #[operation(name = "cluster-datacenter-topology-get")]
@@ -101,7 +94,11 @@ pub async fn handle(
 		.collect::<HashMap<_, _>>();
 
 	for server in servers {
-		let mut usage = Stats::default();
+		let mut usage = cluster::datacenter_topology_get::response::Stats {
+			cpu: 0,
+			memory: 0,
+			disk: 0,
+		};
 
 		// Aggregate all allocated resources for this node
 		for alloc in &allocation_info {
@@ -116,15 +113,15 @@ pub async fn handle(
 					let cpu = unwrap_ref!(task.cpu);
 					let memory = unwrap_ref!(task.memory);
 
-					usage.cpu += unwrap!(cpu.cpu_shares);
-					usage.memory += unwrap!(memory.memory_mb);
+					usage.cpu += unwrap!(cpu.cpu_shares) as u64;
+					usage.memory += unwrap!(memory.memory_mb) as u64;
 				}
 
-				usage.disk += unwrap!(shared_resources.disk_mb);
+				usage.disk += unwrap!(shared_resources.disk_mb) as u64;
 			}
 		}
 
-		// Get total node resources
+		// Get node resource limits
 		let node = unwrap!(
 			node_info.iter().find(|node| node
 				.ID
@@ -133,10 +130,10 @@ pub async fn handle(
 			"node not found"
 		);
 		let resources = unwrap_ref!(node.node_resources);
-		let total = Stats {
-			cpu: unwrap!(unwrap_ref!(resources.cpu).cpu_shares),
-			memory: unwrap!(unwrap_ref!(resources.memory).memory_mb),
-			disk: unwrap!(unwrap_ref!(resources.disk).disk_mb),
+		let limits = cluster::datacenter_topology_get::response::Stats {
+			cpu: unwrap!(unwrap_ref!(resources.cpu).cpu_shares) as u64,
+			memory: unwrap!(unwrap_ref!(resources.memory).memory_mb) as u64,
+			disk: unwrap!(unwrap_ref!(resources.disk).disk_mb) as u64,
 		};
 
 		let datacenter = datacenters.entry(server.datacenter_id).or_insert_with(|| {
@@ -151,9 +148,12 @@ pub async fn handle(
 			.push(cluster::datacenter_topology_get::response::Server {
 				server_id: Some(server.server_id.into()),
 				node_id: server.nomad_node_id,
-				cpu: usage.cpu as f32 / total.cpu as f32,
-				memory: usage.memory as f32 / total.memory as f32,
-				disk: usage.disk as f32 / total.disk as f32,
+				usage: Some(cluster::datacenter_topology_get::response::Stats {
+					cpu: usage.cpu,
+					memory: usage.memory,
+					disk: usage.disk,
+				}),
+				limits: Some(limits),
 			});
 	}
 
