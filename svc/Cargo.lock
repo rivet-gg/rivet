@@ -2353,6 +2353,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cluster-autoscale"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "rivet-connection",
+ "rivet-operation",
+ "rivet-runtime",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "cluster-datacenter-get"
 version = "0.0.1"
 dependencies = [
@@ -2471,20 +2485,6 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
- "prost 0.10.4",
- "rivet-operation",
- "sqlx",
-]
-
-[[package]]
-name = "cluster-topology-get"
-version = "0.0.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "lazy_static",
- "nomad-util",
- "nomad_client",
  "prost 0.10.4",
  "rivet-operation",
  "sqlx",
@@ -5665,7 +5665,6 @@ dependencies = [
  "prost 0.10.4",
  "rivet-operation",
  "sqlx",
- "unzip-n",
 ]
 
 [[package]]

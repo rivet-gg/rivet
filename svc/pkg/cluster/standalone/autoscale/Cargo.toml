@@ -1,5 +1,5 @@
 [package]
-name = "cluster-topology-get"
+name = "cluster-autoscale"
 version = "0.0.1"
 edition = "2018"
 authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
@@ -7,15 +7,12 @@ license = "Apache-2.0"
 
 [dependencies]
 chirp-client = { path = "../../../../../lib/chirp/client" }
-lazy_static = "1.4"
-nomad_client = { path = "../../../../../lib/nomad-client" }	
-nomad-util = { path = "../../../../../lib/nomad-util" }	
-prost = "0.10"
 rivet-operation = { path = "../../../../../lib/operation/core" }
-
-[dependencies.sqlx]
-version = "0.7"
-default-features = false
+rivet-connection = { path = "../../../../../lib/connection" }
+rivet-runtime = { path = "../../../../../lib/runtime" }
+tokio = { version = "1.29", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "ansi"] }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../../lib/chirp/worker" }
