@@ -1,7 +1,6 @@
+use proto::backend::pkg::*;
 use rivet_operation::prelude::*;
 use serde::Deserialize;
-
-use proto::backend::pkg::*;
 
 lazy_static::lazy_static! {
 	static ref NOMAD_CONFIG: nomad_client::apis::configuration::Configuration =

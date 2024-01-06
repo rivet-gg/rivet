@@ -1,7 +1,7 @@
-use chirp_worker::prelude::*;
+use std::collections::HashMap;
+
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
-use std::collections::HashMap;
 
 pub struct Setup {
 	pub namespace_id: Uuid,

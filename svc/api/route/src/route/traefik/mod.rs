@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use api_helper::{anchor::WatchIndexQuery, ctx::Ctx};
 use rivet_operation::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::auth::Auth;
 

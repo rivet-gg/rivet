@@ -1,7 +1,8 @@
+use std::{convert::TryFrom, sync::Arc};
+
 use global_error::prelude::*;
 use jsonwebtoken::{Algorithm, DecodingKey};
 use prost::Message;
-use std::{convert::TryFrom, sync::Arc};
 
 mod schema {
 	pub use types::rivet::{backend, claims::*, common};
@@ -80,8 +81,9 @@ impl From<serde_json::Error> for Error {
 }
 
 pub mod ent {
-	use global_error::prelude::*;
 	use std::convert::{TryFrom, TryInto};
+
+	use global_error::prelude::*;
 	use uuid::Uuid;
 
 	use super::schema;
@@ -676,7 +678,9 @@ impl ClaimsDecode for schema::Claims {
 		self.entitlements
 			.iter()
 			.find_map(|ent| match &ent.kind {
-				Some(schema::entitlement::Kind::AccessToken(ent)) => Some(ent::AccessToken::try_from(ent)),
+				Some(schema::entitlement::Kind::AccessToken(ent)) => {
+					Some(ent::AccessToken::try_from(ent))
+				}
 				_ => None,
 			})
 			.ok_or(err_code!(

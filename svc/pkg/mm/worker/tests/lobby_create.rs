@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
-use std::collections::HashMap;
 
 struct Setup {
 	namespace_id: Uuid,

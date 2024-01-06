@@ -1,7 +1,8 @@
+use std::collections::{HashMap, HashSet};
+
 use proto::backend::pkg::*;
 use rivet_operation::prelude::*;
 use serde_json::json;
-use std::collections::{HashMap, HashSet};
 
 /// Tracks which resources should be prewarmed in the ATS cache.
 #[derive(Debug)]

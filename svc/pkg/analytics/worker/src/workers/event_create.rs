@@ -1,7 +1,8 @@
+use std::collections::{HashMap, HashSet};
+
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
 use serde_json::json;
-use std::collections::{HashMap, HashSet};
 
 #[derive(clickhouse::Row, serde::Serialize, Debug)]
 struct Event {
