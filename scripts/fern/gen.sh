@@ -1,15 +1,27 @@
 #!/usr/bin/env bash
 set -euf -o pipefail
 
-# Generate Fern libraries
 set +u
-if [ -n "$FERN_REPO_PATH" ]; then
-	echo "Using Fern from $FERN_REPO_PATH"
-	FERN_NO_VERSION_REDIRECTION=true node "$FERN_REPO_PATH/packages/cli/cli/dist/dev/cli.cjs" generate --local --group local --log-level debug
-else
-	fern generate --local --group local --log-level debug
+if [ -z "$FERN_REPO_PATH" ]; then
+	echo 'Please clone and build https://github.com/rivet-gg/fern/tree/nathan/skip-token-local and set $FERN_REPO_PATH. This is a workaround until https://github.com/fern-api/fern/pull/2551 is resolved.'
+	exit 1
 fi
 set -u
+
+# Generate Fern libraries
+echo "Using Fern from $FERN_REPO_PATH"
+FERN_NO_VERSION_REDIRECTION=true node "$FERN_REPO_PATH/packages/cli/cli/dist/dev/cli.cjs" generate --local --group local --log-level debug
+
+# Once the above changes are merged
+# Generate Fern libraries
+# set +u
+# if [ -n "$FERN_REPO_PATH" ]; then
+# 	echo "Using Fern from $FERN_REPO_PATH"
+# 	FERN_NO_VERSION_REDIRECTION=true node "$FERN_REPO_PATH/packages/cli/cli/dist/dev/cli.cjs" generate --local --group local --log-level debug
+# else
+# 	fern generate --local --group local --log-level debug
+# fi
+# set -u
 
 # Export missing types
 cat <<EOF >> sdks/typescript/src/index.ts
