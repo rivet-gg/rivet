@@ -1,16 +1,11 @@
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
 
-// See pkr/static/nomad-config.hcl.tpl client.reserved
+// See lib/bolt/core/src/dep/terraform/install_scripts/files/nomad.sh
+//
+// Reserved for Nomad, Vector, and misc system jobs
 const RESERVE_SYSTEM_CPU: u64 = 500;
 const RESERVE_SYSTEM_MEMORY: u64 = 512;
-
-// See module.traefik_job resources
-const RESERVE_LB_CPU: u64 = 1500;
-const RESERVE_LB_MEMORY: u64 = 512;
-
-const RESERVE_CPU: u64 = RESERVE_SYSTEM_CPU + RESERVE_LB_CPU;
-const RESERVE_MEMORY: u64 = RESERVE_SYSTEM_MEMORY + RESERVE_LB_MEMORY;
 
 struct GameNodeConfig {
 	cpu_cores: u64,
@@ -46,20 +41,22 @@ fn get_game_node_config() -> GameNodeConfig {
 	// Multiply config for 2 core, 4 GB to scale up to the 4 core, 8 GB
 	// plan
 	let mut config = GameNodeConfig {
-		cpu_cores: 4,
+		cpu_cores: 8,
 		// DigitalOcean: 7,984
 		// Linode: 7,996
-		cpu: 7900,
+		cpu: 17592,
 		// DigitalOcean: 7,957
 		// Linode: 7,934
-		memory: 7900,
+		memory: 16_753,
+		// This is arbitrary
 		disk: 64_000,
+		// This is arbitrary
 		bandwidth: 2_000_000,
 	};
 
 	// Remove reserved resources
-	config.cpu -= RESERVE_CPU;
-	config.memory -= RESERVE_MEMORY;
+	config.cpu -= RESERVE_SYSTEM_CPU;
+	config.memory -= RESERVE_SYSTEM_MEMORY;
 
 	config
 }
