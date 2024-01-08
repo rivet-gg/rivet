@@ -31,8 +31,12 @@ async fn worker(
 	// Shut down server before creating custom image
 	api::shut_down(&client, prebake_server.linode_id).await?;
 
-	let create_image_res =
-		api::create_custom_image(&client, &prebake_server.variant, prebake_server.disk_id).await?;
+	// NOTE: Linode imposes a restriction of 50 characters on custom image labels, so unfortunately we cannot
+	// use the image variant as the name. All we need from the label is for it to be unique. Keep in mind that
+	// the UUID and hyphen take 37 characters, leaving us with 13 for the namespace name
+	let name = format!("{}-{}", util::env::namespace(), Uuid::new_v4());
+
+	let create_image_res = api::create_custom_image(&client, &name, prebake_server.disk_id).await?;
 
 	// Write image id
 	sql_execute!(

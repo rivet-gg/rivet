@@ -18,7 +18,9 @@ async fn worker(
 
 	// Update config
 	let mut config = datacenter.clone();
+
 	config.pools = ctx.pools.clone();
+
 	if let Some(drain_timeout) = ctx.drain_timeout {
 		config.drain_timeout = drain_timeout;
 	}

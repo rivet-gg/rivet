@@ -5,6 +5,7 @@ use proto::backend::{self, pkg::*};
 #[derive(sqlx::FromRow)]
 struct Server {
 	datacenter_id: Uuid,
+	provider_server_id: Option<String>,
 	dns_record_id: Option<String>,
 }
 
@@ -17,7 +18,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 		[ctx, Server, &crdb]
 		"
 		SELECT
-			datacenter_id, dns_record_id
+			datacenter_id, provider_server_id, dns_record_id
 		FROM db_cluster.servers AS s
 		LEFT JOIN db_cluster.cloudflare_misc AS cf
 		ON s.server_id = cf.server_id
@@ -27,6 +28,10 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 		util::timestamp::now(),
 	)
 	.await?;
+
+	if server.provider_server_id.is_none() && !ctx.force {
+		retry_bail!("server is not completely provisioned yet, retrying");
+	}
 
 	let datacenter_res = op!([ctx] cluster_datacenter_get {
 		datacenter_ids: vec![server.datacenter_id.into()],

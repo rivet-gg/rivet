@@ -18,7 +18,8 @@ pub async fn handle(
 		PoolType::Gg => "gg",
 		PoolType::Ats => "ats",
 	};
-	let name = util_cluster::full_server_name(&provider_datacenter_id, pool_type, server_id);
+	// Linode label must be 3-64 characters, UUID's are 36
+	let name = format!("{ns}-{server_id}");
 
 	let tags = ctx
 		.tags
@@ -54,7 +55,7 @@ pub async fn handle(
 	let client = util_linode::Client::new().await?;
 
 	// Create SSH key
-	let ssh_key_res = api::create_ssh_key(&client, &server).await?;
+	let ssh_key_res = api::create_ssh_key(&client, &server_id.to_string()).await?;
 
 	// Write SSH key id
 	sql_execute!(

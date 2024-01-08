@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use rivet_operation::prelude::*;
 
 fn main() -> GlobalResult<()> {
@@ -5,7 +7,24 @@ fn main() -> GlobalResult<()> {
 }
 
 async fn start() -> GlobalResult<()> {
-	cluster_autoscale::run_from_env(util::timestamp::now()).await?;
+	let pools = rivet_pools::from_env("cluster-autoscale").await?;
 
-	Ok(())
+	tokio::task::Builder::new()
+		.name("cluster_autoscale::health_checks")
+		.spawn(rivet_health_checks::run_standalone(
+			rivet_health_checks::Config {
+				pools: Some(pools.clone()),
+			},
+		))?;
+
+	tokio::task::Builder::new()
+		.name("cluster_autoscale::metrics")
+		.spawn(rivet_metrics::run_standalone())?;
+
+	let mut interval = tokio::time::interval(Duration::from_secs(15));
+	loop {
+		interval.tick().await;
+
+		cluster_autoscale::run_from_env(pools.clone()).await?;
+	}
 }

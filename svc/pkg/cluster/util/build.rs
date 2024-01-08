@@ -16,6 +16,8 @@ async fn main() {
 	// Add rereun statement
 	println!("cargo:rerun-if-changed={}", server_install_path.display(),);
 
+	// NOTE: This only gets the hash of the folder. Any template variables changed in the install scripts
+	// will not update the hash.
 	// Get a hash of the server install worker
 	let git_hash_cmd = Command::new("git")
 		.arg("rev-parse")

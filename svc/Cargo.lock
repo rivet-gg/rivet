@@ -2358,7 +2358,13 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "cluster-datacenter-get",
+ "cluster-datacenter-topology-get",
+ "lazy_static",
+ "linode-instance-type-get",
  "rivet-connection",
+ "rivet-health-checks",
+ "rivet-metrics",
  "rivet-operation",
  "rivet-runtime",
  "tokio",
@@ -2505,6 +2511,7 @@ dependencies = [
  "include_dir",
  "indoc",
  "lazy_static",
+ "linode-instance-type-get",
  "linode-server-destroy",
  "linode-server-provision",
  "maplit",
@@ -4909,6 +4916,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "linode-instance-type-get"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "rivet-operation",
+ "rivet-util-linode",
+ "sqlx",
+]
+
+[[package]]
 name = "linode-server-destroy"
 version = "0.0.1"
 dependencies = [
@@ -4946,6 +4964,7 @@ dependencies = [
  "rivet-health-checks",
  "rivet-metrics",
  "rivet-runtime",
+ "rivet-util-cluster",
  "rivet-util-linode",
  "sqlx",
 ]
@@ -8682,9 +8701,9 @@ dependencies = [
  "chirp-worker",
  "cluster-datacenter-get",
  "cluster-datacenter-list",
+ "linode-instance-type-get",
  "prost 0.10.4",
  "rivet-operation",
- "rivet-util-linode",
 ]
 
 [[package]]

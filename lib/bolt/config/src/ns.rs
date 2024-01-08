@@ -596,6 +596,9 @@ pub struct Upload {
 #[serde(deny_unknown_fields)]
 pub struct DynamicServers {
 	pub cluster: DynamicServersCluster,
+	// Used with simple provisioning algorithm. How many empty servers to have at all times
+	#[serde(default = "default_server_provision_margin")]
+	pub server_provision_margin: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, strum_macros::Display)]
@@ -687,6 +690,24 @@ pub struct Bolt {
 	pub confirm_commands: bool,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(deny_unknown_fields)]
+pub struct BetterUptime {
+	/// The name of your company. This will be displayed on your status page
+	/// in the top left. This is required by Better Uptime.
+	pub company_name: String,
+	/// The URL of your company. This will be used on the status page to link
+	/// to your company's website. This is required by Better Uptime.
+	pub company_url: String,
+	/// The subdomain is the part of the public URL of your status page uses.
+	///
+	/// Eg. <company_subdomain>.betteruptime.com.
+	///
+	/// It needs to be unique across all of Better Uptime. This is required
+	/// by Better Uptime.
+	pub company_subdomain: String,
+}
+
 fn default_docker_repo() -> String {
 	"ghcr.io/rivet-gg/".to_string()
 }
@@ -707,20 +728,6 @@ fn default_tunnel_port() -> u16 {
 	5000
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
-#[serde(deny_unknown_fields)]
-pub struct BetterUptime {
-	/// The name of your company. This will be displayed on your status page
-	/// in the top left. This is required by Better Uptime.
-	pub company_name: String,
-	/// The URL of your company. This will be used on the status page to link
-	/// to your company's website. This is required by Better Uptime.
-	pub company_url: String,
-	/// The subdomain is the part of the public URL of your status page uses.
-	///
-	/// Eg. <company_subdomain>.betteruptime.com.
-	///
-	/// It needs to be unique across all of Better Uptime. This is required
-	/// by Better Uptime.
-	pub company_subdomain: String,
+fn default_server_provision_margin() -> u32 {
+	2
 }

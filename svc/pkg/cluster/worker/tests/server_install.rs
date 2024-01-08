@@ -56,6 +56,7 @@ async fn server_install(ctx: TestCtx) {
 	// Clean up afterwards so we don't litter
 	msg!([ctx] @wait cluster::msg::server_destroy(server_id) {
 		server_id: Some(server_id.into()),
+		force: false,
 	})
 	.await
 	.unwrap();

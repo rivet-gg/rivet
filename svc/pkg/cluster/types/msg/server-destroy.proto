@@ -10,4 +10,6 @@ import "proto/common.proto";
 /// ]
 message Message {
     rivet.common.Uuid server_id = 1;
+    // Destroys the server even if it isn't fully provisioned yet
+    bool force = 2;
 }

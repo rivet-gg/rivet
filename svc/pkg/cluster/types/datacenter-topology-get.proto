@@ -23,7 +23,7 @@ message Response {
 	}
 
 	message Stats {
-		uint64 cpu = 1; // shares
+		uint64 cpu = 1; // mhz
 		uint64 memory = 2; // mb
 		uint64 disk = 3; // mb
 	}

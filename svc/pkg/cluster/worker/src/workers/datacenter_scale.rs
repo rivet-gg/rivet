@@ -67,19 +67,19 @@ async fn worker(
 		.collect::<GlobalResult<Vec<_>>>()?;
 
 	let topology = unwrap!(topology_res.datacenters.first());
-	let topology_by_server = topology
+	let memory_by_server = topology
 		.servers
 		.iter()
-		.map(|server| Ok((unwrap_ref!(server.server_id).as_uuid(), server)))
+		.map(|server| {
+			Ok((
+				unwrap_ref!(server.server_id).as_uuid(),
+				unwrap_ref!(server.usage).memory,
+			))
+		})
 		.collect::<GlobalResult<HashMap<_, _>>>()?;
 
-	// Sort servers by cpu usage using cluster-datacenter-topology-get
-	servers.sort_by(|a, b| {
-		let cpu_a = topology_by_server.get(&a.server_id).map(|x| x.cpu);
-		let cpu_b = topology_by_server.get(&b.server_id).map(|x| x.cpu);
-
-		cmp_floats(cpu_a, cpu_b)
-	});
+	// Sort servers by memory usage using cluster-datacenter-topology-get
+	servers.sort_by_key(|server| memory_by_server.get(&server.server_id));
 
 	let dc = unwrap!(datacenter_res.datacenters.first());
 	let cluster_id = unwrap_ref!(dc.cluster_id).as_uuid();
@@ -199,6 +199,7 @@ async fn scale_down_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 
 			msg!([ctx] cluster::msg::server_destroy(server.server_id) {
 				server_id: Some(server.server_id.into()),
+				force: false,
 			})
 			.await?;
 		}
@@ -303,6 +304,7 @@ async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 
 			msg!([ctx] cluster::msg::server_destroy(server.server_id) {
 				server_id: Some(server.server_id.into()),
+				force: false,
 			})
 			.await?;
 		}
@@ -366,6 +368,7 @@ async fn scale_down_ats_servers<
 
 			msg!([ctx] cluster::msg::server_destroy(server.server_id) {
 				server_id: Some(server.server_id.into()),
+				force: false,
 			})
 			.await?;
 		}
@@ -401,7 +404,8 @@ async fn scale_up_servers(
 	if undrain_count != 0 {
 		tracing::info!(count=%undrain_count, "undraining servers");
 
-		// Because servers are ordered by cpu usage, this will undrain the servers with the most cpu usage
+		// Because servers are ordered by memory usage, this will undrain the servers with the most memory
+		// usage
 		let undrain_candidates = draining_servers.iter().take(undrain_count);
 
 		// Mark servers as not draining in db
@@ -479,29 +483,4 @@ async fn scale_up_servers(
 	}
 
 	Ok(())
-}
-
-fn cmp_floats(a: Option<f32>, b: Option<f32>) -> Ordering {
-	match a.partial_cmp(&b) {
-		Some(ord) => ord,
-		None => {
-			if let (Some(a), Some(b)) = (a, b) {
-				if a.is_nan() {
-					if b.is_nan() {
-						Ordering::Equal
-					} else {
-						Ordering::Less
-					}
-				} else if b.is_nan() {
-					Ordering::Greater
-				} else {
-					// unreachable
-					Ordering::Less
-				}
-			} else {
-				// unreachable
-				Ordering::Less
-			}
-		}
-	}
 }

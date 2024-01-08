@@ -30,7 +30,7 @@ pub struct SshKeyResponse {
 
 pub async fn create_ssh_key(
 	client: &Client,
-	server: &ProvisionCtx,
+	label: &str,
 ) -> GlobalResult<SshKeyResponse> {
 	tracing::info!("creating linode ssh key");
 
@@ -45,7 +45,8 @@ pub async fn create_ssh_key(
 		.post::<CreateSshKeyResponse>(
 			"/profile/sshkeys",
 			json!({
-				"label": server.name,
+				// Label must be < 64 characters for some stupid reason
+				"label": label,
 				"ssh_key": public_key,
 			}),
 		)
@@ -463,10 +464,10 @@ pub struct InstanceType {
 	pub network_out: u64,
 }
 
-impl From<InstanceType> for tier::list::CacheInstanceType {
+impl From<InstanceType> for linode::instance_type_get::response::InstanceType {
 	fn from(value: InstanceType) -> Self {
-		tier::list::CacheInstanceType {
-			id: value.id,
+		linode::instance_type_get::response::InstanceType {
+			hardware_id: value.id,
 			memory: value.memory,
 			disk: value.disk,
 			vcpus: value.vcpus,

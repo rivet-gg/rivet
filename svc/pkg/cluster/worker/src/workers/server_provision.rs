@@ -4,6 +4,7 @@ use rand::Rng;
 
 struct ProvisionResponse {
 	provider_server_id: String,
+	provider_hardware: String,
 	public_ip: String,
 	already_installed: bool,
 }
@@ -41,10 +42,7 @@ async fn worker(
 		return Ok(());
 	}
 	if destroyed {
-		tracing::warn!(
-			?server_id,
-			"attempting to provision a destroyed server. likely failed/timed out during provisioning and was retried"
-		);
+		tracing::warn!(?server_id, "attempting to provision a destroyed server");
 		return Ok(());
 	}
 
@@ -96,18 +94,35 @@ async fn worker(
 					Ok(res) => {
 						break Some(ProvisionResponse {
 							provider_server_id: res.provider_server_id.clone(),
+							provider_hardware: hardware.provider_hardware.clone(),
 							public_ip: res.public_ip.clone(),
 							already_installed: res.already_installed,
 						})
 					}
 					Err(err) => {
-						tracing::warn!(?err, ?server_id, "failed to provision server, cleaning up");
+						tracing::error!(
+							?err,
+							?server_id,
+							"failed to provision server, cleaning up"
+						);
 
 						destroy_server(ctx, server_id).await?;
 					}
 				}
 			}
 		}
+	};
+
+	let memory = if let Some(provision_res) = &provision_res {
+		let instance_types_res = op!([ctx] linode_instance_type_get {
+			hardware_ids: vec![provision_res.provider_hardware.clone()],
+		})
+		.await?;
+		let instance_type = unwrap!(instance_types_res.instance_types.first());
+
+		Some(instance_type.memory as i64)
+	} else {
+		None
 	};
 
 	// Update DB regardless of success (have to set vlan_ip)
@@ -118,13 +133,15 @@ async fn worker(
 		SET
 			provider_server_id = $2,
 			vlan_ip = $3,
-			public_ip = $4
+			public_ip = $4,
+			memory = $5
 		WHERE server_id = $1
 		",
 		server_id,
 		provision_res.as_ref().map(|res| &res.provider_server_id),
 		vlan_ip,
 		provision_res.as_ref().map(|res| &res.public_ip),
+		memory
 	)
 	.await?;
 
@@ -149,8 +166,8 @@ async fn worker(
 			.await?;
 		}
 	} else {
-		tracing::info!(?server_id, hardware_options=?pool.hardware.len(), "failed to provision server");
-		bail!("failed to provision server");
+		tracing::error!(?server_id, hardware_options=?pool.hardware.len(), "failed all attempts to provision server");
+		bail!("failed all attempts to provision server");
 	}
 
 	Ok(())
@@ -210,23 +227,15 @@ async fn destroy_server(
 	ctx: &OperationContext<cluster::msg::server_provision::Message>,
 	server_id: Uuid,
 ) -> GlobalResult<()> {
-	sql_execute!(
-		[ctx]
-		"
-		UPDATE db_cluster.servers
-		SET cloud_destroy_ts = $2
-		WHERE
-			server_id = $1
-		",
-		&server_id,
-		util::timestamp::now(),
-	)
-	.await?;
+	// NOTE: Usually before publishing this message we would set `cloud_destroy_ts`. We do not set it here
+	// because this message will be retried with the same server id
 
 	// Wait for server to complete destroying so we don't get a primary key conflict (the same server id
 	// will be used to try and provision the next hardware option)
 	msg!([ctx] cluster::msg::server_destroy(server_id) -> cluster::msg::server_destroy_complete {
 		server_id: Some(server_id.into()),
+		// We force destroy because the provision process failed
+		force: true,
 	})
 	.await?;
 

@@ -40,6 +40,7 @@ async fn worker(
 			backend::cluster::PoolType::Gg | backend::cluster::PoolType::Ats => {
 				msg!([ctx] cluster::msg::server_destroy(server_id) {
 					server_id: Some(server_id.into()),
+					force: false,
 				})
 				.await?;
 			}

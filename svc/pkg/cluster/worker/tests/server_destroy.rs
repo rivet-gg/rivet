@@ -51,6 +51,7 @@ async fn server_destroy(ctx: TestCtx) {
 
 	msg!([ctx] cluster::msg::server_destroy(server_id) -> cluster::msg::server_destroy_complete {
 		server_id: Some(server_id.into()),
+		force: false,
 	})
 	.await
 	.unwrap();

@@ -39,7 +39,7 @@ pub async fn info(
 	let datacenter = unwrap!(datacenter_res.datacenters.first());
 
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(server.pool_type));
-	let name = util_cluster::full_server_name(
+	let name = util_cluster::server_name(
 		&datacenter.provider_datacenter_id,
 		pool_type,
 		server_id.as_uuid(),

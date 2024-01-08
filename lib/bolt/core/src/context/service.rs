@@ -341,6 +341,10 @@ impl ServiceContextData {
 	pub fn depends_on_infra(&self) -> bool {
 		self.name() == "cluster-worker" || self.name() == "monolith-worker"
 	}
+
+	pub fn depends_on_provision_margin(&self) -> bool {
+		self.name() == "cluster-autoscale"
+	}
 }
 
 impl ServiceContextData {
@@ -1007,6 +1011,13 @@ impl ServiceContextData {
 				"RIVET_DEFAULT_CLUSTER_CONFIG".into(),
 				serde_json::to_string(&dynamic_servers.cluster)?,
 			));
+
+			if self.depends_on_provision_margin() {
+				env.push((
+					format!("SERVER_PROVISION_MARGIN"),
+					dynamic_servers.server_provision_margin.to_string(),
+				));
+			}
 		}
 
 		// Sort env by keys so it's always in the same order
