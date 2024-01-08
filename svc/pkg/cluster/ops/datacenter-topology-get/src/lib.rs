@@ -1,4 +1,4 @@
-use std::{collections::HashMap, convert::TryInto};
+use std::collections::HashMap;
 
 use nomad_client::apis::{allocations_api, configuration::Configuration, nodes_api};
 use proto::backend::pkg::*;
@@ -108,8 +108,17 @@ pub async fn handle(
 				let resources = unwrap_ref!(alloc.allocated_resources);
 				let shared_resources = unwrap_ref!(resources.shared);
 				let tasks = unwrap_ref!(resources.tasks);
+				let task_states = unwrap_ref!(alloc.task_states);
 
-				for task in tasks.values() {
+				for (task_name, task) in tasks {
+					let task_state = unwrap!(task_states.get(task_name));
+					let state = unwrap_ref!(task_state.state);
+
+					// Only count pending, running, or failed tasks
+					if state != "pending" && state != "running" && state != "failed" {
+						continue;
+					}
+
 					let cpu = unwrap_ref!(task.cpu);
 					let memory = unwrap_ref!(task.memory);
 
@@ -148,11 +157,7 @@ pub async fn handle(
 			.push(cluster::datacenter_topology_get::response::Server {
 				server_id: Some(server.server_id.into()),
 				node_id: server.nomad_node_id,
-				usage: Some(cluster::datacenter_topology_get::response::Stats {
-					cpu: usage.cpu,
-					memory: usage.memory,
-					disk: usage.disk,
-				}),
+				usage: Some(usage),
 				limits: Some(limits),
 			});
 	}

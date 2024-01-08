@@ -10,6 +10,9 @@ async fn basic() {
 		.with_span_events(tracing_subscriber::fmt::format::FmtSpan::NONE)
 		.init();
 
-	// TODO:
-	run_from_env().await.unwrap();
+	let pools = rivet_pools::from_env("cluster-autoscale-test")
+		.await
+		.unwrap();
+
+	run_from_env(pools).await.unwrap();
 }

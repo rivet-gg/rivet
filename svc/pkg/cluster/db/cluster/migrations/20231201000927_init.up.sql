@@ -26,6 +26,8 @@ CREATE TABLE servers (
 	vlan_ip TEXT,
 	network_idx INT,
 	public_ip TEXT,
+	-- Only set on job nodes
+	memory INT, -- MiB
 
 	-- Null until nomad node successfully registers
 	nomad_node_id TEXT,

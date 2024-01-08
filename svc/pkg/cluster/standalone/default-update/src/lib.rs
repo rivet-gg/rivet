@@ -170,18 +170,27 @@ pub async fn run_from_env() -> GlobalResult<()> {
 
 		// Update existing datacenter
 		if existing_datacenter {
-			msg!([ctx] @wait cluster::msg::datacenter_update(datacenter.datacenter_id) {
-				datacenter_id: datacenter_id_proto,
-				pools: datacenter.pools.into_iter().filter(|(pool_type, _)| {
+			let new_pools = datacenter
+				.pools
+				.into_iter()
+				.filter(|(pool_type, _)| {
 					// Filter job pool from update, it's desired count is based on the autoscaler
 					!matches!(pool_type, PoolType::Job)
-				}).map(|(pool_type, pool)| {
-					backend::cluster::Pool {
-						pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
-						hardware: pool.hardware.into_iter().map(Into::into).collect::<Vec<_>>(),
-						desired_count: pool.desired_count,
-					}
-				}).collect::<Vec<_>>(),
+				})
+				.map(|(pool_type, pool)| backend::cluster::Pool {
+					pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
+					hardware: pool
+						.hardware
+						.into_iter()
+						.map(Into::into)
+						.collect::<Vec<_>>(),
+					desired_count: pool.desired_count,
+				})
+				.collect::<Vec<_>>();
+
+			msg!([ctx] @wait cluster::msg::datacenter_update(datacenter.datacenter_id) {
+				datacenter_id: datacenter_id_proto,
+				pools: new_pools,
 				drain_timeout: Some(datacenter.drain_timeout),
 			})
 			.await?;

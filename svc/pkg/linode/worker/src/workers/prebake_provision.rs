@@ -1,5 +1,5 @@
 use chirp_worker::prelude::*;
-use proto::backend::{self, pkg::*};
+use proto::backend::{self, cluster::PoolType, pkg::*};
 use util_linode::api;
 
 #[worker(name = "linode-prebake-provision")]
@@ -7,19 +7,34 @@ async fn worker(
 	ctx: &OperationContext<linode::msg::prebake_provision::Message>,
 ) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
+	let pool_type = unwrap!(PoolType::from_i32(ctx.pool_type));
 
 	let ns = util::env::namespace();
-	let name = ctx.variant.clone();
+	let pool_type_str = match pool_type {
+		PoolType::Job => "job",
+		PoolType::Gg => "gg",
+		PoolType::Ats => "ats",
+	};
+	let provider_datacenter_id = &ctx.provider_datacenter_id;
+
+	let name = util_cluster::simple_image_variant(provider_datacenter_id, pool_type);
+
 	let tags = ctx
 		.tags
 		.iter()
 		.cloned()
-		.chain([format!("rivet-{ns}"), "prebake".to_string(), name.clone()])
+		.chain([
+			"prebake".to_string(),
+			format!("rivet-{ns}"),
+			format!("{ns}-{provider_datacenter_id}"),
+			format!("{ns}-{pool_type_str}"),
+			format!("{ns}-{provider_datacenter_id}-{pool_type_str}"),
+		])
 		.collect::<Vec<_>>();
 
 	// Build context
 	let prebake_server = api::ProvisionCtx {
-		datacenter: ctx.provider_datacenter_id.clone(),
+		datacenter: provider_datacenter_id.clone(),
 		name,
 		hardware: "g6-nanode-1".to_string(),
 		vlan_ip: None,
@@ -62,7 +77,7 @@ async fn provision(
 	server: &api::ProvisionCtx,
 ) -> GlobalResult<String> {
 	// Create SSH key
-	let ssh_key_res = api::create_ssh_key(client, server).await?;
+	let ssh_key_res = api::create_ssh_key(client, &Uuid::new_v4().to_string()).await?;
 
 	// Write SSH key id
 	sql_execute!(

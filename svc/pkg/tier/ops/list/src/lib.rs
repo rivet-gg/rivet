@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
-use util_linode::api;
 
 // See pkr/static/nomad-config.hcl.tpl client.reserved
 const RESERVE_SYSTEM_CPU: u64 = 500;
@@ -48,57 +45,45 @@ async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier
 	})
 	.await?;
 
-	// Build HTTP client
-	let client = util_linode::Client::new().await?;
-
-	// Get hardware stats from linode and cache
-	let instance_types_res = ctx
-		.cache()
-		.ttl(util::duration::days(1))
-		.fetch_one_proto("instance_type", "linode", {
-			let client = client.clone();
-			move |mut cache, key| {
-				let client = client.clone();
-				async move {
-					let api_res = api::list_instance_types(&client).await?;
-
-					cache.resolve(
-						&key,
-						tier::list::CacheInstanceTypes {
-							instance_types: api_res.into_iter().map(Into::into).collect::<Vec<_>>(),
-						},
-					);
-
-					Ok(cache)
-				}
-			}
-		})
-		.await?;
-	let instance_types = unwrap!(instance_types_res)
-		.instance_types
-		.into_iter()
-		.map(|ty| (ty.id.clone(), ty))
-		.collect::<HashMap<_, _>>();
-
-	let regions = datacenters_res
+	let hardware = datacenters_res
 		.datacenters
 		.iter()
-		.map(|datacenter| {
+		.map(|dc| {
 			let job_pool = unwrap!(
-				datacenter
-					.pools
+				dc.pools
 					.iter()
 					.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32),
 				"no job pool"
 			);
-			let hardware = &unwrap!(job_pool.hardware.first(), "no hardware").provider_hardware;
+			let hardware = unwrap!(job_pool.hardware.first(), "no hardware")
+				.provider_hardware
+				.clone();
+
+			Ok((dc.datacenter_id, hardware))
+		})
+		.collect::<GlobalResult<Vec<_>>>()?;
+
+	let instance_types_res = op!([ctx] linode_instance_type_get {
+		hardware_ids: hardware
+			.iter()
+			.map(|(_, hardware)| hardware.clone())
+			.collect::<Vec<_>>(),
+	})
+	.await?;
+
+	let regions = hardware
+		.into_iter()
+		.map(|(datacenter_id, hardware)| {
 			let instance_type = unwrap!(
-				instance_types.get(hardware),
+				instance_types_res
+					.instance_types
+					.iter()
+					.find(|it| it.hardware_id == hardware),
 				"datacenter hardware stats not found"
 			);
 
 			Ok(tier::list::response::Region {
-				region_id: datacenter.datacenter_id,
+				region_id: datacenter_id,
 				tiers: vec![
 					generate_tier(instance_type, "basic-4d1", 4, 1),
 					generate_tier(instance_type, "basic-2d1", 2, 1),
@@ -116,7 +101,9 @@ async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier
 }
 
 /// Returns the default game node config.
-fn get_game_node_config(instance_type: &tier::list::CacheInstanceType) -> GameNodeConfig {
+fn get_game_node_config(
+	instance_type: &linode::instance_type_get::response::InstanceType,
+) -> GameNodeConfig {
 	// Multiply config for 2 core, 4 GB to scale up to the 4 core, 8 GB
 	// plan
 	let mut config = GameNodeConfig {
@@ -137,7 +124,7 @@ fn get_game_node_config(instance_type: &tier::list::CacheInstanceType) -> GameNo
 }
 
 fn generate_tier(
-	instance_type: &tier::list::CacheInstanceType,
+	instance_type: &linode::instance_type_get::response::InstanceType,
 	name: &str,
 	numerator: u64,
 	denominator: u64,

@@ -59,7 +59,7 @@ pub async fn id(ctx: &ProjectContext, server_id: &str, command: Option<&str>) ->
 	let server_ips = tasks::api::get_cluster_server_ips(&ctx, ("server_id", server_id)).await?;
 	let server_ip = server_ips
 		.first()
-		.context("failed to find server with server id")?;
+		.context(format!("failed to find server with server id {server_id}"))?;
 
 	// TODO: Choose correct SSH key
 	let ssh_key = TempSshKey::new(&ctx, "server").await?;
@@ -72,7 +72,7 @@ pub async fn pool(ctx: &ProjectContext, pool: &str, command: Option<&str>) -> Re
 	let server_ips = tasks::api::get_cluster_server_ips(&ctx, ("pool", pool)).await?;
 	let server_ip = server_ips
 		.first()
-		.context("failed to find server with pool")?;
+		.context(format!("failed to find server with pool {pool}"))?;
 
 	let ssh_key = TempSshKey::new(&ctx, "server").await?;
 	ip(ctx, &server_ip, &ssh_key, command).await?;

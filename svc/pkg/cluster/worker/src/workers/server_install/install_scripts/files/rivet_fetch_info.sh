@@ -2,7 +2,7 @@ PUBLIC_IP=$(ip -4 route get 1.0.0.0 | awk '{print $7; exit}')
 
 # Get server info from rivet
 response=$(
-	curl \
+	curl -f \
 		-H "Authorization: Bearer __SERVER_TOKEN__" \
 		"https://__DOMAIN_MAIN_API__/provision/servers/$PUBLIC_IP/info"
 )

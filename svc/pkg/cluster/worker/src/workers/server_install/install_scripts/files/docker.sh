@@ -4,6 +4,9 @@ curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
 # Add Docker repository
 echo 'deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable' > /etc/apt/sources.list.d/docker.list
 
+# Create directories
+mkdir -p /etc/docker
+
 # Add daemon.json
 # 
 # Enable live restore in order to ensure that container stay alive

@@ -41,12 +41,14 @@ impl QueryTiming {
 	}
 }
 
+lazy_static::lazy_static! {
+	static ref PROMETHEUS_URL: String = util::env::var("PROMETHEUS_URL").unwrap();
+}
+
 #[operation(name = "job-run-metrics-log")]
 async fn handle(
 	ctx: OperationContext<job_run::metrics_log::Request>,
 ) -> GlobalResult<job_run::metrics_log::Response> {
-	let prometheus_url = util::env::var("PROMETHEUS_URL")?;
-
 	let mut metrics = Vec::new();
 
 	for metric in &ctx.metrics {
@@ -58,7 +60,7 @@ async fn handle(
 		// relabel action in the Kubernetes config.
 		let (mem_allocated, cpu_usage, mem_usage) = tokio::try_join!(
 			handle_request(
-				&prometheus_url,
+				&PROMETHEUS_URL,
 				None,
 				formatdoc!(
 					"
@@ -72,7 +74,7 @@ async fn handle(
 				)
 			),
 			handle_request(
-				&prometheus_url,
+				&PROMETHEUS_URL,
 				query_timing.as_ref(),
 				formatdoc!(
 					"
@@ -86,7 +88,7 @@ async fn handle(
 				)
 			),
 			handle_request(
-				&prometheus_url,
+				&PROMETHEUS_URL,
 				query_timing.as_ref(),
 				// Fall back to `nomad_client_allocs_memory_rss` since `nomad_client_allocs_memory_usage` is
 				// not available in `raw_exec`.
