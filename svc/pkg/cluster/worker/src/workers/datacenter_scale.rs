@@ -78,7 +78,8 @@ async fn worker(
 		})
 		.collect::<GlobalResult<HashMap<_, _>>>()?;
 
-	// Sort servers by memory usage using cluster-datacenter-topology-get
+	// TODO: Sort gg servers by cpu usage
+	// Sort job servers by memory usage using cluster-datacenter-topology-get
 	servers.sort_by_key(|server| memory_by_server.get(&server.server_id));
 
 	let dc = unwrap!(datacenter_res.datacenters.first());
@@ -243,21 +244,16 @@ async fn scale_down_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	Ok(())
 }
 
-async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
+async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + DoubleEndedIterator + Clone>(
 	ctx: &OperationContext<cluster::msg::datacenter_scale::Message>,
 	crdb: &CrdbPool,
 	dc: &backend::cluster::Datacenter,
-	servers_in_dc: I,
+	servers: I,
 	active_server_count: usize,
 	pool: &backend::cluster::Pool,
 ) -> GlobalResult<()> {
 	let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
 	let desired_count = pool.desired_count as usize;
-	let (gg_servers, job_servers) = servers_in_dc
-		.filter(|server| !matches!(server.pool_type, backend::cluster::PoolType::Ats))
-		.partition::<Vec<_>, _>(|server| {
-			matches!(server.pool_type, backend::cluster::PoolType::Gg)
-		});
 
 	tracing::info!(
 		?datacenter_id,
@@ -266,50 +262,41 @@ async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 		"scaling down gg"
 	);
 
-	// If there are active job servers, leave one gg server open (it will get destroyed in
-	// `cluster-server-drain-complete` once the last job server is finished draining)
-	let destroy_count = if job_servers.is_empty() {
-		active_server_count - desired_count
-	} else {
-		(active_server_count - desired_count).min(active_server_count - 1)
-	};
+	let drain_count = active_server_count - desired_count;
 
-	// Destroy servers
-	if destroy_count != 0 {
-		tracing::info!(count=%destroy_count, "destroying servers");
+	// Drain servers
+	if drain_count != 0 {
+		tracing::info!(count=%drain_count, "draining servers");
 
-		let destroy_candidates = gg_servers.iter().take(destroy_count);
+		let drain_candidates = servers.rev().take(drain_count);
 
-		// Mark servers for destruction in db
+		// Mark servers as draining in db
 		sql_execute!(
 			[ctx, &crdb]
 			"
 			UPDATE db_cluster.servers
-			SET cloud_destroy_ts = $2
+			SET drain_ts = $2
 			WHERE server_id = ANY($1)
 			",
-			destroy_candidates.clone()
+			drain_candidates.clone()
 				.map(|server| server.server_id)
 				.collect::<Vec<_>>(),
 			util::timestamp::now(),
 		)
 		.await?;
 
-		for server in destroy_candidates {
+		for server in drain_candidates {
 			tracing::info!(
 				server_id=%server.server_id,
 				nomad_node_id=?server.nomad_node_id,
-				"destroying server"
+				"draining server"
 			);
 
-			msg!([ctx] cluster::msg::server_destroy(server.server_id) {
+			msg!([ctx] cluster::msg::server_drain(server.server_id) {
 				server_id: Some(server.server_id.into()),
-				force: false,
 			})
 			.await?;
 		}
-	} else if !job_servers.is_empty() {
-		tracing::info!("job servers not drained yet, leaving one gg server");
 	}
 
 	Ok(())
@@ -405,7 +392,7 @@ async fn scale_up_servers(
 	if undrain_count != 0 {
 		tracing::info!(count=%undrain_count, "undraining servers");
 
-		// Because servers are ordered by memory usage, this will undrain the servers with the most memory
+		// Because job servers are ordered by memory usage, this will undrain the servers with the most memory
 		// usage
 		let undrain_candidates = draining_servers.iter().take(undrain_count);
 

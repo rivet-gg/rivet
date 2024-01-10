@@ -2,7 +2,7 @@ use chirp_worker::prelude::*;
 use proto::backend::pkg::*;
 
 lazy_static::lazy_static! {
-	static ref REDIS_SCRIPT: redis::Script = redis::Script::new(include_str!("../../redis-scripts/datacenter_closed_set.lua"));
+	static ref REDIS_SCRIPT: redis::Script = redis::Script::new(include_str!("../../redis-scripts/nomad_node_closed_set.lua"));
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -14,21 +14,26 @@ struct LobbyRow {
 	max_players_party: i64,
 }
 
-#[worker(name = "mm-datacenter-closed-set")]
+#[worker(name = "mm-nomad-node-closed-set")]
 async fn worker(
-	ctx: &OperationContext<mm::msg::datacenter_closed_set::Message>,
+	ctx: &OperationContext<mm::msg::nomad_node_closed_set::Message>,
 ) -> GlobalResult<()> {
 	let datacenter_id = unwrap_ref!(ctx.datacenter_id).as_uuid();
 
+	// Select all lobbies in the node
 	let lobby_rows = sql_fetch_all!(
 		[ctx, LobbyRow]
 		"
-		UPDATE db_mm_state.lobbies
+		UPDATE db_mm_state.lobbies AS l
 		SET is_closed = $2
-		WHERE region_id = $1
-		RETURNING lobby_id, namespace_id, lobby_group_id, max_players_normal, max_players_party
+		FROM db_job_state.run_meta_nomad AS n
+		WHERE
+			l.run_id = n.node_id AND
+			n.node_id = $1
+		RETURNING
+			lobby_id, namespace_id, lobby_group_id, max_players_normal, max_players_party
 		",
-		datacenter_id,
+		&ctx.nomad_node_id,
 		ctx.is_closed,
 	)
 	.await?;
@@ -37,8 +42,6 @@ async fn worker(
 	if ctx.is_closed {
 		let mut pipe = redis::pipe();
 		pipe.atomic();
-
-		pipe.set(util_mm::key::datacenter_is_closed(datacenter_id), true);
 
 		for lobby in lobby_rows {
 			pipe.zrem(
@@ -58,16 +61,15 @@ async fn worker(
 					util_mm::JoinKind::Party,
 				),
 				lobby.lobby_id.to_string(),
-			);
+			)
+			.hset(util_mm::key::lobby_config(lobby.lobby_id), "nc", 1);
 		}
 
 		pipe.query_async(&mut ctx.redis_mm().await?).await?;
 	} else {
 		let mut script = REDIS_SCRIPT.prepare_invoke();
 
-		script
-			.key(util_mm::key::datacenter_is_closed(datacenter_id))
-			.arg(lobby_rows.len());
+		script.arg(lobby_rows.len());
 
 		for lobby in lobby_rows {
 			script

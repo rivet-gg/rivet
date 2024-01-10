@@ -13,15 +13,8 @@ pub async fn gen_install(
 	pool_type: backend::cluster::PoolType,
 	initialize_immediately: bool,
 ) -> GlobalResult<String> {
-	let mut script = Vec::new();
-
 	// MARK: Common (pre)
-	script.push(components::common());
-	script.push(components::node_exporter());
-	script.push(components::sysctl());
-	script.push(components::traefik());
-	script.push(components::traefik_tunnel()?);
-	script.push(components::vector_install());
+	let mut script = vec![components::common(), components::node_exporter(), components::sysctl(), components::traefik(), components::traefik_tunnel()?, components::vector_install()];
 
 	// MARK: Specific pool components
 	match pool_type {
@@ -50,9 +43,7 @@ pub async fn gen_install(
 
 // This script is run by systemd on startup and gets the server's data from the Rivet API
 pub async fn gen_hook(server_token: &str) -> GlobalResult<String> {
-	let mut script = Vec::new();
-
-	script.push(components::rivet_fetch_info(server_token)?);
+	let mut script = vec![components::rivet_fetch_info(server_token)?];
 
 	let joined = script.join("\n\necho \"======\"\n\n");
 	Ok(format!("#!/usr/bin/env bash\nset -eu\n\n{joined}"))

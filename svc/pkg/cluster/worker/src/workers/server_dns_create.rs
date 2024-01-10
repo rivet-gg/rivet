@@ -34,7 +34,6 @@ async fn worker(
 		return Ok(());
 	}
 
-	// NOTE: The only pool type that needs DNS records should be GG
 	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
 	let zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
 	let record_name = format!(

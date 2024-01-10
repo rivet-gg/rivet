@@ -159,7 +159,7 @@ async fn worker(
 		}
 
 		// Create DNS record
-		if matches!(pool_type, backend::cluster::PoolType::Gg) {
+		if let backend::cluster::PoolType::Gg = pool_type {
 			msg!([ctx] cluster::msg::server_dns_create(server_id) {
 				server_id: ctx.server_id,
 			})

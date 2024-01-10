@@ -44,7 +44,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_install::Message>) -
 	}
 
 	let public_ip = ctx.public_ip.clone();
-	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(ctx.pool_type as i32));
+	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(ctx.pool_type));
 	let private_key_openssh =
 		util::env::read_secret(&["ssh", "server", "private_key_openssh"]).await?;
 
