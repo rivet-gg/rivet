@@ -113,11 +113,16 @@ pub async fn run_from_env() -> GlobalResult<()> {
 	);
 
 	// Read config from env
-	let Some(config_json) = std::env::var("RIVET_DEFAULT_CLUSTER_CONFIG").ok() else {
+	let Some(config_json) = util::env::var("RIVET_DEFAULT_CLUSTER_CONFIG").ok() else {
 		tracing::warn!("no cluster config set in namespace config");
 		return Ok(());
 	};
 	let config = serde_json::from_str::<Cluster>(&config_json)?;
+
+	let taint = util::env::var("RIVET_TAINT_DEFAULT_CLUSTER")
+		.ok()
+		.unwrap_or_else(|| "0".to_string())
+		== "1";
 
 	let cluster_id = util::env::default_cluster_id();
 
@@ -218,6 +223,14 @@ pub async fn run_from_env() -> GlobalResult<()> {
 					build_delivery_method: Into::<backend::cluster::BuildDeliveryMethod>::into(datacenter.build_delivery_method) as i32,
 					drain_timeout: datacenter.drain_timeout,
 				}),
+			})
+			.await?;
+		}
+
+		// Taint datacenter
+		if taint {
+			msg!([ctx] cluster::msg::datacenter_taint(datacenter.datacenter_id) {
+				datacenter_id: datacenter_id_proto,
 			})
 			.await?;
 		}

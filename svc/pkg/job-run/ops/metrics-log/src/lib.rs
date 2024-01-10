@@ -162,5 +162,8 @@ async fn handle_request(
 		.into());
 	}
 
-	Ok(unwrap!(res.json::<PrometheusResponse>().await?.data.result.first()).clone())
+	let body = res.json::<PrometheusResponse>().await?;
+	let data = unwrap!(body.data.result.first()).clone();
+
+	Ok(data)
 }

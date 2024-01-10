@@ -30,7 +30,7 @@ async fn worker(ctx: &OperationContext<cluster::msg::server_destroy::Message>) -
 	.await?;
 
 	if server.provider_server_id.is_none() && !ctx.force {
-		retry_bail!("server is not completely provisioned yet, retrying");
+		bail!("server is not completely provisioned yet, retrying");
 	}
 
 	let datacenter_res = op!([ctx] cluster_datacenter_get {

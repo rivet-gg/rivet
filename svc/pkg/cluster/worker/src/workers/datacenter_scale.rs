@@ -394,6 +394,7 @@ async fn scale_up_servers(
 		active=%active_server_count,
 		draining=%draining_servers.len(),
 		desired=%desired_count,
+		pool_type=?pool,
 		"scaling up"
 	);
 

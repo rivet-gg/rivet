@@ -1,7 +1,7 @@
 use chirp_worker::prelude::*;
 use proto::backend::pkg::*;
 
-#[worker(name = "cluster-datacenter-taint", timeout = 200)]
+#[worker(name = "cluster-datacenter-taint")]
 async fn worker(
 	ctx: &OperationContext<cluster::msg::datacenter_taint::Message>,
 ) -> GlobalResult<()> {

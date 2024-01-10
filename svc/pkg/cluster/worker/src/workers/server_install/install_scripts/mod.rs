@@ -15,22 +15,13 @@ pub async fn gen_install(
 ) -> GlobalResult<String> {
 	let mut script = Vec::new();
 
-	let mut prometheus_targets = HashMap::new();
-
 	// MARK: Common (pre)
 	script.push(components::common());
 	script.push(components::node_exporter());
 	script.push(components::sysctl());
 	script.push(components::traefik());
 	script.push(components::traefik_tunnel()?);
-
-	prometheus_targets.insert(
-		"node_exporter".into(),
-		components::VectorPrometheusTarget {
-			endpoint: "http://127.0.0.1:9100/metrics".into(),
-			scrape_interval: 15,
-		},
-	);
+	script.push(components::vector_install());
 
 	// MARK: Specific pool components
 	match pool_type {
@@ -42,24 +33,8 @@ pub async fn gen_install(
 			script.push(components::cnitool());
 			script.push(components::cni_plugins());
 			script.push(components::nomad_install());
-
-			prometheus_targets.insert(
-				"nomad".into(),
-				components::VectorPrometheusTarget {
-					endpoint: "http://127.0.0.1:4646/v1/metrics?format=prometheus".into(),
-					scrape_interval: 15,
-				},
-			);
 		}
-		backend::cluster::PoolType::Gg => {
-			prometheus_targets.insert(
-				"game_guard".into(),
-				components::VectorPrometheusTarget {
-					endpoint: "http://127.0.0.1:9980/metrics".into(),
-					scrape_interval: 15,
-				},
-			);
-		}
+		backend::cluster::PoolType::Gg => {}
 		backend::cluster::PoolType::Ats => {
 			script.push(components::docker());
 			script.push(components::traffic_server_install());
@@ -67,11 +42,6 @@ pub async fn gen_install(
 	}
 
 	// MARK: Common (post)
-	if !prometheus_targets.is_empty() {
-		script.push(components::vector(&components::VectorConfig {
-			prometheus_targets,
-		}));
-	}
 	script.push(components::rivet_create_hook(initialize_immediately)?);
 
 	let joined = script.join("\n\necho \"======\"\n\n");
@@ -93,10 +63,29 @@ pub async fn gen_hook(server_token: &str) -> GlobalResult<String> {
 pub async fn gen_initialize(pool_type: backend::cluster::PoolType) -> GlobalResult<String> {
 	let mut script = Vec::new();
 
+	let mut prometheus_targets = HashMap::new();
+
+	// MARK: Common (pre)
+	prometheus_targets.insert(
+		"node_exporter".into(),
+		components::VectorPrometheusTarget {
+			endpoint: "http://127.0.0.1:9100/metrics".into(),
+			scrape_interval: 15,
+		},
+	);
+
 	// MARK: Specific pool components
 	match pool_type {
 		backend::cluster::PoolType::Job => {
 			script.push(components::nomad_configure());
+
+			prometheus_targets.insert(
+				"nomad".into(),
+				components::VectorPrometheusTarget {
+					endpoint: "http://127.0.0.1:4646/v1/metrics?format=prometheus".into(),
+					scrape_interval: 15,
+				},
+			);
 		}
 		backend::cluster::PoolType::Gg => {
 			script.push(components::traefik_instance(components::TraefikInstance {
@@ -111,10 +100,26 @@ pub async fn gen_initialize(pool_type: backend::cluster::PoolType) -> GlobalResu
 				},
 				tcp_server_transports: Default::default(),
 			}));
+
+			prometheus_targets.insert(
+				"game_guard".into(),
+				components::VectorPrometheusTarget {
+					endpoint: "http://127.0.0.1:9980/metrics".into(),
+					scrape_interval: 15,
+				},
+			);
 		}
 		backend::cluster::PoolType::Ats => {
 			script.push(components::traffic_server_configure().await?);
 		}
+	}
+
+	// MARK: Common (post)
+	if !prometheus_targets.is_empty() {
+		script.push(components::vector_configure(
+			&components::VectorConfig { prometheus_targets },
+			pool_type,
+		));
 	}
 
 	let joined = script.join("\n\necho \"======\"\n\n");

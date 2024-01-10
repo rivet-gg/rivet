@@ -2367,6 +2367,7 @@ dependencies = [
  "rivet-metrics",
  "rivet-operation",
  "rivet-runtime",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
