@@ -342,6 +342,10 @@ impl ServiceContextData {
 		self.name() == "cluster-worker" || self.name() == "monolith-worker"
 	}
 
+	pub fn depends_on_cluster_config(&self) -> bool {
+		self.name() == "cluster-default-update"
+	}
+
 	pub fn depends_on_provision_margin(&self) -> bool {
 		self.name() == "cluster-autoscale"
 	}
@@ -1007,15 +1011,25 @@ impl ServiceContextData {
 
 		// Dynamic servers
 		if let Some(dynamic_servers) = &project_ctx.ns().rivet.dynamic_servers {
-			env.push((
-				"RIVET_DEFAULT_CLUSTER_CONFIG".into(),
-				serde_json::to_string(&dynamic_servers.cluster)?,
-			));
+			if self.depends_on_cluster_config() {
+				env.push((
+					"RIVET_DEFAULT_CLUSTER_CONFIG".into(),
+					serde_json::to_string(&dynamic_servers.cluster)?,
+				));
+				env.push((
+					"RIVET_TAINT_DEFAULT_CLUSTER".into(),
+					if dynamic_servers.taint {
+						"1".to_string()
+					} else {
+						"0".to_string()
+					},
+				));
+			}
 
 			if self.depends_on_provision_margin() {
 				env.push((
-					format!("SERVER_PROVISION_MARGIN"),
-					dynamic_servers.server_provision_margin.to_string(),
+					format!("JOB_SERVER_PROVISION_MARGIN"),
+					dynamic_servers.job_server_provision_margin.to_string(),
 				));
 			}
 		}

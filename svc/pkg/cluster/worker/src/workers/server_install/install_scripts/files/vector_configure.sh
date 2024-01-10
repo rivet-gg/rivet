@@ -1,33 +1,13 @@
 PUBLIC_IP=$(ip -4 route get 1.0.0.0 | awk '{print $7; exit}')
 
-version="0.34.1"
-
-# Create vector user
-if ! id -u "vector" &>/dev/null; then
-	useradd -r -s /bin/false vector
-fi
-
-# Install vector
-mkdir -p "/opt/vector-${version}"
-curl -L "https://github.com/vectordotdev/vector/releases/download/v${version}/vector-${version}-x86_64-unknown-linux-gnu.tar.gz" -o "/tmp/vector_${version}.tar.gz"
-tar zxvf "/tmp/vector_${version}.tar.gz" -C "/opt/vector-${version}"
-install -o vector -g vector "/opt/vector-${version}/vector-x86_64-unknown-linux-gnu/bin/vector" /usr/bin/
-
-# Check vector version
-if vector --version | grep "vector ${version}"; then
-	echo "Successfully installed Vector ${version}"
-else
-	echo "Vector version mismatch"
-	exit 1
-fi
-
 # Write config
 mkdir -p /etc/vector /var/lib/vector
 
-cat << 'EOF' > /etc/vector/vector.toml
+cat << EOF > /etc/vector/vector.toml
 __VECTOR_CONFIG__
 EOF
 
+# Vector user created in vector_install.sh script
 chown -R vector:vector /etc/vector /var/lib/vector
 
 # Systemd service

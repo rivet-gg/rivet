@@ -596,9 +596,12 @@ pub struct Upload {
 #[serde(deny_unknown_fields)]
 pub struct DynamicServers {
 	pub cluster: DynamicServersCluster,
-	// Used with simple provisioning algorithm. How many empty servers to have at all times
-	#[serde(default = "default_server_provision_margin")]
-	pub server_provision_margin: u32,
+	/// Whether or not to send a taint message in the next cluster update.
+	#[serde(default)]
+	pub taint: bool,
+	/// How many empty job servers to have at all times. Used in the simple provisioning algorithm.
+	#[serde(default = "default_job_server_provision_margin")]
+	pub job_server_provision_margin: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, strum_macros::Display)]
@@ -728,6 +731,6 @@ fn default_tunnel_port() -> u16 {
 	5000
 }
 
-fn default_server_provision_margin() -> u32 {
+fn default_job_server_provision_margin() -> u32 {
 	2
 }

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use chirp_worker::prelude::*;
 use include_dir::{include_dir, Dir};
 use indoc::{formatdoc, indoc};
+use proto::backend;
 use s3_util::Provider;
 
 /// Service that gets exposed from the Traefik tunnel.
@@ -323,6 +324,10 @@ fn tunnel_traefik_dynamic_config(tunnel_external_ip: &str) -> String {
 	config
 }
 
+pub fn vector_install() -> String {
+	include_str!("files/vector_install.sh").to_string()
+}
+
 pub struct VectorConfig {
 	pub prometheus_targets: HashMap<String, VectorPrometheusTarget>,
 }
@@ -332,7 +337,7 @@ pub struct VectorPrometheusTarget {
 	pub scrape_interval: usize,
 }
 
-pub fn vector(config: &VectorConfig) -> String {
+pub fn vector_configure(config: &VectorConfig, pool_type: backend::cluster::PoolType) -> String {
 	let sources = config
 		.prometheus_targets
 		.keys()
@@ -340,18 +345,28 @@ pub fn vector(config: &VectorConfig) -> String {
 		.collect::<Vec<_>>()
 		.join(", ");
 
+	let pool_type_str = match pool_type {
+		backend::cluster::PoolType::Job => "job",
+		backend::cluster::PoolType::Gg => "gg",
+		backend::cluster::PoolType::Ats => "ats",
+	};
+
 	let mut config_str = formatdoc!(
 		r#"
 		[api]
 			enabled = true
-	
+
 		[transforms.add_meta]
 			type = "remap"
 			inputs = [{sources}]
 			source = '''
+			.tags.server_id = "__SERVER_ID__"
+			.tags.datacenter_id = "__DATACENTER_ID__"
+			.tags.cluster_id = "__CLUSTER_ID__"
+			.tags.pool_type = "{pool_type_str}"
 			.tags.public_ip = "${{PUBLIC_IP}}"
 			'''
-	
+
 		[sinks.vector_sink]
 			type = "vector"
 			inputs = ["add_meta"]
@@ -379,7 +394,7 @@ pub fn vector(config: &VectorConfig) -> String {
 		));
 	}
 
-	include_str!("files/vector.sh").replace("__VECTOR_CONFIG__", &config_str)
+	include_str!("files/vector_configure.sh").replace("__VECTOR_CONFIG__", &config_str)
 }
 
 const TRAFFIC_SERVER_IMAGE: &str = "ghcr.io/rivet-gg/apache-traffic-server:9934dc2";

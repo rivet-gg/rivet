@@ -8,7 +8,7 @@ async fn worker(
 ) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
-	// Mark servers for destruction in db
+	// Mark tainted servers of the same datacenter for destruction in db
 	let tainted_servers = sql_fetch_all!(
 		[ctx, (Uuid, i64)]
 		"
@@ -18,7 +18,8 @@ async fn worker(
 		WHERE
 			s1.datacenter_id = s2.datacenter_id AND
 			s1.server_id = $1 AND
-			s2.taint_ts IS NOT NULL
+			s2.taint_ts IS NOT NULL AND
+			s2.cloud_destroy_ts IS NULL
 		RETURNING s2.server_id, s2.pool_type
 		",
 		&server_id,

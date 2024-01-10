@@ -11,23 +11,36 @@ async fn worker(
 		datacenter_ids: vec![datacenter_id.into()],
 	})
 	.await?;
-	let datacenter = unwrap!(
+	let datacenter_config = unwrap!(
 		datacenter_res.datacenters.first(),
 		"datacenter does not exist"
 	);
 
 	// Update config
-	let mut config = datacenter.clone();
+	let mut new_config = datacenter_config.clone();
 
-	config.pools = ctx.pools.clone();
+	for pool in &ctx.pools {
+		// Check if pool config already exists
+		if let Some(current_pool) = new_config
+			.pools
+			.iter_mut()
+			.find(|p| p.pool_type == pool.pool_type)
+		{
+			// Update pool config
+			current_pool.hardware = pool.hardware.clone();
+			current_pool.desired_count = pool.desired_count;
+		} else {
+			new_config.pools.push(pool.clone());
+		}
+	}
 
 	if let Some(drain_timeout) = ctx.drain_timeout {
-		config.drain_timeout = drain_timeout;
+		new_config.drain_timeout = drain_timeout;
 	}
 
 	// Encode config
-	let mut config_buf = Vec::with_capacity(config.encoded_len());
-	config.encode(&mut config_buf)?;
+	let mut config_buf = Vec::with_capacity(new_config.encoded_len());
+	new_config.encode(&mut config_buf)?;
 
 	// Write config
 	sql_execute!(

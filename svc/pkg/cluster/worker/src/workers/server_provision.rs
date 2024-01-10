@@ -106,7 +106,7 @@ async fn worker(
 							"failed to provision server, cleaning up"
 						);
 
-						destroy_server(ctx, server_id).await?;
+						cleanup(ctx, server_id).await?;
 					}
 				}
 			}
@@ -223,7 +223,8 @@ async fn get_vlan_ip(
 	Ok(vlan_ip.to_string())
 }
 
-async fn destroy_server(
+// This function is used to destroy leftovers from a failed partial provision.
+async fn cleanup(
 	ctx: &OperationContext<cluster::msg::server_provision::Message>,
 	server_id: Uuid,
 ) -> GlobalResult<()> {
