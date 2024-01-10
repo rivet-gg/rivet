@@ -553,7 +553,7 @@ async fn gen_s3_provider(
 pub fn rivet_create_hook(initialize_immediately: bool) -> GlobalResult<String> {
 	let domain_main_api = unwrap!(util::env::domain_main_api(), "no cdn");
 	let mut script =
-		include_str!("files/rivet_create_hook.sh").replace("__DOMAIN_MAIN_API__", &domain_main_api);
+		include_str!("files/rivet_create_hook.sh").replace("__DOMAIN_MAIN_API__", domain_main_api);
 
 	if initialize_immediately {
 		script.push_str("systemctl start rivet_hook\n");
@@ -567,5 +567,5 @@ pub fn rivet_fetch_info(server_token: &str) -> GlobalResult<String> {
 
 	Ok(include_str!("files/rivet_fetch_info.sh")
 		.replace("__SERVER_TOKEN__", server_token)
-		.replace("__DOMAIN_MAIN_API__", &domain_main_api))
+		.replace("__DOMAIN_MAIN_API__", domain_main_api))
 }

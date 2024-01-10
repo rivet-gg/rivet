@@ -32,18 +32,12 @@ if query.kind.direct ~= nil then
 		return { 'err', 'LOBBY_NOT_FOUND' }
 	end
 
-	-- Check lobby is not closed
-	local config_keys = redis.call('HMGET', key_direct_lobby_config, 'c', 'r')
+	-- Check that lobby and node are not closed
+	local config_keys = redis.call('HMGET', key_direct_lobby_config, 'c', 'nc')
 	local is_closed = config_keys[1] == '1'
-	if is_closed then
-		return {'err', 'LOBBY_CLOSED'}
-	end
+	local is_node_closed = config_keys[2] == '1'
 
-	-- Check datacenter is not closed
-	local region_id = config_keys[2]
-	local key_datacenter_is_closed = '{global}:mm:datacenter:' .. region_id .. ':is_closed'
-	local is_closed = redis.call('GET', key_datacenter_is_closed) == '1'
-	if is_closed then
+	if is_closed or is_node_closed then
 		return {'err', 'LOBBY_CLOSED'}
 	end
 
