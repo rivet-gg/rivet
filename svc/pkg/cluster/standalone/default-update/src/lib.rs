@@ -196,7 +196,8 @@ pub async fn run_from_env() -> GlobalResult<()> {
 			msg!([ctx] @wait cluster::msg::datacenter_update(datacenter.datacenter_id) {
 				datacenter_id: datacenter_id_proto,
 				pools: new_pools,
-				drain_timeout: Some(datacenter.drain_timeout),
+				// Convert from seconds to ms
+				drain_timeout: Some(datacenter.drain_timeout * 1000),
 			})
 			.await?;
 		}
