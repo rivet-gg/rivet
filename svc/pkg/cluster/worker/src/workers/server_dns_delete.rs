@@ -13,7 +13,7 @@ async fn worker(
 		[ctx, (String,), &crdb]
 		"
 		SELECT dns_record_id
-		FROM db_cluster.cloudflare_misc.servers
+		FROM db_cluster.cloudflare_misc
 		WHERE server_id = $1
 		",
 		&server_id,

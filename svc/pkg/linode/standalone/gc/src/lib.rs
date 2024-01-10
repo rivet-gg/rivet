@@ -142,6 +142,8 @@ async fn delete_expired_images(
 	Ok(())
 }
 
+// NOTE: We do not use `cluster-server-destroy` here because this is a prebake server (only
+// `cluster-server-install` works with both)
 async fn destroy(client: &util_linode::Client, server: &PrebakeServer) -> GlobalResult<()> {
 	if let Some(linode_id) = server.linode_id {
 		api::delete_instance(client, linode_id).await?;

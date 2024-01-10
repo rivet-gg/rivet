@@ -13,7 +13,6 @@ lazy_static::lazy_static! {
 
 #[derive(sqlx::FromRow)]
 struct Server {
-	server_id: Uuid,
 	datacenter_id: Uuid,
 	pool_type: i64,
 	memory: Option<i64>,
@@ -36,26 +35,6 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 	);
 	let crdb = ctx.crdb().await?;
 
-	// TODO: Remove
-	// let servers = sql_fetch_all!(
-	// 	[ctx, (Uuid,), &crdb]
-	// 	"
-	// 	SELECT server_id
-	// 	FROM db_cluster.linode_misc
-	// 	",
-	// )
-	// .await?;
-
-	// for (server_id,) in servers {
-	// 	msg!([ctx] cluster::msg::server_destroy(server_id) {
-	// 		server_id: Some(server_id.into()),
-	// 		force: true,
-	// 	})
-	// 	.await?;
-	// }
-
-	// return Ok(());
-
 	// Fetch all datacenters and all of their gg + job servers
 	let (datacenter_rows, servers) = tokio::try_join!(
 		sql_fetch_all!(
@@ -68,7 +47,7 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 		sql_fetch_all!(
 			[ctx, Server, &crdb]
 			"
-			SELECT server_id, datacenter_id, pool_type, memory
+			SELECT datacenter_id, pool_type, memory
 			FROM db_cluster.servers
 			WHERE
 				pool_type = ANY($1) AND
@@ -100,14 +79,23 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 	let hardware = datacenters_res
 		.datacenters
 		.iter()
-		.map(|dc| {
+		// Gracefully fetch job pool
+		.filter_map(|dc| {
+			let job_pool = dc
+				.pools
+				.iter()
+				.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32);
+
+			if let Some(job_pool) = job_pool {
+				Some((dc, job_pool))
+			} else {
+				tracing::warn!(datacenter_id=?dc.datacenter_id, "datacenter has no job pool");
+
+				None
+			}
+		})
+		.map(|(dc, job_pool)| {
 			let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
-			let job_pool = unwrap!(
-				dc.pools
-					.iter()
-					.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32),
-				"no job pool"
-			);
 			let hardware = unwrap!(job_pool.hardware.first(), "no hardware")
 				.provider_hardware
 				.clone();
@@ -147,20 +135,20 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 			.iter()
 			.find(|topo| topo.datacenter_id == datacenter.datacenter_id));
 
-		let job_pool = unwrap!(
-			datacenter
-				.pools
-				.iter()
-				.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32),
-			"no job pool"
-		);
-		let gg_pool = unwrap!(
-			datacenter
-				.pools
-				.iter()
-				.find(|pool| pool.pool_type == backend::cluster::PoolType::Gg as i32),
-			"no gg pool"
-		);
+		let job_pool = datacenter
+			.pools
+			.iter()
+			.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32);
+		let gg_pool = datacenter
+			.pools
+			.iter()
+			.find(|pool| pool.pool_type == backend::cluster::PoolType::Gg as i32);
+
+		// Gracefully handle missing pools (test datacenters might not have them)
+		let (Some(job_pool), Some(gg_pool)) = (job_pool, gg_pool) else {
+			tracing::warn!(?datacenter_id, "datacenter missing job/gg pools");
+			continue;
+		};
 
 		let default_memory = *unwrap!(default_memory.get(&datacenter_id));
 
@@ -172,11 +160,8 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 		let new_job_desired_count =
 			autoscale_job_servers(default_memory, servers_in_datacenter.clone(), topology).await?;
 		let new_gg_desired_count =
-			autoscale_gg_servers(datacenter_id, servers_in_datacenter, gg_pool.desired_count)
+			autoscale_gg_servers(datacenter_id, gg_pool.desired_count)
 				.await?;
-
-		let new_job_desired_count = 1;
-		let new_gg_desired_count = 1;
 
 		if new_job_desired_count != job_pool.desired_count
 			|| new_gg_desired_count != gg_pool.desired_count
@@ -268,13 +253,8 @@ fn job_autoscale_algorithm(
 
 async fn autoscale_gg_servers<'a, I: Iterator<Item = &'a Server>>(
 	datacenter_id: Uuid,
-	servers: I,
 	current_desired_count: u32,
 ) -> GlobalResult<u32> {
-	let gg_servers_iter =
-		servers.filter(|server| server.pool_type == backend::cluster::PoolType::Gg as i32 as i64);
-	let server_count = gg_servers_iter.count() as u64;
-
 	let prom_res = handle_request(
 		&PROMETHEUS_URL,
 		formatdoc!(
@@ -308,8 +288,8 @@ async fn autoscale_gg_servers<'a, I: Iterator<Item = &'a Server>>(
 	Ok(new_desired_count)
 }
 
-fn gg_autoscale_algorithm(current_desired_count: u32, server_count: u64, used_cpu: u64) -> u32 {
-	let total_cpu = server_count * 100;
+fn gg_autoscale_algorithm(current_desired_count: u32, used_cpu: u64) -> u32 {
+	let total_cpu = current_desired_count * 100;
 	let diff = total_cpu.saturating_sub(used_cpu);
 
 	tracing::info!(
