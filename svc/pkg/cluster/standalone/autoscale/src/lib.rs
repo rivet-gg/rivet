@@ -1,7 +1,9 @@
 use std::{collections::HashMap, iter::Iterator};
 
+use indoc::formatdoc;
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
+use serde::Deserialize;
 
 lazy_static::lazy_static! {
 	static ref JOB_SERVER_PROVISION_MARGIN: u64 = util::env::var("JOB_SERVER_PROVISION_MARGIN").unwrap()
@@ -69,11 +71,14 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 			SELECT server_id, datacenter_id, pool_type, memory
 			FROM db_cluster.servers
 			WHERE
-				pool_type = $1 AND
+				pool_type = ANY($1) AND
 				cloud_destroy_ts IS NULL AND
 				taint_ts IS NULL
 			",
-			backend::cluster::PoolType::Job as i32 as i64
+			&[
+				backend::cluster::PoolType::Job as i32 as i64,
+				backend::cluster::PoolType::Gg as i32 as i64
+			]
 		)
 	)?;
 
@@ -164,14 +169,11 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 			.filter(|server| server.datacenter_id == datacenter_id);
 
 		// Calculate new desired counts
-		let new_job_desired_count = autoscale_job_servers(
-			default_memory,
-			servers_in_datacenter.clone(),
-			topology,
-		)
-		.await?;
+		let new_job_desired_count =
+			autoscale_job_servers(default_memory, servers_in_datacenter.clone(), topology).await?;
 		let new_gg_desired_count =
-			autoscale_gg_servers(servers_in_datacenter).await?;
+			autoscale_gg_servers(datacenter_id, servers_in_datacenter, gg_pool.desired_count)
+				.await?;
 
 		let new_job_desired_count = 1;
 		let new_gg_desired_count = 1;
@@ -180,7 +182,10 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 			|| new_gg_desired_count != gg_pool.desired_count
 		{
 			tracing::info!(
-				%new_job_desired_count, %new_gg_desired_count,
+				old_job=%job_pool.desired_count,
+				new_job=%new_job_desired_count,
+				old_gg=%gg_pool.desired_count,
+				new_gg=%new_gg_desired_count,
 				"scaling datacenter {}", datacenter_id
 			);
 
@@ -254,7 +259,7 @@ fn job_autoscale_algorithm(
 	let usage = util::div_up!(used_memory, default_memory_per_server);
 
 	tracing::info!(
-		usage=%used_memory, total=%total_memory, %expected_total, %error,
+		%used_memory, %total_memory, expected_total_memory=%expected_total, %error,
 		"calculating job server count"
 	);
 
@@ -262,38 +267,43 @@ fn job_autoscale_algorithm(
 }
 
 async fn autoscale_gg_servers<'a, I: Iterator<Item = &'a Server>>(
+	datacenter_id: Uuid,
 	servers: I,
+	current_desired_count: u32,
 ) -> GlobalResult<u32> {
 	let gg_servers_iter =
 		servers.filter(|server| server.pool_type == backend::cluster::PoolType::Gg as i32 as i64);
+	let server_count = gg_servers_iter.count() as u64;
 
-	"last_over_time(nomad_client_allocs_memory_allocated{{exported_job=\"{nomad_job_id}\",task=\"{task}\"}} [15m:15s]) or vector(0)"
-	
-	handle_request(
+	let prom_res = handle_request(
 		&PROMETHEUS_URL,
-		None,
 		formatdoc!(
 			r#"
-			sum without (mode) (
-				irate(
-					node_cpu_seconds_total{
-						datacenter_id="{datacenter_id}",
-						pool_type="gg",
+			last_over_time((
+				sum without (mode) (
+					irate(
+						node_cpu_seconds_total{{
+							datacenter_id="{datacenter_id}",
+							pool_type="gg",
 
-						mode!="idle",
-						mode!="iowait",
-						mode!="steal"
-					}
-					[5m]
-				)
-			) * 100
+							mode!="idle",
+							mode!="iowait",
+							mode!="steal"
+						}}
+						[5m]
+					)
+				) * 100
+			) [15m:15s])
+			or vector(0)
 			"#
 		),
-		nomad_job_id = metric.job,
-		task = metric.task
-	)).await?;
+	)
+	.await?;
+	let (_, cpu_sum) = unwrap!(prom_res.value);
+	#[allow(clippy::cast_possible_truncation)]
+	let cpu_sum = cpu_sum.parse::<f64>()? as u64;
 
-	let new_desired_count = gg_autoscale_algorithm();
+	let new_desired_count = gg_autoscale_algorithm(current_desired_count, server_count, cpu_sum);
 
 	Ok(new_desired_count)
 }
@@ -302,12 +312,16 @@ fn gg_autoscale_algorithm(current_desired_count: u32, server_count: u64, used_cp
 	let total_cpu = server_count * 100;
 	let diff = total_cpu.saturating_sub(used_cpu);
 
+	tracing::info!(
+		%used_cpu, %total_cpu, %diff,
+		"calculating gg server count"
+	);
+
 	if diff < 20 {
 		current_desired_count + 1
 	} else if diff > 130 {
 		current_desired_count - 1
-	}
-	else {
+	} else {
 		current_desired_count
 	}
 }
@@ -326,20 +340,7 @@ struct PrometheusData {
 
 #[derive(Debug, Clone, Deserialize)]
 struct PrometheusResult {
-	values: Option<Vec<(u64, f64)>>,
-}
-
-#[derive(Debug)]
-struct QueryTiming {
-	start: i64,
-	end: i64,
-	step: i64,
-}
-
-impl QueryTiming {
-	fn new(start: i64, end: i64, step: i64) -> Self {
-		QueryTiming { start, end, step }
-	}
+	value: Option<(f64, String)>,
 }
 
 lazy_static::lazy_static! {
@@ -347,42 +348,20 @@ lazy_static::lazy_static! {
 }
 
 // TODO: Copied from job-run-metrics-log
-async fn handle_request(
-	url: &String,
-	timing: Option<&QueryTiming>,
-	query: String,
-) -> GlobalResult<PrometheusResult> {
-	// Start query string building
-	let mut query_pairs = vec![("query", query), ("timeout", "2500ms".to_owned())];
-
-	// Append timing queries
-	if let Some(timing) = timing {
-		query_pairs.push(("start", (timing.start / 1000).to_string()));
-		query_pairs.push(("end", (timing.end / 1000).to_string()));
-		query_pairs.push(("step", format!("{}ms", timing.step)));
-	}
+async fn handle_request(url: &String, query: String) -> GlobalResult<PrometheusResult> {
+	let query_pairs = vec![("query", query), ("timeout", "2500ms".to_owned())];
 
 	let query_string = serde_urlencoded::to_string(query_pairs)?;
-	let req_url = format!(
-		"{}/api/v1/query{}?{}",
-		url,
-		if timing.is_some() { "_range" } else { "" },
-		query_string
-	);
-	tracing::info!(?req_url, "prometheus query");
+	let req_url = format!("{}/api/v1/query?{}", url, query_string);
 
 	// Query prometheus
 	let res = reqwest::Client::new().get(req_url).send().await?;
 
-	if res.status() != StatusCode::OK {
+	if !res.status().is_success() {
 		let status = res.status();
 		let text = res.text().await?;
 
-		return Err(Error::PrometheusError(format!(
-			"failed prometheus request: ({}) {}",
-			status, text
-		))
-		.into());
+		bail!(format!("failed prometheus request: ({}) {}", status, text));
 	}
 
 	let body = res.json::<PrometheusResponse>().await?;

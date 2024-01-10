@@ -229,7 +229,7 @@ pub async fn run_from_env() -> GlobalResult<()> {
 
 		// Taint datacenter
 		if taint {
-			msg!([ctx] cluster::msg::datacenter_taint(datacenter.datacenter_id) {
+			msg!([ctx] @wait cluster::msg::datacenter_taint(datacenter.datacenter_id) {
 				datacenter_id: datacenter_id_proto,
 			})
 			.await?;

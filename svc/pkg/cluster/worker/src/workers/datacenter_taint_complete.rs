@@ -8,7 +8,8 @@ async fn worker(
 ) -> GlobalResult<()> {
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 
-	// Mark tainted servers of the same datacenter for destruction in db
+	// NOTE: This does not set the drain ts even though job and gg servers will be drained
+	// Mark tainted servers of the same datacenter for destruction in db.
 	let tainted_servers = sql_fetch_all!(
 		[ctx, (Uuid, i64)]
 		"
