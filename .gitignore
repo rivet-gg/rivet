@@ -35,6 +35,7 @@ gen/svc/
 gen/tf/
 gen/docker/
 gen/k8s/
+svc/pkg/cluster/util/gen/hash.txt
 
 # Rust
 lib/**/Cargo.lock

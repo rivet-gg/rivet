@@ -4,12 +4,6 @@ use reqwest::StatusCode;
 use rivet_operation::prelude::*;
 use serde::Deserialize;
 
-#[derive(Debug, thiserror::Error)]
-enum Error {
-	#[error("prometheus error: {0}")]
-	PrometheusError(String),
-}
-
 #[derive(Debug, Deserialize)]
 struct PrometheusResponse {
 	data: PrometheusData,
@@ -151,15 +145,11 @@ async fn handle_request(
 	// Query prometheus
 	let res = reqwest::Client::new().get(req_url).send().await?;
 
-	if res.status() != StatusCode::OK {
+	if !res.status().is_success() {
 		let status = res.status();
 		let text = res.text().await?;
 
-		return Err(Error::PrometheusError(format!(
-			"failed prometheus request: ({}) {}",
-			status, text
-		))
-		.into());
+		bail!(format!("failed prometheus request: ({}) {}", status, text));
 	}
 
 	let body = res.json::<PrometheusResponse>().await?;
