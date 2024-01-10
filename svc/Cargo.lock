@@ -2458,6 +2458,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cluster-gc"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "cluster-datacenter-get",
+ "rivet-connection",
+ "rivet-health-checks",
+ "rivet-metrics",
+ "rivet-operation",
+ "rivet-runtime",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "cluster-get"
 version = "0.0.1"
 dependencies = [
