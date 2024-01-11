@@ -81,6 +81,7 @@ async fn setup(
 				provider_hardware: "g6-nanode-1".to_string(),
 			}],
 			desired_count: 0,
+			max_count: 0,
 		}],
 
 		build_delivery_method: backend::cluster::BuildDeliveryMethod::TrafficServer as i32,

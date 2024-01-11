@@ -7,6 +7,10 @@ const DRAIN_TIMEOUT: i64 = 1000 * 60 * 60;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn basic() {
+	if !util::feature::server_provision() {
+		return;
+	}
+
 	tracing_subscriber::fmt()
 		.json()
 		.with_max_level(tracing::Level::INFO)
@@ -128,6 +132,7 @@ async fn setup(
 				provider_hardware: "g6-nanode-1".to_string(),
 			}],
 			desired_count: 0,
+			max_count: 0,
 		}],
 
 		build_delivery_method: backend::cluster::BuildDeliveryMethod::TrafficServer as i32,

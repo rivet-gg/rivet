@@ -5,9 +5,16 @@ use proto::backend::pkg::*;
 async fn worker(
 	ctx: &OperationContext<cluster::msg::datacenter_create::Message>,
 ) -> GlobalResult<()> {
-	let config = unwrap_ref!(ctx.config);
+	let mut config = unwrap_ref!(ctx.config).clone();
 	let cluster_id = unwrap_ref!(config.cluster_id).as_uuid();
 	let datacenter_id = unwrap_ref!(config.datacenter_id).as_uuid();
+
+	// Ensure that the desired count is below the max count
+	for pool in &mut config.pools {
+		if pool.desired_count > pool.max_count {
+			pool.desired_count = pool.max_count;
+		}
+	}
 
 	let mut config_buf = Vec::with_capacity(config.encoded_len());
 	config.encode(&mut config_buf)?;

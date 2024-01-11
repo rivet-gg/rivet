@@ -94,11 +94,20 @@ impl ServiceContextData {
 		let config = match toml::from_str::<config::service::ServiceConfig>(&config_str) {
 			Result::Ok(x) => x,
 			Result::Err(err) => {
-				panic!(
-					"failed to parse namespace config ({}): {}",
-					path.display(),
-					err.message()
-				);
+				if let Some(span) = err.span().filter(|span| span.start != span.end) {
+					panic!(
+						"failed to parse service config ({}): {}\n\n{}\n",
+						path.display(),
+						err.message(),
+						&config_str[span.clone()],
+					);
+				} else {
+					panic!(
+						"failed to parse service config ({}): {}",
+						path.display(),
+						err.message(),
+					);
+				}
 			}
 		};
 
@@ -1011,7 +1020,7 @@ impl ServiceContextData {
 
 		// Dynamic servers
 		if let Some(dynamic_servers) = &project_ctx.ns().rivet.dynamic_servers {
-			if self.depends_on_cluster_config() {
+			if self.depends_on_cluster_config() || matches!(run_context, RunContext::Test { .. }) {
 				env.push((
 					"RIVET_DEFAULT_CLUSTER_CONFIG".into(),
 					serde_json::to_string(&dynamic_servers.cluster)?,

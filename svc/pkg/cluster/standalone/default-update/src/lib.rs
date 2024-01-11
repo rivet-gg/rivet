@@ -40,6 +40,7 @@ impl From<Provider> for backend::cluster::Provider {
 struct Pool {
 	hardware: Vec<Hardware>,
 	desired_count: u32,
+	max_count: u32,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Hash)]
@@ -182,15 +183,18 @@ pub async fn run_from_env() -> GlobalResult<()> {
 					// Filter job pool from update, it's desired count is based on the autoscaler
 					!matches!(pool_type, PoolType::Job)
 				})
-				.map(|(pool_type, pool)| backend::cluster::Pool {
-					pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
-					hardware: pool
-						.hardware
-						.into_iter()
-						.map(Into::into)
-						.collect::<Vec<_>>(),
-					desired_count: pool.desired_count,
-				})
+				.map(
+					|(pool_type, pool)| cluster::msg::datacenter_update::PoolUpdate {
+						pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
+						hardware: pool
+							.hardware
+							.into_iter()
+							.map(Into::into)
+							.collect::<Vec<_>>(),
+						desired_count: Some(pool.desired_count),
+						max_count: Some(pool.max_count),
+					},
+				)
 				.collect::<Vec<_>>();
 
 			msg!([ctx] @wait cluster::msg::datacenter_update(datacenter.datacenter_id) {
@@ -218,6 +222,7 @@ pub async fn run_from_env() -> GlobalResult<()> {
 							pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
 							hardware: pool.hardware.into_iter().map(Into::into).collect::<Vec<_>>(),
 							desired_count: pool.desired_count,
+							max_count: pool.max_count,
 						}
 					}).collect::<Vec<_>>(),
 

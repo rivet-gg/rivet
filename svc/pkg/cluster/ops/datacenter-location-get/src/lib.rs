@@ -26,7 +26,7 @@ pub async fn handle(
 			pool_type = $2
 		",
 		&datacenter_ids,
-		backend::cluster::PoolType::Gg as i32 as i64,
+		backend::cluster::PoolType::Gg as i64,
 	)
 	.await?
 	.into_iter()

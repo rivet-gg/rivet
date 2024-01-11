@@ -59,7 +59,7 @@ pub async fn prewarm_ats_cache(
 		",
 		// NOTE: region_id is just the old name for datacenter_id
 		prewarm_ctx.region_ids.iter().cloned().collect::<Vec<_>>(),
-		backend::cluster::PoolType::Ats as i32 as i64,
+		backend::cluster::PoolType::Ats as i64,
 	)
 	.await?;
 

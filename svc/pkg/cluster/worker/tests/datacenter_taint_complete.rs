@@ -55,12 +55,11 @@ async fn datacenter_taint_complete(ctx: TestCtx) {
 	// Increase desired count (this wont provision anything, we manually created a server)
 	msg!([ctx] cluster::msg::datacenter_update(datacenter_id) -> cluster::msg::datacenter_scale {
 		datacenter_id: Some(datacenter_id.into()),
-		pools: vec![backend::cluster::Pool {
+		pools: vec![cluster::msg::datacenter_update::PoolUpdate {
 			pool_type: backend::cluster::PoolType::Job as i32,
-			hardware: vec![backend::cluster::Hardware {
-				provider_hardware: "g6-nanode-1".to_string(),
-			}],
-			desired_count: 1,
+			hardware: Vec::new(),
+			desired_count: Some(1),
+			max_count: Some(1),
 		}],
 		drain_timeout: None,
 	})
@@ -97,10 +96,11 @@ async fn datacenter_taint_complete(ctx: TestCtx) {
 	// Downscale datacenter (so it destroys the new server)
 	msg!([ctx] cluster::msg::datacenter_update(datacenter_id) -> cluster::msg::datacenter_scale {
 		datacenter_id: Some(datacenter_id.into()),
-		pools: vec![backend::cluster::Pool {
+		pools: vec![cluster::msg::datacenter_update::PoolUpdate {
 			pool_type: backend::cluster::PoolType::Job as i32,
 			hardware: Vec::new(),
-			desired_count: 0,
+			desired_count: Some(0),
+			max_count: Some(0),
 		}],
 		drain_timeout: None,
 	})
@@ -142,6 +142,7 @@ async fn setup(
 				provider_hardware: "g6-nanode-1".to_string(),
 			}],
 			desired_count: 0,
+			max_count: 0,
 		}],
 
 		build_delivery_method: backend::cluster::BuildDeliveryMethod::TrafficServer as i32,

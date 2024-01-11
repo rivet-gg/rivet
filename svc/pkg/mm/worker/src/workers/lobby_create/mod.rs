@@ -571,7 +571,7 @@ async fn update_db(
 		opts.creator_user_id,
 		opts.is_custom,
 		opts.publicity
-			.unwrap_or(backend::matchmaker::lobby::Publicity::Public) as i32 as i64,
+			.unwrap_or(backend::matchmaker::lobby::Publicity::Public) as i64,
 	)
 	.await?;
 
@@ -886,7 +886,7 @@ async fn resolve_image_artifact_url(
 				",
 				// NOTE: region_id is just the old name for datacenter_id
 				&region_id,
-				backend::cluster::PoolType::Ats as i32 as i64,
+				backend::cluster::PoolType::Ats as i64,
 				hash,
 			)
 			.await?;

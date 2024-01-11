@@ -11,8 +11,15 @@ import "proto/backend/cluster.proto";
 /// ]
 message Message {
     rivet.common.Uuid datacenter_id = 1;
-    // This property does not overwrite the pools property of the current config. It updates the values of
-    // each pool accordingly. If this list is empty no updates are made.
-    repeated rivet.backend.cluster.Pool pools = 2;
+    repeated PoolUpdate pools = 2;
     optional uint64 drain_timeout = 3;
+}
+
+message PoolUpdate {
+    rivet.backend.cluster.PoolType pool_type = 1;
+
+    // Each can be optionally updated
+    repeated rivet.backend.cluster.Hardware hardware = 2;
+    optional uint32 desired_count = 3;
+    optional uint32 max_count = 4;
 }

@@ -35,6 +35,7 @@ message Pool {
     PoolType pool_type = 1;
     repeated Hardware hardware = 2;
     uint32 desired_count = 3;
+    uint32 max_count = 4;
 }
 
 enum PoolType {
