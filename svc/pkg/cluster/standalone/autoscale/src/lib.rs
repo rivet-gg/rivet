@@ -55,8 +55,8 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 				taint_ts IS NULL
 			",
 			&[
-				backend::cluster::PoolType::Job as i32 as i64,
-				backend::cluster::PoolType::Gg as i32 as i64
+				backend::cluster::PoolType::Job as i64,
+				backend::cluster::PoolType::Gg as i64
 			]
 		)
 	)?;
@@ -173,15 +173,22 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 				"scaling datacenter {}", datacenter_id
 			);
 
-			let mut new_job_pool = job_pool.clone();
-			new_job_pool.desired_count = new_job_desired_count;
-
-			let mut new_gg_pool = gg_pool.clone();
-			new_gg_pool.desired_count = new_gg_desired_count;
-
 			msg!([ctx] cluster::msg::datacenter_update(datacenter_id) {
 				datacenter_id: datacenter.datacenter_id,
-				pools: vec![new_job_pool],
+				pools: vec![
+					cluster::msg::datacenter_update::PoolUpdate {
+						pool_type: backend::cluster::PoolType::Job as i32,
+						hardware: Vec::new(),
+						desired_count: Some(new_job_desired_count),
+						max_count: None,
+					},
+					cluster::msg::datacenter_update::PoolUpdate {
+						pool_type: backend::cluster::PoolType::Gg as i32,
+						hardware: Vec::new(),
+						desired_count: Some(new_gg_desired_count),
+						max_count: None,
+					}
+				],
 				drain_timeout: None,
 			})
 			.await?;
@@ -197,7 +204,7 @@ async fn autoscale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	topology: &cluster::datacenter_topology_get::response::Datacenter,
 ) -> GlobalResult<u32> {
 	let job_servers_iter =
-		servers.filter(|server| server.pool_type == backend::cluster::PoolType::Job as i32 as i64);
+		servers.filter(|server| server.pool_type == backend::cluster::PoolType::Job as i64);
 	let server_count = job_servers_iter.clone().count() as u64;
 
 	// Aggregate total available memory from all job servers. We assume a server has this default memory

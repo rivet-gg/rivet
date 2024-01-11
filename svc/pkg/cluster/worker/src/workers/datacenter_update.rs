@@ -20,17 +20,23 @@ async fn worker(
 	let mut new_config = datacenter_config.clone();
 
 	for pool in &ctx.pools {
-		// Check if pool config already exists
-		if let Some(current_pool) = new_config
-			.pools
-			.iter_mut()
-			.find(|p| p.pool_type == pool.pool_type)
-		{
-			// Update pool config
+		let mut current_pool = unwrap!(
+			new_config
+				.pools
+				.iter_mut()
+				.find(|p| p.pool_type == pool.pool_type),
+			"attempting to update pool that doesn't exist in current config"
+		);
+
+		// Update pool config
+		if !pool.hardware.is_empty() {
 			current_pool.hardware = pool.hardware.clone();
-			current_pool.desired_count = pool.desired_count;
-		} else {
-			new_config.pools.push(pool.clone());
+		}
+		if let Some(desired_count) = pool.desired_count {
+			current_pool.desired_count = desired_count;
+		}
+		if let Some(max_count) = pool.max_count {
+			current_pool.max_count = max_count;
 		}
 	}
 

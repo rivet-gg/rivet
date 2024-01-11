@@ -101,7 +101,7 @@ async fn scale_servers(
 	pool: &backend::cluster::Pool,
 ) -> GlobalResult<()> {
 	let pool_type = unwrap!(backend::cluster::PoolType::from_i32(pool.pool_type));
-	let desired_count = pool.desired_count as usize;
+	let desired_count = pool.desired_count.min(pool.max_count) as usize;
 
 	let servers_in_pool = servers
 		.iter()
@@ -115,16 +115,37 @@ async fn scale_servers(
 	match desired_count.cmp(&active_server_count) {
 		Ordering::Less => match pool_type {
 			backend::cluster::PoolType::Job => {
-				scale_down_job_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool)
-					.await?
+				scale_down_job_servers(
+					ctx,
+					crdb,
+					dc,
+					servers_in_pool,
+					active_server_count,
+					desired_count,
+				)
+				.await?
 			}
 			backend::cluster::PoolType::Gg => {
-				scale_down_gg_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool)
-					.await?
+				scale_down_gg_servers(
+					ctx,
+					crdb,
+					dc,
+					servers_in_pool,
+					active_server_count,
+					desired_count,
+				)
+				.await?
 			}
 			backend::cluster::PoolType::Ats => {
-				scale_down_ats_servers(ctx, crdb, dc, servers_in_pool, active_server_count, pool)
-					.await?
+				scale_down_ats_servers(
+					ctx,
+					crdb,
+					dc,
+					servers_in_pool,
+					active_server_count,
+					desired_count,
+				)
+				.await?
 			}
 		},
 		Ordering::Greater => {
@@ -135,7 +156,8 @@ async fn scale_servers(
 				dc,
 				draining_servers,
 				active_server_count,
-				pool,
+				desired_count,
+				pool_type,
 			)
 			.await?;
 		}
@@ -151,10 +173,9 @@ async fn scale_down_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 	dc: &backend::cluster::Datacenter,
 	servers: I,
 	active_server_count: usize,
-	pool: &backend::cluster::Pool,
+	desired_count: usize,
 ) -> GlobalResult<()> {
 	let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
-	let desired_count = pool.desired_count as usize;
 
 	tracing::info!(
 		?datacenter_id,
@@ -250,10 +271,9 @@ async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + DoubleEndedI
 	dc: &backend::cluster::Datacenter,
 	servers: I,
 	active_server_count: usize,
-	pool: &backend::cluster::Pool,
+	desired_count: usize,
 ) -> GlobalResult<()> {
 	let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
-	let desired_count = pool.desired_count as usize;
 
 	tracing::info!(
 		?datacenter_id,
@@ -311,10 +331,9 @@ async fn scale_down_ats_servers<
 	dc: &backend::cluster::Datacenter,
 	servers: I,
 	active_server_count: usize,
-	pool: &backend::cluster::Pool,
+	desired_count: usize,
 ) -> GlobalResult<()> {
 	let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
-	let desired_count = pool.desired_count as usize;
 
 	tracing::info!(
 		?datacenter_id,
@@ -371,17 +390,17 @@ async fn scale_up_servers(
 	dc: &backend::cluster::Datacenter,
 	draining_servers: Vec<&Server>,
 	active_server_count: usize,
-	pool: &backend::cluster::Pool,
+	desired_count: usize,
+	pool_type: backend::cluster::PoolType,
 ) -> GlobalResult<()> {
 	let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
-	let desired_count = pool.desired_count as usize;
 
 	tracing::info!(
 		?datacenter_id,
 		active=%active_server_count,
 		draining=%draining_servers.len(),
 		desired=%desired_count,
-		pool_type=?pool,
+		?pool_type,
 		"scaling up"
 	);
 
@@ -448,7 +467,7 @@ async fn scale_up_servers(
 					server_id,
 					datacenter_id,
 					cluster_id,
-					pool.pool_type as i64,
+					pool_type as i64,
 					util::timestamp::now(),
 				)
 				.await?;
@@ -457,7 +476,7 @@ async fn scale_up_servers(
 					cluster_id: Some(cluster_id.into()),
 					datacenter_id: dc.datacenter_id,
 					server_id: Some(server_id.into()),
-					pool_type: pool.pool_type,
+					pool_type: pool_type as i32,
 					provider: dc.provider,
 					tags: Vec::new(),
 				})

@@ -650,6 +650,7 @@ pub enum DynamicServersProvider {
 pub struct DynamicServersDatacenterPool {
 	pub hardware: Vec<DynamicServersDatacenterHardware>,
 	pub desired_count: u32,
+	pub max_count: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

@@ -3,6 +3,10 @@ use proto::backend::{self, pkg::*};
 
 #[worker_test]
 async fn prebake_install_complete(ctx: TestCtx) {
+	if !util::feature::server_provision() {
+		return;
+	}
+
 	let image_variant = util::faker::ident();
 	let pool_type = backend::cluster::PoolType::Ats;
 

@@ -266,7 +266,7 @@ async fn custom_private_lobby_create(ctx: TestCtx) {
 
 	assert!(is_custom);
 	assert_eq!(
-		backend::matchmaker::lobby::Publicity::Private as i32 as i64,
+		backend::matchmaker::lobby::Publicity::Private as i64,
 		publicity
 	);
 }

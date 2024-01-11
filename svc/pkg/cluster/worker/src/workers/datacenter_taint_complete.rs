@@ -33,13 +33,13 @@ async fn worker(
 		let pool_type = unwrap!(backend::cluster::PoolType::from_i32(pool_type as i32));
 
 		match pool_type {
-			backend::cluster::PoolType::Job => {
+			backend::cluster::PoolType::Gg | backend::cluster::PoolType::Job => {
 				msg!([ctx] cluster::msg::server_drain(server_id) {
 					server_id: Some(server_id.into()),
 				})
 				.await?;
 			}
-			backend::cluster::PoolType::Gg | backend::cluster::PoolType::Ats => {
+			backend::cluster::PoolType::Ats => {
 				msg!([ctx] cluster::msg::server_destroy(server_id) {
 					server_id: Some(server_id.into()),
 					force: false,

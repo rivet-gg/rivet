@@ -23,7 +23,12 @@ async fn datacenter_update(ctx: TestCtx) {
 		provider: backend::cluster::Provider::Linode as i32,
 		provider_datacenter_id: "us-southeast".to_string(),
 
-		pools: Vec::new(),
+		pools: vec![backend::cluster::Pool {
+			pool_type: backend::cluster::PoolType::Ats as i32,
+			hardware: Vec::new(),
+			desired_count: 0,
+			max_count: 0,
+		}],
 
 		build_delivery_method: backend::cluster::BuildDeliveryMethod::TrafficServer as i32,
 		drain_timeout: 0,
@@ -37,10 +42,11 @@ async fn datacenter_update(ctx: TestCtx) {
 
 	msg!([ctx] cluster::msg::datacenter_update(datacenter_id) -> cluster::msg::datacenter_scale {
 		datacenter_id: Some(datacenter_id.into()),
-		pools: vec![backend::cluster::Pool {
+		pools: vec![cluster::msg::datacenter_update::PoolUpdate {
 			pool_type: backend::cluster::PoolType::Ats as i32,
 			hardware: Vec::new(),
-			desired_count: 0,
+			desired_count: Some(1),
+			max_count: None,
 		}],
 		drain_timeout: None,
 	})
@@ -55,8 +61,8 @@ async fn datacenter_update(ctx: TestCtx) {
 	let updated_dc = datacenter_res.datacenters.first().unwrap();
 
 	assert_ne!(
-		dc.pools.len(),
-		updated_dc.pools.len(),
+		dc.pools.first().unwrap().desired_count,
+		updated_dc.pools.first().unwrap().desired_count,
 		"datacenter not updated"
 	);
 }

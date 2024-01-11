@@ -404,7 +404,22 @@ impl ProjectContextData {
 	async fn read_config(project_path: &Path) -> config::project::Project {
 		let config_path = project_path.join("Bolt.toml");
 		let config_str = fs::read_to_string(config_path).await.unwrap();
-		toml::from_str::<config::project::Project>(&config_str).unwrap()
+
+		match toml::from_str::<config::project::Project>(&config_str) {
+			Result::Ok(x) => x,
+			Result::Err(err) => {
+				if let Some(span) = err.span().filter(|span| span.start != span.end) {
+					panic!(
+						"failed to parse project config ({:?}): {}\n\n{}\n",
+						&span,
+						err.message(),
+						&config_str[span.clone()]
+					);
+				} else {
+					panic!("failed to parse project config: {}", err.message());
+				}
+			}
+		}
 	}
 
 	pub async fn read_config_local(project_path: &Path) -> config::local::Local {
@@ -426,11 +441,12 @@ impl ProjectContextData {
 		let config = match toml::from_str::<config::ns::Namespace>(&config_str) {
 			Result::Ok(x) => x,
 			Result::Err(err) => {
-				if let Some(span) = err.span() {
+				if let Some(span) = err.span().filter(|span| span.start != span.end) {
 					panic!(
-						"failed to parse namespace config ({:?}): {}",
-						span,
-						err.message()
+						"failed to parse namespace config ({:?}): {}\n\n{}\n",
+						&span,
+						err.message(),
+						&config_str[span.clone()]
 					);
 				} else {
 					panic!("failed to parse namespace config: {}", err.message());

@@ -65,7 +65,7 @@ async fn gg_server_drain(ctx: TestCtx) {
 	)
 	.await;
 
-	msg!([ctx] @notrace cluster::msg::server_provision(server_id) -> nomad::msg::monitor_node_registered {
+	msg!([ctx] cluster::msg::server_provision(server_id) -> cluster::msg::server_dns_create {
 		cluster_id: Some(cluster_id.into()),
 		datacenter_id: Some(datacenter_id.into()),
 		server_id: Some(server_id.into()),
@@ -75,6 +75,29 @@ async fn gg_server_drain(ctx: TestCtx) {
 	})
 	.await
 	.unwrap();
+
+	// Wait for server to have a dns record
+	loop {
+		tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
+		let (exists,) = sql_fetch_one!(
+			[ctx, (bool,)]
+			"
+			SELECT EXISTS (
+				SELECT 1
+				FROM db_cluster.cloudflare_misc
+				WHERE server_id = $1
+			)
+			",
+			server_id,
+		)
+		.await
+		.unwrap();
+
+		if exists {
+			break;
+		}
+	}
 
 	msg!([ctx] cluster::msg::server_drain(server_id) -> cluster::msg::server_dns_delete {
 		server_id: Some(server_id.into()),
@@ -123,6 +146,7 @@ async fn setup(
 				provider_hardware: "g6-nanode-1".to_string(),
 			}],
 			desired_count: 0,
+			max_count: 0,
 		}],
 
 		build_delivery_method: backend::cluster::BuildDeliveryMethod::TrafficServer as i32,
