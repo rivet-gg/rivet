@@ -34,7 +34,9 @@ pub async fn handle(
 		FROM db_cluster.servers
 		WHERE
 			datacenter_id = ANY($1) AND
-			nomad_node_id IS NOT NULL
+			nomad_node_id IS NOT NULL AND
+			cloud_destroy_ts IS NULL AND
+			taint_ts IS NULL
 		",
 		&datacenter_ids,
 	)
@@ -136,7 +138,7 @@ pub async fn handle(
 				.ID
 				.as_ref()
 				.map_or(false, |node_id| node_id == &server.nomad_node_id)),
-			"node not found"
+			format!("node not found {}", server.nomad_node_id)
 		);
 		let resources = unwrap_ref!(node.node_resources);
 		let limits = cluster::datacenter_topology_get::response::Stats {
