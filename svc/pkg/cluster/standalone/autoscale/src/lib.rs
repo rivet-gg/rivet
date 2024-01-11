@@ -160,8 +160,7 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 		let new_job_desired_count =
 			autoscale_job_servers(default_memory, servers_in_datacenter.clone(), topology).await?;
 		let new_gg_desired_count =
-			autoscale_gg_servers(datacenter_id, gg_pool.desired_count)
-				.await?;
+			autoscale_gg_servers(datacenter_id, gg_pool.desired_count).await?;
 
 		if new_job_desired_count != job_pool.desired_count
 			|| new_gg_desired_count != gg_pool.desired_count
@@ -251,7 +250,7 @@ fn job_autoscale_algorithm(
 	(*JOB_SERVER_PROVISION_MARGIN + error + usage) as u32
 }
 
-async fn autoscale_gg_servers<'a, I: Iterator<Item = &'a Server>>(
+async fn autoscale_gg_servers(
 	datacenter_id: Uuid,
 	current_desired_count: u32,
 ) -> GlobalResult<u32> {
@@ -283,13 +282,13 @@ async fn autoscale_gg_servers<'a, I: Iterator<Item = &'a Server>>(
 	#[allow(clippy::cast_possible_truncation)]
 	let cpu_sum = cpu_sum.parse::<f64>()? as u64;
 
-	let new_desired_count = gg_autoscale_algorithm(current_desired_count, server_count, cpu_sum);
+	let new_desired_count = gg_autoscale_algorithm(current_desired_count, cpu_sum);
 
 	Ok(new_desired_count)
 }
 
 fn gg_autoscale_algorithm(current_desired_count: u32, used_cpu: u64) -> u32 {
-	let total_cpu = current_desired_count * 100;
+	let total_cpu = current_desired_count as u64 * 100;
 	let diff = total_cpu.saturating_sub(used_cpu);
 
 	tracing::info!(

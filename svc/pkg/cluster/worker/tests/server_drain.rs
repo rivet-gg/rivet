@@ -11,7 +11,14 @@ async fn server_drain(ctx: TestCtx) {
 	let datacenter_id = Uuid::new_v4();
 	let cluster_id = Uuid::new_v4();
 
-	let dc = setup(&ctx, server_id, datacenter_id, cluster_id).await;
+	let dc = setup(
+		&ctx,
+		backend::cluster::PoolType::Job,
+		server_id,
+		datacenter_id,
+		cluster_id,
+	)
+	.await;
 
 	msg!([ctx] @notrace cluster::msg::server_provision(server_id) -> nomad::msg::monitor_node_registered {
 		cluster_id: Some(cluster_id.into()),
@@ -39,13 +46,59 @@ async fn server_drain(ctx: TestCtx) {
 	.unwrap();
 }
 
+#[worker_test]
+async fn gg_server_drain(ctx: TestCtx) {
+	if !util::feature::server_provision() {
+		return;
+	}
+
+	let server_id = Uuid::new_v4();
+	let datacenter_id = Uuid::new_v4();
+	let cluster_id = Uuid::new_v4();
+
+	let dc = setup(
+		&ctx,
+		backend::cluster::PoolType::Gg,
+		server_id,
+		datacenter_id,
+		cluster_id,
+	)
+	.await;
+
+	msg!([ctx] @notrace cluster::msg::server_provision(server_id) -> nomad::msg::monitor_node_registered {
+		cluster_id: Some(cluster_id.into()),
+		datacenter_id: Some(datacenter_id.into()),
+		server_id: Some(server_id.into()),
+		pool_type: dc.pools.first().unwrap().pool_type,
+		provider: dc.provider,
+		tags: vec!["test".to_string()],
+	})
+	.await
+	.unwrap();
+
+	msg!([ctx] cluster::msg::server_drain(server_id) -> cluster::msg::server_dns_delete {
+		server_id: Some(server_id.into()),
+	})
+	.await
+	.unwrap();
+
+	// Clean up afterwards so we don't litter
+	msg!([ctx] @wait cluster::msg::server_destroy(server_id) {
+		server_id: Some(server_id.into()),
+		force: false,
+	})
+	.await
+	.unwrap();
+}
+
 async fn setup(
 	ctx: &TestCtx,
+	pool_type: backend::cluster::PoolType,
 	server_id: Uuid,
 	datacenter_id: Uuid,
 	cluster_id: Uuid,
 ) -> backend::cluster::Datacenter {
-	let pool_type = backend::cluster::PoolType::Job as i32;
+	let pool_type = pool_type as i32;
 
 	msg!([ctx] cluster::msg::create(cluster_id) -> cluster::msg::create_complete {
 		cluster_id: Some(cluster_id.into()),

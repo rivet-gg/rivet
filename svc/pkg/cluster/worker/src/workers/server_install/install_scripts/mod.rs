@@ -14,7 +14,14 @@ pub async fn gen_install(
 	initialize_immediately: bool,
 ) -> GlobalResult<String> {
 	// MARK: Common (pre)
-	let mut script = vec![components::common(), components::node_exporter(), components::sysctl(), components::traefik(), components::traefik_tunnel()?, components::vector_install()];
+	let mut script = vec![
+		components::common(),
+		components::node_exporter(),
+		components::sysctl(),
+		components::traefik(),
+		components::traefik_tunnel()?,
+		components::vector_install(),
+	];
 
 	// MARK: Specific pool components
 	match pool_type {

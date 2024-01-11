@@ -9,7 +9,7 @@ async fn worker(
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
 	let crdb = ctx.crdb().await?;
 
-	let (dns_record_id,) = sql_fetch_one!(
+	let row = sql_fetch_optional!(
 		[ctx, (String,), &crdb]
 		"
 		SELECT dns_record_id
@@ -20,6 +20,11 @@ async fn worker(
 		util::timestamp::now(),
 	)
 	.await?;
+	let Some((dns_record_id,)) = row else {
+		tracing::warn!(?server_id, "server has no dns record");
+
+		return Ok(());
+	};
 
 	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
 	let zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
