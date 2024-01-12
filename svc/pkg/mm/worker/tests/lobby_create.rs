@@ -297,14 +297,14 @@ async fn setup(ctx: &TestCtx) -> Setup {
 
 	let build_res = op!([ctx] faker_build {
 		game_id: game_res.game_id,
-		image: backend::faker::build::Image::MmLobbyAutoReady as i32,
+		image: backend::faker::Image::MmLobbyAutoReady as i32,
 	})
 	.await
 	.unwrap();
 
 	let game_version_res = op!([ctx] faker_game_version {
 		game_id: game_res.game_id,
-		override_lobby_groups: Some(backend::faker::game_version::request::OverrideLobbyGroups {
+		override_lobby_groups: Some(faker::game_version::request::OverrideLobbyGroups {
 			lobby_groups: vec![backend::matchmaker::LobbyGroup {
 				name_id: "test-1".into(),
 

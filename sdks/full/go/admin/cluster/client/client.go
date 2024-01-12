@@ -7,11 +7,12 @@ import (
 	context "context"
 	json "encoding/json"
 	errors "errors"
+	fmt "fmt"
 	io "io"
 	http "net/http"
+	url "net/url"
 	sdk "sdk"
-	admin "sdk/admin"
-	clusterclient "sdk/admin/cluster/client"
+	cluster "sdk/admin/cluster"
 	core "sdk/core"
 )
 
@@ -19,8 +20,6 @@ type Client struct {
 	baseURL string
 	caller  *core.Caller
 	header  http.Header
-
-	Cluster *clusterclient.Client
 }
 
 func NewClient(opts ...core.ClientOption) *Client {
@@ -32,16 +31,26 @@ func NewClient(opts ...core.ClientOption) *Client {
 		baseURL: options.BaseURL,
 		caller:  core.NewCaller(options.HTTPClient),
 		header:  options.ToHeader(),
-		Cluster: clusterclient.NewClient(opts...),
 	}
 }
 
-func (c *Client) Login(ctx context.Context, request *admin.LoginRequest) (*admin.LoginResponse, error) {
+func (c *Client) GetServerIps(ctx context.Context, request *cluster.GetServerIpsRequest) (*cluster.GetServerIpsResponse, error) {
 	baseURL := "https://api.rivet.gg"
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
-	endpointURL := baseURL + "/" + "admin/login"
+	endpointURL := baseURL + "/" + "cluster/server_ips"
+
+	queryParams := make(url.Values)
+	if request.ServerId != nil {
+		queryParams.Add("server_id", fmt.Sprintf("%v", *request.ServerId))
+	}
+	if request.Pool != nil {
+		queryParams.Add("pool", fmt.Sprintf("%v", *request.Pool))
+	}
+	if len(queryParams) > 0 {
+		endpointURL += "?" + queryParams.Encode()
+	}
 
 	errorDecoder := func(statusCode int, body io.Reader) error {
 		raw, err := io.ReadAll(body)
@@ -97,14 +106,13 @@ func (c *Client) Login(ctx context.Context, request *admin.LoginRequest) (*admin
 		return apiError
 	}
 
-	var response *admin.LoginResponse
+	var response *cluster.GetServerIpsResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
 			URL:          endpointURL,
-			Method:       http.MethodPost,
+			Method:       http.MethodGet,
 			Headers:      c.header,
-			Request:      request,
 			Response:     &response,
 			ErrorDecoder: errorDecoder,
 		},

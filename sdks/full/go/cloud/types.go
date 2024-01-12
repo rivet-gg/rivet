@@ -1060,8 +1060,6 @@ type RegionSummary struct {
 	RegionNameId string `json:"region_name_id"`
 	// The server provider of this region.
 	Provider string `json:"provider"`
-	// A universal region label given to this region.
-	UniversalRegion UniversalRegion `json:"universal_region,omitempty"`
 	// Represent a resource's readable display name.
 	ProviderDisplayName string `json:"provider_display_name"`
 	// Represent a resource's readable display name.

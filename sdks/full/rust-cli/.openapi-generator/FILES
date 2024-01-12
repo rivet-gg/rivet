@@ -329,8 +329,8 @@ docs/PortalNotificationRegisterService.md
 docs/PortalNotificationUnregisterService.md
 docs/PortalNotificationsApi.md
 docs/PortalRegisterNotificationsRequest.md
+docs/ProvisionServersApi.md
 docs/ProvisionServersGetServerInfoResponse.md
-docs/ProvisionServersServersApi.md
 docs/UploadPrepareFile.md
 docs/UploadPresignedRequest.md
 docs/ValidationError.md
@@ -375,7 +375,7 @@ src/apis/mod.rs
 src/apis/module_api.rs
 src/apis/portal_games_api.rs
 src/apis/portal_notifications_api.rs
-src/apis/provision_servers_servers_api.rs
+src/apis/provision_servers_api.rs
 src/lib.rs
 src/models/admin_cluster_get_server_ips_response.rs
 src/models/admin_login_request.rs

@@ -7398,6 +7398,8 @@ name = "rivet-util-env"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
+ "serde",
+ "serde_json",
  "thiserror",
  "uuid",
 ]

@@ -1,16 +1,16 @@
-# \ProvisionServersApi
+# \AdminClusterApi
 
 All URIs are relative to *https://api.rivet.gg*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**provision_servers_get_server_info**](ProvisionServersApi.md#provision_servers_get_server_info) | **GET** /servers/{ip}/info | 
+[**admin_cluster_get_server_ips**](AdminClusterApi.md#admin_cluster_get_server_ips) | **GET** /cluster/server_ips | 
 
 
 
-## provision_servers_get_server_info
+## admin_cluster_get_server_ips
 
-> crate::models::ProvisionServersGetServerInfoResponse provision_servers_get_server_info(ip)
+> crate::models::AdminClusterGetServerIpsResponse admin_cluster_get_server_ips(server_id, pool)
 
 
 ### Parameters
@@ -18,11 +18,12 @@ Method | HTTP request | Description
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**ip** | **String** |  | [required] |
+**server_id** | Option<**uuid::Uuid**> |  |  |
+**pool** | Option<[**AdminPoolType**](.md)> |  |  |
 
 ### Return type
 
-[**crate::models::ProvisionServersGetServerInfoResponse**](ProvisionServersGetServerInfoResponse.md)
+[**crate::models::AdminClusterGetServerIpsResponse**](AdminClusterGetServerIpsResponse.md)
 
 ### Authorization
 
