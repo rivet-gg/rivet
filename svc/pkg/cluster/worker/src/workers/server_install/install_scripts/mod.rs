@@ -135,7 +135,7 @@ async fn gg_traefik_static_config() -> GlobalResult<String> {
 		r#"
 		[entryPoints]
 			[entryPoints.traefik]
-				address = ":9980"
+				address = "127.0.0.1:9980"
 
 			[entryPoints.lb-80]
 				address = ":80"
@@ -143,7 +143,7 @@ async fn gg_traefik_static_config() -> GlobalResult<String> {
 			[entryPoints.lb-443]
 				address = ":443"
 
-		[api-routes]
+		[api]
 			insecure = true
 
 		[metrics.prometheus]
