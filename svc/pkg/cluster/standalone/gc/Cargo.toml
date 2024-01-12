@@ -24,3 +24,4 @@ default-features = false
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../../lib/chirp/worker" }
+util-cluster = { package = "rivet-util-cluster", path = "../../util" }

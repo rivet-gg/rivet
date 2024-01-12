@@ -143,7 +143,7 @@ async fn setup(
 		pools: vec![backend::cluster::Pool {
 			pool_type,
 			hardware: vec![backend::cluster::Hardware {
-				provider_hardware: "g6-nanode-1".to_string(),
+				provider_hardware: util_cluster::test::HARDWARE.to_string(),
 			}],
 			desired_count: 0,
 			max_count: 0,

@@ -79,12 +79,12 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 	let hardware = datacenters_res
 		.datacenters
 		.iter()
-		// Gracefully fetch job pool
+		// Gracefully fetch job pool (test datacenters might not have it)
 		.filter_map(|dc| {
-			let job_pool = dc
-				.pools
-				.iter()
-				.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32);
+			let job_pool = dc.pools.iter().find(|pool| {
+				pool.pool_type == backend::cluster::PoolType::Job as i32
+					&& !pool.hardware.is_empty()
+			});
 
 			if let Some(job_pool) = job_pool {
 				Some((dc, job_pool))

@@ -36,7 +36,7 @@ async fn worker(
 	let prebake_server = api::ProvisionCtx {
 		datacenter: provider_datacenter_id.clone(),
 		name,
-		hardware: "g6-nanode-1".to_string(),
+		hardware: util_linode::consts::PREBAKE_HARDWARE.to_string(),
 		vlan_ip: None,
 		tags,
 		firewall_inbound: vec![util::net::default_firewall()],

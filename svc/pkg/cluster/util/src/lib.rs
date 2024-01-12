@@ -1,6 +1,8 @@
 use types::rivet::backend;
 use uuid::Uuid;
 
+pub mod test;
+
 pub fn server_name(
 	provider_datacenter_id: &str,
 	pool_type: backend::cluster::PoolType,
