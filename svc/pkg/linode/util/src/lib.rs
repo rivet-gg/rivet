@@ -5,6 +5,7 @@ use reqwest::header;
 use rivet_operation::prelude::*;
 use serde::{de::DeserializeOwned, Deserialize};
 
+pub mod consts;
 pub mod api;
 
 #[derive(Clone)]

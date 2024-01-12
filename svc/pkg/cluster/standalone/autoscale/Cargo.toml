@@ -31,3 +31,7 @@ default-features = false
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../../lib/chirp/worker" }
+util-cluster = { package = "rivet-util-cluster", path = "../../util" }
+util-mm = { package = "rivet-util-mm", path = "../../../mm/util" }
+
+faker-job-run = { path = "../../../faker/ops/job-run" }

@@ -67,6 +67,8 @@ pub async fn prewarm_ats_cache(
 		let mut vlan_ips_in_region = vlan_ips.iter().filter(|row| row.datacenter_id == region_id);
 		let vlan_ip_count = vlan_ips_in_region.clone().count() as i64;
 
+		ensure!(vlan_ip_count != 0, "no ats servers found");
+
 		// Pass artifact URLs to the job
 		let parameters = prewarm_ctx
 			.paths
@@ -74,7 +76,7 @@ pub async fn prewarm_ats_cache(
 			.enumerate()
 			.map(|(i, (path, build_id_hash))| {
 				// NOTE: The algorithm here for deterministically choosing the vlan ip should match the one
-				// used in mm-lobby-create @ resolve_image_artifact_url
+				// used in the SQL statement in mm-lobby-create @ resolve_image_artifact_url
 				let idx = (*build_id_hash as i64 % vlan_ip_count).abs() as usize;
 				let vlan_ip = &unwrap!(vlan_ips_in_region.nth(idx), "no vlan ip").vlan_ip;
 

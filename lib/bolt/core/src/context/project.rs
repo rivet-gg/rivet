@@ -227,18 +227,22 @@ impl ProjectContextData {
 				};
 
 				// Validate the build delivery method
-				let ats_count = ats_pool.desired_count;
+				assert!(
+					ats_pool.desired_count <= ats_pool.max_count,
+					"invalid datacenter ({}): ATS desired > max",
+					name_id
+				);
 				match datacenter.build_delivery_method {
 					config::ns::DynamicServersBuildDeliveryMethod::TrafficServer => {
 						assert_ne!(
-							ats_count, 0,
+							0, ats_pool.desired_count,
 							"invalid datacenter ({}): TrafficServer delivery method will not work without ats servers. Either set datacenter.build_delivery_method = \"s3_direct\" to download builds directly from S3 or increase the ATS pool count.",
 							name_id,
 						);
 					}
 					config::ns::DynamicServersBuildDeliveryMethod::S3Direct => {
 						assert_eq!(
-							ats_count, 0,
+							0, ats_pool.desired_count,
 							"invalid datacenter ({}): S3Direct delivery method should not be used if ats servers are available",
 							name_id,
 						);
@@ -246,26 +250,35 @@ impl ProjectContextData {
 				}
 
 				// Validate all required pools exist
-				let gg_count = datacenter
+				let gg_pool = datacenter
 					.pools
-					.get(&config::ns::DynamicServersDatacenterPoolType::Gg)
-					.map(|pool| pool.desired_count)
-					.unwrap_or_default();
+					.get(&config::ns::DynamicServersDatacenterPoolType::Gg);
+				let gg_count = gg_pool.map(|pool| pool.desired_count).unwrap_or_default();
 				assert_ne!(
 					gg_count, 0,
 					"invalid datacenter ({}): Missing GG servers",
 					name_id,
 				);
-				let job_count = datacenter
+				assert!(
+					gg_count <= gg_pool.unwrap().max_count,
+					"invalid datacenter ({}): GG desired > max",
+					name_id
+				);
+
+				let job_pool = datacenter
 					.pools
-					.get(&config::ns::DynamicServersDatacenterPoolType::Job)
-					.map(|pool| pool.desired_count)
-					.unwrap_or_default();
+					.get(&config::ns::DynamicServersDatacenterPoolType::Job);
+				let job_count = job_pool.map(|pool| pool.desired_count).unwrap_or_default();
 
 				assert_ne!(
 					job_count, 0,
 					"invalid datacenter ({}): Missing job servers",
 					name_id,
+				);
+				assert!(
+					job_count <= job_pool.unwrap().max_count,
+					"invalid datacenter ({}): Job desired > max",
+					name_id
 				);
 			}
 		}

@@ -109,23 +109,26 @@ pub async fn handle(
 			if alloc_node_id == &server.nomad_node_id {
 				let resources = unwrap_ref!(alloc.allocated_resources);
 				let shared_resources = unwrap_ref!(resources.shared);
-				let tasks = unwrap_ref!(resources.tasks);
-				let task_states = unwrap_ref!(alloc.task_states);
 
-				for (task_name, task) in tasks {
-					let task_state = unwrap!(task_states.get(task_name));
-					let state = unwrap_ref!(task_state.state);
+				// Task states don't exist until a task starts
+				if let Some(task_states) = &alloc.task_states {
+					let tasks = unwrap_ref!(resources.tasks);
 
-					// Only count pending, running, or failed tasks
-					if state != "pending" && state != "running" && state != "failed" {
-						continue;
+					for (task_name, task) in tasks {
+						let task_state = unwrap!(task_states.get(task_name));
+						let state = unwrap_ref!(task_state.state);
+
+						// Only count pending, running, or failed tasks
+						if state != "pending" && state != "running" && state != "failed" {
+							continue;
+						}
+
+						let cpu = unwrap_ref!(task.cpu);
+						let memory = unwrap_ref!(task.memory);
+
+						usage.cpu += unwrap!(cpu.cpu_shares) as u64;
+						usage.memory += unwrap!(memory.memory_mb) as u64;
 					}
-
-					let cpu = unwrap_ref!(task.cpu);
-					let memory = unwrap_ref!(task.memory);
-
-					usage.cpu += unwrap!(cpu.cpu_shares) as u64;
-					usage.memory += unwrap!(memory.memory_mb) as u64;
 				}
 
 				usage.disk += unwrap!(shared_resources.disk_mb) as u64;
