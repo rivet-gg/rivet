@@ -12695,8 +12695,7 @@ paths:
       - PortalNotifications
   /servers/{ip}/info:
     get:
-      description: Completes the email verification process.
-      operationId: provision_servers_servers_getServerInfo
+      operationId: provision_servers_getServerInfo
       parameters:
       - in: path
         name: ip
@@ -12748,7 +12747,7 @@ paths:
           description: ''
       security: *id001
       tags:
-      - ProvisionServersServers
+      - ProvisionServers
 servers:
 - description: Production
   url: https://api.rivet.gg

@@ -431,37 +431,6 @@ types:
           USD, 1,000,000,000,000 = $1.00).
         type: integer
 
-  UniversalRegion:
-    enum:
-      - unknown
-      - local
-      - amsterdam
-      - atlanta
-      - bangalore
-      - dallas
-      - frankfurt
-      - london
-      - mumbai
-      - newark
-      - new_york_city
-      - san_francisco
-      - singapore
-      - sydney
-      - tokyo
-      - toronto
-      - washington_dc
-      - chicago
-      - paris
-      - seattle
-      - sao_paulo
-      - stockholm
-      - chennai
-      - osaka
-      - milan
-      - miami
-      - jakarta
-      - los_angeles
-
   NamespaceFull:
     docs: A full namespace.
     properties:
