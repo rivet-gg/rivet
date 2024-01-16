@@ -125,6 +125,11 @@ pub async fn run_from_env() -> GlobalResult<()> {
 		.unwrap_or_else(|| "0".to_string())
 		== "1";
 
+	// HACK: When deploying both monolith worker and this service for the first time, there is a race
+	// condition which might result in the message being published from here but not caught by
+	// monolith-worker, resulting in nothing happening.
+	tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
 	let cluster_id = util::env::default_cluster_id();
 
 	let (cluster_res, datacenter_list_res) = tokio::try_join!(
@@ -233,6 +238,9 @@ pub async fn run_from_env() -> GlobalResult<()> {
 			.await?;
 		}
 
+		// TODO: Both this message and datacenter-create/datacenter-update (above) publish datacenter-scale.
+		// This results in double provisioning until datacenter-scale is published again, cleaning up the
+		// excess.
 		// Taint datacenter
 		if taint {
 			msg!([ctx] @wait cluster::msg::datacenter_taint(datacenter.datacenter_id) {
