@@ -343,7 +343,7 @@ fn gen_task(ctx: &OperationContext<faker::job_template::Request>) -> GlobalResul
 				value: None,
 				to: Some(80),
 			}],
-			meta_required: Some(vec!["test_id".into()]),
+			meta_required: None,
 			task: Task {
 				name: Some(util_job::RUN_MAIN_TASK_NAME.into()),
 				driver: Some("docker".into()),
@@ -367,6 +367,48 @@ fn gen_task(ctx: &OperationContext<faker::job_template::Request>) -> GlobalResul
 					)),
 					..Template::new()
 				}]),
+				log_config: Some(Box::new(LogConfig {
+					max_files: Some(1),
+					max_file_size_mb: Some(4),
+				})),
+				..base_task
+			},
+		},
+		faker::job_template::request::Kind::MemoryStress(stress) => GenTaskOutput {
+			ports: vec![Port {
+				label: Some("http".into()),
+				value: None,
+				to: Some(80),
+			}],
+			meta_required: None,
+			task: Task {
+				name: Some(util_job::RUN_MAIN_TASK_NAME.into()),
+				driver: Some("docker".into()),
+				config: Some({
+					let mut config = HashMap::new();
+					config.insert("image".into(), json!("rust:1.72-slim"));
+					config.insert("args".into(), json!(["sh", "${NOMAD_TASK_DIR}/run.sh"]));
+					config
+				}),
+				templates: Some(vec![
+					Template {
+						dest_path: Some("local/run.sh".into()),
+						embedded_tmpl: Some(formatdoc!(
+							r#"
+								cargo install rust-script
+
+								rust-script allocate.rs {size}
+								"#,
+							size = stress.size,
+						)),
+						..Template::new()
+					},
+					Template {
+						dest_path: Some("local/allocate.rs".into()),
+						embedded_tmpl: Some(include_str!("../templates/allocate.rs").into()),
+						..Template::new()
+					},
+				]),
 				log_config: Some(Box::new(LogConfig {
 					max_files: Some(1),
 					max_file_size_mb: Some(4),
