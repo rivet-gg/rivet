@@ -4341,6 +4341,7 @@ dependencies = [
  "chirp-worker",
  "faker-job-run",
  "faker-job-template",
+ "indoc",
  "job-run-get",
  "prost 0.10.4",
  "reqwest",
