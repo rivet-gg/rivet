@@ -21,7 +21,7 @@ pub async fn status(
 	_watch_index: WatchIndexQuery,
 	query: StatusQuery,
 ) -> GlobalResult<serde_json::Value> {
-	let domain_cdn = unwrap!(util::env::domain_cdn());
+	let _domain_cdn = unwrap!(util::env::domain_cdn());
 
 	// Find namespace ID
 	let game_res = op!([ctx] game_resolve_name_id {
@@ -156,7 +156,7 @@ pub async fn status(
 			)
 		}
 	};
-	let res = match res.error_for_status() {
+	let _res = match res.error_for_status() {
 		Ok(x) => x,
 		Err(err) => {
 			bail_with!(
