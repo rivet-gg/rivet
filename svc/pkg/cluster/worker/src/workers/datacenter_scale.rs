@@ -308,7 +308,6 @@ async fn scale_down_gg_servers<'a, I: Iterator<Item = &'a Server> + DoubleEndedI
 		for server in drain_candidates {
 			tracing::info!(
 				server_id=%server.server_id,
-				nomad_node_id=?server.nomad_node_id,
 				"draining server"
 			);
 
@@ -368,7 +367,6 @@ async fn scale_down_ats_servers<
 		for server in destroy_candidates {
 			tracing::info!(
 				server_id=%server.server_id,
-				nomad_node_id=?server.nomad_node_id,
 				"destroying server"
 			);
 

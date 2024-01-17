@@ -11,7 +11,6 @@ chrono = "0.4"
 futures-util = "0.3"
 indoc = "1.0"
 lazy_static = "1.4"
-nomad_client = { path = "../../../../../lib/nomad-client" }
 nomad-util = { path = "../../../../../lib/nomad-util" }
 prost = "0.10"
 rivet-connection = { path = "../../../../../lib/connection" }
@@ -30,6 +29,10 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
     "ansi",
 ] }
 util-job = { package = "rivet-util-job", path = "../../../job/util" }
+
+[dependencies.nomad_client]
+git = "https://github.com/rivet-gg/nomad-client"
+rev = "f9f84efcdfcc0ca47840893d590280e4e5896e80"
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../../lib/chirp/worker" }

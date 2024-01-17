@@ -26,6 +26,11 @@ util-job = { package = "rivet-util-job", path = "../../job/util" }
 region-get = { path = "../../region/ops/get" }
 token-create = { path = "../../token/ops/create" }
 
+[dependencies.nomad_client_new]
+package = "nomad_client"
+git = "https://github.com/rivet-gg/nomad-client"
+rev = "f9f84efcdfcc0ca47840893d590280e4e5896e80"
+
 [dependencies.sqlx]
 version = "0.7"
 default-features = false

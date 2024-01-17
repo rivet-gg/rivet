@@ -4,6 +4,8 @@ use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
 use tokio::time::Duration;
 
+use crate::NEW_NOMAD_CONFIG;
+
 mod create_job;
 
 // TODO: Reduce disk space for allocations
@@ -17,11 +19,6 @@ const MAX_PARAMETER_VALUE_LEN: usize = 8_192; // 8 KB
 ///
 /// See also svc/pkg/mm/worker/src/workers/lobby_ready_set.rs @ TRAEFIK_GRACE_MS
 const TRAEFIK_GRACE: Duration = Duration::from_secs(1);
-
-lazy_static::lazy_static! {
-	static ref NOMAD_CONFIG: nomad_client::apis::configuration::Configuration =
-		nomad_util::config_from_env().unwrap();
-}
 
 #[tracing::instrument]
 async fn fail(
@@ -156,14 +153,11 @@ async fn run_job(
 		("job_run_id".into(), run_id.to_string()),
 		("job_run_token".into(), job_run_token),
 	];
-	let dispatch_res = nomad_client::apis::jobs_api::dispatch_job(
-		&NOMAD_CONFIG,
+	let dispatch_res = nomad_client_new::apis::jobs_api::post_job_dispatch(
+		&NEW_NOMAD_CONFIG,
 		nomad_job_id,
-		None,
-		Some(nomad_region),
-		None,
-		None,
-		Some(nomad_client::models::JobDispatchRequest {
+		nomad_client_new::models::JobDispatchRequest {
+			job_id: Some(nomad_job_id.to_string()),
 			payload: None,
 			meta: Some(
 				req.parameters
@@ -172,7 +166,11 @@ async fn run_job(
 					.chain(job_params.into_iter())
 					.collect::<HashMap<String, String>>(),
 			),
-		}),
+		},
+		Some(nomad_region),
+		None,
+		None,
+		None,
 	)
 	.await;
 	match dispatch_res {

@@ -3,15 +3,12 @@ use proto::backend::{self, pkg::*};
 use redis::AsyncCommands;
 use serde::Deserialize;
 
-lazy_static::lazy_static! {
-	static ref NOMAD_CONFIG: nomad_client::apis::configuration::Configuration =
-		nomad_util::config_from_env().unwrap();
-}
+use crate::NEW_NOMAD_CONFIG;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct PlanResult {
-	allocation: nomad_client::models::Allocation,
+	allocation: nomad_client_new::models::Allocation,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -61,9 +58,14 @@ async fn worker(
 	}
 
 	// Fetch node metadata
-	let node = nomad_client::apis::nodes_api::get_node(
-		&NOMAD_CONFIG,
-		nomad_node_id,
+	let node = nomad_client_new::apis::nodes_api::get_node(
+		&NEW_NOMAD_CONFIG,
+		&nomad_node_id,
+		None,
+		None,
+		None,
+		None,
+		None,
 		None,
 		None,
 		None,

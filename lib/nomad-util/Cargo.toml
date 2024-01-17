@@ -10,7 +10,6 @@ base64 = "0.13"
 bytes = "1.0"
 futures-util = "0.3"
 nomad-client = "0.0.9"
-nomad_client_new = { path = "../nomad-client", package = "nomad_client" }
 reqwest = { version = "0.11", features = ["stream"] }
 rivet-pools = { path = "../pools" }
 serde = { version = "1.0", features = ["derive"] }
@@ -18,3 +17,8 @@ serde_json = { version = "1.0", features = ["raw_value"] }
 thiserror = "1.0"
 tokio = { version = "1.29", features = ["full"] }
 tracing = "0.1"
+
+[dependencies.nomad_client_new]
+package = "nomad_client"
+git = "https://github.com/rivet-gg/nomad-client"
+rev = "f9f84efcdfcc0ca47840893d590280e4e5896e80"
