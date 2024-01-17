@@ -28,12 +28,12 @@ async fn worker(
 		SET is_closed = $2
 		FROM db_job_state.run_meta_nomad AS n
 		WHERE
-			l.run_id = n.node_id AND
+			l.run_id = n.run_id AND
 			n.node_id = $1
 		RETURNING
 			lobby_id, namespace_id, lobby_group_id, max_players_normal, max_players_party
 		",
-		util::uuid::parse(&ctx.nomad_node_id)?,
+		&ctx.nomad_node_id,
 		ctx.is_closed,
 	)
 	.await?;
