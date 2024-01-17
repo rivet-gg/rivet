@@ -33,7 +33,7 @@ async fn worker(
 		RETURNING
 			lobby_id, namespace_id, lobby_group_id, max_players_normal, max_players_party
 		",
-		&ctx.nomad_node_id,
+		util::uuid::parse(&ctx.nomad_node_id)?,
 		ctx.is_closed,
 	)
 	.await?;
