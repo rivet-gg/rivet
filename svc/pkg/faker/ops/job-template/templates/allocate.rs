@@ -12,6 +12,7 @@ fn main() {
 	let size = args[1].parse::<usize>().expect("Error parsing size");
 
 	// Allocate the array
+	println!("allocating {size} bytes");
 	let _array = vec![0u8; size];
 
 	handle_ctrl_c();
@@ -21,14 +22,14 @@ fn main() {
 
 fn handle_ctrl_c() {
 	let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
+	let r = running.clone();
 
-    ctrlc::set_handler(move || {
-        r.store(false, Ordering::SeqCst);
-    }).expect("Error setting Ctrl-C handler");
+	ctrlc::set_handler(move || {
+		r.store(false, Ordering::SeqCst);
+	}).expect("Error setting Ctrl-C handler");
 
 	// Wait for ctrl + c
-    while running.load(Ordering::SeqCst) {
+	while running.load(Ordering::SeqCst) {
 		thread::sleep(Duration::from_secs(1));
 	}
 }

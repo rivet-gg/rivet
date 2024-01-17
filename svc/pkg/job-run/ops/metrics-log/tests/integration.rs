@@ -10,7 +10,13 @@ async fn cpu_stress(ctx: TestCtx) {
 	}
 
 	let template_res = op!([ctx] faker_job_template {
-		kind: Some(faker::job_template::request::Kind::Stress(faker::job_template::request::Stress { flags: "-c 1 -l 50".into() })),
+		kind: Some(
+			faker::job_template::request::Kind::Stress(
+				faker::job_template::request::Stress {
+					flags: "-c 1 -l 50".into(),
+				}
+			)
+		),
 		..Default::default()
 	})
 	.await
@@ -65,7 +71,7 @@ async fn cpu_stress(ctx: TestCtx) {
 				tracing::info!(?cpu, "received valid cpu metrics");
 				break;
 			} else {
-				tracing::info!("cpu metrics not high enough",)
+				tracing::info!("cpu metrics not high enough");
 			}
 		} else {
 			tracing::info!("received zeroed metrics, either Prometheus has not polled this client yet or requests are failing");
@@ -80,7 +86,13 @@ async fn memory_stress(ctx: TestCtx) {
 	}
 
 	let template_res = op!([ctx] faker_job_template {
-		kind: Some(faker::job_template::request::Kind::MemoryStress(faker::job_template::request::MemoryStress { size: 4096 })),
+		kind: Some(
+			faker::job_template::request::Kind::Stress(
+				faker::job_template::request::Stress {
+					flags: "--vm 1 --vm-bytes 4K --vm-hang 0".into(),
+				},
+			)
+		),
 		..Default::default()
 	})
 	.await
@@ -128,8 +140,11 @@ async fn memory_stress(ctx: TestCtx) {
 
 		let metrics = metrics_res.metrics.first().unwrap();
 		let memory = *metrics.memory.last().unwrap();
-		let cpu = *metrics.cpu.last().unwrap();
-
-		tracing::info!(?nomad_job_id, task=?util_job::RUN_MAIN_TASK_NAME, ?memory, "--------------");
+		if memory > 10000000000 {
+			tracing::info!(?memory, "received valid memory metrics");
+			break;
+		} else {
+			tracing::info!("memory metrics not high enough");
+		}
 	}
 }
