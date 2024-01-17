@@ -4,8 +4,8 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct AllocationUpdated {
-	allocation: nomad_client::models::Allocation,
+struct NodeRegistration {
+	node: nomad_client::models::Node,
 }
 
 #[tracing::instrument(skip_all)]
@@ -13,26 +13,26 @@ pub async fn start(
 	shared_client: chirp_client::SharedClientHandle,
 	redis_job: RedisPool,
 ) -> GlobalResult<()> {
-	let redis_index_key = "nomad:monitor_index:alloc_update_monitor";
+	let redis_index_key = "nomad:monitor_index:node_registration_monitor";
 
 	let configuration = nomad_util::config_from_env().unwrap();
 	nomad_util::monitor::Monitor::run(
 		configuration,
 		redis_job,
 		redis_index_key,
-		&["Allocation"],
+		&["Node"],
 		move |event| {
 			let client = shared_client
 				.clone()
-				.wrap_new("nomad-alloc-updated-monitor");
+				.wrap_new("nomad-node-registration-monitor");
 			async move {
 				if let Some(payload) = event
-					.decode::<AllocationUpdated>("Allocation", "AllocationUpdated")
+					.decode::<NodeRegistration>("Node", "NodeRegistration")
 					.unwrap()
 				{
 					let spawn_res = tokio::task::Builder::new()
-						.name("nomad_alloc_update_monitor::handle_event")
-						.spawn(handle(client, payload, event.payload.to_string()));
+						.name("nomad_node_registration_monitor::handle_event")
+						.spawn(handle(client, payload));
 					if let Err(err) = spawn_res {
 						tracing::error!(?err, "failed to spawn handle_event task");
 					}
@@ -46,8 +46,8 @@ pub async fn start(
 }
 
 #[tracing::instrument(skip_all)]
-async fn handle(client: chirp_client::Client, payload: AllocationUpdated, payload_json: String) {
-	match handle_inner(client, &payload, payload_json).await {
+async fn handle(client: chirp_client::Client, payload: NodeRegistration) {
+	match handle_inner(client, &payload).await {
 		Ok(_) => {}
 		Err(err) => {
 			tracing::error!(?err, ?payload, "error handling event");
@@ -57,19 +57,16 @@ async fn handle(client: chirp_client::Client, payload: AllocationUpdated, payloa
 
 async fn handle_inner(
 	client: chirp_client::Client,
-	AllocationUpdated { allocation: alloc }: &AllocationUpdated,
-	payload_json: String,
+	NodeRegistration { node }: &NodeRegistration,
 ) -> GlobalResult<()> {
-	let job_id = unwrap_ref!(alloc.job_id);
+	let node_id = unwrap_ref!(node.ID);
+	let meta = unwrap_ref!(node.meta, "no metadata on node");
+	let cluster_id =
+		util::uuid::parse(unwrap!(meta.get("cluster_id"), "no cluster_id in metadata"))?;
 
-	if !util_job::is_nomad_job_run(job_id) {
-		tracing::info!(%job_id, "disregarding event");
-		return Ok(());
-	}
-
-	msg!([client] nomad::msg::monitor_alloc_update(job_id) {
-		dispatched_job_id: job_id.clone(),
-		payload_json: payload_json,
+	msg!([client] nomad::msg::monitor_node_registered(node_id) {
+		cluster_id: Some(cluster_id.into()),
+		node_id: node_id.to_owned(),
 	})
 	.await?;
 

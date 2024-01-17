@@ -141,12 +141,6 @@ async fn worker(ctx: &OperationContext<job_run::msg::create::Message>) -> Global
 	})
 	.await?;
 
-	msg!([ctx] job_run::msg::nomad_dispatched_job(run_id, &nomad_dispatched_job_id) {
-		run_id: Some(run_id.into()),
-		dispatched_job_id: nomad_dispatched_job_id.clone(),
-	})
-	.await?;
-
 	Ok(())
 }
 

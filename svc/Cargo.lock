@@ -4353,33 +4353,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "job-run-nomad-monitor"
-version = "0.0.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "chrono",
- "futures-util",
- "indoc",
- "lazy_static",
- "nomad-client",
- "nomad-util",
- "prost 0.10.4",
- "rivet-connection",
- "rivet-health-checks",
- "rivet-metrics",
- "rivet-operation",
- "rivet-pools",
- "rivet-runtime",
- "rivet-util-job",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "job-run-worker"
 version = "0.0.1"
 dependencies = [
@@ -5505,6 +5478,33 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "url",
+]
+
+[[package]]
+name = "nomad-monitor"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "chrono",
+ "futures-util",
+ "indoc",
+ "lazy_static",
+ "nomad-client",
+ "nomad-util",
+ "prost 0.10.4",
+ "rivet-connection",
+ "rivet-health-checks",
+ "rivet-metrics",
+ "rivet-operation",
+ "rivet-pools",
+ "rivet-runtime",
+ "rivet-util-job",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
