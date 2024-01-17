@@ -35,10 +35,6 @@ message Request {
 		string flags = 1;
 	}
 
-	message MemoryStress {
-		uint32 size = 1;
-	}
-
 	oneof kind {
 		EchoServer echo_server = 1;
 		EchoServer echo_server_tcp = 5;
@@ -47,7 +43,6 @@ message Request {
 		Exit exit = 3;
 		Counter counter = 4;
 		Stress stress = 7;
-		MemoryStress memory_stress = 8;
 	};
 
 	optional uint32 cpu = 101;

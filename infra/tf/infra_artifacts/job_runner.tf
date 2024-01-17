@@ -6,7 +6,7 @@ locals {
 		[for f in fileset("${local.job_runner_src_dir}/src/", "**/*"): "${local.job_runner_src_dir}/src/${f}"],
 	])
 	job_runner_src_hash = md5(join("", [
-		for f in local.job_runner_src_files: fileexists(f) ? filemd5(f) : ""
+		for f in local.job_runner_src_files: filemd5(f)
 	]))
 	job_runner_dst_binary_path = "/tmp/job-runner-${local.job_runner_src_hash}"
 }
