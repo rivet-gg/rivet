@@ -27,17 +27,29 @@ runs:
           ${{ runner.os }}-nix-${{ hashfiles('./shell.nix', './nix/**/*.nix') }}
           ${{ runner.os }}-nix-
 
-    # We can't use the GitHub cache because it has a max size of 10 GB
     - name: Enable sccache
       shell: bash -e {0}
       run: |
-        # Expose sccache config for all future calls of nix-shell, which configures sccache respectively
-        echo 'USE_SCCACHE=1' >> $GITHUB_ENV
-        echo 'SCCACHE_BUCKET=rivet-sccache' >> $GITHUB_ENV
-        echo 'SCCACHE_ENDPOINT=https://2a94c6a0ced8d35ea63cddc86c2681e7.r2.cloudflarestorage.com/rivet-sccache' >> $GITHUB_ENV
-        echo 'SCCACHE_REGION=auto' >> $GITHUB_ENV
-        echo 'AWS_SECRET_ACCESS_KEY=${{ inputs.sccache_aws_secret_access_key }}' >> $GITHUB_ENV
-        echo 'AWS_ACCESS_KEY_ID=${{ inputs.sccache_aws_access_key_id }}' >> $GITHUB_ENV
+        if [[ -n "${{ inputs.sccache_aws_secret_access_key }}" && -n "${{ inputs.sccache_aws_access_key_id }}" ]]; then
+          # Expose sccache config for all future calls of nix-shell, which configures sccache respectively
+          echo 'USE_SCCACHE=1' >> $GITHUB_ENV
+          echo 'SCCACHE_BUCKET=rivet-sccache' >> $GITHUB_ENV
+          echo 'SCCACHE_ENDPOINT=https://2a94c6a0ced8d35ea63cddc86c2681e7.r2.cloudflarestorage.com/rivet-sccache' >> $GITHUB_ENV
+          echo 'SCCACHE_REGION=auto' >> $GITHUB_ENV
+          echo 'AWS_SECRET_ACCESS_KEY=${{ inputs.sccache_aws_secret_access_key }}' >> $GITHUB_ENV
+          echo 'AWS_ACCESS_KEY_ID=${{ inputs.sccache_aws_access_key_id }}' >> $GITHUB_ENV
+        fi
+
+    - name: Debug GITHUB_ENV
+      shell: bash -e {0}
+      run: |
+        whoami
+        # stat /home/runner
+        # mkdir -m 0755 /nix && chown runner /nix
+        # stat /home/runner
+        # echo "TEST=TEST" >> $GITHUB_ENV
+        # echo "GITHUB_ENV:"
+        # cat $GITHUB_ENV
 
     # Cache generated Bolt files in order to prevent needless rebuilding
     - name: Bolt Cache

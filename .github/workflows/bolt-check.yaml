@@ -23,9 +23,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3.5.2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           submodules: recursive
 
+      # sccache is used for caching Rust builds instead of GitHub Actions cache,
+      # since the cache sizes needed are greater than 10GB, which isn't
+      # supported by GitHub Actions.
       - uses: ./.github/actions/pre-init
         with:
           sccache_aws_secret_access_key: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
