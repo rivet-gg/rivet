@@ -1,6 +1,7 @@
 name: docker-publish
 
-on: push
+on:
+  workflow_dispatch:
 
 jobs:
   rivet-local-binary-artifact-runner:
