@@ -5,7 +5,7 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct AllocationUpdated {
-	allocation: nomad_client::models::Allocation,
+	allocation: nomad_client_new::models::Allocation,
 }
 
 #[derive(Debug, Copy, Clone)]

@@ -4722,6 +4722,7 @@ dependencies = [
  "lazy_static",
  "nomad-client",
  "nomad-util",
+ "nomad_client",
  "rand",
  "region-get",
  "reqwest",
@@ -5967,6 +5968,7 @@ dependencies = [
 [[package]]
 name = "nomad_client"
 version = "1.1.4"
+source = "git+https://github.com/rivet-gg/nomad-client?rev=f9f84efcdfcc0ca47840893d590280e4e5896e80#f9f84efcdfcc0ca47840893d590280e4e5896e80"
 dependencies = [
  "reqwest",
  "serde",

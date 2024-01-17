@@ -2,11 +2,6 @@ use chirp_worker::prelude::*;
 use proto::backend::pkg::*;
 use tokio::task;
 
-lazy_static::lazy_static! {
-	static ref NOMAD_CONFIG: nomad_client::apis::configuration::Configuration =
-		nomad_util::config_from_env().unwrap();
-}
-
 #[derive(Debug, sqlx::FromRow)]
 struct RunRow {
 	region_id: Uuid,
@@ -18,6 +13,13 @@ struct RunRow {
 struct RunMetaNomadRow {
 	alloc_id: Option<String>,
 	dispatched_job_id: Option<String>,
+}
+
+use crate::NEW_NOMAD_CONFIG;
+
+lazy_static::lazy_static! {
+	static ref NOMAD_CONFIG: nomad_client::apis::configuration::Configuration =
+		nomad_util::config_from_env().unwrap();
 }
 
 #[worker(name = "job-run-stop")]
@@ -68,14 +70,15 @@ async fn worker(ctx: &OperationContext<job_run::msg::stop::Message>) -> GlobalRe
 		dispatched_job_id: Some(dispatched_job_id),
 	}) = &run_meta_nomad_row
 	{
-		match nomad_client::apis::jobs_api::stop_job(
-			&NOMAD_CONFIG,
+		match nomad_client_new::apis::jobs_api::delete_job(
+			&NEW_NOMAD_CONFIG,
 			dispatched_job_id,
 			None,
 			Some(&region.nomad_region),
 			None,
 			None,
 			Some(false), // TODO: Maybe change back to true for performance?
+			None,
 		)
 		.await
 		{

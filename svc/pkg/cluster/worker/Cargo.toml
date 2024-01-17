@@ -15,7 +15,6 @@ include_dir = "0.7.3"
 indoc = "1.0"
 lazy_static = "1.4.0"
 maplit = "1.0"
-nomad_client = { path = "../../../../lib/nomad-client" }
 nomad-util = { path = "../../../../lib/nomad-util" }
 rivet-convert = { path = "../../../../lib/convert" }
 rivet-health-checks = { path = "../../../../lib/health-checks" }
@@ -34,6 +33,10 @@ linode-instance-type-get = { path = "../../linode/ops/instance-type-get" }
 linode-server-destroy = { path = "../../linode/ops/server-destroy" }
 linode-server-provision = { path = "../../linode/ops/server-provision" }
 token-create = { path = "../../token/ops/create" }
+
+[dependencies.nomad_client]
+git = "https://github.com/rivet-gg/nomad-client"
+rev = "f9f84efcdfcc0ca47840893d590280e4e5896e80"
 
 [dependencies.sqlx]
 version = "0.7"
