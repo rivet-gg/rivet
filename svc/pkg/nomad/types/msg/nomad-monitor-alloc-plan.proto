@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package rivet.backend.pkg.job_run.msg.nomad_monitor_eval_update;
+package rivet.backend.pkg.nomad.msg.monitor_alloc_plan;
 
 import "proto/common.proto";
 
-/// name = "msg-job-run-nomad-monitor-eval-update"
+/// name = "msg-nomad-monitor-alloc-plan"
 /// parameters = [
 /// 	{ name = "dispatched_job_id" },
 /// ]
