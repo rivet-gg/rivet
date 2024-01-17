@@ -1,7 +1,7 @@
 use anyhow::*;
 use bolt_core::{
 	context,
-	tasks::{self, infra::ExecutePlanOpts},
+	tasks::{self, db, infra::ExecutePlanOpts},
 };
 use clap::Parser;
 
@@ -27,6 +27,8 @@ impl InitOpts {
 
 		// Apply infra
 		let plan = tasks::infra::build_plan(&ctx, None, false)?;
+		dbg!(&plan);
+		return Ok(());
 		tasks::infra::execute_plan(
 			&ctx,
 			&plan,

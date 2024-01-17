@@ -26,14 +26,79 @@ use crate::{
 	utils::{self},
 };
 
-pub async fn up_all(ctx: &ProjectContext, load_tests: bool) -> Result<()> {
+pub async fn up_all(ctx: &ProjectContext, load_tests: bool, build_only: bool) -> Result<()> {
 	let all_svc_names = ctx
 		.all_services()
 		.await
 		.iter()
 		.map(|svc| svc.name())
 		.collect::<Vec<_>>();
-	up_services(ctx, &all_svc_names, load_tests).await?;
+	up_services(ctx, &all_svc_names, load_tests, build_only).await?;
+
+	Ok(())
+}
+
+// pub async fn only_build(ctx: &ProjectContext) {
+// 	// Find all matching services
+// 	let all_svcs = ctx.services_with_patterns(&svc_names).await;
+// 	ensure!(!all_svcs.is_empty(), "input matched no services");
+
+// 	// Find all services that are executables
+// 	let all_exec_svcs = all_svcs
+// 		.iter()
+// 		.filter(|svc| svc.config().kind.component_class() == ComponentClass::Executable)
+// 		.filter(|svc| load_tests || !svc.config().service.load_test)
+// 		.cloned()
+// 		.collect::<Vec<_>>();
+
+// 	build(&ctx, &ctx.all_services().await).await.unwrap();
+// }
+
+pub async fn build(
+	ctx: &ProjectContext,
+	all_exec_svcs: &Vec<Arc<crate::context::ServiceContextData>>,
+) -> Result<()> {
+	// Run batch commands for all given services
+	eprintln!();
+	rivet_term::status::progress("Building", "(batch)");
+	{
+		// Build all the Rust modules in parallel
+		let rust_svcs = all_exec_svcs
+			.iter()
+			.filter(|svc_ctx| match svc_ctx.config().runtime {
+				RuntimeKind::Rust {} => true,
+				_ => false,
+			});
+
+		// Collect rust services by their workspace root
+		let mut svcs_by_workspace = HashMap::new();
+		for svc in rust_svcs {
+			let workspace = svcs_by_workspace
+				.entry(svc.workspace_path())
+				.or_insert_with(Vec::new);
+			workspace.push(svc.cargo_name().expect("no cargo name"));
+		}
+
+		if !svcs_by_workspace.is_empty() {
+			// Run build
+			cargo::cli::build(
+				ctx,
+				cargo::cli::BuildOpts {
+					build_calls: svcs_by_workspace
+						.iter()
+						.map(|(workspace_path, svc_names)| cargo::cli::BuildCall {
+							path: workspace_path.strip_prefix(ctx.path()).unwrap(),
+							bins: &svc_names,
+						})
+						.collect::<Vec<_>>(),
+					release: ctx.build_optimization() == BuildOptimization::Release,
+					jobs: ctx.config_local().rust.num_jobs,
+				},
+			)
+			.await
+			.unwrap();
+		}
+	}
 
 	Ok(())
 }
@@ -42,11 +107,11 @@ pub async fn up_services<T: AsRef<str>>(
 	ctx: &ProjectContext,
 	svc_names: &[T],
 	load_tests: bool,
+	build_only: bool,
 ) -> Result<Vec<ServiceContext>> {
 	let event = utils::telemetry::build_event(ctx, "bolt_up").await?;
 	utils::telemetry::capture_event(ctx, event).await?;
 
-	// let run_context = RunContext::Service;
 	let build_context = BuildContext::Bin {
 		optimization: ctx.build_optimization(),
 	};
@@ -122,30 +187,34 @@ pub async fn up_services<T: AsRef<str>>(
 	let mut upload_join_set = JoinSet::<Result<()>>::new();
 	let upload_semaphore = Arc::new(Semaphore::new(4));
 
-	// Login to docker repo for uploading
-	match &ctx.ns().cluster.kind {
-		config::ns::ClusterKind::SingleNode { .. } => {}
-		config::ns::ClusterKind::Distributed { .. } => {
-			if let Some((repo, _)) = ctx.ns().docker.repository.split_once("/") {
-				let username = ctx
-					.read_secret(&["docker", "registry", "ghcr.io", "write", "username"])
-					.await?;
-				let password = ctx
-					.read_secret(&["docker", "registry", "ghcr.io", "write", "password"])
-					.await?;
+	if !build_only {
+		// Login to docker repo for uploading
+		match &ctx.ns().cluster.kind {
+			config::ns::ClusterKind::SingleNode { .. } => {}
+			config::ns::ClusterKind::Distributed { .. } => {
+				if let Some((repo, _)) = ctx.ns().docker.repository.split_once("/") {
+					let username = ctx
+						.read_secret(&["docker", "registry", "ghcr.io", "write", "username"])
+						.await?;
+					let password = ctx
+						.read_secret(&["docker", "registry", "ghcr.io", "write", "password"])
+						.await?;
 
-				let mut cmd = Command::new("sh");
-				cmd.arg("-c").arg(format!(
-					"echo {password} | docker login {repo} -u {username} --password-stdin"
-				));
+					let mut cmd = Command::new("sh");
+					cmd.arg("-c").arg(format!(
+						"echo {password} | docker login {repo} -u {username} --password-stdin"
+					));
 
-				let status = cmd.status().await?;
-				ensure!(status.success());
-			} else {
-				bail!("docker repo must end with a slash");
-			};
+					let status = cmd.status().await?;
+					ensure!(status.success());
+				} else {
+					bail!("docker repo must end with a slash");
+				};
+			}
 		}
 	}
+
+	// build(ctx, &all_exec_svcs).await?;
 
 	// Run batch commands for all given services
 	eprintln!();
@@ -187,6 +256,11 @@ pub async fn up_services<T: AsRef<str>>(
 			.await
 			.unwrap();
 		}
+	}
+
+	// If we're only building the services, we can return here
+	if build_only {
+		return Ok(all_svcs.iter().cloned().collect());
 	}
 
 	// Fetch build plans after compiling rust
