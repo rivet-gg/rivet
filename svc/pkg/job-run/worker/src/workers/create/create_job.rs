@@ -118,7 +118,7 @@ fn modify_job_spec(
 
 	// TEST
 	if let Some(log_config) = main_task.log_config.as_mut() {
-		log_config.enabled = Some(false);
+		log_config.disabled = Some(false);
 	}
 
 	// Configure networks
@@ -245,7 +245,7 @@ fn gen_cleanup_task() -> nomad_client_new::models::Task {
 		log_config: Some(Box::new(LogConfig {
 			max_files: Some(4),
 			max_file_size_mb: Some(2),
-			enabled: Some(true),
+			disabled: Some(false),
 		})),
 		..Task::new()
 	}

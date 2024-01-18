@@ -191,7 +191,7 @@ async fn get_vlan_ip(
 		"
 		WITH
 			get_next_network_idx AS (
-				SELECT idx
+				SELECT mod(idx + $1, $2) AS idx
 				FROM generate_series(0, $2) AS s(idx)
 				WHERE NOT EXISTS (
 					SELECT 1
@@ -204,7 +204,7 @@ async fn get_vlan_ip(
 			),
 			update_network_idx AS (
 				UPDATE db_cluster.servers
-				SET network_idx = mod((SELECT idx FROM get_next_network_idx) + $1, $2)
+				SET network_idx = (SELECT idx FROM get_next_network_idx) 
 				WHERE server_id = $4
 				RETURNING 1
 			)

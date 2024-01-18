@@ -184,22 +184,24 @@ pub async fn run_from_env() -> GlobalResult<()> {
 			let new_pools = datacenter
 				.pools
 				.into_iter()
-				.filter(|(pool_type, _)| {
-					// Filter job pool from update, it's desired count is based on the autoscaler
-					!matches!(pool_type, PoolType::Job)
-				})
-				.map(
-					|(pool_type, pool)| cluster::msg::datacenter_update::PoolUpdate {
+				.map(|(pool_type, pool)| {
+					let desired_count = match pool_type {
+						PoolType::Ats => Some(pool.desired_count),
+						// Handled by autoscaler
+						PoolType::Job | PoolType::Gg => None,
+					};
+
+					cluster::msg::datacenter_update::PoolUpdate {
 						pool_type: Into::<backend::cluster::PoolType>::into(pool_type) as i32,
 						hardware: pool
 							.hardware
 							.into_iter()
 							.map(Into::into)
 							.collect::<Vec<_>>(),
-						desired_count: Some(pool.desired_count),
+						desired_count,
 						max_count: Some(pool.max_count),
-					},
-				)
+					}
+				})
 				.collect::<Vec<_>>();
 
 			msg!([ctx] @wait cluster::msg::datacenter_update(datacenter.datacenter_id) {

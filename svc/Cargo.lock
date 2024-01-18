@@ -5968,7 +5968,7 @@ dependencies = [
 [[package]]
 name = "nomad_client"
 version = "1.1.4"
-source = "git+https://github.com/rivet-gg/nomad-client?rev=f9f84efcdfcc0ca47840893d590280e4e5896e80#f9f84efcdfcc0ca47840893d590280e4e5896e80"
+source = "git+https://github.com/rivet-gg/nomad-client?rev=abb66bf0c30c7ff5b0c695dae952481c33e538b5#abb66bf0c30c7ff5b0c695dae952481c33e538b5"
 dependencies = [
  "reqwest",
  "serde",
