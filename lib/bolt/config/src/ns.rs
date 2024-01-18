@@ -144,7 +144,7 @@ pub struct DnsDomains {
 	/// - api.{domain.main}
 	pub main: String,
 	/// Will create DNS records for:
-	/// - *.lobby.{region}.{domain.job}
+	/// - *.lobby.{region_id}.{domain.job}
 	///
 	/// Can be the identical to `domain.main`.
 	pub job: String,

@@ -641,13 +641,13 @@ async fn create_docker_job(
 				&& port.port_range.is_none()
 		})
 		.flat_map(|port| {
-			let mut ports = vec![direct_proxied_port(lobby_id, region, port)];
+			let mut ports = vec![direct_proxied_port(lobby_id, region_id, port)];
 			match backend::matchmaker::lobby_runtime::ProxyProtocol::from_i32(port.proxy_protocol) {
 				Some(
 					backend::matchmaker::lobby_runtime::ProxyProtocol::Http
 					| backend::matchmaker::lobby_runtime::ProxyProtocol::Https,
 				) => {
-					ports.push(path_proxied_port(lobby_id, region, port));
+					ports.push(path_proxied_port(lobby_id, region_id, port));
 				}
 				Some(
 					backend::matchmaker::lobby_runtime::ProxyProtocol::Udp
@@ -909,7 +909,7 @@ async fn resolve_image_artifact_url(
 
 fn direct_proxied_port(
 	lobby_id: Uuid,
-	region: &backend::region::Region,
+	region_id: Uuid,
 	port: &backend::matchmaker::lobby_runtime::Port,
 ) -> GlobalResult<backend::job::ProxiedPortConfig> {
 	Ok(backend::job::ProxiedPortConfig {
@@ -921,7 +921,7 @@ fn direct_proxied_port(
 			"{}-{}.lobby.{}.{}",
 			lobby_id,
 			port.label,
-			region.name_id,
+			region_id,
 			unwrap!(util::env::domain_job()),
 		)],
 		proxy_protocol: job_proxy_protocol(port.proxy_protocol)? as i32,
@@ -931,7 +931,7 @@ fn direct_proxied_port(
 
 fn path_proxied_port(
 	lobby_id: Uuid,
-	region: &backend::region::Region,
+	region_id: Uuid,
 	port: &backend::matchmaker::lobby_runtime::Port,
 ) -> GlobalResult<backend::job::ProxiedPortConfig> {
 	Ok(backend::job::ProxiedPortConfig {
@@ -942,7 +942,7 @@ fn path_proxied_port(
 		// TODO: Not just for hostnames anymore, change name?
 		ingress_hostnames: vec![format!(
 			"lobby.{}.{}/{}-{}",
-			region.name_id,
+			region_id,
 			unwrap!(util::env::domain_job()),
 			lobby_id,
 			port.label,
