@@ -68,7 +68,6 @@ members = [
 	"pkg/cluster/ops/server-get",
 	"pkg/cluster/ops/server-list",
 	"pkg/cluster/ops/server-resolve-for-ip",
-	"pkg/cluster/standalone/autoscale",
 	"pkg/cluster/standalone/default-update",
 	"pkg/cluster/standalone/gc",
 	"pkg/cluster/worker",

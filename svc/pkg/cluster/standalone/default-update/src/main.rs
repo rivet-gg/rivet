@@ -13,5 +13,5 @@ async fn main() -> GlobalResult<()> {
 	// immediately afterwards.
 	tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
-	cluster_default_update::run_from_env().await
+	cluster_default_update::run_from_env(false).await
 }

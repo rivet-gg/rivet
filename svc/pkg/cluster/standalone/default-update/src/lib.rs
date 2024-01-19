@@ -96,7 +96,7 @@ impl From<BuildDeliveryMethod> for backend::cluster::BuildDeliveryMethod {
 }
 
 #[tracing::instrument]
-pub async fn run_from_env() -> GlobalResult<()> {
+pub async fn run_from_env(use_autoscaler: bool) -> GlobalResult<()> {
 	let pools = rivet_pools::from_env("cluster-default-update").await?;
 	let client =
 		chirp_client::SharedClient::from_env(pools.clone())?.wrap_new("cluster-default-update");
@@ -187,8 +187,13 @@ pub async fn run_from_env() -> GlobalResult<()> {
 				.map(|(pool_type, pool)| {
 					let desired_count = match pool_type {
 						PoolType::Ats => Some(pool.desired_count),
-						// Handled by autoscaler
-						PoolType::Job | PoolType::Gg => None,
+						PoolType::Job | PoolType::Gg => {
+							if use_autoscaler {
+								None
+							} else {
+								Some(pool.desired_count)
+							}
+						}
 					};
 
 					cluster::msg::datacenter_update::PoolUpdate {
