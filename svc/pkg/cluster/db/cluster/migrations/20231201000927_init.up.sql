@@ -23,11 +23,10 @@ CREATE TABLE servers (
 
 	-- Null until actual server is provisioned
 	provider_server_id TEXT,
+	provider_hardware TEXT,
 	vlan_ip TEXT,
 	network_idx INT,
 	public_ip TEXT,
-	-- Only set on job nodes
-	memory INT, -- MiB
 
 	-- Null until nomad node successfully registers
 	nomad_node_id TEXT,

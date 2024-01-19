@@ -14,7 +14,7 @@ message Response {
         uint64 memory = 2;
         uint64 disk = 3;
         uint64 vcpus = 4;
-        uint64 network_out = 5;
+        uint64 transfer = 5;
     }
 
     repeated InstanceType instance_types = 1;

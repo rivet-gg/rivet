@@ -1,9 +1,13 @@
-use std::{collections::HashMap, iter::Iterator};
+use std::{
+	collections::{HashMap, HashSet},
+	iter::Iterator,
+};
 
 use indoc::formatdoc;
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
 use serde::Deserialize;
+use util_cluster::JobNodeConfig;
 
 lazy_static::lazy_static! {
 	static ref JOB_SERVER_PROVISION_MARGIN: u64 = util::env::var("JOB_SERVER_PROVISION_MARGIN").unwrap()
@@ -15,7 +19,7 @@ lazy_static::lazy_static! {
 struct Server {
 	datacenter_id: Uuid,
 	pool_type: i64,
-	memory: Option<i64>,
+	provider_hardware: Option<String>,
 }
 
 #[tracing::instrument(skip_all)]
@@ -47,7 +51,7 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 		sql_fetch_all!(
 			[ctx, Server, &crdb]
 			"
-			SELECT datacenter_id, pool_type, memory
+			SELECT datacenter_id, pool_type, provider_hardware
 			FROM db_cluster.servers
 			WHERE
 				pool_type = ANY($1) AND
@@ -75,57 +79,52 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 		}),
 	)?;
 
-	// Get all hardware types
-	let hardware = datacenters_res
+	// Get first hardware type from each datacenter
+	let default_hardware = datacenters_res
 		.datacenters
 		.iter()
 		// Gracefully fetch job pool (test datacenters might not have it)
 		.filter_map(|dc| {
-			let job_pool = dc.pools.iter().find(|pool| {
-				pool.pool_type == backend::cluster::PoolType::Job as i32
-					&& !pool.hardware.is_empty()
-			});
+			let job_pool = dc
+				.pools
+				.iter()
+				.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32);
 
 			if let Some(job_pool) = job_pool {
-				Some((dc, job_pool))
+				job_pool
+					.hardware
+					.first()
+					.map(|hw| hw.provider_hardware.clone())
 			} else {
 				tracing::warn!(datacenter_id=?dc.datacenter_id, "datacenter has no job pool");
 
 				None
 			}
 		})
-		.map(|(dc, job_pool)| {
-			let datacenter_id = unwrap_ref!(dc.datacenter_id).as_uuid();
-			let hardware = unwrap!(job_pool.hardware.first(), "no hardware")
-				.provider_hardware
-				.clone();
-
-			Ok((datacenter_id, hardware))
-		})
-		.collect::<GlobalResult<Vec<_>>>()?;
+		.collect::<Vec<_>>();
 
 	// Fetch hardware info
 	let instance_types_res = op!([ctx] linode_instance_type_get {
-		// TODO: Filter duplicates
-		hardware_ids: hardware
-			.iter()
-			.map(|(_, hardware)| hardware.clone())
+		hardware_ids: default_hardware
+			.into_iter()
+			.chain(servers.iter().filter_map(|s| s.provider_hardware.clone()))
+			.collect::<HashSet<_>>()
+			.into_iter()
 			.collect::<Vec<_>>(),
 	})
 	.await?;
 
-	// Convert the memory data into a hashmap for better reads
-	let default_memory = hardware
-		.into_iter()
-		.map(|(datacenter_id, hardware)| {
-			let instance_type = unwrap!(instance_types_res
-				.instance_types
-				.iter()
-				.find(|hw| hw.hardware_id == hardware));
-
-			Ok((datacenter_id, instance_type.memory))
+	// Make the hardware data agnostic and put into a hashmap for better reads
+	let hardware_specs = instance_types_res
+		.instance_types
+		.iter()
+		.map(|instance_type| {
+			(
+				instance_type.hardware_id.clone(),
+				JobNodeConfig::from_linode(instance_type),
+			)
 		})
-		.collect::<GlobalResult<HashMap<_, _>>>()?;
+		.collect::<HashMap<_, _>>();
 
 	// Autoscale each datacenter
 	for datacenter in &datacenters_res.datacenters {
@@ -150,15 +149,23 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 			continue;
 		};
 
-		let default_memory = *unwrap!(default_memory.get(&datacenter_id));
+		// Get default job hardware specs
+		let default_provider_hardware = &unwrap!(job_pool.hardware.first()).provider_hardware;
+		let default_hardware_specs = unwrap!(hardware_specs.get(default_provider_hardware));
+		let default_memory = default_hardware_specs.memory;
 
 		let servers_in_datacenter = servers
 			.iter()
 			.filter(|server| server.datacenter_id == datacenter_id);
 
 		// Calculate new desired counts
-		let new_job_desired_count =
-			autoscale_job_servers(default_memory, servers_in_datacenter.clone(), topology).await?;
+		let new_job_desired_count = autoscale_job_servers(
+			&hardware_specs,
+			default_memory,
+			servers_in_datacenter.clone(),
+			topology,
+		)
+		.await?;
 		let new_gg_desired_count =
 			autoscale_gg_servers(datacenter_id, gg_pool.desired_count).await?;
 
@@ -199,6 +206,7 @@ pub async fn run_from_env(pools: rivet_pools::Pools) -> GlobalResult<()> {
 }
 
 async fn autoscale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
+	hardware_specs: &HashMap<String, JobNodeConfig>,
 	default_memory: u64,
 	servers: I,
 	topology: &cluster::datacenter_topology_get::response::Datacenter,
@@ -207,11 +215,18 @@ async fn autoscale_job_servers<'a, I: Iterator<Item = &'a Server> + Clone>(
 		servers.filter(|server| server.pool_type == backend::cluster::PoolType::Job as i64);
 	let server_count = job_servers_iter.clone().count() as u64;
 
-	// Aggregate total available memory from all job servers. We assume a server has this default memory
-	// amount (memory of the first hardware in the list) before it is provisioned
-	let total_memory = job_servers_iter.fold(0, |acc, server| {
-		acc + server.memory.map(|x| x as u64).unwrap_or(default_memory)
-	});
+	// Aggregate total available memory from all job servers. We assume a server has the default memory
+	// amount (memory of the first hardware in the list) if it is not provisioned yet
+	let mut total_memory = 0;
+	for job_server in job_servers_iter {
+		if let Some(provider_hardware) = &job_server.provider_hardware {
+			let hardware_specs = unwrap!(hardware_specs.get(provider_hardware));
+
+			total_memory += hardware_specs.memory;
+		} else {
+			total_memory += default_memory;
+		}
+	}
 
 	// Aggregate memory usage
 	let total_used_memory = topology.servers.iter().fold(0, |acc_usage, server| {
@@ -243,7 +258,7 @@ fn job_autoscale_algorithm(
 	let expected_total = server_count * default_memory_per_server;
 
 	// Calculate by how much our previous prediction was off
-	let error = apply_inaccuracy(expected_total.saturating_sub(total_memory));
+	let error = expected_total.saturating_sub(total_memory);
 	let error = util::div_up!(error, default_memory_per_server);
 
 	// Calculate average usage
@@ -354,10 +369,4 @@ async fn handle_request(url: &String, query: String) -> GlobalResult<PrometheusR
 	let data = unwrap!(body.data.result.first()).clone();
 
 	Ok(data)
-}
-
-// Linode servers do not actually give you the advertised amount of memory, we account for this error here
-// https://www.linode.com/community/questions/17791/why-doesnt-free-m-match-the-full-amount-of-ram-of-my-nanode-plan
-fn apply_inaccuracy(x: u64) -> u64 {
-	(x * 96) / 100
 }

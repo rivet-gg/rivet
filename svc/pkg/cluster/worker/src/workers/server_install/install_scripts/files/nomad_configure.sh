@@ -353,13 +353,9 @@ client {
 		"network-public-ipv4" = "${PUBLIC_IP}"
 	}
 
-	# TODO: This is disabled on job nodes for now because this prevents
-	# scheduling full cores at max capacity
 	reserved {
-		# See tier_list::RESERVE_SYSTEM_CPU
-		# cpu = 500
-		# See tier_list::RESERVE_SYSTEM_MEMORY
-		# memory = 512
+		# See tier_list::RESERVE_MEMORY
+		memory = 1024
 		disk = 10000
 	}
 }
