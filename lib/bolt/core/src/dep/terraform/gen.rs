@@ -290,7 +290,9 @@ async fn vars(ctx: &ProjectContext) {
 			.collect::<HashMap<_, _>>();
 
 		vars.insert("datacenters".into(), json!(datacenters));
-	}
+	} else {
+		vars.insert("datacenters".into(), json!({}));
+	};
 
 	// Docker
 	vars.insert(

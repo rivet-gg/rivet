@@ -11,4 +11,4 @@ rivet-util = { path = "../../../../lib/util/core" }
 types = { path = "../../../../lib/types/core" }
 
 [build-dependencies]
-tokio = { version = "1.29" }
+tokio = { version = "1.29", features = ["full"] }
