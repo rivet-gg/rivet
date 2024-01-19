@@ -1747,37 +1747,6 @@ components:
       - spans
       - marks
       type: object
-    CloudUniversalRegion:
-      enum:
-      - unknown
-      - local
-      - amsterdam
-      - atlanta
-      - bangalore
-      - dallas
-      - frankfurt
-      - london
-      - mumbai
-      - newark
-      - new_york_city
-      - san_francisco
-      - singapore
-      - sydney
-      - tokyo
-      - toronto
-      - washington_dc
-      - chicago
-      - paris
-      - seattle
-      - sao_paulo
-      - stockholm
-      - chennai
-      - osaka
-      - milan
-      - miami
-      - jakarta
-      - los_angeles
-      type: string
     CloudValidateGroupRequest:
       properties:
         display_name:
@@ -2232,7 +2201,7 @@ components:
           type: object
       type: object
     CloudVersionMatchmakerGameModeRuntimeDockerPort:
-      description: A docker port.
+      description: Port config for a docker build.
       properties:
         dev_port:
           description: _Configures Rivet CLI behavior. Has no effect on server behavior._
@@ -2244,7 +2213,10 @@ components:
           $ref: '#/components/schemas/CloudVersionMatchmakerPortProtocol'
           description: _Configures Rivet CLI behavior. Has no effect on server behavior._
         port:
-          description: The port number to connect to.
+          description: 'The port number to connect to.
+
+
+            ### Related - cloud.version.matchmaker.PortProtocol - cloud.version.matchmaker.ProxyKind'
           type: integer
         port_range:
           $ref: '#/components/schemas/CloudVersionMatchmakerPortRange'
@@ -2424,12 +2396,18 @@ components:
       - host
       type: string
     CloudVersionMatchmakerPortProtocol:
-      description: 'Type of network traffic to allow access to this port.
-
-        Configuring `https` or `tcp_tls` will provide TLS termination for you via
-        Game Guard.
-
-        `https` and `tcp_tls` must have `proxy_kind` set to `game_guard`.'
+      description: "Signifies the protocol of the port.\nNote that when proxying through\
+        \ GameGuard (via `ProxyKind`), the port number returned by `/find`, `/join`,\
+        \ and `/create` will not be the same as the port number configured in the\
+        \ config:\n\n- With HTTP, the port will always be 80. The hostname of the\
+        \ port correctly routes the incoming\n  connection to the correct port being\
+        \ used by the game server.\n- With HTTPS, the port will always be 443. The\
+        \ hostname of the port correctly routes the incoming\n  connection to the\
+        \ correct port being used by the game server.\n- Using TCP/UDP, the port will\
+        \ be a random number between 26000 and 31999. This gets automatically\n  routed\
+        \ to the correct port being used by the game server.\n\n### Related - cloud.version.matchmaker.GameModeRuntimeDockerPort\
+        \ - cloud.version.matchmaker.ProxyKind - /docs/dynamic-servers/concepts/game-guard\
+        \ - matchmaker.lobbies.find"
       enum:
       - http
       - https
@@ -2438,16 +2416,16 @@ components:
       - udp
       type: string
     CloudVersionMatchmakerPortRange:
-      description: 'Range of ports that can be connected to.
+      description: 'Range of ports that can be connected to. Note that the port range
+        values returned by /find
 
-        If configured, `network_mode` must equal `host`.
 
-        Port ranges may overlap between containers, it is the responsibility of the
-        developer to ensure ports are available before using.
+        ### Related
 
-        Read more about host networking [here](https://rivet.gg/docs/dynamic-servers/concepts/host-bridge-networking).
 
-        Only available on Rivet Open Source & Enterprise.'
+        - cloud.version.matchmaker.PortProtocol
+
+        - cloud.version.matchmaker.ProxyKind'
       properties:
         max:
           description: Unsigned 32 bit integer.
@@ -2460,14 +2438,11 @@ components:
       - max
       type: object
     CloudVersionMatchmakerProxyKind:
-      description: 'Range of ports that can be connected to.
+      description: 'Denotes what type of proxying to use for ports. Rivet GameGuard
+        adds DoS and DDoS mitigation to incoming connections.
 
-        `game_guard` (default) proxies all traffic through [Game Guard](https://rivet.gg/docs/dynamic-servers/concepts/game-guard)
-        to mitigate DDoS attacks and provide TLS termination.
 
-        `none` sends traffic directly to the game server. If configured, `network_mode`
-        must equal `host`. Read more about host networking [here](https://rivet.gg/docs/dynamic-servers/concepts/host-bridge-networking).
-        Only available on Rivet Open Source & Enterprise.'
+        ### Related - /docs/dynamic-servers/concepts/game-guard - cloud.version.matchmaker.PortProtocol'
       enum:
       - none
       - game_guard

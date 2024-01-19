@@ -116,10 +116,10 @@ fn modify_job_spec(
 		"main task must not have a lifecycle hook"
 	);
 
-	// TEST
-	if let Some(log_config) = main_task.log_config.as_mut() {
-		log_config.disabled = Some(false);
-	}
+	// Disable logs
+	// if let Some(log_config) = main_task.log_config.as_mut() {
+	// 	log_config.disabled = Some(true);
+	// }
 
 	// Configure networks
 	let networks = unwrap!(task_group.networks.as_mut());

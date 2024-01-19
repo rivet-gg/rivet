@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EnvVarError {
@@ -36,18 +37,6 @@ lazy_static::lazy_static! {
 
 pub fn default_cluster_id() -> Uuid {
 	Uuid::nil()
-}
-
-pub fn var(name: impl AsRef<str>) -> Result<String, EnvVarError> {
-	let env_var = std::env::var(name.as_ref());
-	
-	match env_var {
-		Ok(v) => Ok(v),
-		Err(var_error) => match var_error {
-			std::env::VarError::NotPresent => Err(EnvVarError::Missing(name.as_ref().to_string())),
-			_ => Err(EnvVarError::Invalid(var_error)),
-		},
-	}
 }
 
 /// Where this code is being written from. This is derived from the `RIVET_RUN_CONTEXT` environment
