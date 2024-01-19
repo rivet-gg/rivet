@@ -113,18 +113,6 @@ async fn worker(
 		}
 	};
 
-	let memory = if let Some(provision_res) = &provision_res {
-		let instance_types_res = op!([ctx] linode_instance_type_get {
-			hardware_ids: vec![provision_res.provider_hardware.clone()],
-		})
-		.await?;
-		let instance_type = unwrap!(instance_types_res.instance_types.first());
-
-		Some(instance_type.memory as i64)
-	} else {
-		None
-	};
-
 	// Update DB regardless of success (have to set vlan_ip)
 	sql_execute!(
 		[ctx, &crdb]
@@ -132,16 +120,16 @@ async fn worker(
 		UPDATE db_cluster.servers
 		SET
 			provider_server_id = $2,
-			vlan_ip = $3,
-			public_ip = $4,
-			memory = $5
+			provider_hardware = $3,
+			vlan_ip = $4,
+			public_ip = $5
 		WHERE server_id = $1
 		",
 		server_id,
 		provision_res.as_ref().map(|res| &res.provider_server_id),
+		provision_res.as_ref().map(|res| &res.provider_hardware),
 		vlan_ip,
 		provision_res.as_ref().map(|res| &res.public_ip),
-		memory
 	)
 	.await?;
 

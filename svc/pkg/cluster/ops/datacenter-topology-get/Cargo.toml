@@ -14,7 +14,7 @@ rivet-operation = { path = "../../../../../lib/operation/core" }
 
 [dependencies.nomad_client]
 git = "https://github.com/rivet-gg/nomad-client"
-rev = "abb66bf0c30c7ff5b0c695dae952481c33e538b5"
+rev = "abb66bf0c30c7ff5b0c695dae952481c33e538b5" # pragma: allowlist secret
 
 [dependencies.sqlx]
 version = "0.7"
