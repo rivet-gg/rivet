@@ -461,6 +461,7 @@ pub struct InstanceType {
 	pub memory: u64,
 	pub disk: u64,
 	pub vcpus: u64,
+	pub transfer: u64,
 	pub network_out: u64,
 }
 
@@ -471,7 +472,8 @@ impl From<InstanceType> for linode::instance_type_get::response::InstanceType {
 			memory: value.memory,
 			disk: value.disk,
 			vcpus: value.vcpus,
-			network_out: value.network_out,
+			transfer: value.transfer,
+			// network_out: value.network_out,
 		}
 	}
 }
