@@ -79,7 +79,6 @@ async fn cpu_stress(ctx: TestCtx) {
 	}
 }
 
-// TODO:
 #[worker_test]
 async fn memory_stress(ctx: TestCtx) {
 	if !util::feature::job_run() {
@@ -90,7 +89,7 @@ async fn memory_stress(ctx: TestCtx) {
 		kind: Some(
 			faker::job_template::request::Kind::Stress(
 				faker::job_template::request::Stress {
-					flags: "--vm 1 --vm-bytes 4K --vm-hang 0".into(),
+					flags: "--vm 1 --vm-bytes 40M --vm-hang 0".into(),
 				},
 			)
 		),
@@ -141,7 +140,7 @@ async fn memory_stress(ctx: TestCtx) {
 
 		let metrics = metrics_res.metrics.first().unwrap();
 		let memory = *metrics.memory.last().unwrap();
-		if memory > 10000000000 {
+		if memory > 80_000_000 {
 			tracing::info!(?memory, "received valid memory metrics");
 			break;
 		} else {
