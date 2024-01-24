@@ -1,11 +1,10 @@
-use anyhow::*;
-
-use serde::Serialize;
 use std::{collections::HashMap, net::Ipv4Addr};
 
-use crate::context::ProjectContext;
+use anyhow::*;
+use serde::Serialize;
 
 use super::net;
+use crate::context::ProjectContext;
 
 #[derive(Serialize, Clone)]
 pub struct Region {

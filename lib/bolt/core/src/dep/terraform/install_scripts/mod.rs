@@ -1,9 +1,13 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use indexmap::{indexmap, IndexMap};
 use indoc::formatdoc;
-use std::collections::HashMap;
 
-use crate::{context::ProjectContext, dep::terraform, dep::terraform::servers::Server};
+use crate::{
+	context::ProjectContext,
+	dep::{terraform, terraform::servers::Server},
+};
 
 pub mod components;
 

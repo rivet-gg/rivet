@@ -1,15 +1,15 @@
-use redis::AsyncCommands;
-use rivet_pools::prelude::*;
 use std::{
 	fmt::Debug,
 	future::Future,
 	time::{Duration, SystemTime},
 };
+
+use redis::AsyncCommands;
+use rivet_pools::prelude::*;
 use tracing::Instrument;
 
-use crate::error::{Error, GetterResult};
-
 use super::*;
+use crate::error::{Error, GetterResult};
 
 /// Config specifying how cached values will behave.
 #[derive(Clone)]

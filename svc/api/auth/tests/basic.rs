@@ -1,11 +1,10 @@
 use std::{net::SocketAddr, str::FromStr, sync::Once};
 
+use ::api_auth::route;
 use proto::backend;
 use rivet_auth::model;
 use rivet_claims::ClaimsDecode;
 use rivet_operation::prelude::*;
-
-use ::api_auth::route;
 
 static GLOBAL_INIT: Once = Once::new();
 

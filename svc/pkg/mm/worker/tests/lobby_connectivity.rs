@@ -1,12 +1,13 @@
 mod common;
 
-use chirp_worker::prelude::*;
-use common::*;
-use proto::backend::{self, pkg::*};
 use std::{
 	io::{BufRead, BufReader, Read, Write},
 	net::{TcpStream, UdpSocket},
 };
+
+use chirp_worker::prelude::*;
+use common::*;
+use proto::backend::{self, pkg::*};
 
 #[worker_test]
 async fn lobby_connectivity_http(ctx: TestCtx) {

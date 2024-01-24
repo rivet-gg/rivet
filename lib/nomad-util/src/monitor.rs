@@ -1,9 +1,10 @@
+use std::{future::Future, pin::Pin};
+
 use futures_util::{Stream, StreamExt};
 use nomad_client::apis::configuration::Configuration;
 use redis::AsyncCommands;
 use rivet_pools::prelude::*;
 use serde::{de::DeserializeOwned, Deserialize};
-use std::{future::Future, pin::Pin};
 
 use crate::error::NomadError;
 

@@ -1,9 +1,3 @@
-use anyhow::*;
-use futures_util::{StreamExt, TryStreamExt};
-use rand::{seq::SliceRandom, thread_rng};
-use rivet_term::console::style;
-
-use indoc::formatdoc;
 use std::{
 	collections::{HashMap, HashSet},
 	path::{Path, PathBuf},
@@ -13,6 +7,12 @@ use std::{
 	},
 	time::{Duration, Instant},
 };
+
+use anyhow::*;
+use futures_util::{StreamExt, TryStreamExt};
+use indoc::formatdoc;
+use rand::{seq::SliceRandom, thread_rng};
+use rivet_term::console::style;
 use tokio::{io::AsyncWriteExt, process::Command};
 
 use crate::{

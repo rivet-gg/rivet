@@ -1,8 +1,9 @@
 mod prewarm_ats;
 
+use std::collections::HashSet;
+
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
-use std::collections::HashSet;
 
 use crate::prewarm_ats::PrewarmAtsContext;
 

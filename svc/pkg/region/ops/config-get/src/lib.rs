@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use proto::backend::pkg::*;
 use rivet_operation::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[operation(name = "region-config-get")]
 pub async fn handle(

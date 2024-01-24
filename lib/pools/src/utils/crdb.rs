@@ -4,9 +4,11 @@
 // - https://www.cockroachlabs.com/docs/v22.2/transactions#client-side-intervention
 // - https://github.com/cockroachdb/docs/blob/1250d113dcb6de3a885eef1f3b2dfbc6d7eba5fa/_includes/v2.0/app/txn-sample.rs#L10
 
-use crate::CrdbPool;
-use global_error::prelude::*;
 use std::{future::Future, pin::Pin};
+
+use global_error::prelude::*;
+
+use crate::CrdbPool;
 
 const MAX_TX_RETRIES: usize = 16;
 

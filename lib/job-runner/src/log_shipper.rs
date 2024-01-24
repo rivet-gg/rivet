@@ -1,7 +1,8 @@
+use std::{io::Write, net::TcpStream, sync::mpsc};
+
 use anyhow::*;
 use serde::Serialize;
 use serde_json;
-use std::{io::Write, net::TcpStream, sync::mpsc};
 
 #[derive(Copy, Clone, Debug)]
 #[repr(u8)]

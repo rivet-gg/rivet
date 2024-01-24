@@ -1,19 +1,19 @@
-use anyhow::*;
 use std::{
 	collections::HashMap,
 	path::{Path, PathBuf},
 	sync::{Arc, Weak},
 };
+
+use anyhow::*;
 use tokio::{fs, sync::Mutex};
 
+use super::{RunContext, ServiceContext};
 use crate::{
 	config::{self},
 	context,
 	dep::{self},
 	utils,
 };
-
-use super::{RunContext, ServiceContext};
 
 pub type ProjectContext = Arc<ProjectContextData>;
 
