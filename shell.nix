@@ -105,11 +105,6 @@ in
 			# If these don't match, then the build cache is purged any time Rust is ran from Bolt.
 			export RUSTFLAGS="--cfg tokio_unstable"
 
-			git() {
-				echo "ARGS $@" >&2
-				command git "$@"
-			}
-
 			${sccacheShellHook}
 		'';
 	}
