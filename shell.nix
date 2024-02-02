@@ -74,6 +74,8 @@ in
 			]
 		);
 		shellHook = ''
+			shopt -s expand_aliases
+
 			# Setup Git LFS
 			git lfs install > /dev/null
 
