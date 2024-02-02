@@ -38,7 +38,7 @@ in
 			cloc
 			curl
 			docker-client  # Standardize client CLI since older clients have breaking changes
-			git  # Bolt relies functionality only available in newer versions of Bolt
+			git  # Bolt relies functionality only available in newer versions of git
 			git-lfs
 			go-migrate
 			jq
@@ -74,8 +74,6 @@ in
 			]
 		);
 		shellHook = ''
-			shopt -s expand_aliases
-
 			# Setup Git LFS
 			git lfs install > /dev/null
 
@@ -107,7 +105,10 @@ in
 			# If these don't match, then the build cache is purged any time Rust is ran from Bolt.
 			export RUSTFLAGS="--cfg tokio_unstable"
 
-			alias git="echo"
+			git() {
+				echo "ARGS $@" >&2
+				command git "$@"
+			}
 
 			${sccacheShellHook}
 		'';
