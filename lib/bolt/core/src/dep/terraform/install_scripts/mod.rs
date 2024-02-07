@@ -67,6 +67,7 @@ pub async fn gen(
 		script.push(components::cnitool());
 		script.push(components::cni_plugins());
 		script.push(components::nomad(server));
+		script.push(components::nomad_health_check());
 		script.push(components::envoy());
 		script.push(components::outbound_proxy(server, all_servers)?);
 
