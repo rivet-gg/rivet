@@ -35,3 +35,7 @@ variable "s3_providers" {
 	}))
 }
 
+# MARK: Imagor
+variable "imagor_enabled" {
+	type = bool
+}

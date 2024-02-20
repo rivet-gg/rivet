@@ -3,12 +3,6 @@ use reqwest::StatusCode;
 use rivet_operation::prelude::*;
 use serde::Deserialize;
 
-#[derive(Debug, thiserror::Error)]
-enum Error {
-	#[error("prometheus error: {0}")]
-	PrometheusError(String),
-}
-
 #[derive(Debug, Deserialize)]
 struct PrometheusResponse {
 	data: PrometheusData,
@@ -44,7 +38,12 @@ impl QueryTiming {
 async fn handle(
 	ctx: OperationContext<job_run::metrics_log::Request>,
 ) -> GlobalResult<job_run::metrics_log::Response> {
-	let prometheus_url = std::env::var("PROMETHEUS_URL")?;
+	let Ok(prometheus_url) = util::env::var("PROMETHEUS_URL") else {
+		// Prometheus disabled
+		return Ok(job_run::metrics_log::Response {
+			metrics: Vec::new(),
+		});
+	};
 
 	let mut metrics = Vec::new();
 
@@ -133,12 +132,13 @@ async fn handle_request(
 		let status = res.status();
 		let text = res.text().await?;
 
-		return Err(Error::PrometheusError(format!(
-			"failed prometheus request: ({}) {}",
-			status, text
-		))
-		.into());
+		bail_with!(
+			ERROR,
+			error = format!("failed prometheus request ({}):\n{}", status, text)
+		);
 	}
 
-	Ok(unwrap!(res.json::<PrometheusResponse>().await?.data.result.first()).clone())
+	let body = res.json::<PrometheusResponse>().await?;
+
+	Ok(unwrap!(body.data.result.first()).clone())
 }

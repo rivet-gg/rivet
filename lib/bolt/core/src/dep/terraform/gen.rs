@@ -41,7 +41,14 @@ pub async fn project(ctx: &ProjectContext) {
 pub async fn gen_bolt_tf(ctx: &ProjectContext, plan_id: &str) -> Result<()> {
 	// Configure the backend
 	let backend = match ctx.ns().terraform.backend {
-		ns::TerraformBackend::Local {} => String::new(),
+		ns::TerraformBackend::Local {} => indoc!(
+			"
+			terraform {
+				backend \"local\" {}
+			}
+			"
+		)
+		.to_string(),
 		ns::TerraformBackend::Postgres {} => indoc!(
 			"
 			terraform {
@@ -235,6 +242,9 @@ async fn vars(ctx: &ProjectContext) {
 	let pools = super::pools::build_pools(&ctx).await.unwrap();
 	vars.insert("pools".into(), json!(&pools));
 
+	// Edge nodes
+	vars.insert("edge_enabled".into(), json!(&!pools.is_empty()));
+
 	// Tunnels
 	if let Some(ns::Dns {
 		provider: Some(ns::DnsProvider::Cloudflare { access, .. }),
@@ -380,32 +390,40 @@ async fn vars(ctx: &ProjectContext) {
 	}
 
 	// ClickHouse
-	match &config.clickhouse.provider {
-		ns::ClickHouseProvider::Kubernetes {} => {
-			vars.insert("clickhouse_provider".into(), json!("kubernetes"));
-		}
-		ns::ClickHouseProvider::Managed { tier } => {
-			vars.insert("clickhouse_provider".into(), json!("managed"));
-			match tier {
-				ns::ClickHouseManagedTier::Development {} => {
-					vars.insert("clickhouse_tier".into(), json!("development"));
-				}
-				ns::ClickHouseManagedTier::Production {
-					min_total_memory_gb,
-					max_total_memory_gb,
-				} => {
-					vars.insert("clickhouse_tier".into(), json!("production"));
-					vars.insert(
-						"clickhouse_min_total_memory_gb".into(),
-						json!(min_total_memory_gb),
-					);
-					vars.insert(
-						"clickhouse_max_total_memory_gb".into(),
-						json!(max_total_memory_gb),
-					);
+	vars.insert(
+		"clickhouse_enabled".into(),
+		json!(config.clickhouse.is_some()),
+	);
+	if let Some(clickhouse) = &config.clickhouse {
+		match &clickhouse.provider {
+			ns::ClickHouseProvider::Kubernetes {} => {
+				vars.insert("clickhouse_provider".into(), json!("kubernetes"));
+			}
+			ns::ClickHouseProvider::Managed { tier } => {
+				vars.insert("clickhouse_provider".into(), json!("managed"));
+				match tier {
+					ns::ClickHouseManagedTier::Development {} => {
+						vars.insert("clickhouse_tier".into(), json!("development"));
+					}
+					ns::ClickHouseManagedTier::Production {
+						min_total_memory_gb,
+						max_total_memory_gb,
+					} => {
+						vars.insert("clickhouse_tier".into(), json!("production"));
+						vars.insert(
+							"clickhouse_min_total_memory_gb".into(),
+							json!(min_total_memory_gb),
+						);
+						vars.insert(
+							"clickhouse_max_total_memory_gb".into(),
+							json!(max_total_memory_gb),
+						);
+					}
 				}
 			}
 		}
+	} else {
+		vars.insert("clickhouse_provider".into(), json!(null));
 	}
 
 	if dep::terraform::cli::has_applied(ctx, "clickhouse_k8s").await
@@ -422,6 +440,12 @@ async fn vars(ctx: &ProjectContext) {
 			json!(*clickhouse.port_native_secure),
 		);
 	}
+
+	// Prometheus
+	vars.insert(
+		"prometheus_enabled".into(),
+		json!(config.prometheus.is_some()),
+	);
 
 	// Redis services
 	{
@@ -575,18 +599,32 @@ async fn vars(ctx: &ProjectContext) {
 		vars.insert("better_uptime".into(), json!(better_uptime.to_owned()));
 	}
 
+	// Imagor
+	vars.insert(
+		"imagor_enabled".into(),
+		json!(config.rivet.cdn.image_resizing.is_some()),
+	);
+
+	// NSFW API
+	vars.insert(
+		"nsfw_api_enabled".into(),
+		json!(config.rivet.upload.nsfw_check.is_some()),
+	);
+
 	// Media presets
-	vars.insert(
-		"imagor_presets".into(),
-		json!(media_resize::build_presets(ctx.ns_id())
-			.into_iter()
-			.map(media_resize::ResizePresetSerialize::from)
-			.collect::<Vec<_>>()),
-	);
-	vars.insert(
-		"imagor_cors_allowed_origins".into(),
-		json!(ctx.imagor_cors_allowed_origins()),
-	);
+	if config.rivet.cdn.image_resizing.is_some() {
+		vars.insert(
+			"imagor_presets".into(),
+			json!(media_resize::build_presets(ctx.ns_id())
+				.into_iter()
+				.map(media_resize::ResizePresetSerialize::from)
+				.collect::<Vec<_>>()),
+		);
+		vars.insert(
+			"imagor_cors_allowed_origins".into(),
+			json!(ctx.imagor_cors_allowed_origins()),
+		);
+	}
 
 	vars.insert("kubeconfig_path".into(), json!(ctx.gen_kubeconfig_path()));
 	vars.insert(
@@ -597,6 +635,10 @@ async fn vars(ctx: &ProjectContext) {
 		}),
 	);
 	vars.insert("limit_resources".into(), json!(ctx.limit_resources()));
+	vars.insert(
+		"k8s_dashboard_enabled".into(),
+		json!(config.kubernetes.dashboard_enabled),
+	);
 
 	vars.insert(
 		"cdn_cache_size_gb".into(),

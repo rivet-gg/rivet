@@ -38,9 +38,11 @@ pub struct Namespace {
 	#[serde(default)]
 	pub cockroachdb: CockroachDB,
 	#[serde(default)]
-	pub clickhouse: ClickHouse,
+	pub clickhouse: Option<ClickHouse>,
 	#[serde(default)]
 	pub traefik: Traefik,
+	#[serde(default)]
+	pub prometheus: Option<Prometheus>,
 	#[serde(default)]
 	pub rust: Rust,
 	#[serde(default)]
@@ -377,6 +379,8 @@ pub struct Kubernetes {
 	pub provider: KubernetesProvider,
 	#[serde(default)]
 	pub health_checks: Option<bool>,
+	#[serde(default)]
+	pub dashboard_enabled: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -500,6 +504,10 @@ impl Default for Traefik {
 		}
 	}
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct Prometheus {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(deny_unknown_fields)]
@@ -629,7 +637,13 @@ pub struct Profanity {
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Upload {
-	pub nsfw_error_verbose: bool,
+	pub nsfw_check: Option<NsfwCheck>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct NsfwCheck {
+	pub error_verbose: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -654,13 +668,21 @@ pub enum DynamicServersBuildDeliveryMethod {
 #[serde(deny_unknown_fields)]
 pub struct Cdn {
 	pub cache_size_gb: usize,
+	pub image_resizing: Option<ImageResizing>,
 }
 
 impl Default for Cdn {
 	fn default() -> Self {
-		Cdn { cache_size_gb: 10 }
+		Cdn {
+			cache_size_gb: 10,
+			image_resizing: None,
+		}
 	}
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct ImageResizing {}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
