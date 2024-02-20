@@ -37,6 +37,18 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
     -   Made NSFW Check API disabled by default
     -   Made Image Resizing (via Imagor) disabled by default
 
+## [24.2.1] - Unreleased
+
+### Changed
+
+-   Reduced minimal infrastructure required to get Rivet running:
+    -   Made K8s Dashboard disabled by default
+    -   Made Prometheus and friends (Vector, Loki, Promtail) disabled by default
+    -   Made Clickhouse disabled by default
+    -   Made NSFW Check API disabled by default
+    -   Made NSFW Check API disabled by default
+    -   Made Image Resizing (via Imagor) disabled by default
+
 ## [24.2.0] - 2024-02-22
 
 ### Added
