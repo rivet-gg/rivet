@@ -1,15 +1,18 @@
 use std::convert::TryInto;
 
-use proto::backend::{
-	self,
-	matchmaker::{
+use proto::{
+	backend::{
 		self,
-		lobby_runtime::{
-			NetworkMode as LobbyRuntimeNetworkMode, ProxyKind as LobbyRuntimeProxyKind,
-			ProxyProtocol as LobbyRuntimeProxyProtocol,
+		matchmaker::{
+			self,
+			lobby_runtime::{
+				NetworkMode as LobbyRuntimeNetworkMode, ProxyKind as LobbyRuntimeProxyKind,
+				ProxyProtocol as LobbyRuntimeProxyProtocol,
+			},
 		},
+		pkg::*,
 	},
-	pkg::*,
+	common,
 };
 use rivet_operation::prelude::*;
 
@@ -1257,7 +1260,7 @@ async fn handle(
 	Ok(game::version_validate::Response {
 		errors: errors
 			.into_iter()
-			.map(|path| game::version_validate::response::Error { path })
+			.map(|path| common::ValidationError { path })
 			.collect::<Vec<_>>(),
 	})
 }

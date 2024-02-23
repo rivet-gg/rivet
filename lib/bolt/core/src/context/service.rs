@@ -808,18 +808,6 @@ impl ServiceContextData {
 		env.push(("RIVET_ORIGIN_API".into(), project_ctx.origin_api()));
 		env.push(("RIVET_ORIGIN_HUB".into(), project_ctx.origin_hub()));
 
-		// DNS
-		if let Some(dns) = &project_ctx.ns().dns {
-			if let Some(provider) = &dns.provider {
-				env.push((
-					"RIVET_DNS_PROVIDER".into(),
-					match provider {
-						config::ns::DnsProvider::Cloudflare { .. } => "cloudflare".into(),
-					},
-				));
-			}
-		}
-
 		// Pools
 		if !project_ctx.ns().pools.is_empty() {
 			env.push(("RIVET_HAS_POOLS".into(), "1".into()));
@@ -846,19 +834,28 @@ impl ServiceContextData {
 			));
 		}
 
-		if project_ctx.ns().dns.is_some() {
-			let dns = terraform::output::read_dns(&project_ctx).await;
+		// DNS
+		if let Some(dns) = &project_ctx.ns().dns {
+			match &dns.provider {
+				Some(config::ns::DnsProvider::Cloudflare { account_id, .. }) => {
+					env.push(("RIVET_DNS_PROVIDER".into(), "cloudflare".into()));
+					env.push(("CLOUDFLARE_ACCOUNT_ID".into(), account_id.clone()));
+				}
+				None => {}
+			}
+
+			let dns_output = terraform::output::read_dns(&project_ctx).await;
 			env.push((
-				"CLOUDFLARE_ZONE_ID_BASE".into(),
-				(*dns.cloudflare_zone_ids).main.clone(),
+				"CLOUDFLARE_ZONE_ID_MAIN".into(),
+				(*dns_output.cloudflare_zone_ids).main.clone(),
 			));
 			env.push((
 				"CLOUDFLARE_ZONE_ID_GAME".into(),
-				(*dns.cloudflare_zone_ids).cdn.clone(),
+				(*dns_output.cloudflare_zone_ids).cdn.clone(),
 			));
 			env.push((
 				"CLOUDFLARE_ZONE_ID_JOB".into(),
-				(*dns.cloudflare_zone_ids).job.clone(),
+				(*dns_output.cloudflare_zone_ids).job.clone(),
 			));
 		}
 
@@ -1198,13 +1195,20 @@ impl ServiceContextData {
 			}
 		}
 
-		if project_ctx.ns().dns.is_some() && self.depends_on_cloudflare() {
-			env.push((
-				"CLOUDFLARE_AUTH_TOKEN".into(),
-				project_ctx
-					.read_secret(&["cloudflare", "terraform", "auth_token"])
-					.await?,
-			));
+		if let Some(dns) = &project_ctx.ns().dns {
+			match &dns.provider {
+				Some(config::ns::DnsProvider::Cloudflare { .. }) => {
+					if self.depends_on_cloudflare() {
+						env.push((
+							"CLOUDFLARE_AUTH_TOKEN".into(),
+							project_ctx
+								.read_secret(&["cloudflare", "terraform", "auth_token"])
+								.await?,
+						));
+					}
+				}
+				None => {}
+			}
 		}
 
 		Ok(env)

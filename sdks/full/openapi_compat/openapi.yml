@@ -242,12 +242,9 @@ components:
           format: int64
           type: integer
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         upload_id:
           format: uuid
           type: string
@@ -304,9 +301,7 @@ components:
       description: A CDN domain for a given namespace.
       properties:
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         domain:
           description: A valid domain name (no protocol).
           type: string
@@ -359,12 +354,9 @@ components:
           format: int64
           type: integer
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         site_id:
           format: uuid
           type: string
@@ -390,12 +382,9 @@ components:
           format: int64
           type: integer
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         upload_id:
           format: uuid
           type: string
@@ -456,15 +445,12 @@ components:
           description: The URL of this game's banner image.
           type: string
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         developer_group_id:
           format: uuid
           type: string
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         game_id:
           format: uuid
           type: string
@@ -548,8 +534,7 @@ components:
         compression:
           $ref: '#/components/schemas/CloudGamesBuildCompression'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         image_file:
           $ref: '#/components/schemas/UploadPrepareFile'
         image_tag:
@@ -585,8 +570,7 @@ components:
     CloudGamesCreateGameCdnSiteRequest:
       properties:
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         files:
           description: A list of files preparing to upload.
           items:
@@ -619,16 +603,10 @@ components:
           format: uuid
           type: string
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         name_id:
-          description: '**Deprecated**
-
-            A human readable short identifier used to references resources. Different
-            than a `rivet.common#Uuid` because this is intended to be human readable.
-            Different than `rivet.common#DisplayName` because this should not include
-            special characters and be short.'
-          type: string
+          $ref: '#/components/schemas/Identifier'
+          description: '**Deprecated**'
       required:
       - display_name
       - developer_group_id
@@ -646,8 +624,7 @@ components:
         config:
           $ref: '#/components/schemas/CloudVersionConfig'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
       required:
       - display_name
       - config
@@ -860,8 +837,7 @@ components:
     CloudGamesNamespacesCreateGameNamespaceRequest:
       properties:
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         name_id:
           description: A human readable short identifier used to references resources.
             Different than a `rivet.common#Uuid` because this is intended to be human
@@ -1077,8 +1053,7 @@ components:
     CloudGamesNamespacesValidateGameNamespaceRequest:
       properties:
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         name_id:
           description: A human readable short identifier used to references resources.
             Different than a `rivet.common#Uuid` because this is intended to be human
@@ -1152,15 +1127,14 @@ components:
     CloudGamesReserveVersionNameResponse:
       properties:
         version_display_name:
-          type: string
+          $ref: '#/components/schemas/DisplayName'
       required:
       - version_display_name
       type: object
     CloudGamesValidateGameRequest:
       properties:
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         name_id:
           description: '**Deprecated**
 
@@ -1187,8 +1161,7 @@ components:
         config:
           $ref: '#/components/schemas/CloudVersionConfig'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
       required:
       - display_name
       - config
@@ -1254,9 +1227,7 @@ components:
       description: Analytical information about a lobby.
       properties:
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         is_closed:
           description: Whether or not this lobby is in a closed state.
           type: boolean
@@ -1335,8 +1306,7 @@ components:
           description: Whether or not the lobby failed or stopped successfully.
           type: boolean
         stop_ts:
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
       required:
       - stop_ts
       - failed
@@ -1346,9 +1316,7 @@ components:
       description: A logs summary for a lobby.
       properties:
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         lobby_group_name_id:
           description: A human readable short identifier used to references resources.
             Different than a `rivet.common#Uuid` because this is intended to be human
@@ -1362,16 +1330,12 @@ components:
           format: uuid
           type: string
         ready_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         region_id:
           format: uuid
           type: string
         start_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         status:
           $ref: '#/components/schemas/CloudLogsLobbyStatus'
       required:
@@ -1395,9 +1359,7 @@ components:
           format: uuid
           type: string
         ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
       required:
       - label
       - ts
@@ -1406,9 +1368,7 @@ components:
       description: A performance span.
       properties:
         finish_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         label:
           description: The label given to this performance span.
           type: string
@@ -1416,9 +1376,7 @@ components:
           format: uuid
           type: string
         start_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
       required:
       - label
       - start_ts
@@ -1487,12 +1445,9 @@ components:
         config:
           $ref: '#/components/schemas/CloudNamespaceConfig'
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         name_id:
           description: A human readable short identifier used to references resources.
             Different than a `rivet.common#Uuid` because this is intended to be human
@@ -1517,12 +1472,9 @@ components:
       description: A namespace summary.
       properties:
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         name_id:
           description: A human readable short identifier used to references resources.
             Different than a `rivet.common#Uuid` because this is intended to be human
@@ -1546,9 +1498,7 @@ components:
       description: A previously deployed namespace version.
       properties:
         deploy_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         namespace_id:
           description: A universally unique identifier.
           type: string
@@ -1567,11 +1517,9 @@ components:
           description: The server provider of this region.
           type: string
         provider_display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         region_display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         region_id:
           format: uuid
           type: string
@@ -1770,8 +1718,7 @@ components:
     CloudValidateGroupRequest:
       properties:
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
       required:
       - display_name
       type: object
@@ -1917,12 +1864,9 @@ components:
         config:
           $ref: '#/components/schemas/CloudVersionConfig'
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         version_id:
           format: uuid
           type: string
@@ -1970,7 +1914,7 @@ components:
     CloudVersionIdentityCustomDisplayName:
       properties:
         display_name:
-          type: string
+          $ref: '#/components/schemas/DisplayName'
       required:
       - display_name
       type: object
@@ -2465,12 +2409,9 @@ components:
       description: A version summary.
       properties:
         create_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         version_id:
           format: uuid
           type: string
@@ -2480,6 +2421,7 @@ components:
       - display_name
       type: object
     DisplayName:
+      description: Represent a resource's readable display name.
       type: string
     Email:
       description: A valid email address
@@ -2527,8 +2469,7 @@ components:
       description: A game leaderboard category.
       properties:
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
       required:
       - display_name
       type: object
@@ -2536,8 +2477,7 @@ components:
       description: A platform link denoting a supported platform.
       properties:
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         url:
           description: The URL to the given game's method of distribution on this
             platform.
@@ -2558,8 +2498,7 @@ components:
         developer:
           $ref: '#/components/schemas/GroupSummary'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         game_id:
           format: uuid
           type: string
@@ -2784,9 +2723,7 @@ components:
       description: A banned identity.
       properties:
         ban_ts:
-          description: RFC3339 timestamp.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         identity:
           $ref: '#/components/schemas/IdentityHandle'
       required:
@@ -2822,8 +2759,7 @@ components:
     GroupCreateRequest:
       properties:
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
       required:
       - display_name
       type: object
@@ -3008,8 +2944,7 @@ components:
           description: Detailed information about a profile.
           type: string
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         external:
           $ref: '#/components/schemas/GroupExternalLinks'
         group_id:
@@ -3132,19 +3067,16 @@ components:
           description: Detailed information about a profile.
           type: string
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         publicity:
           $ref: '#/components/schemas/GroupPublicity'
       type: object
     GroupValidateProfileRequest:
       properties:
         bio:
-          description: Detailed information about a profile.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         display_name:
-          description: Represent a resource's readable display name.
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         publicity:
           $ref: '#/components/schemas/GroupPublicity'
       type: object
@@ -3243,8 +3175,7 @@ components:
         identity_token:
           $ref: '#/components/schemas/Jwt'
         identity_token_expire_ts:
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
       required:
       - identity_token
       - identity_token_expire_ts
@@ -3554,8 +3485,7 @@ components:
     IdentityPrepareGameLinkResponse:
       properties:
         expire_ts:
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         identity_link_token:
           description: Pass this to `GetGameLink` to get the linking status. Valid
             for 15 minutes.
@@ -3576,8 +3506,7 @@ components:
         status:
           $ref: '#/components/schemas/IdentityStatus'
         update_ts:
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
       required:
       - update_ts
       - status
@@ -3642,8 +3571,7 @@ components:
           description: Whether or not this identity is registered with a linked account.
           type: boolean
         join_ts:
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
         linked_accounts:
           items:
             $ref: '#/components/schemas/IdentityLinkedAccount'
@@ -3712,10 +3640,7 @@ components:
             If this token is compromised, anyone with access to this token has control
             of the identity.'
         identity_token_expire_ts:
-          description: If this token is compromised, anyone with access to this token
-            has control of the identity.
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
       required:
       - identity_token
       - identity_token_expire_ts
@@ -4138,9 +4063,9 @@ components:
         datacenter_distance_from_client:
           $ref: '#/components/schemas/GeoDistance'
         provider_display_name:
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         region_display_name:
-          type: string
+          $ref: '#/components/schemas/DisplayName'
         region_id:
           $ref: '#/components/schemas/Identifier'
       required:
@@ -4157,12 +4082,6 @@ components:
           type: integer
       required:
       - player_count
-      type: object
-    ModuleCallResponse:
-      properties:
-        data: {}
-      required:
-      - data
       type: object
     PortalGetGameProfileResponse:
       properties:
@@ -6602,8 +6521,7 @@ paths:
         name: before_create_ts
         required: false
         schema:
-          format: date-time
-          type: string
+          $ref: '#/components/schemas/Timestamp'
       responses:
         '200':
           content:
@@ -12349,85 +12267,6 @@ paths:
       security: *id001
       tags:
       - MatchmakerRegions
-  /module/modules/{module}/scripts/{script}/call:
-    post:
-      description: Makes a request to a module's script.
-      operationId: module_call
-      parameters:
-      - in: path
-        name: module
-        required: true
-        schema:
-          type: string
-      - in: path
-        name: script
-        required: true
-        schema:
-          type: string
-      - in: header
-        name: origin
-        required: false
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              properties:
-                data: {}
-                namespace_id:
-                  format: uuid
-                  type: string
-              required:
-              - data
-              type: object
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ModuleCallResponse'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '408':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-      security: *id001
-      tags:
-      - Module
   /portal/games/{game_name_id}/profile:
     get:
       description: Returns a game profile.

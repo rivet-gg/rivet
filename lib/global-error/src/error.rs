@@ -84,7 +84,7 @@ impl GlobalError {
 	}
 
 	pub fn bad_request_builder(code: &'static str) -> BadRequestBuilder {
-		BadRequestBuilder::new().code(code)
+		BadRequestBuilder::new(code)
 	}
 
 	/// Matches this error against a `formatted_error::code` variant.
@@ -186,22 +186,17 @@ impl From<GlobalError> for chirp::response::Err {
 
 #[derive(Default)]
 pub struct BadRequestBuilder {
-	code: Option<&'static str>,
+	code: &'static str,
 	context: Option<HashMap<String, String>>,
 	metadata: Option<serde_json::Value>,
 }
 
 impl BadRequestBuilder {
-	pub fn new() -> BadRequestBuilder {
+	pub fn new(code: &'static str) -> BadRequestBuilder {
 		BadRequestBuilder {
+			code,
 			..Default::default()
 		}
-	}
-
-	pub fn code(mut self, code: &'static str) -> BadRequestBuilder {
-		self.code = Some(code);
-
-		self
 	}
 
 	pub fn context(mut self, context: HashMap<String, String>) -> BadRequestBuilder {
@@ -217,18 +212,11 @@ impl BadRequestBuilder {
 	}
 
 	pub fn build(self) -> GlobalError {
-		match self.build_inner() {
-			Ok(err) => err,
-			Err(err) => err,
-		}
-	}
-
-	fn build_inner(self) -> GlobalResult<GlobalError> {
-		Ok(GlobalError::BadRequest {
-			code: self.code.ok_or(BadRequestBuilderError)?.to_string(),
+		GlobalError::BadRequest {
+			code: self.code.to_string(),
 			context: self.context.unwrap_or_else(HashMap::new),
 			metadata: self.metadata.map(|m| m.to_string()),
-		})
+		}
 	}
 }
 

@@ -1028,12 +1028,15 @@ async fn find_inner(
 		debug: None,
 	})
 	.await?;
-	let lobby_id = match find_res
-		.map_err(|msg| backend::matchmaker::lobby_find::ErrorCode::from_i32(msg.error_code))
-	{
+	let lobby_id = match find_res {
 		Ok(res) => unwrap_ref!(res.lobby_id).as_uuid(),
-		Err(Some(code)) => {
-			use backend::matchmaker::lobby_find::ErrorCode::*;
+		Err(err) => {
+			use backend::matchmaker::lobby_find::ErrorCode::{self, *};
+
+			let code = unwrap!(
+				ErrorCode::from_i32(err.error_code),
+				"failed to parse find error code"
+			);
 
 			match code {
 				Unknown => bail!("unknown find error code"),
@@ -1058,7 +1061,6 @@ async fn find_inner(
 				RegistrationRequired => bail_with!(MATCHMAKER_REGISTRATION_REQUIRED),
 			};
 		}
-		Err(None) => bail!("failed to parse find error code"),
 	};
 
 	// Fetch lobby data

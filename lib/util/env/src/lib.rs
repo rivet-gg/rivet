@@ -182,6 +182,7 @@ pub mod cloudflare {
 
 	lazy_static::lazy_static! {
 		static ref CLOUDFLARE_AUTH_TOKEN: Option<String> = std::env::var("CLOUDFLARE_AUTH_TOKEN").ok();
+		static ref CLOUDFLARE_ACCOUNT_ID: Option<String> = std::env::var("CLOUDFLARE_ACCOUNT_ID").ok();
 	}
 
 	pub fn auth_token() -> &'static str {
@@ -194,10 +195,20 @@ pub mod cloudflare {
 		}
 	}
 
+	pub fn account_id() -> &'static str {
+		match &*CLOUDFLARE_ACCOUNT_ID {
+			Some(x) => x.as_str(),
+			None => panic!(
+				"{}",
+				EnvVarError::Missing("CLOUDFLARE_ACCOUNT_ID".to_string())
+			),
+		}
+	}
+
 	pub mod zone {
-		pub mod base {
+		pub mod main {
 			lazy_static::lazy_static! {
-				static ref ID: Option<String> = std::env::var("CLOUDFLARE_ZONE_ID_BASE").ok();
+				static ref ID: Option<String> = std::env::var("CLOUDFLARE_ZONE_ID_MAIN").ok();
 			}
 
 			pub fn id() -> Option<&'static str> {
