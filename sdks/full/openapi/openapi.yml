@@ -111,6 +111,489 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+  /cloud/games:
+    get:
+      description: >-
+        Returns a list of games in which the current identity is a group member
+        of its development team.
+      operationId: cloud_games_getGames
+      tags:
+        - CloudGames
+      parameters:
+        - name: watch_index
+          in: query
+          description: A query parameter denoting the requests watch index.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudGamesGetGamesResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+    post:
+      description: Creates a new game.
+      operationId: cloud_games_createGame
+      tags:
+        - CloudGames
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudGamesCreateGameResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloudGamesCreateGameRequest'
+  /cloud/games/validate:
+    post:
+      description: Validates information used to create a new game.
+      operationId: cloud_games_validateGame
+      tags:
+        - CloudGames
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudGamesValidateGameResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloudGamesValidateGameRequest'
+  /cloud/games/{game_id}:
+    get:
+      description: Returns a game by its game id.
+      operationId: cloud_games_getGameById
+      tags:
+        - CloudGames
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: watch_index
+          in: query
+          description: A query parameter denoting the requests watch index.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudGamesGetGameByIdResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+  /cloud/games/{game_id}/banner-upload/prepare:
+    post:
+      description: Prepares a game banner image upload.
+      operationId: cloud_games_gameBannerUploadPrepare
+      tags:
+        - CloudGames
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudGamesGameBannerUploadPrepareResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloudGamesGameBannerUploadPrepareRequest'
+  /cloud/games/{game_id}/banner-upload/{upload_id}/complete:
+    post:
+      description: >-
+        Completes an game banner image upload. Must be called after the file
+        upload process completes.
+      operationId: cloud_games_gameBannerUploadComplete
+      tags:
+        - CloudGames
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: upload_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+  /cloud/games/{game_id}/logo-upload/prepare:
+    post:
+      description: Prepares a game logo image upload.
+      operationId: cloud_games_gameLogoUploadPrepare
+      tags:
+        - CloudGames
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudGamesGameLogoUploadPrepareResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloudGamesGameLogoUploadPrepareRequest'
+  /cloud/games/{game_id}/logo-upload/{upload_id}/complete:
+    post:
+      description: >-
+        Completes a game logo image upload. Must be called after the file upload
+        process completes.
+      operationId: cloud_games_gameLogoUploadComplete
+      tags:
+        - CloudGames
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: upload_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
   /cloud/games/{game_id}/namespaces:
     post:
       description: Creates a new namespace for the given game.
@@ -5032,489 +5515,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CloudGamesCreateGameCdnSiteRequest'
-  /cloud/games:
-    get:
-      description: >-
-        Returns a list of games in which the current identity is a group member
-        of its development team.
-      operationId: cloud_games_games_getGames
-      tags:
-        - CloudGamesGames
-      parameters:
-        - name: watch_index
-          in: query
-          description: A query parameter denoting the requests watch index.
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CloudGamesGetGamesResponse'
-        '400':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '403':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '404':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '408':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '429':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '500':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-      security: *ref_0
-    post:
-      description: Creates a new game.
-      operationId: cloud_games_games_createGame
-      tags:
-        - CloudGamesGames
-      parameters: []
-      responses:
-        '200':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CloudGamesCreateGameResponse'
-        '400':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '403':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '404':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '408':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '429':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '500':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-      security: *ref_0
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CloudGamesCreateGameRequest'
-  /cloud/games/validate:
-    post:
-      description: Validates information used to create a new game.
-      operationId: cloud_games_games_validateGame
-      tags:
-        - CloudGamesGames
-      parameters: []
-      responses:
-        '200':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CloudGamesValidateGameResponse'
-        '400':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '403':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '404':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '408':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '429':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '500':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-      security: *ref_0
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CloudGamesValidateGameRequest'
-  /cloud/games/{game_id}:
-    get:
-      description: Returns a game by its game id.
-      operationId: cloud_games_games_getGameById
-      tags:
-        - CloudGamesGames
-      parameters:
-        - name: game_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: watch_index
-          in: query
-          description: A query parameter denoting the requests watch index.
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CloudGamesGetGameByIdResponse'
-        '400':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '403':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '404':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '408':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '429':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '500':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-      security: *ref_0
-  /cloud/games/{game_id}/banner-upload/prepare:
-    post:
-      description: Prepares a game banner image upload.
-      operationId: cloud_games_games_gameBannerUploadPrepare
-      tags:
-        - CloudGamesGames
-      parameters:
-        - name: game_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CloudGamesGameBannerUploadPrepareResponse'
-        '400':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '403':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '404':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '408':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '429':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '500':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-      security: *ref_0
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CloudGamesGameBannerUploadPrepareRequest'
-  /cloud/games/{game_id}/banner-upload/{upload_id}/complete:
-    post:
-      description: >-
-        Completes an game banner image upload. Must be called after the file
-        upload process completes.
-      operationId: cloud_games_games_gameBannerUploadComplete
-      tags:
-        - CloudGamesGames
-      parameters:
-        - name: game_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: upload_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: ''
-        '400':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '403':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '404':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '408':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '429':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '500':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-      security: *ref_0
-  /cloud/games/{game_id}/logo-upload/prepare:
-    post:
-      description: Prepares a game logo image upload.
-      operationId: cloud_games_games_gameLogoUploadPrepare
-      tags:
-        - CloudGamesGames
-      parameters:
-        - name: game_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CloudGamesGameLogoUploadPrepareResponse'
-        '400':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '403':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '404':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '408':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '429':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '500':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-      security: *ref_0
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CloudGamesGameLogoUploadPrepareRequest'
-  /cloud/games/{game_id}/logo-upload/{upload_id}/complete:
-    post:
-      description: >-
-        Completes a game logo image upload. Must be called after the file upload
-        process completes.
-      operationId: cloud_games_games_gameLogoUploadComplete
-      tags:
-        - CloudGamesGames
-      parameters:
-        - name: game_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: upload_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: ''
-        '400':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '403':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '404':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '408':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '429':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-        '500':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-      security: *ref_0
   /cloud/games/{game_id}/matchmaker/lobbies/export-history:
     post:
       description: Exports lobby history over a given query time span.
@@ -8425,6 +8425,131 @@ components:
       required:
         - access_token
         - email
+    CloudGamesGetGamesResponse:
+      type: object
+      properties:
+        games:
+          type: array
+          items:
+            $ref: '#/components/schemas/GameSummary'
+          description: A list of game summaries.
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupSummary'
+          description: A list of group summaries.
+        watch:
+          $ref: '#/components/schemas/WatchResponse'
+      required:
+        - games
+        - groups
+        - watch
+    CloudGamesCreateGameRequest:
+      type: object
+      properties:
+        name_id:
+          $ref: '#/components/schemas/Identifier'
+          description: '**Deprecated**'
+        display_name:
+          $ref: '#/components/schemas/DisplayName'
+        developer_group_id:
+          type: string
+          format: uuid
+      required:
+        - display_name
+        - developer_group_id
+    CloudGamesCreateGameResponse:
+      type: object
+      properties:
+        game_id:
+          type: string
+          format: uuid
+      required:
+        - game_id
+    CloudGamesValidateGameRequest:
+      type: object
+      properties:
+        display_name:
+          $ref: '#/components/schemas/DisplayName'
+        name_id:
+          $ref: '#/components/schemas/Identifier'
+          description: '**Deprecated**'
+      required:
+        - display_name
+    CloudGamesValidateGameResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          description: A list of validation errors.
+      required:
+        - errors
+    CloudGamesGetGameByIdResponse:
+      type: object
+      properties:
+        game:
+          $ref: '#/components/schemas/CloudGameFull'
+        watch:
+          $ref: '#/components/schemas/WatchResponse'
+      required:
+        - game
+        - watch
+    CloudGamesGameBannerUploadPrepareRequest:
+      type: object
+      properties:
+        path:
+          type: string
+          description: The path/filename of the game banner.
+        mime:
+          type: string
+          description: The MIME type of the game banner.
+        content_length:
+          type: integer
+          format: int64
+          description: Unsigned 64 bit integer.
+      required:
+        - path
+        - content_length
+    CloudGamesGameBannerUploadPrepareResponse:
+      type: object
+      properties:
+        upload_id:
+          type: string
+          format: uuid
+        presigned_request:
+          $ref: '#/components/schemas/UploadPresignedRequest'
+      required:
+        - upload_id
+        - presigned_request
+    CloudGamesGameLogoUploadPrepareRequest:
+      type: object
+      properties:
+        path:
+          type: string
+          description: The path/filename of the game logo.
+        mime:
+          type: string
+          description: The MIME type of the game logo.
+        content_length:
+          type: integer
+          format: int64
+          description: Unsigned 64 bit integer.
+      required:
+        - path
+        - content_length
+    CloudGamesGameLogoUploadPrepareResponse:
+      type: object
+      properties:
+        upload_id:
+          type: string
+          format: uuid
+        presigned_request:
+          $ref: '#/components/schemas/UploadPresignedRequest'
+      required:
+        - upload_id
+        - presigned_request
     CloudGamesNamespacesInspectResponse:
       type: object
       properties:
@@ -9399,9 +9524,7 @@ components:
           type: string
           description: The name of the service.
         ts:
-          type: string
-          format: date-time
-          description: RFC3339 timestamp.
+          $ref: '#/components/schemas/Timestamp'
         duration:
           type: integer
           format: int64
@@ -10358,137 +10481,6 @@ components:
         - site_id
         - upload_id
         - presigned_requests
-    CloudGamesGetGamesResponse:
-      type: object
-      properties:
-        games:
-          type: array
-          items:
-            $ref: '#/components/schemas/GameSummary'
-          description: A list of game summaries.
-        groups:
-          type: array
-          items:
-            $ref: '#/components/schemas/GroupSummary'
-          description: A list of group summaries.
-        watch:
-          $ref: '#/components/schemas/WatchResponse'
-      required:
-        - games
-        - groups
-        - watch
-    CloudGamesCreateGameRequest:
-      type: object
-      properties:
-        name_id:
-          $ref: '#/components/schemas/Identifier'
-          description: '**Deprecated**'
-        display_name:
-          $ref: '#/components/schemas/DisplayName'
-        developer_group_id:
-          type: string
-          format: uuid
-      required:
-        - display_name
-        - developer_group_id
-    CloudGamesCreateGameResponse:
-      type: object
-      properties:
-        game_id:
-          type: string
-          format: uuid
-      required:
-        - game_id
-    CloudGamesValidateGameRequest:
-      type: object
-      properties:
-        display_name:
-          $ref: '#/components/schemas/DisplayName'
-        name_id:
-          type: string
-          description: >-
-            **Deprecated**
-
-            A human readable short identifier used to references resources.
-            Different than a `rivet.common#Uuid` because this is intended to be
-            human readable. Different than `rivet.common#DisplayName` because
-            this should not include special characters and be short.
-      required:
-        - display_name
-    CloudGamesValidateGameResponse:
-      type: object
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          description: A list of validation errors.
-      required:
-        - errors
-    CloudGamesGetGameByIdResponse:
-      type: object
-      properties:
-        game:
-          $ref: '#/components/schemas/CloudGameFull'
-        watch:
-          $ref: '#/components/schemas/WatchResponse'
-      required:
-        - game
-        - watch
-    CloudGamesGameBannerUploadPrepareRequest:
-      type: object
-      properties:
-        path:
-          type: string
-          description: The path/filename of the game banner.
-        mime:
-          type: string
-          description: The MIME type of the game banner.
-        content_length:
-          type: integer
-          format: int64
-          description: Unsigned 64 bit integer.
-      required:
-        - path
-        - content_length
-    CloudGamesGameBannerUploadPrepareResponse:
-      type: object
-      properties:
-        upload_id:
-          type: string
-          format: uuid
-        presigned_request:
-          $ref: '#/components/schemas/UploadPresignedRequest'
-      required:
-        - upload_id
-        - presigned_request
-    CloudGamesGameLogoUploadPrepareRequest:
-      type: object
-      properties:
-        path:
-          type: string
-          description: The path/filename of the game logo.
-        mime:
-          type: string
-          description: The MIME type of the game logo.
-        content_length:
-          type: integer
-          format: int64
-          description: Unsigned 64 bit integer.
-      required:
-        - path
-        - content_length
-    CloudGamesGameLogoUploadPrepareResponse:
-      type: object
-      properties:
-        upload_id:
-          type: string
-          format: uuid
-        presigned_request:
-          $ref: '#/components/schemas/UploadPresignedRequest'
-      required:
-        - upload_id
-        - presigned_request
     CloudGamesExportMatchmakerLobbyHistoryRequest:
       type: object
       properties:
@@ -11252,6 +11244,7 @@ components:
       type: integer
     Timestamp:
       type: string
+      format: date-time
       description: RFC3339 timestamp
     GlobalEventNotification:
       type: object
@@ -11644,9 +11637,7 @@ components:
         identity:
           $ref: '#/components/schemas/IdentityHandle'
         ts:
-          type: string
-          format: date-time
-          description: RFC3339 timestamp.
+          $ref: '#/components/schemas/Timestamp'
       required:
         - identity
         - ts
@@ -11795,8 +11786,7 @@ components:
       description: An event relevant to the current identity.
       properties:
         ts:
-          type: string
-          format: date-time
+          $ref: '#/components/schemas/Timestamp'
         kind:
           $ref: '#/components/schemas/IdentityGlobalEventKind'
         notification:

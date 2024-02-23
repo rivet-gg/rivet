@@ -1,4 +1,6 @@
-use crate::Location;
+use async_trait::async_trait;
+
+use crate::{bail, GlobalResult, Location};
 
 #[derive(Debug, thiserror::Error)]
 pub enum AssertionError {
@@ -119,6 +121,26 @@ impl<'a, T> UnwrapOrAssertError for &'a &'a Option<T> {
 				message,
 				location,
 			})),
+		}
+	}
+}
+
+#[async_trait]
+pub trait ToGlobalError: Sized {
+	async fn to_global_error(self) -> GlobalResult<Self>;
+}
+
+#[async_trait]
+impl ToGlobalError for reqwest::Response {
+	async fn to_global_error(self) -> GlobalResult<Self> {
+		if self.status().is_success() {
+			Ok(self)
+		} else {
+			let url = self.url().clone();
+			let status = self.status();
+			let body = self.text().await?;
+
+			bail!(format!("{url} ({status}):\n{body}"));
 		}
 	}
 }

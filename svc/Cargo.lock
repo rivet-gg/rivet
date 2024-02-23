@@ -6632,6 +6632,7 @@ dependencies = [
 name = "rivet-util"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "aws-smithy-client 0.41.0",
  "aws-smithy-types 0.41.0",
  "bcrypt",
@@ -6641,6 +6642,7 @@ dependencies = [
  "lazy_static",
  "rand",
  "regex",
+ "reqwest",
  "rivet-util-env",
  "rivet-util-macros",
  "serde",

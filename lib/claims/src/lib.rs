@@ -333,6 +333,23 @@ pub mod ent {
 			})
 		}
 	}
+
+	#[derive(Clone, Debug)]
+	pub struct OpenGbDb {
+		pub environment_id: Uuid,
+		pub db_name: String,
+	}
+
+	impl TryFrom<&schema::entitlement::OpenGbDb> for OpenGbDb {
+		type Error = GlobalError;
+
+		fn try_from(value: &schema::entitlement::OpenGbDb) -> GlobalResult<Self> {
+			Ok(OpenGbDb {
+				environment_id: unwrap!(value.environment_id).as_uuid(),
+				db_name: value.db_name.clone(),
+			})
+		}
+	}
 }
 
 pub trait ClaimsDecode {
@@ -356,6 +373,7 @@ pub trait ClaimsDecode {
 	fn as_cloud_device_link(&self) -> GlobalResult<ent::CloudDeviceLink>;
 	fn as_bypass(&self) -> GlobalResult<ent::Bypass>;
 	fn as_access_token(&self) -> GlobalResult<ent::AccessToken>;
+	fn as_opengb_db(&self) -> GlobalResult<ent::OpenGbDb>;
 }
 
 impl ClaimsDecode for schema::Claims {
@@ -621,6 +639,22 @@ impl ClaimsDecode for schema::Claims {
 			))
 			.and_then(std::convert::identity)
 	}
+
+	fn as_opengb_db(&self) -> GlobalResult<ent::OpenGbDb> {
+		self.entitlements
+			.iter()
+			.find_map(|ent| match &ent.kind {
+				Some(schema::entitlement::Kind::OpengbDb(ent)) => {
+					Some(ent::OpenGbDb::try_from(ent))
+				}
+				_ => None,
+			})
+			.ok_or(err_code!(
+				CLAIMS_MISSING_ENTITLEMENT,
+				entitlements = "OpenGbDb"
+			))
+			.and_then(std::convert::identity)
+	}
 }
 
 pub trait EntitlementTag {
@@ -647,6 +681,7 @@ impl EntitlementTag for schema::Entitlement {
 			schema::entitlement::Kind::CloudDeviceLink(_) => 14,
 			schema::entitlement::Kind::Bypass(_) => 15,
 			schema::entitlement::Kind::AccessToken(_) => 16,
+			schema::entitlement::Kind::OpengbDb(_) => 16,
 		})
 	}
 }

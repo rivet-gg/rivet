@@ -222,6 +222,18 @@ async fn vars(ctx: &ProjectContext) {
 		}
 	}
 
+	// OpenGB
+	vars.insert(
+		"opengb_enabled".into(),
+		json!(config.rivet.opengb.is_some()),
+	);
+	if let Some(opengb) = &config.rivet.opengb {
+		vars.insert(
+			"opengb_shared_tier_project_count".into(),
+			json!(opengb.shared_tier_project_count),
+		);
+	}
+
 	// Regions
 	vars.insert(
 		"primary_region".into(),
@@ -329,10 +341,14 @@ async fn vars(ctx: &ProjectContext) {
 			"name": domain_main_api,
 		}));
 
-		// OGS
+		// OpenGB
 		extra_dns.push(json!({
 			"zone_name": "main",
-			"name": format!("*.ogs.{domain_main}"),
+			"name": format!("*.opengb.{domain_main}"),
+		}));
+		extra_dns.push(json!({
+			"zone_name": "main",
+			"name": format!("db.opengb-internal.{domain_main}"),
 		}));
 
 		// Add services

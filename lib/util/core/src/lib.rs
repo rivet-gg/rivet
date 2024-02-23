@@ -19,6 +19,7 @@ pub mod route;
 pub mod sort;
 pub mod timestamp;
 pub mod uuid;
+pub mod req;
 
 #[cfg(feature = "serde")]
 pub mod serde {
