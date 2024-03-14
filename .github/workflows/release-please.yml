@@ -2,8 +2,8 @@ name: release-please
 
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
 
 permissions:
   contents: write
@@ -16,4 +16,5 @@ jobs:
       - uses: google-github-actions/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          release-type: simple
+          config-file: release-please-config.json
+          target-branch: ${{ github.ref_name }}
