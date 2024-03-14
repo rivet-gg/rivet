@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [24.3.1](https://github.com/rivet-gg/rivet/compare/v24.3.0...v24.3.1) (2024-03-14)
+
+
+### Continuous Integration
+
+* Fix release please not adding all items to changelog ([17291bf](https://github.com/rivet-gg/rivet/commit/17291bf02dfc16c9d01f190a5846fe9b293d3d2b))
+
 ## [24.3.0](https://github.com/rivet-gg/rivet/compare/v24.2.0...v24.3.0) (2024-03-01)
 
 
