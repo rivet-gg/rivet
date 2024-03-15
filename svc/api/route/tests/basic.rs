@@ -244,7 +244,7 @@ async fn job_run() {
 
 		let res = reqwest::Client::new()
 			.get(&format!(
-				"{API_ROUTE_URL}/traefik/config/core?region={region}&token={token}",
+				"{API_ROUTE_URL}/traefik/config/game-guard?region={region}&token={token}",
 				region = region.name_id,
 				token = get_api_route_token().await
 			))
