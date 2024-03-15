@@ -22,8 +22,6 @@ async fn handle(
 	})
 	.await?;
 	if !validation_res.errors.is_empty() {
-		tracing::warn!(errors = ?validation_res.errors, "validation errors");
-
 		let readable_errors = validation_res
 			.errors
 			.iter()

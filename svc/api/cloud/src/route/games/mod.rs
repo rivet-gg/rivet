@@ -46,7 +46,7 @@ pub async fn list(
 			})
 		} else {
 			bail_with!(
-				API_UNAUTHORIZED,
+				API_FORBIDDEN,
 				reason = "Cloud token cannot watch `/games`"
 			);
 		}
