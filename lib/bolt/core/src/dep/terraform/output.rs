@@ -66,6 +66,11 @@ pub struct DnsZones {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct OpenGb {
+	pub dispatcher_namespace_name: TerraformOutputValue<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct KubernetesClusterAws {
 	pub eks_admin_role_arn: TerraformOutputValue<String>,
 }
@@ -138,6 +143,10 @@ pub async fn read_redis(ctx: &ProjectContext) -> Redis {
 		config::ns::RedisProvider::Aws { .. } => read_plan::<Redis>(ctx, "redis_aws").await,
 		config::ns::RedisProvider::Aiven { .. } => read_plan::<Redis>(ctx, "redis_aiven").await,
 	}
+}
+
+pub async fn read_opengb(ctx: &ProjectContext) -> OpenGb {
+	read_plan::<OpenGb>(ctx, "opengb").await
 }
 
 /// Reads a Terraform plan's output and decodes in to type.

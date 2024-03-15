@@ -107,6 +107,12 @@ message Entitlement {
 		string name = 1;
 	}
 
+	// Token used to connect to a neon database through the OpenGB DB proxy
+	message OpenGbDb {
+		rivet.common.Uuid environment_id = 1;
+		string db_name = 2;
+	}
+
 	oneof kind {
 		Refresh refresh = 1;
 		User user = 2;
@@ -123,6 +129,7 @@ message Entitlement {
 		CloudDeviceLink cloud_device_link = 14;
 		Bypass bypass = 15;
 		AccessToken access_token = 16;
+		OpenGbDb opengb_db = 17;
 	}
 
 	reserved 13;

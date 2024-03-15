@@ -173,16 +173,16 @@ impl ProjectContextData {
 				if self.ns().dns.is_some() {
 					assert_eq!(
 						80, *api_http_port,
-						"api_http_port must be 80 if dns is configured"
+						"api_http_port must be 80 if DNS is configured"
 					);
 					assert_eq!(
 						Some(443),
 						*api_https_port,
-						"api_https_port must be 443 if dns is configured"
+						"api_https_port must be 443 if DNS is configured"
 					);
 					assert_eq!(
 						9000, *minio_port,
-						"minio_port must not be changed if dns is configured"
+						"minio_port must not be changed if DNS is configured"
 					);
 				}
 			}
@@ -197,9 +197,17 @@ impl ProjectContextData {
 
 				assert!(
 					self.ns().dns.is_some(),
-					"must have dns configured with a distributed cluster"
+					"must have DNS configured with a distributed cluster"
 				);
 			}
+		}
+
+		// MARK: OpenGB
+		if self.ns().rivet.opengb.is_some() {
+			assert!(
+				self.ns().dns.is_some(),
+				"must have DNS configured with for OpenGB"
+			);
 		}
 
 		// MARK: Dynamic Servers
