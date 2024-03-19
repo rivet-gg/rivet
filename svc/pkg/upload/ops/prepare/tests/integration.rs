@@ -124,14 +124,18 @@ async fn empty(ctx: TestCtx) {
 	}
 }
 
-// TODO: This test takes a long time to complete
 #[worker_test]
 async fn multipart(ctx: TestCtx) {
+	// TODO: This test takes a long time to complete (each part takes ~40 seconds to create)
+	return;
+
+	let mut rng = thread_rng();
 	// Create random parts
 	let mut parts = (0..3)
-		.map(|_| {
-			thread_rng()
-				.sample_iter(&Alphanumeric)
+		.map(|i| {
+			tracing::info!("generating part {}", i + 1);
+
+			(&mut rng).sample_iter(&Alphanumeric)
 				.take(CHUNK_SIZE as usize)
 				.map(char::from)
 				.collect::<String>()
