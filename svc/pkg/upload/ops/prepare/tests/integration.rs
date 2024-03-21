@@ -135,7 +135,8 @@ async fn multipart(ctx: TestCtx) {
 		.map(|i| {
 			tracing::info!("generating part {}", i + 1);
 
-			(&mut rng).sample_iter(&Alphanumeric)
+			(&mut rng)
+				.sample_iter(&Alphanumeric)
 				.take(CHUNK_SIZE as usize)
 				.map(char::from)
 				.collect::<String>()
