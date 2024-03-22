@@ -596,7 +596,10 @@ impl Default for RivetLogin {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(deny_unknown_fields)]
-pub struct RivetTest {}
+pub struct RivetTest {
+	#[serde(default)]
+	pub load_tests: bool,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
