@@ -122,6 +122,10 @@ pub fn nomad(server: &Server) -> String {
 		.replace("__ATS_VLAN_SUBNET__", &net::ats::vlan_ip_net().to_string())
 }
 
+pub fn nomad_health_check() -> String {
+	include_str!("files/nomad_health_check.sh").to_string()
+}
+
 /// Installs Traefik, but does not create the Traefik service.
 pub fn traefik() -> String {
 	include_str!("files/traefik.sh").to_string()
