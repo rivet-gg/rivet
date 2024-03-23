@@ -29,7 +29,6 @@ job-log-worker = { path = "../../../job-log/worker" }
 job-run-worker = { path = "../../../job-run/worker" }
 kv-worker = { path = "../../../kv/worker" }
 mm-worker = { path = "../../../mm/worker" }
-module-worker = { path = "../../../module/worker" }
 push-notification-worker = { path = "../../../push-notification/worker" }
 team-invite-worker = { path = "../../../team-invite/worker" }
 team-worker = { path = "../../../team/worker" }

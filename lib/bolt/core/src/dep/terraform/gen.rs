@@ -41,13 +41,20 @@ pub async fn project(ctx: &ProjectContext) {
 pub async fn gen_bolt_tf(ctx: &ProjectContext, plan_id: &str) -> Result<()> {
 	// Configure the backend
 	let backend = match ctx.ns().terraform.backend {
-		ns::TerraformBackend::Local {} => String::new(),
-		ns::TerraformBackend::Postgres {} => indoc!(
-			"
+		ns::TerraformBackend::Local {} => indoc!(
+			r#"
 			terraform {
-				backend \"pg\" {}
+				backend "local" {}
 			}
-			"
+			"#
+		)
+		.to_string(),
+		ns::TerraformBackend::Postgres {} => indoc!(
+			r#"
+			terraform {
+				backend "pg" {}
+			}
+			"#
 		)
 		.to_string(),
 	};

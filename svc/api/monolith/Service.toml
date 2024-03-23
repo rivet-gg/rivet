@@ -64,12 +64,6 @@ add-path = "/matchmaker"
 [[api.router.mounts]]
 deprecated = true
 path = "/v1"
-subdomain = "module.api"
-add-path = "/module"
-
-[[api.router.mounts]]
-deprecated = true
-path = "/v1"
 subdomain = "portal.api"
 add-path = "/portal"
 
