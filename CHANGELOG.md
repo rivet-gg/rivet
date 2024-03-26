@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [24.4.0](https://github.com/rivet-gg/rivet/compare/v24.3.0...v24.4.0) (2024-03-26)
+
+
+### Features
+
+* add hacky secondary ingress route for game lobbies ([#567](https://github.com/rivet-gg/rivet/issues/567)) ([8bb6bd6](https://github.com/rivet-gg/rivet/commit/8bb6bd64e98d670b8f444cdfce09b81e7093cf45))
+
+
+### Bug Fixes
+
+* add region to dns for path routing ([#574](https://github.com/rivet-gg/rivet/issues/574)) ([e10ad25](https://github.com/rivet-gg/rivet/commit/e10ad25f7ff54666faeb152d642b486ba64a4180))
+* game guard ingress routes getting cobbled ([#569](https://github.com/rivet-gg/rivet/issues/569)) ([bd3a73f](https://github.com/rivet-gg/rivet/commit/bd3a73f6016ad4dae0c8c738293776ca5bdbc7ed))
+* increase default api-route resources for distributed ([#559](https://github.com/rivet-gg/rivet/issues/559)) ([dc6cd79](https://github.com/rivet-gg/rivet/commit/dc6cd79d254b76d326e3a09215e6853ee40df12d))
+* only generate path proxied port for https routes ([#587](https://github.com/rivet-gg/rivet/issues/587)) ([29985ce](https://github.com/rivet-gg/rivet/commit/29985cec4e7683bd1fca1d709fd3dd4b81b6401d))
+* only select primary hostname in mm endpoints ([#577](https://github.com/rivet-gg/rivet/issues/577)) ([3d8e55d](https://github.com/rivet-gg/rivet/commit/3d8e55d00608508c410283f3e1c9f2bf371886e7))
+* remove hardcoded eks role ([#586](https://github.com/rivet-gg/rivet/issues/586)) ([f1546c6](https://github.com/rivet-gg/rivet/commit/f1546c69342216a985c0845b8c8592e09f3ecc15))
+
+
+### Continuous Integration
+
+* Disable Prettier checking on changelog for now ([#563](https://github.com/rivet-gg/rivet/issues/563)) ([8bfad8f](https://github.com/rivet-gg/rivet/commit/8bfad8f6d53810b2acc4cb86ccb95ab16e5f47ea))
+* Fix release please not adding all items to changelog ([#560](https://github.com/rivet-gg/rivet/issues/560)) ([7191325](https://github.com/rivet-gg/rivet/commit/7191325a6782a0af9c584aa1933db922b552b086))
+
 ## [24.3.0](https://github.com/rivet-gg/rivet/compare/v24.2.0...v24.3.0) (2024-03-01)
 
 
