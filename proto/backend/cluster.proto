@@ -21,10 +21,10 @@ message Datacenter {
     rivet.common.Uuid cluster_id = 2;
     string name_id = 3;
     string display_name = 4;
-    
+
     Provider provider = 5;
     string provider_datacenter_id = 6;
-    
+
     repeated Pool pools = 7;
     BuildDeliveryMethod build_delivery_method = 8;
     // Nomad drain time in seconds.
@@ -63,5 +63,5 @@ message Server {
 
     optional int64 cloud_destroy_ts = 7;
 
-    // TODO: Add the rest
+    // TODO: Add the rest of the sql columns
 }
