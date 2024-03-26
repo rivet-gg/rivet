@@ -1,4 +1,4 @@
-use proto::backend::pkg::*;
+use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
@@ -44,7 +44,7 @@ pub async fn prewarm_ats_cache(
 			.paths
 			.iter()
 			.enumerate()
-			.map(|(i, path)| job_run::msg::create::Parameter {
+			.map(|(i, path)| backend::job::Parameter {
 				key: format!("artifact_url_{i}"),
 				value: format!("http://127.0.0.1:8080{path}"),
 			})

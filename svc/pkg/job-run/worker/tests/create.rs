@@ -41,12 +41,16 @@ async fn basic_http(ctx: TestCtx) {
 	msg!([ctx] job_run::msg::create(run_id) {
 		run_id: Some(run_id.into()),
 		region_id: Some(region_id.into()),
-		parameters: vec![
-			job_run::msg::create::Parameter {
-				key: "test_id".into(),
-				value: test_id.clone(),
-			},
-		],
+		parameters: [
+			vec![
+				backend::job::Parameter {
+					key: "test_id".into(),
+					value: test_id.clone(),
+				},
+			],
+			util::env::test_id_param(),
+		]
+		.concat(),
 		job_spec_json: template_res.job_spec_json.clone(),
 		proxied_ports: vec![
 			backend::job::ProxiedPortConfig {
@@ -132,12 +136,16 @@ async fn basic_tcp(ctx: TestCtx) {
 	msg!([ctx] job_run::msg::create(run_id) {
 		run_id: Some(run_id.into()),
 		region_id: Some(region_id.into()),
-		parameters: vec![
-			job_run::msg::create::Parameter {
-				key: "test_id".into(),
-				value: test_id.clone(),
-			},
-		],
+		parameters: [
+			vec![
+				backend::job::Parameter {
+					key: "test_id".into(),
+					value: test_id.clone(),
+				},
+			],
+			util::env::test_id_param(),
+		]
+		.concat(),
 		job_spec_json: template_res.job_spec_json.clone(),
 		proxied_ports: vec![
 			backend::job::ProxiedPortConfig {
@@ -240,12 +248,16 @@ async fn basic_udp(ctx: TestCtx) {
 	msg!([ctx] job_run::msg::create(run_id) {
 		run_id: Some(run_id.into()),
 		region_id: Some(region_id.into()),
-		parameters: vec![
-			job_run::msg::create::Parameter {
-				key: "test_id".into(),
-				value: test_id.clone(),
-			},
-		],
+		parameters: [
+			vec![
+				backend::job::Parameter {
+					key: "test_id".into(),
+					value: test_id.clone(),
+				},
+			],
+			util::env::test_id_param(),
+		]
+		.concat(),
 		job_spec_json: template_res.job_spec_json.clone(),
 		proxied_ports: vec![
 			backend::job::ProxiedPortConfig {
@@ -317,12 +329,16 @@ async fn plan_fail(ctx: TestCtx) {
 	msg!([ctx] job_run::msg::create(run_id) {
 		run_id: Some(run_id.into()),
 		region_id: Some(region_id.into()),
-		parameters: vec![
-			job_run::msg::create::Parameter {
-				key: "test_id".into(),
-				value: test_id.clone(),
-			},
-		],
+		parameters: [
+			vec![
+				backend::job::Parameter {
+					key: "test_id".into(),
+					value: test_id.clone(),
+				},
+			],
+			util::env::test_id_param(),
+		]
+		.concat(),
 		job_spec_json: template_res.job_spec_json.clone(),
 		proxied_ports: vec![],
 		..Default::default()

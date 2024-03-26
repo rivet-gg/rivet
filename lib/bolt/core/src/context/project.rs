@@ -196,8 +196,8 @@ impl ProjectContextData {
 				);
 
 				assert!(
-					self.ns().dns.is_some(),
-					"must have dns configured with a distributed cluster"
+					self.dns_enabled(),
+					"must have dns provider configured with a distributed cluster"
 				);
 			}
 		}
@@ -205,8 +205,8 @@ impl ProjectContextData {
 		// MARK: Dynamic Servers
 		if !self.ns().pools.is_empty() {
 			assert!(
-				self.ns().dns.is_some(),
-				"must have dns configured to provision servers"
+				self.dns_enabled(),
+				"must have dns provider configured to provision servers"
 			);
 		}
 
@@ -726,6 +726,14 @@ impl ProjectContextData {
 
 	pub fn tls_enabled(&self) -> bool {
 		self.ns().dns.is_some()
+	}
+
+	pub fn dns_enabled(&self) -> bool {
+		self.ns()
+			.dns
+			.as_ref()
+			.and_then(|dns| dns.provider.as_ref())
+			.is_some()
 	}
 }
 
