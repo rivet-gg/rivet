@@ -6,5 +6,8 @@ kind = "rust"
 
 [operation]
 
+[secrets]
+"ip_info/token" = { optional = true }
+
 [databases]
 db-ip-info = {}
