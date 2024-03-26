@@ -368,6 +368,8 @@ mod cdn_suite {
 		.await
 		.unwrap();
 
+		tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
 		// Test HTML
 		{
 			let res = test_cdn_path(&version, "/index.html", |req| {
