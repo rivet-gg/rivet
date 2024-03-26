@@ -26,3 +26,7 @@ pub fn job_run() -> bool {
 pub fn billing() -> bool {
 	std::env::var("RIVET_BILLING").ok().is_some()
 }
+
+pub fn email() -> bool {
+	std::env::var("SENDGRID_KEY").ok().is_some()
+}
