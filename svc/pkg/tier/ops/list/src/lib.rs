@@ -38,23 +38,82 @@ impl GameNodeConfig {
 	}
 }
 
-/// Returns the default game node config.
-fn get_game_node_config() -> GameNodeConfig {
-	// TODO: CPU should be different based on the provider. For now, we use the
-	// minimum value from tf/prod/config.tf
+#[operation(name = "tier-list")]
+async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier::list::Response> {
+	let datacenters_res = op!([ctx] cluster_datacenter_get {
+		datacenter_ids: ctx.region_ids.clone(),
+	})
+	.await?;
 
+	let hardware = datacenters_res
+		.datacenters
+		.iter()
+		.map(|dc| {
+			let job_pool = unwrap!(
+				dc.pools
+					.iter()
+					.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32),
+				"no job pool"
+			);
+			let hardware = unwrap!(job_pool.hardware.first(), "no hardware")
+				.provider_hardware
+				.clone();
+
+			Ok((dc.datacenter_id, hardware))
+		})
+		.collect::<GlobalResult<Vec<_>>>()?;
+
+	let instance_types_res = op!([ctx] linode_instance_type_get {
+		hardware_ids: hardware
+			.iter()
+			.map(|(_, hardware)| hardware.clone())
+			.collect::<Vec<_>>(),
+	})
+	.await?;
+
+	let regions = hardware
+		.into_iter()
+		.map(|(datacenter_id, hardware)| {
+			let instance_type = unwrap!(
+				instance_types_res
+					.instance_types
+					.iter()
+					.find(|it| it.hardware_id == hardware),
+				"datacenter hardware stats not found"
+			);
+
+			Ok(tier::list::response::Region {
+				region_id: datacenter_id,
+				tiers: vec![
+					generate_tier(instance_type, "basic-4d1", 4, 1),
+					generate_tier(instance_type, "basic-2d1", 2, 1),
+					generate_tier(instance_type, "basic-1d1", 1, 1),
+					generate_tier(instance_type, "basic-1d2", 1, 2),
+					generate_tier(instance_type, "basic-1d4", 1, 4),
+					generate_tier(instance_type, "basic-1d8", 1, 8),
+					generate_tier(instance_type, "basic-1d16", 1, 16),
+				],
+			})
+		})
+		.collect::<GlobalResult<Vec<_>>>()?;
+
+	Ok(tier::list::Response { regions })
+}
+
+/// Returns the default game node config.
+fn get_game_node_config(
+	instance_type: &linode::instance_type_get::response::InstanceType,
+) -> GameNodeConfig {
 	// Multiply config for 2 core, 4 GB to scale up to the 4 core, 8 GB
 	// plan
 	let mut config = GameNodeConfig {
-		cpu_cores: 4,
+		cpu_cores: instance_type.vcpus,
 		// DigitalOcean: 7,984
 		// Linode: 7,996
 		cpu: 7900,
-		// DigitalOcean: 7,957
-		// Linode: 7,934
-		memory: 7900,
-		disk: 64_000,
-		bandwidth: 2_000_000,
+		memory: instance_type.memory,
+		disk: instance_type.disk,
+		bandwidth: instance_type.network_out * 1000,
 	};
 
 	// Remove reserved resources
@@ -64,37 +123,13 @@ fn get_game_node_config() -> GameNodeConfig {
 	config
 }
 
-#[operation(name = "tier-list")]
-async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier::list::Response> {
-	let region_ids = ctx
-		.region_ids
-		.iter()
-		.map(common::Uuid::as_uuid)
-		.collect::<Vec<_>>();
-
-	let tiers = vec![
-		generate_tier("basic-4d1", 4, 1),
-		generate_tier("basic-2d1", 2, 1),
-		generate_tier("basic-1d1", 1, 1),
-		generate_tier("basic-1d2", 1, 2),
-		generate_tier("basic-1d4", 1, 4),
-		generate_tier("basic-1d8", 1, 8),
-		generate_tier("basic-1d16", 1, 16),
-	];
-
-	Ok(tier::list::Response {
-		regions: region_ids
-			.into_iter()
-			.map(|region_id| tier::list::response::Region {
-				region_id: Some(region_id.into()),
-				tiers: tiers.clone(),
-			})
-			.collect::<Vec<_>>(),
-	})
-}
-
-fn generate_tier(name: &str, numerator: u64, denominator: u64) -> backend::region::Tier {
-	let c = get_game_node_config();
+fn generate_tier(
+	instance_type: &linode::instance_type_get::response::InstanceType,
+	name: &str,
+	numerator: u64,
+	denominator: u64,
+) -> backend::region::Tier {
+	let c = get_game_node_config(instance_type);
 
 	backend::region::Tier {
 		tier_name_id: name.into(),

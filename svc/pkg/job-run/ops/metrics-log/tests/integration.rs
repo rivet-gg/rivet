@@ -79,6 +79,7 @@ async fn cpu_stress(ctx: TestCtx) {
 	}
 }
 
+// TODO:
 #[worker_test]
 async fn memory_stress(ctx: TestCtx) {
 	if !util::feature::job_run() {

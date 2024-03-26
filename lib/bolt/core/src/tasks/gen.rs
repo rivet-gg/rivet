@@ -49,9 +49,6 @@ pub async fn generate_project(ctx: &ProjectContext, skip_config_sync_check: bool
 
 	// Generate root
 	generate_root(ctx.path()).await;
-
-	// Generate regions
-	generate_regions(ctx).await;
 }
 
 async fn generate_root(path: &Path) {
@@ -192,7 +189,7 @@ fn update_libs<'a>(lib_path: &'a Path) -> BoxFuture<'a, ()> {
 	async move {
 		let mut lib_dir = fs::read_dir(lib_path).await.unwrap();
 		while let Some(entry) = lib_dir.next_entry().await.unwrap() {
-			if !entry.metadata().await.unwrap().is_dir() {
+			if !entry.metadata().await.unwrap().is_dir() || entry.file_name() == "nomad-client" {
 				continue;
 			}
 
@@ -213,7 +210,9 @@ fn update_libs<'a>(lib_path: &'a Path) -> BoxFuture<'a, ()> {
 }
 
 async fn set_license(path: &Path) {
-	let toml = fs::read_to_string(path).await.unwrap();
+	let toml = fs::read_to_string(path)
+		.await
+		.expect(&format!("could not read path: {}", path.display()));
 	let mut doc = toml.parse::<toml_edit::Document>().unwrap();
 
 	let mut array = toml_edit::Array::new();
@@ -235,19 +234,6 @@ pub async fn generate_all_services(ctx: &ProjectContext) {
 
 pub async fn generate_service(_ctx: &ServiceContext) {
 	// println!("  * Generating service {}", ctx.name());
-}
-
-async fn generate_regions(ctx: &ProjectContext) {
-	let svc = ctx.service_with_name("region-config-get").await;
-	let gen_path = svc.path().join("gen");
-	let gen_config_path = gen_path.join("region_config.json");
-
-	// Make gen dir
-	fs::create_dir_all(gen_path).await.unwrap();
-
-	// Write config. Use cjson in order to get deterministic output.
-	let regions_json = cjson::to_string(&ctx.ns().regions).unwrap();
-	write_if_different(&gen_config_path, &regions_json).await;
 }
 
 /// Writes to a file if the contents are different.

@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EnvVarError {
@@ -13,7 +14,6 @@ lazy_static::lazy_static! {
 	static ref RUN_CONTEXT: Option<RunContext> = std::env::var("RIVET_RUN_CONTEXT")
 		.ok()
 		.and_then(|ctx| RunContext::from_str(&ctx));
-	static ref PRIMARY_REGION: Option<String> = std::env::var("RIVET_PRIMARY_REGION").ok();
 	static ref NAMESPACE: Option<String> = std::env::var("RIVET_NAMESPACE").ok();
 	static ref CLUSTER_ID: Option<String> = std::env::var("RIVET_CLUSTER_ID").ok();
 	static ref SOURCE_HASH: Option<String> = std::env::var("RIVET_SOURCE_HASH").ok();
@@ -33,7 +33,10 @@ lazy_static::lazy_static! {
 	static ref BILLING: Option<RivetBilling> = std::env::var("RIVET_BILLING")
 		.ok()
 		.map(|x| serde_json::from_str(&x).expect("failed to parse billing"));
-	static ref CLUSTER_TYPE: Option<String> = std::env::var("RIVET_CLUSTER_ID").ok();
+}
+
+pub fn default_cluster_id() -> Uuid {
+	Uuid::nil()
 }
 
 /// Where this code is being written from. This is derived from the `RIVET_RUN_CONTEXT` environment
@@ -137,13 +140,6 @@ pub fn dns_provider() -> Option<&'static str> {
 	DNS_PROVIDER.as_ref().map(|x| x.as_str())
 }
 
-pub fn primary_region() -> &'static str {
-	match &*PRIMARY_REGION {
-		Some(x) => x.as_str(),
-		None => panic!("RIVET_PRIMARY_REGION"),
-	}
-}
-
 pub fn chirp_service_name() -> &'static str {
 	match &*CHIRP_SERVICE_NAME {
 		Some(x) => x.as_str(),
@@ -187,10 +183,7 @@ pub mod cloudflare {
 	pub fn auth_token() -> &'static str {
 		match &*CLOUDFLARE_AUTH_TOKEN {
 			Some(x) => x.as_str(),
-			None => panic!(
-				"{}",
-				EnvVarError::Missing("CLOUDFLARE_AUTH_TOKEN".to_string())
-			),
+			None => panic!("{}", EnvVarError::Missing("CLOUDFLARE_AUTH_TOKEN".to_string())),
 		}
 	}
 
@@ -234,7 +227,9 @@ pub async fn read_secret(key: &[impl AsRef<str>]) -> Result<String, EnvVarError>
 	var(secret_env_var_key(key))
 }
 
-pub async fn read_secret_opt(key: &[impl AsRef<str>]) -> Result<Option<String>, EnvVarError> {
+pub async fn read_secret_opt(
+	key: &[impl AsRef<str>],
+) -> Result<Option<String>, EnvVarError> {
 	let env_var = read_secret(key).await;
 
 	match env_var {
