@@ -20,16 +20,7 @@ you will need to copy its UUID:
 
 Finally, you have two options for pushing your local config to 1password:
 
-1. #### Run `bolt config push` and input values manually
-
-    This method will require you to input the 1password item paths and login details manually. It is recommended to use option 2 instead.
-
-    Path formats:
-
-    - Config: `op://<NAME OF 1PASSWORD VAULT>/<YOUR UUID>/<NAME OF CONFIG FIELD>`
-    - Secrets: `op://<NAME OF 1PASSWORD VAULT>/<YOUR UUID>/<NAME PF SECRETS FIELD>`
-
-2. #### Add the following to your namespace config (located in the `/namespaces` folder):
+1. #### Add the following to your namespace config (located in the `/namespaces` folder):
 
     You can [generate a service token](https://developer.1password.com/docs/service-accounts/) and write it to your `Bolt.local.toml` file to make config syncing quicker:
 
@@ -47,6 +38,15 @@ Finally, you have two options for pushing your local config to 1password:
     ```
 
     Finally, run `bolt config push`.
+
+2. #### Run `bolt config push` and input values manually
+
+    This method will require you to input the 1password item paths and login details manually. It is recommended to use option 1 instead.
+
+    Path formats:
+
+    - Config: `op://<NAME OF 1PASSWORD VAULT>/<YOUR UUID>/<NAME OF CONFIG FIELD>`
+    - Secrets: `op://<NAME OF 1PASSWORD VAULT>/<YOUR UUID>/<NAME PF SECRETS FIELD>`
 
 ## Pulling
 
