@@ -36,11 +36,6 @@ async fn worker(
 
 	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
 	let zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
-	let record_name = format!(
-		"*.lobby.{}.{}",
-		server.datacenter_id,
-		unwrap!(util::env::domain_job())
-	);
 	let public_ip = server.public_ip.as_str().parse::<Ipv4Addr>()?;
 
 	// Create cloudflare HTTP client
@@ -51,6 +46,11 @@ async fn worker(
 	)
 	.map_err(crate::CloudflareError::from)?;
 
+	let record_name = format!(
+		"*.lobby.{}.{}",
+		server.datacenter_id,
+		unwrap!(util::env::domain_job()),
+	);
 	let create_record_res = client
 		.request(&cf::dns::CreateDnsRecord {
 			zone_identifier: zone_id,
@@ -63,22 +63,50 @@ async fn worker(
 			},
 		})
 		.await?;
-
-	// Save record id for deletion
 	let record_id = create_record_res.result.id;
+
+	let secondary_record_name = format!(
+		"lobby.{}.{}",
+		server.datacenter_id,
+		unwrap!(util::env::domain_job()),
+	);
+	let create_secondary_record_res = client
+		.request(&cf::dns::CreateDnsRecord {
+			zone_identifier: zone_id,
+			params: cf::dns::CreateDnsRecordParams {
+				name: &secondary_record_name,
+				content: cf::dns::DnsContent::A { content: public_ip },
+				proxied: Some(false),
+				ttl: Some(60),
+				priority: None,
+			},
+		})
+		.await;
+
+	// Optionally get secondary record id
+	let secondary_dns_record_id = create_secondary_record_res
+		.as_ref()
+		.ok()
+		.map(|res| res.result.id.clone());
+
+	// Save record ids for deletion
 	sql_execute!(
 		[ctx]
 		"
 		INSERT INTO db_cluster.cloudflare_misc (
 			server_id,
-			dns_record_id
+			dns_record_id,
+			dns_record_id_secondary
 		)
 		VALUES ($1, $2)
 		",
 		server_id,
 		record_id,
+		secondary_dns_record_id
 	)
 	.await?;
+
+	create_secondary_record_res?;
 
 	Ok(())
 }
