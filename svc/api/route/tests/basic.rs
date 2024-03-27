@@ -202,7 +202,7 @@ async fn job_run() {
 	if !util::feature::job_run() {
 		return;
 	}
-	
+
 	struct Namespace {
 		namespace_id: Uuid,
 		domain: String,

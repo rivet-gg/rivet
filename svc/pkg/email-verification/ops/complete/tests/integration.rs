@@ -6,7 +6,7 @@ async fn correct(ctx: TestCtx) {
 	if !util::feature::email() {
 		return;
 	}
-	
+
 	let create_res = op!([ctx] email_verification_create {
 		email: "test@rivet.gg".into(),
 	})
@@ -60,7 +60,7 @@ async fn incorrect(ctx: TestCtx) {
 	if !util::feature::email() {
 		return;
 	}
-	
+
 	let create_res = op!([ctx] email_verification_create {
 		email: "test@rivet.gg".into(),
 	})

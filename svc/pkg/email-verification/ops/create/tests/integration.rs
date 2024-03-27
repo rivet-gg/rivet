@@ -6,7 +6,7 @@ async fn normal(ctx: TestCtx) {
 	if !util::feature::email() {
 		return;
 	}
-	
+
 	let res = op!([ctx] email_verification_create {
 		email: "test@rivet.gg".into(),
 	})
