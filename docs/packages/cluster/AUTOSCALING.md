@@ -1,6 +1,6 @@
 # Autoscaling
 
-Autoscaling occurs in the `cluster-autoscale` service, which runs every 15 seconds.
+The autoscaler service runs every 15 seconds.
 
 ## Why memory?
 

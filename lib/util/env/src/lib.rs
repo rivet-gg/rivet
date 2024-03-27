@@ -35,10 +35,6 @@ lazy_static::lazy_static! {
 		.map(|x| serde_json::from_str(&x).expect("failed to parse billing"));
 }
 
-pub fn default_cluster_id() -> Uuid {
-	Uuid::nil()
-}
-
 /// Where this code is being written from. This is derived from the `RIVET_RUN_CONTEXT` environment
 /// variable.
 ///
@@ -61,6 +57,11 @@ impl RunContext {
 
 pub fn run_context() -> RunContext {
 	RUN_CONTEXT.clone().expect("RIVET_RUN_CONTEXT")
+}
+
+// Cluster id for provisioning servers
+pub fn default_cluster_id() -> Uuid {
+	Uuid::nil()
 }
 
 /// The namespace this service is running in. This is derived from the `NAMESPACE` environment
@@ -251,7 +252,6 @@ pub fn secret_env_var_key(key: &[impl AsRef<str>]) -> String {
 
 pub fn var(name: impl AsRef<str>) -> Result<String, EnvVarError> {
 	let env_var = std::env::var(name.as_ref());
-
 	match env_var {
 		Ok(v) => Ok(v),
 		Err(var_error) => match var_error {

@@ -6,5 +6,5 @@ async fn basic() {
 		.with_span_events(tracing_subscriber::fmt::format::FmtSpan::NONE)
 		.init();
 
-	cluster_default_update::run_from_env().await.unwrap();
+	cluster_default_update::run_from_env(false).await.unwrap();
 }

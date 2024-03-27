@@ -1,9 +1,0 @@
-[service]
-name = "cluster-autoscale"
-
-[runtime]
-kind = "rust"
-
-[headless]
-singleton = true
-
