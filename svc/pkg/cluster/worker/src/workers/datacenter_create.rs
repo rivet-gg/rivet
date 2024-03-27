@@ -16,8 +16,13 @@ async fn worker(
 		}
 	}
 
-	let mut config_buf = Vec::with_capacity(config.encoded_len());
-	config.encode(&mut config_buf)?;
+	// Copy pools config to write to db
+	let pools = cluster::msg::datacenter_create::Pools {
+		pools: config.pools.clone(),
+	};
+
+	let mut pools_buf = Vec::with_capacity(pools.encoded_len());
+	pools.encode(&mut pools_buf)?;
 
 	sql_execute!(
 		[ctx]
@@ -25,16 +30,25 @@ async fn worker(
 		INSERT INTO db_cluster.datacenters (
 			datacenter_id,
 			cluster_id,
-			config,
-			name_id
+			name_id,
+			display_name,
+			provider,
+			provider_datacenter_id,
+			pools,
+			build_delivery_method,
+			drain_timeout
 		)
-		VALUES ($1, $2, $3, $4)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		",
 		datacenter_id,
 		cluster_id,
-		config_buf,
-		// Datacenters have a unique constraint on name ids
 		&config.name_id,
+		&config.display_name,
+		config.provider as i64,
+		&config.provider_datacenter_id,
+		pools_buf,
+		config.build_delivery_method as i64,
+		config.drain_timeout as i64
 	)
 	.await?;
 

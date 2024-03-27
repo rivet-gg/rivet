@@ -8,8 +8,14 @@ CREATE TABLE clusters (
 CREATE TABLE datacenters (
     datacenter_id UUID PRIMARY KEY,
 	cluster_id UUID NOT NULL REFERENCES clusters (cluster_id),
-	config BYTES NOT NULL,
 	name_id TEXT NOT NULL,
+	display_name TEXT NOT NULL,
+	provider INT NOT NULL,
+	provider_datacenter_id TEXT NOT NULL,
+	provider_api_token TEXT,
+	pools BYTES NOT NULL,
+	build_delivery_method INT NOT NULL,
+	drain_timeout INT NOT NULL,
 
 	UNIQUE (cluster_id, name_id),
 	INDEX (cluster_id)
