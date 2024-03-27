@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use chirp_worker::prelude::*;
 use proto::backend::{self, pkg::*};
 
@@ -125,8 +123,6 @@ async fn gg_autoscale(ctx: &TestCtx, setup_cluster: &SetupCluster) {
 
 struct SetupCluster {
 	datacenter_id: Uuid,
-	job_server_id: Uuid,
-	ats_server_id: Uuid,
 }
 
 async fn setup_cluster(ctx: &TestCtx) -> SetupCluster {
@@ -260,9 +256,5 @@ async fn setup_cluster(ctx: &TestCtx) -> SetupCluster {
 	.await
 	.unwrap();
 
-	SetupCluster {
-		datacenter_id,
-		job_server_id,
-		ats_server_id,
-	}
+	SetupCluster { datacenter_id }
 }

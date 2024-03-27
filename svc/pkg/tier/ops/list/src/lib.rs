@@ -1,42 +1,6 @@
 use proto::backend::{self, pkg::*};
 use rivet_operation::prelude::*;
-
-// See pkr/static/nomad-config.hcl.tpl client.reserved
-const RESERVE_SYSTEM_CPU: u64 = 500;
-const RESERVE_SYSTEM_MEMORY: u64 = 512;
-
-// See module.traefik_job resources
-const RESERVE_LB_CPU: u64 = 1500;
-const RESERVE_LB_MEMORY: u64 = 512;
-
-const RESERVE_CPU: u64 = RESERVE_SYSTEM_CPU + RESERVE_LB_CPU;
-const RESERVE_MEMORY: u64 = RESERVE_SYSTEM_MEMORY + RESERVE_LB_MEMORY;
-
-struct GameNodeConfig {
-	cpu_cores: u64,
-	cpu: u64,
-	memory: u64,
-	disk: u64,
-	bandwidth: u64,
-}
-
-impl GameNodeConfig {
-	fn cpu_per_core(&self) -> u64 {
-		self.cpu / self.cpu_cores
-	}
-
-	fn memory_per_core(&self) -> u64 {
-		self.memory / self.cpu_cores
-	}
-
-	fn disk_per_core(&self) -> u64 {
-		self.disk / self.cpu_cores
-	}
-
-	fn bandwidth_per_core(&self) -> u64 {
-		self.bandwidth / self.cpu_cores
-	}
-}
+use util_cluster::JobNodeConfig;
 
 #[operation(name = "tier-list")]
 async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier::list::Response> {
@@ -55,6 +19,8 @@ async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier
 					.find(|pool| pool.pool_type == backend::cluster::PoolType::Job as i32),
 				"no job pool"
 			);
+
+			// Choose the first hardware in the list
 			let hardware = unwrap!(job_pool.hardware.first(), "no hardware")
 				.provider_hardware
 				.clone();
@@ -81,17 +47,27 @@ async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier
 					.find(|it| it.hardware_id == hardware),
 				"datacenter hardware stats not found"
 			);
+			let config = JobNodeConfig::from_linode(instance_type);
+
+			let config =
+				JobNodeConfig::from_linode(&linode::instance_type_get::response::InstanceType {
+					hardware_id: "".to_string(),
+					vcpus: 8,
+					memory: 2u64.pow(14),
+					disk: 2u64.pow(15) * 10,
+					transfer: 6_000,
+				});
 
 			Ok(tier::list::response::Region {
 				region_id: datacenter_id,
 				tiers: vec![
-					generate_tier(instance_type, "basic-4d1", 4, 1),
-					generate_tier(instance_type, "basic-2d1", 2, 1),
-					generate_tier(instance_type, "basic-1d1", 1, 1),
-					generate_tier(instance_type, "basic-1d2", 1, 2),
-					generate_tier(instance_type, "basic-1d4", 1, 4),
-					generate_tier(instance_type, "basic-1d8", 1, 8),
-					generate_tier(instance_type, "basic-1d16", 1, 16),
+					generate_tier(&config, "basic-4d1", 4, 1),
+					generate_tier(&config, "basic-2d1", 2, 1),
+					generate_tier(&config, "basic-1d1", 1, 1),
+					generate_tier(&config, "basic-1d2", 1, 2),
+					generate_tier(&config, "basic-1d4", 1, 4),
+					generate_tier(&config, "basic-1d8", 1, 8),
+					generate_tier(&config, "basic-1d16", 1, 16),
 				],
 			})
 		})
@@ -100,37 +76,12 @@ async fn handle(ctx: OperationContext<tier::list::Request>) -> GlobalResult<tier
 	Ok(tier::list::Response { regions })
 }
 
-/// Returns the default game node config.
-fn get_game_node_config(
-	instance_type: &linode::instance_type_get::response::InstanceType,
-) -> GameNodeConfig {
-	// Multiply config for 2 core, 4 GB to scale up to the 4 core, 8 GB
-	// plan
-	let mut config = GameNodeConfig {
-		cpu_cores: instance_type.vcpus,
-		// DigitalOcean: 7,984
-		// Linode: 7,996
-		cpu: 7900,
-		memory: instance_type.memory,
-		disk: instance_type.disk,
-		bandwidth: instance_type.network_out * 1000,
-	};
-
-	// Remove reserved resources
-	config.cpu -= RESERVE_CPU;
-	config.memory -= RESERVE_MEMORY;
-
-	config
-}
-
 fn generate_tier(
-	instance_type: &linode::instance_type_get::response::InstanceType,
+	c: &JobNodeConfig,
 	name: &str,
 	numerator: u64,
 	denominator: u64,
 ) -> backend::region::Tier {
-	let c = get_game_node_config(instance_type);
-
 	backend::region::Tier {
 		tier_name_id: name.into(),
 		rivet_cores_numerator: numerator as u32,

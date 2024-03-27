@@ -8744,6 +8744,7 @@ dependencies = [
  "linode-instance-type-get",
  "prost 0.10.4",
  "rivet-operation",
+ "rivet-util-cluster",
 ]
 
 [[package]]
