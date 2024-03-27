@@ -43,7 +43,12 @@ async fn worker(
 	};
 
 	// Build HTTP client
-	let client = util_linode::Client::new().await?;
+	let api_token = if let Some(api_token) = ctx.api_token.clone() {
+		api_token
+	} else {
+		util::env::read_secret(&["linode", "token"]).await?
+	};
+	let client = util_linode::Client::new(&api_token).await?;
 
 	match provision(ctx, &crdb, &client, &prebake_server).await {
 		Ok(public_ip) => {
@@ -53,6 +58,7 @@ async fn worker(
 				pool_type: ctx.pool_type,
 				server_id: None,
 				provider: backend::cluster::Provider::Linode as i32,
+				provider_api_token: ctx.api_token.clone(),
 				initialize_immediately: false,
 			})
 			.await?;
