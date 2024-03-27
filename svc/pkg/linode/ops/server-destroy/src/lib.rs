@@ -33,7 +33,12 @@ pub async fn handle(
 	};
 
 	// Build HTTP client
-	let client = util_linode::Client::new().await?;
+	let api_token = if let Some(api_token) = ctx.api_token.clone() {
+		api_token
+	} else {
+		util::env::read_secret(&["linode", "token"]).await?
+	};
+	let client = util_linode::Client::new(&api_token).await?;
 
 	if let Some(linode_id) = data.linode_id {
 		api::delete_instance(&client, linode_id).await?;

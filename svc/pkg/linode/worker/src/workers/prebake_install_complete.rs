@@ -21,12 +21,17 @@ async fn worker(
 		FROM db_cluster.server_images_linode_misc
 		WHERE public_ip = $1
 		",
-		&ctx.ip,
+		&ctx.public_ip,
 	)
 	.await?;
 
 	// Build HTTP client
-	let client = util_linode::Client::new().await?;
+	let api_token = if let Some(api_token) = ctx.api_token.clone() {
+		api_token
+	} else {
+		util::env::read_secret(&["linode", "token"]).await?
+	};
+	let client = util_linode::Client::new(&api_token).await?;
 
 	// Shut down server before creating custom image
 	api::shut_down(&client, prebake_server.linode_id).await?;
