@@ -16,8 +16,7 @@ pub struct Client {
 }
 
 impl Client {
-	pub async fn new() -> GlobalResult<Self> {
-		let api_token = util::env::read_secret(&["linode", "token"]).await?;
+	pub async fn new(api_token: &str) -> GlobalResult<Self> {
 		let auth = format!("Bearer {}", api_token);
 		let mut headers = header::HeaderMap::new();
 		headers.insert(header::AUTHORIZATION, header::HeaderValue::from_str(&auth)?);
@@ -32,7 +31,7 @@ impl Client {
 		})
 	}
 
-	pub async fn new_with_headers(mut headers: header::HeaderMap) -> GlobalResult<Self> {
+	pub async fn new_with_headers(api_token: &str, mut headers: header::HeaderMap) -> GlobalResult<Self> {
 		let api_token = util::env::read_secret(&["linode", "token"]).await?;
 		let auth = format!("Bearer {}", api_token);
 		headers.insert(header::AUTHORIZATION, header::HeaderValue::from_str(&auth)?);

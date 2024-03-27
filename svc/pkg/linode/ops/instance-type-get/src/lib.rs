@@ -7,7 +7,8 @@ pub async fn handle(
 	ctx: OperationContext<linode::instance_type_get::Request>,
 ) -> GlobalResult<linode::instance_type_get::Response> {
 	// Build HTTP client
-	let client = util_linode::Client::new().await?;
+	let api_token = util::env::read_secret(&["linode", "token"]).await?;
+	let client = util_linode::Client::new(&api_token).await?;
 
 	// Get hardware stats from linode and cache
 	let instance_types_res = ctx
