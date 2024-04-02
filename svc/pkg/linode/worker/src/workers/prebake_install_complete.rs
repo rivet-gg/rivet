@@ -4,7 +4,10 @@ use util_linode::api;
 
 #[derive(sqlx::FromRow)]
 struct PrebakeServer {
-	variant: String,
+	install_hash: String,
+	datacenter_id: Uuid,
+	pool_type: i64,
+
 	linode_id: i64,
 	disk_id: i64,
 }
@@ -13,11 +16,13 @@ struct PrebakeServer {
 async fn worker(
 	ctx: &OperationContext<linode::msg::prebake_install_complete::Message>,
 ) -> GlobalResult<()> {
-	let crdb = ctx.crdb().await?;
+	let datacenter_id = unwrap_ref!(ctx.datacenter_id).as_uuid();
+
 	let prebake_server = sql_fetch_one!(
-		[ctx, PrebakeServer, &crdb]
+		[ctx, PrebakeServer]
 		"
-		SELECT variant, linode_id, disk_id
+		SELECT
+			install_hash, datacenter_id, pool_type, linode_id, disk_id
 		FROM db_cluster.server_images_linode_misc
 		WHERE public_ip = $1
 		",
@@ -25,8 +30,14 @@ async fn worker(
 	)
 	.await?;
 
+	let datacenter_res = op!([ctx] cluster_datacenter_get {
+		datacenter_ids: vec![datacenter_id.into()],
+	})
+	.await?;
+	let datacenter = unwrap!(datacenter_res.datacenters.first());
+
 	// Build HTTP client
-	let api_token = if let Some(api_token) = ctx.api_token.clone() {
+	let api_token = if let Some(api_token) = datacenter.provider_api_token.clone() {
 		api_token
 	} else {
 		util::env::read_secret(&["linode", "token"]).await?
@@ -45,13 +56,18 @@ async fn worker(
 
 	// Write image id
 	sql_execute!(
-		[ctx, &crdb]
+		[ctx]
 		"
 		UPDATE db_cluster.server_images_linode_misc
-		SET image_id = $2
-		WHERE variant = $1
+		SET image_id = $4
+		WHERE
+			install_hash = $1 AND
+			datacenter_id = $2 AND
+			pool_type = $3
 		",
-		&prebake_server.variant,
+		util_cluster::INSTALL_SCRIPT_HASH,
+		prebake_server.datacenter_id,
+		prebake_server.pool_type as i64,
 		create_image_res.id,
 	)
 	.await?;

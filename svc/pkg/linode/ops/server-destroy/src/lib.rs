@@ -15,6 +15,13 @@ pub async fn handle(
 ) -> GlobalResult<linode::server_destroy::Response> {
 	let crdb = ctx.crdb().await?;
 	let server_id = unwrap_ref!(ctx.server_id).as_uuid();
+	let datacenter_id = unwrap!(ctx.datacenter_id);
+
+	let datacenter_res = op!([ctx] cluster_datacenter_get {
+		datacenter_ids: vec![datacenter_id],
+	})
+	.await?;
+	let datacenter = unwrap!(datacenter_res.datacenters.first());
 
 	let data = sql_fetch_optional!(
 		[ctx, LinodeData, &crdb]
@@ -33,7 +40,7 @@ pub async fn handle(
 	};
 
 	// Build HTTP client
-	let api_token = if let Some(api_token) = ctx.api_token.clone() {
+	let api_token = if let Some(api_token) = datacenter.provider_api_token.clone() {
 		api_token
 	} else {
 		util::env::read_secret(&["linode", "token"]).await?

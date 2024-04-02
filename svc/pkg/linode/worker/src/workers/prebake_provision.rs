@@ -7,7 +7,14 @@ async fn worker(
 	ctx: &OperationContext<linode::msg::prebake_provision::Message>,
 ) -> GlobalResult<()> {
 	let crdb = ctx.crdb().await?;
+	let datacenter_id = unwrap_ref!(ctx.datacenter_id).as_uuid();
 	let pool_type = unwrap!(PoolType::from_i32(ctx.pool_type));
+
+	let datacenter_res = op!([ctx] cluster_datacenter_get {
+		datacenter_ids: vec![datacenter_id.into()],
+	})
+	.await?;
+	let datacenter = unwrap!(datacenter_res.datacenters.first());
 
 	let ns = util::env::namespace();
 	let pool_type_str = match pool_type {
@@ -16,8 +23,8 @@ async fn worker(
 		PoolType::Ats => "ats",
 	};
 	let provider_datacenter_id = &ctx.provider_datacenter_id;
-
-	let name = util_cluster::simple_image_variant(provider_datacenter_id, pool_type);
+	// Prebake server labels just have to be unique, they are ephemeral
+	let name = format!("{ns}-{}", Uuid::new_v4());
 
 	let tags = ctx
 		.tags
@@ -43,22 +50,22 @@ async fn worker(
 	};
 
 	// Build HTTP client
-	let api_token = if let Some(api_token) = ctx.api_token.clone() {
+	let api_token = if let Some(api_token) = datacenter.provider_api_token.clone() {
 		api_token
 	} else {
 		util::env::read_secret(&["linode", "token"]).await?
 	};
 	let client = util_linode::Client::new(&api_token).await?;
 
-	match provision(ctx, &crdb, &client, &prebake_server).await {
+	match provision(ctx, &crdb, &client, datacenter_id, &prebake_server).await {
 		Ok(public_ip) => {
 			// Continue to install
 			msg!([ctx] cluster::msg::server_install(&public_ip) {
 				public_ip: public_ip,
 				pool_type: ctx.pool_type,
 				server_id: None,
+				datacenter_id: ctx.datacenter_id,
 				provider: backend::cluster::Provider::Linode as i32,
-				provider_api_token: ctx.api_token.clone(),
 				initialize_immediately: false,
 			})
 			.await?;
@@ -66,7 +73,7 @@ async fn worker(
 		// Handle provisioning errors gracefully
 		Err(err) => {
 			tracing::error!(?err, "failed to provision server, destroying");
-			destroy(ctx, &crdb, &client).await?;
+			destroy(ctx, &crdb, &client, datacenter_id).await?;
 
 			// NOTE: This will retry indefinitely to provision a prebake server
 			retry_bail!("failed to provision server");
@@ -80,6 +87,7 @@ async fn provision(
 	ctx: &OperationContext<linode::msg::prebake_provision::Message>,
 	crdb: &CrdbPool,
 	client: &util_linode::Client,
+	datacenter_id: Uuid,
 	server: &api::ProvisionCtx,
 ) -> GlobalResult<String> {
 	// Create SSH key
@@ -87,15 +95,19 @@ async fn provision(
 
 	// Write SSH key id
 	sql_execute!(
-		[ctx, &crdb]
+		[ctx]
 		"
 		INSERT INTO db_cluster.server_images_linode_misc (
-			variant,
+			install_hash,
+			datacenter_id,
+			pool_type,
 			ssh_key_id
 		)
-		VALUES ($1, $2)
+		VALUES ($1, $2, $3, $4)
 		",
-		&ctx.variant,
+		util_cluster::INSTALL_SCRIPT_HASH,
+		datacenter_id,
+		ctx.pool_type as i64,
 		ssh_key_res.id as i64,
 	)
 	.await?;
@@ -105,13 +117,18 @@ async fn provision(
 
 	// Write linode id
 	sql_execute!(
-		[ctx, &crdb]
+		[ctx]
 		"
 		UPDATE db_cluster.server_images_linode_misc
-		SET linode_id = $2
-		WHERE variant = $1
+		SET linode_id = $4
+		WHERE
+			install_hash = $1 AND
+			datacenter_id = $2 AND
+			pool_type = $3
 		",
-		&ctx.variant,
+		util_cluster::INSTALL_SCRIPT_HASH,
+		datacenter_id,
+		ctx.pool_type as i64,
 		linode_id as i64,
 	)
 	.await?;
@@ -136,10 +153,15 @@ async fn provision(
 		[ctx, &crdb]
 		"
 		UPDATE db_cluster.server_images_linode_misc
-		SET firewall_id = $2
-		WHERE variant = $1
+		SET firewall_id = $4
+		WHERE
+			install_hash = $1 AND
+			datacenter_id = $2 AND
+			pool_type = $3
 		",
-		&ctx.variant,
+		util_cluster::INSTALL_SCRIPT_HASH,
+		datacenter_id,
+		ctx.pool_type as i64,
 		firewall_res.id as i64,
 	)
 	.await?;
@@ -154,11 +176,16 @@ async fn provision(
 		"
 		UPDATE db_cluster.server_images_linode_misc
 		SET
-			disk_id = $2,
-			public_ip = $3
-		WHERE variant = $1
+			disk_id = $4,
+			public_ip = $5
+		WHERE
+			install_hash = $1 AND
+			datacenter_id = $2 AND
+			pool_type = $3
 		",
-		&ctx.variant,
+		util_cluster::INSTALL_SCRIPT_HASH,
+		datacenter_id,
+		ctx.pool_type as i64,
 		create_disks_res.boot_id as i64,
 		&public_ip,
 	)
@@ -178,15 +205,21 @@ async fn destroy(
 	ctx: &OperationContext<linode::msg::prebake_provision::Message>,
 	crdb: &CrdbPool,
 	client: &util_linode::Client,
+	datacenter_id: Uuid,
 ) -> GlobalResult<()> {
 	let data = sql_fetch_optional!(
 		[ctx, LinodeData, &crdb]
 		"
 		SELECT ssh_key_id, linode_id, firewall_id
 		FROM db_cluster.server_images_linode_misc
-		WHERE variant = $1
+		WHERE
+			install_hash = $1 AND
+			datacenter_id = $2 AND
+			pool_type = $3
 		",
-		&ctx.variant,
+		util_cluster::INSTALL_SCRIPT_HASH,
+		datacenter_id,
+		ctx.pool_type as i64,
 	)
 	.await?;
 
@@ -207,12 +240,17 @@ async fn destroy(
 
 	// Remove record
 	sql_execute!(
-		[ctx, &crdb]
+		[ctx]
 		"
 		DELETE FROM db_cluster.server_images_linode_misc
-		WHERE variant = $1
+		WHERE
+			install_hash = $1 AND
+			datacenter_id = $2 AND
+			pool_type = $3
 		",
-		&ctx.variant,
+		util_cluster::INSTALL_SCRIPT_HASH,
+		datacenter_id,
+		ctx.pool_type as i64,
 	)
 	.await?;
 
