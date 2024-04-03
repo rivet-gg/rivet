@@ -4,8 +4,37 @@ All URIs are relative to *https://api.rivet.gg*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**admin_cluster_create**](AdminClusterApi.md#admin_cluster_create) | **POST** /cluster/create | 
 [**admin_cluster_get_server_ips**](AdminClusterApi.md#admin_cluster_get_server_ips) | **GET** /cluster/server_ips | 
 
+
+
+## admin_cluster_create
+
+> crate::models::AdminClusterCreateResponse admin_cluster_create(admin_cluster_create_request)
+
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**admin_cluster_create_request** | [**AdminClusterCreateRequest**](AdminClusterCreateRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::AdminClusterCreateResponse**](AdminClusterCreateResponse.md)
+
+### Authorization
+
+[BearerAuth](../README.md#BearerAuth)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 
 ## admin_cluster_get_server_ips

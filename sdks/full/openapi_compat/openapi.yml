@@ -2,6 +2,27 @@ components:
   schemas:
     AccountNumber:
       type: integer
+    AdminClusterCreateRequest:
+      properties:
+        cluster_id:
+          format: uuid
+          type: string
+        name:
+          type: string
+        owner_team_id:
+          format: uuid
+          type: string
+      required:
+      - name
+      type: object
+    AdminClusterCreateResponse:
+      properties:
+        cluster_id:
+          format: uuid
+          type: string
+      required:
+      - cluster_id
+      type: object
     AdminClusterGetServerIpsResponse:
       properties:
         ips:
@@ -7806,6 +7827,62 @@ paths:
       security: *id001
       tags:
       - CloudUploads
+  /cluster/create:
+    post:
+      operationId: admin_cluster_create
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminClusterCreateRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminClusterCreateResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      tags:
+      - AdminCluster
   /cluster/server_ips:
     get:
       operationId: admin_cluster_getServerIps

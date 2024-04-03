@@ -10,6 +10,26 @@ pub enum SubCommand {
 		#[clap(default_value = "root")]
 		name: String,
 	},
+	/// Cluster related operations
+	Cluster {
+		#[clap(subcommand)]
+		sub: ClusterSubCommand,
+	},
+}
+
+#[derive(Parser)]
+pub enum ClusterSubCommand {
+    /// Creates a new cluster
+    Create {
+        /// The name of the cluster
+        #[clap(short, long)]
+        name: String,
+        /// The ID of the owner team
+        #[clap(short, long)]
+        owner_team_id: String,
+    },
+    /// Deletes an existing cluster
+    Delete,
 }
 
 impl SubCommand {
@@ -26,7 +46,19 @@ impl SubCommand {
 				utils::ringadingding();
 
 				Ok(())
-			}
+			},
+            Self::Cluster { sub } => {
+                match sub {
+                    ClusterSubCommand::Create { name, owner_team_id } => {
+                        // Handle cluster creation here
+                        // You can now use `name` and `owner_team_id`
+                    },
+                    ClusterSubCommand::Delete => {
+                        // Handle cluster deletion here
+                    },
+                }
+                Ok(())
+            }
 		}
 	}
 }

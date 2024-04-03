@@ -121,6 +121,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+  /cluster/create:
+    post:
+      operationId: admin_cluster_create
+      tags:
+        - AdminCluster
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminClusterCreateResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminClusterCreateRequest'
   /cloud/bootstrap:
     get:
       description: Returns the basic information required to use the cloud APIs.
@@ -8554,6 +8610,27 @@ components:
             type: string
       required:
         - ips
+    AdminClusterCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        cluster_id:
+          type: string
+          format: uuid
+        owner_team_id:
+          type: string
+          format: uuid
+      required:
+        - name
+    AdminClusterCreateResponse:
+      type: object
+      properties:
+        cluster_id:
+          type: string
+          format: uuid
+      required:
+        - cluster_id
     CloudBootstrapResponse:
       type: object
       properties:

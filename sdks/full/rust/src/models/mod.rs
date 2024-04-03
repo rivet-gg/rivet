@@ -1,3 +1,7 @@
+pub mod admin_cluster_create_request;
+pub use self::admin_cluster_create_request::AdminClusterCreateRequest;
+pub mod admin_cluster_create_response;
+pub use self::admin_cluster_create_response::AdminClusterCreateResponse;
 pub mod admin_cluster_get_server_ips_response;
 pub use self::admin_cluster_get_server_ips_response::AdminClusterGetServerIpsResponse;
 pub mod admin_login_request;

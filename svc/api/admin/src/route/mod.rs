@@ -26,6 +26,12 @@ define_router! {
 			),
 		},
 
+		"cluster" / "create": {
+			POST: cluster::create(
+				body: models::AdminClusterCreateRequest,
+			),
+		},
+
 		"login": {
 			POST: login::login(
 				body: models::AdminLoginRequest,

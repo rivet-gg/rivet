@@ -3,7 +3,7 @@ use api_helper::{anchor::WatchIndexQuery, ctx::Ctx};
 use proto::backend;
 use rivet_api::models;
 use rivet_convert::ApiInto;
-use rivet_operation::prelude::*;
+use rivet_operation::prelude::{proto::{backend::pkg::cluster, chirp::response::Ok}, *};
 use serde::Deserialize;
 
 use crate::auth::Auth;
@@ -69,4 +69,23 @@ pub async fn server_ips(
 	};
 
 	Ok(models::AdminClusterGetServerIpsResponse { ips })
+}
+
+pub async fn create(
+	ctx: Ctx<Auth>,
+	body: models::AdminClusterCreateRequest,
+) -> GlobalResult<models::AdminClusterCreateResponse> {
+	let cluster_id = unwrap!(body.cluster_id);
+
+	msg!([ctx] cluster::msg::create(cluster_id) -> cluster::msg::create_complete {
+		cluster_id: body.cluster_id.map(Into::into),
+		owner_team_id: body.owner_team_id.map(Into::into),
+		name_id: util::faker::ident(),
+	})
+	.await
+	.unwrap();
+
+	Ok(models::AdminClusterCreateResponse {
+		cluster_id: cluster_id,
+	})
 }

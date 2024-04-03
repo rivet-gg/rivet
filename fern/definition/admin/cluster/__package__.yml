@@ -16,8 +16,22 @@ service:
           server_id: optional<uuid>
           pool: optional<localCommons.PoolType>
       response: GetServerIpsResponse
+    create:
+      path: /create
+      method: POST
+      request:
+        body: CreateRequest
+      response: CreateResponse
 
 types:
   GetServerIpsResponse:
     properties:
       ips: list<string>
+  CreateRequest:
+    properties:
+      name: string
+      cluster_id: optional<uuid>
+      owner_team_id: optional<uuid>
+  CreateResponse:
+    properties:
+      cluster_id: uuid

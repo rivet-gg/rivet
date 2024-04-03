@@ -5,6 +5,8 @@ Cargo.toml
 README.md
 docs/AdminApi.md
 docs/AdminClusterApi.md
+docs/AdminClusterCreateRequest.md
+docs/AdminClusterCreateResponse.md
 docs/AdminClusterGetServerIpsResponse.md
 docs/AdminLoginRequest.md
 docs/AdminLoginResponse.md
@@ -376,6 +378,8 @@ src/apis/portal_games_api.rs
 src/apis/portal_notifications_api.rs
 src/apis/provision_servers_api.rs
 src/lib.rs
+src/models/admin_cluster_create_request.rs
+src/models/admin_cluster_create_response.rs
 src/models/admin_cluster_get_server_ips_response.rs
 src/models/admin_login_request.rs
 src/models/admin_login_response.rs

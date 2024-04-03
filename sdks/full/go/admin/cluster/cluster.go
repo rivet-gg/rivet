@@ -5,8 +5,69 @@ package cluster
 import (
 	json "encoding/json"
 	fmt "fmt"
+	uuid "github.com/google/uuid"
 	core "sdk/core"
 )
+
+type CreateRequest struct {
+	Name        string     `json:"name"`
+	ClusterId   *uuid.UUID `json:"cluster_id,omitempty"`
+	OwnerTeamId *uuid.UUID `json:"owner_team_id,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (c *CreateRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = CreateRequest(value)
+	c._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *CreateRequest) String() string {
+	if len(c._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
+}
+
+type CreateResponse struct {
+	ClusterId uuid.UUID `json:"cluster_id"`
+
+	_rawJSON json.RawMessage
+}
+
+func (c *CreateResponse) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateResponse
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = CreateResponse(value)
+	c._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *CreateResponse) String() string {
+	if len(c._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
+}
 
 type GetServerIpsResponse struct {
 	Ips []string `json:"ips,omitempty"`

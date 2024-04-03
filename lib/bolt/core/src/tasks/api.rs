@@ -82,3 +82,38 @@ pub async fn get_cluster_server_ips(
 
 	Ok(res.ips)
 }
+
+pub async fn create_cluster(
+	project_ctx: &ProjectContext,
+	name: String,
+	owner_team_id: String,
+) -> Result<()> {
+	let api_admin_token = project_ctx
+		.read_secret(&["rivet", "api_admin", "token"])
+		.await?;
+
+		let response = reqwest::Client::new()
+		.post(format!("{}/admin/cluster/create", project_ctx.origin_api(),))
+		.header(
+			reqwest::header::AUTHORIZATION,
+			reqwest::header::HeaderValue::from_str(&format!("Bearer {api_admin_token}"))?,
+		)
+		.json(&json!({
+			"name": name,
+			"owner_team_id": owner_team_id,
+			// generate a random cluster id
+			"cluster_id": uuid::Uuid::new_v4(),
+		}))
+		.send()
+		.await?;
+
+	if !response.status().is_success() {
+		bail!(
+			"failed to create cluster ({}):\n{:#?}",
+			response.status().as_u16(),
+			response.json::<serde_json::Value>().await?
+		);
+	}
+
+	Ok(())
+}
