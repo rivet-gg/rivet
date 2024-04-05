@@ -75,6 +75,11 @@ define_router! {
 				body: serde_json::Value
 			),
 		},
+		"games" / Uuid / "namespaces" / Uuid / "tokens" / "service": {
+			POST: games::namespaces::create_token_service(
+				body: models::CreateGameNamespaceTokenServiceRequest
+			),
+		},
 		"games" / Uuid / "namespaces" / Uuid / "tokens" / "development": {
 			POST: games::namespaces::create_token_development(
 				body: models::CloudGamesNamespacesCreateGameNamespaceTokenDevelopmentRequest

@@ -59,6 +59,7 @@ Class | Method | HTTP request | Description
 *CloudGamesNamespacesApi* | [**cloud_games_namespaces_create_game_namespace**](docs/CloudGamesNamespacesApi.md#cloud_games_namespaces_create_game_namespace) | **POST** /cloud/games/{game_id}/namespaces | 
 *CloudGamesNamespacesApi* | [**cloud_games_namespaces_create_game_namespace_token_development**](docs/CloudGamesNamespacesApi.md#cloud_games_namespaces_create_game_namespace_token_development) | **POST** /cloud/games/{game_id}/namespaces/{namespace_id}/tokens/development | 
 *CloudGamesNamespacesApi* | [**cloud_games_namespaces_create_game_namespace_token_public**](docs/CloudGamesNamespacesApi.md#cloud_games_namespaces_create_game_namespace_token_public) | **POST** /cloud/games/{game_id}/namespaces/{namespace_id}/tokens/public | 
+*CloudGamesNamespacesApi* | [**cloud_games_namespaces_create_game_namespace_token_service**](docs/CloudGamesNamespacesApi.md#cloud_games_namespaces_create_game_namespace_token_service) | **POST** /cloud/games/{game_id}/namespaces/{namespace_id}/tokens/service | 
 *CloudGamesNamespacesApi* | [**cloud_games_namespaces_get_game_namespace_by_id**](docs/CloudGamesNamespacesApi.md#cloud_games_namespaces_get_game_namespace_by_id) | **GET** /cloud/games/{game_id}/namespaces/{namespace_id} | 
 *CloudGamesNamespacesApi* | [**cloud_games_namespaces_get_game_namespace_version_history_list**](docs/CloudGamesNamespacesApi.md#cloud_games_namespaces_get_game_namespace_version_history_list) | **GET** /cloud/games/{game_id}/namespaces/{namespace_id}/version-history | 
 *CloudGamesNamespacesApi* | [**cloud_games_namespaces_remove_namespace_cdn_auth_user**](docs/CloudGamesNamespacesApi.md#cloud_games_namespaces_remove_namespace_cdn_auth_user) | **DELETE** /cloud/games/{game_id}/namespaces/{namespace_id}/auth-user/{user} | 
@@ -75,6 +76,7 @@ Class | Method | HTTP request | Description
 *CloudGamesNamespacesLogsApi* | [**cloud_games_namespaces_logs_get_namespace_lobby**](docs/CloudGamesNamespacesLogsApi.md#cloud_games_namespaces_logs_get_namespace_lobby) | **GET** /cloud/games/{game_id}/namespaces/{namespace_id}/logs/lobbies/{lobby_id} | 
 *CloudGamesNamespacesLogsApi* | [**cloud_games_namespaces_logs_list_namespace_lobbies**](docs/CloudGamesNamespacesLogsApi.md#cloud_games_namespaces_logs_list_namespace_lobbies) | **GET** /cloud/games/{game_id}/namespaces/{namespace_id}/logs/lobbies | 
 *CloudGamesTokensApi* | [**cloud_games_tokens_create_cloud_token**](docs/CloudGamesTokensApi.md#cloud_games_tokens_create_cloud_token) | **POST** /cloud/games/{game_id}/tokens/cloud | 
+*CloudGamesTokensApi* | [**cloud_games_tokens_create_service_token**](docs/CloudGamesTokensApi.md#cloud_games_tokens_create_service_token) | **POST** /cloud/games/{game_id}/tokens/service | 
 *CloudGamesVersionsApi* | [**cloud_games_versions_create_game_version**](docs/CloudGamesVersionsApi.md#cloud_games_versions_create_game_version) | **POST** /cloud/games/{game_id}/versions | 
 *CloudGamesVersionsApi* | [**cloud_games_versions_get_game_version_by_id**](docs/CloudGamesVersionsApi.md#cloud_games_versions_get_game_version_by_id) | **GET** /cloud/games/{game_id}/versions/{version_id} | 
 *CloudGamesVersionsApi* | [**cloud_games_versions_reserve_version_name**](docs/CloudGamesVersionsApi.md#cloud_games_versions_reserve_version_name) | **POST** /cloud/games/{game_id}/versions/reserve-name | 
@@ -217,6 +219,8 @@ Class | Method | HTTP request | Description
  - [CloudGamesCreateGameResponse](docs/CloudGamesCreateGameResponse.md)
  - [CloudGamesCreateGameVersionRequest](docs/CloudGamesCreateGameVersionRequest.md)
  - [CloudGamesCreateGameVersionResponse](docs/CloudGamesCreateGameVersionResponse.md)
+ - [CloudGamesCreateServiceTokenRequest](docs/CloudGamesCreateServiceTokenRequest.md)
+ - [CloudGamesCreateServiceTokenResponse](docs/CloudGamesCreateServiceTokenResponse.md)
  - [CloudGamesDeleteMatchmakerLobbyResponse](docs/CloudGamesDeleteMatchmakerLobbyResponse.md)
  - [CloudGamesExportLobbyLogsRequest](docs/CloudGamesExportLobbyLogsRequest.md)
  - [CloudGamesExportLobbyLogsResponse](docs/CloudGamesExportLobbyLogsResponse.md)
@@ -240,6 +244,8 @@ Class | Method | HTTP request | Description
  - [CloudGamesNamespacesCreateGameNamespaceTokenDevelopmentRequest](docs/CloudGamesNamespacesCreateGameNamespaceTokenDevelopmentRequest.md)
  - [CloudGamesNamespacesCreateGameNamespaceTokenDevelopmentResponse](docs/CloudGamesNamespacesCreateGameNamespaceTokenDevelopmentResponse.md)
  - [CloudGamesNamespacesCreateGameNamespaceTokenPublicResponse](docs/CloudGamesNamespacesCreateGameNamespaceTokenPublicResponse.md)
+ - [CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest](docs/CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest.md)
+ - [CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse](docs/CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse.md)
  - [CloudGamesNamespacesGetAnalyticsMatchmakerLiveResponse](docs/CloudGamesNamespacesGetAnalyticsMatchmakerLiveResponse.md)
  - [CloudGamesNamespacesGetGameNamespaceByIdResponse](docs/CloudGamesNamespacesGetGameNamespaceByIdResponse.md)
  - [CloudGamesNamespacesGetGameNamespaceVersionHistoryResponse](docs/CloudGamesNamespacesGetGameNamespaceVersionHistoryResponse.md)

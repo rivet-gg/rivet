@@ -45,7 +45,7 @@ message Entitlement {
 		rivet.common.Uuid run_id = 1;
 	}
 
-	// Manage a game's cloud status.
+	// Manage a game's cloud resources.
 	message GameCloud {
 		rivet.common.Uuid game_id = 1;
 	}
@@ -109,7 +109,12 @@ message Entitlement {
 
 	// Issued to provisioned servers for communication with our API.
 	message Server {
+
+	}
 		
+	// Token used to access Rivet via an API backend.
+	message GameNamespaceService {
+		rivet.common.Uuid namespace_id = 1;
 	}
 
 	oneof kind {
@@ -129,6 +134,7 @@ message Entitlement {
 		Bypass bypass = 15;
 		AccessToken access_token = 16;
 		Server server = 17;
+		GameNamespaceService game_namespace_service = 18;
 	}
 
 	reserved 13;

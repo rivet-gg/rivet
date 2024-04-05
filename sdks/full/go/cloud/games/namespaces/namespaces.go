@@ -202,6 +202,67 @@ func (c *CreateGameNamespaceTokenPublicResponse) String() string {
 	return fmt.Sprintf("%#v", c)
 }
 
+type CreateGameNamespaceTokenServiceRequest struct {
+	Ttl int `json:"ttl"`
+
+	_rawJSON json.RawMessage
+}
+
+func (c *CreateGameNamespaceTokenServiceRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateGameNamespaceTokenServiceRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = CreateGameNamespaceTokenServiceRequest(value)
+	c._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *CreateGameNamespaceTokenServiceRequest) String() string {
+	if len(c._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
+}
+
+type CreateGameNamespaceTokenServiceResponse struct {
+	// A JSON Web Token.
+	// Slightly modified to include a description prefix and use Protobufs of
+	// JSON.
+	Token string `json:"token"`
+
+	_rawJSON json.RawMessage
+}
+
+func (c *CreateGameNamespaceTokenServiceResponse) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateGameNamespaceTokenServiceResponse
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = CreateGameNamespaceTokenServiceResponse(value)
+	c._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *CreateGameNamespaceTokenServiceResponse) String() string {
+	if len(c._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
+}
+
 type GetGameNamespaceByIdResponse struct {
 	Namespace *cloud.NamespaceFull `json:"namespace,omitempty"`
 

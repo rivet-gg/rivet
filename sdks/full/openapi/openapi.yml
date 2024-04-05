@@ -1185,6 +1185,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+  /cloud/games/{game_id}/namespaces/{namespace_id}/tokens/service:
+    post:
+      description: Creates a service token for the given namespace.
+      operationId: cloud_games_namespaces_createGameNamespaceTokenService
+      tags:
+        - CloudGamesNamespaces
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: >-
+                  #/components/schemas/CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: >-
+                #/components/schemas/CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest
   /cloud/games/{game_id}/namespaces/{namespace_id}/version:
     put:
       description: Updates the version of a game namespace.
@@ -8851,6 +8922,27 @@ components:
             JSON.
       required:
         - token
+    CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest:
+      type: object
+      properties:
+        ttl:
+          type: integer
+      required:
+        - ttl
+    CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: >-
+            A JSON Web Token.
+
+            Slightly modified to include a description prefix and use Protobufs
+            of
+
+            JSON.
+      required:
+        - token
     CloudGamesNamespacesUpdateGameNamespaceVersionRequest:
       type: object
       properties:
@@ -11015,8 +11107,17 @@ components:
     CloudVersionMatchmakerPortRange:
       type: object
       description: >-
-        Range of ports that can be connected to. Note that the port range values
-        returned by /find
+        Range of ports that can be connected to.
+
+        If configured, `network_mode` must equal `host`.
+
+        Port ranges may overlap between containers, it is the responsibility of
+        the developer to ensure ports are available before using.
+
+        Read more about host networking
+        [here](https://rivet.gg/docs/dynamic-servers/concepts/host-bridge-networking).
+
+        Only available on Rivet Open Source & Enterprise.
 
 
         ### Related
@@ -11070,8 +11171,16 @@ components:
         - none
         - game_guard
       description: >-
-        Denotes what type of proxying to use for ports. Rivet GameGuard adds DoS
-        and DDoS mitigation to incoming connections.
+        Range of ports that can be connected to.
+
+        `game_guard` (default) proxies all traffic through [Game
+        Guard](https://rivet.gg/docs/dynamic-servers/concepts/game-guard) to
+        mitigate DDoS attacks and provide TLS termination.
+
+        `none` sends traffic directly to the game server. If configured,
+        `network_mode` must equal `host`. Read more about host networking
+        [here](https://rivet.gg/docs/dynamic-servers/concepts/host-bridge-networking).
+        Only available on Rivet Open Source & Enterprise.
 
 
         ### Related - /docs/dynamic-servers/concepts/game-guard -
