@@ -8,6 +8,7 @@ Method | HTTP request | Description
 [**cloud_games_namespaces_create_game_namespace**](CloudGamesNamespacesApi.md#cloud_games_namespaces_create_game_namespace) | **POST** /cloud/games/{game_id}/namespaces | 
 [**cloud_games_namespaces_create_game_namespace_token_development**](CloudGamesNamespacesApi.md#cloud_games_namespaces_create_game_namespace_token_development) | **POST** /cloud/games/{game_id}/namespaces/{namespace_id}/tokens/development | 
 [**cloud_games_namespaces_create_game_namespace_token_public**](CloudGamesNamespacesApi.md#cloud_games_namespaces_create_game_namespace_token_public) | **POST** /cloud/games/{game_id}/namespaces/{namespace_id}/tokens/public | 
+[**cloud_games_namespaces_create_game_namespace_token_service**](CloudGamesNamespacesApi.md#cloud_games_namespaces_create_game_namespace_token_service) | **POST** /cloud/games/{game_id}/namespaces/{namespace_id}/tokens/service | 
 [**cloud_games_namespaces_get_game_namespace_by_id**](CloudGamesNamespacesApi.md#cloud_games_namespaces_get_game_namespace_by_id) | **GET** /cloud/games/{game_id}/namespaces/{namespace_id} | 
 [**cloud_games_namespaces_get_game_namespace_version_history_list**](CloudGamesNamespacesApi.md#cloud_games_namespaces_get_game_namespace_version_history_list) | **GET** /cloud/games/{game_id}/namespaces/{namespace_id}/version-history | 
 [**cloud_games_namespaces_remove_namespace_cdn_auth_user**](CloudGamesNamespacesApi.md#cloud_games_namespaces_remove_namespace_cdn_auth_user) | **DELETE** /cloud/games/{game_id}/namespaces/{namespace_id}/auth-user/{user} | 
@@ -144,6 +145,38 @@ Name | Type | Description  | Required | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## cloud_games_namespaces_create_game_namespace_token_service
+
+> crate::models::CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse cloud_games_namespaces_create_game_namespace_token_service(game_id, namespace_id, cloud_games_namespaces_create_game_namespace_token_service_request)
+
+
+Creates a service token for the given namespace.
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**game_id** | **uuid::Uuid** |  | [required] |
+**namespace_id** | **uuid::Uuid** |  | [required] |
+**cloud_games_namespaces_create_game_namespace_token_service_request** | [**CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest**](CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest.md) |  | [required] |
+
+### Return type
+
+[**crate::models::CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse**](CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse.md)
+
+### Authorization
+
+[BearerAuth](../README.md#BearerAuth)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

@@ -942,6 +942,25 @@ components:
       required:
       - token
       type: object
+    CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest:
+      properties:
+        ttl:
+          type: integer
+      required:
+      - ttl
+      type: object
+    CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse:
+      properties:
+        token:
+          description: 'A JSON Web Token.
+
+            Slightly modified to include a description prefix and use Protobufs of
+
+            JSON.'
+          type: string
+      required:
+      - token
+      type: object
     CloudGamesNamespacesGetAnalyticsMatchmakerLiveResponse:
       properties:
         lobbies:
@@ -7088,6 +7107,75 @@ paths:
       security: *id001
       tags:
       - CloudGamesNamespaces
+  /cloud/games/{game_id}/namespaces/{namespace_id}/tokens/service:
+    post:
+      description: Creates a service token for the given namespace.
+      operationId: cloud_games_namespaces_createGameNamespaceTokenService
+      parameters:
+      - in: path
+        name: game_id
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - in: path
+        name: namespace_id
+        required: true
+        schema:
+          format: uuid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      tags:
+      - CloudGamesNamespaces
   /cloud/games/{game_id}/namespaces/{namespace_id}/version:
     put:
       description: Updates the version of a game namespace.
@@ -12748,7 +12836,7 @@ paths:
       security: *id001
       tags:
       - PortalNotifications
-  /servers/{ip}/info:
+  /servers/{ip}:
     get:
       operationId: provision_servers_getInfo
       parameters:

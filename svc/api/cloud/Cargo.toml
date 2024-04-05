@@ -106,6 +106,7 @@ team-member-count = { path = "../../pkg/team/ops/member-count" }
 team-validate = { path = "../../pkg/team/ops/validate" }
 tier-list = { path = "../../pkg/tier/ops/list" }
 token-revoke = { path = "../../pkg/token/ops/revoke" }
+token-create = { path = "../../pkg/token/ops/create" }
 upload-complete = { path = "../../pkg/upload/ops/complete" }
 upload-file-list = { path = "../../pkg/upload/ops/file-list" }
 upload-get = { path = "../../pkg/upload/ops/get" }

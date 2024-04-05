@@ -1185,6 +1185,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+  /cloud/games/{game_id}/namespaces/{namespace_id}/tokens/service:
+    post:
+      description: Creates a service token for the given namespace.
+      operationId: cloud_games_namespaces_createGameNamespaceTokenService
+      tags:
+        - CloudGamesNamespaces
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: namespace_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: >-
+                  #/components/schemas/CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: >-
+                #/components/schemas/CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest
   /cloud/games/{game_id}/namespaces/{namespace_id}/version:
     put:
       description: Updates the version of a game namespace.
@@ -4369,7 +4440,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
-  /servers/{ip}/info:
+  /servers/{ip}:
     get:
       operationId: provision_servers_getInfo
       tags:
@@ -8894,6 +8965,27 @@ components:
       required:
         - errors
     CloudGamesNamespacesCreateGameNamespaceTokenPublicResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: >-
+            A JSON Web Token.
+
+            Slightly modified to include a description prefix and use Protobufs
+            of
+
+            JSON.
+      required:
+        - token
+    CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest:
+      type: object
+      properties:
+        ttl:
+          type: integer
+      required:
+        - ttl
+    CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse:
       type: object
       properties:
         token:

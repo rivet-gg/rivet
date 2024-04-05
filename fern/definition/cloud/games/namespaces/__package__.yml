@@ -207,6 +207,19 @@ service:
           type: uuid
       response: CreateGameNamespaceTokenPublicResponse
 
+    createGameNamespaceTokenService:
+      path: /games/{game_id}/namespaces/{namespace_id}/tokens/service
+      method: POST
+      docs: Creates a service token for the given namespace.
+      path-parameters:
+        game_id:
+          type: uuid
+        namespace_id:
+          type: uuid
+      request:
+        body: CreateGameNamespaceTokenServiceRequest
+      response: CreateGameNamespaceTokenServiceResponse
+
     updateGameNamespaceVersion:
       path: /games/{game_id}/namespaces/{namespace_id}/version
       method: PUT
@@ -365,6 +378,19 @@ types:
         type: list<commons.ValidationError>
 
   CreateGameNamespaceTokenPublicResponse:
+    properties:
+      token:
+        docs: |-
+          A JSON Web Token.
+          Slightly modified to include a description prefix and use Protobufs of
+          JSON.
+        type: string
+
+  CreateGameNamespaceTokenServiceRequest:
+    properties:
+      ttl: integer
+
+  CreateGameNamespaceTokenServiceResponse:
     properties:
       token:
         docs: |-

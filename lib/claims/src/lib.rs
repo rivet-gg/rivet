@@ -344,6 +344,21 @@ pub mod ent {
 			Ok(ProvisionedServer {})
 		}
 	}
+
+	#[derive(Clone, Debug)]
+	pub struct GameNamespaceService {
+		pub namespace_id: Uuid,
+	}
+
+	impl TryFrom<&schema::entitlement::GameNamespaceService> for GameNamespaceService {
+		type Error = GlobalError;
+
+		fn try_from(value: &schema::entitlement::GameNamespaceService) -> GlobalResult<Self> {
+			Ok(GameNamespaceService {
+				namespace_id: unwrap!(value.namespace_id).as_uuid(),
+			})
+		}
+	}
 }
 
 pub trait ClaimsDecode {
@@ -368,6 +383,7 @@ pub trait ClaimsDecode {
 	fn as_bypass(&self) -> GlobalResult<ent::Bypass>;
 	fn as_access_token(&self) -> GlobalResult<ent::AccessToken>;
 	fn as_provisioned_server(&self) -> GlobalResult<ent::ProvisionedServer>;
+	fn as_game_namespace_service(&self) -> GlobalResult<ent::GameNamespaceService>;
 }
 
 impl ClaimsDecode for schema::Claims {
@@ -647,6 +663,22 @@ impl ClaimsDecode for schema::Claims {
 			))
 			.and_then(std::convert::identity)
 	}
+
+	fn as_game_namespace_service(&self) -> GlobalResult<ent::GameNamespaceService> {
+		self.entitlements
+			.iter()
+			.find_map(|ent| match &ent.kind {
+				Some(schema::entitlement::Kind::GameNamespaceService(ent)) => {
+					Some(ent::GameNamespaceService::try_from(ent))
+				}
+				_ => None,
+			})
+			.ok_or(err_code!(
+				CLAIMS_MISSING_ENTITLEMENT,
+				entitlements = "GameNamespaceService"
+			))
+			.and_then(std::convert::identity)
+	}
 }
 
 pub trait EntitlementTag {
@@ -674,6 +706,7 @@ impl EntitlementTag for schema::Entitlement {
 			schema::entitlement::Kind::Bypass(_) => 15,
 			schema::entitlement::Kind::AccessToken(_) => 16,
 			schema::entitlement::Kind::ProvisionedServer(_) => 17,
+			schema::entitlement::Kind::GameNamespaceService(_) => 18,
 		})
 	}
 }

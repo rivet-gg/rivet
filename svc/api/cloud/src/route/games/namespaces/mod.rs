@@ -274,6 +274,47 @@ pub async fn create_token_public(
 	)
 }
 
+// MARK: POST /games/{}/namespaces/{}/tokens/service
+pub async fn create_token_service(
+	ctx: Ctx<Auth>,
+	game_id: Uuid,
+	namespace_id: Uuid,
+	body: models::CreateGameNamespaceTokenServiceRequest,
+) -> GlobalResult<models::CreateGameNamespaceTokenServiceResponse> {
+	ctx.auth()
+		.check_game_write_or_admin(ctx.op_ctx(), game_id)
+		.await?;
+
+	// Issue token
+	let token_res = op!([ctx] token_create {
+		issuer: "api-cloud".into(),
+		token_config: Some(token::create::request::TokenConfig {
+			ttl: util::duration::days(body.ttl.try_into()?),
+		}),
+		refresh_token_config: None,
+		client: None,
+		kind: Some(token::create::request::Kind::New(token::create::request::KindNew {
+			entitlements: vec![
+				proto::claims::Entitlement {
+					kind: Some(
+						proto::claims::entitlement::Kind::GameNamespaceService(proto::claims::entitlement::GameNamespaceService {
+                            namespace_id: Some(namespace_id.into()),
+						})
+					)
+				}
+			],
+		})),
+		label: Some("ns_service".into()),
+		..Default::default()
+	}).await?;
+
+	Ok(
+		models::CloudGamesNamespacesCreateGameNamespaceTokenPublicResponse {
+			token: unwrap!(token_res.token).token,
+		},
+	)
+}
+
 // MARK: POST /games/{}/namespaces/{}/tokens/development
 pub async fn create_token_development(
 	ctx: Ctx<Auth>,
