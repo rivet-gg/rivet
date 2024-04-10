@@ -19,6 +19,14 @@ pub fn fly() -> bool {
 		.is_some()
 }
 
+pub fn billing() -> bool {
+	std::env::var("RIVET_BILLING").ok().is_some()
+}
+
 pub fn job_run() -> bool {
-	std::env::var("RIVET_HAS_POOLS").ok().is_some()
+	server_provision()
+}
+
+pub fn server_provision() -> bool {
+	std::env::var("RIVET_DEFAULT_CLUSTER_CONFIG").ok().is_some()
 }
