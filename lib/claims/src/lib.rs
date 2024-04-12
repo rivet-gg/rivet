@@ -384,6 +384,7 @@ pub trait ClaimsDecode {
 	fn as_access_token(&self) -> GlobalResult<ent::AccessToken>;
 	fn as_server(&self) -> GlobalResult<ent::Server>;
 	fn as_game_namespace_service(&self) -> GlobalResult<ent::GameNamespaceService>;
+	fn as_game_namespace_service_option(&self) -> GlobalResult<Option<ent::GameNamespaceService>>;
 }
 
 impl ClaimsDecode for schema::Claims {
@@ -678,6 +679,18 @@ impl ClaimsDecode for schema::Claims {
 				entitlements = "GameNamespaceService"
 			))
 			.and_then(std::convert::identity)
+	}
+
+	fn as_game_namespace_service_option(&self) -> GlobalResult<Option<ent::GameNamespaceService>> {
+		self.entitlements
+			.iter()
+			.find_map(|ent| match &ent.kind {
+				Some(schema::entitlement::Kind::GameNamespaceService(ent)) => {
+					Some(ent::GameNamespaceService::try_from(ent))
+				}
+				_ => None,
+			})
+			.transpose()
 	}
 }
 

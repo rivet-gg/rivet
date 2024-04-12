@@ -77,7 +77,7 @@ define_router! {
 		},
 		"games" / Uuid / "namespaces" / Uuid / "tokens" / "service": {
 			POST: games::namespaces::create_token_service(
-				body: models::CreateGameNamespaceTokenServiceRequest
+				body: models::CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest
 			),
 		},
 		"games" / Uuid / "namespaces" / Uuid / "tokens" / "development": {
