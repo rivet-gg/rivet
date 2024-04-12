@@ -1,4 +1,5 @@
 use regex::Regex;
+use rivet_cache::RateLimitConfig;
 use std::{str::FromStr, time::Duration};
 
 use global_error::prelude::*;
@@ -283,9 +284,16 @@ pub fn as_auth_expired<T>(res: GlobalResult<T>) -> GlobalResult<T> {
 pub async fn basic_rate_limit(
 	rate_limit_ctx: crate::auth::AuthRateLimitCtx<'_>,
 ) -> GlobalResult<()> {
-	if let Some(remote_address) = rate_limit_ctx.remote_address {
-		let config = rate_limit_ctx.rate_limit_config;
+	basic_rate_limit_with_config(rate_limit_ctx, None).await
+}
 
+pub async fn basic_rate_limit_with_config(
+	rate_limit_ctx: crate::auth::AuthRateLimitCtx<'_>,
+	config: Option<RateLimitConfig>,
+) -> GlobalResult<()> {
+	let config = config.unwrap_or(rate_limit_ctx.rate_limit_config);
+
+	if let Some(remote_address) = rate_limit_ctx.remote_address {
 		// Trigger rate limit
 		let rate_limit_key = config.key.to_owned();
 		let rate_limit_results = rate_limit_ctx
