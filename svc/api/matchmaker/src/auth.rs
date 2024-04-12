@@ -1,9 +1,10 @@
 use api_helper::{
 	auth::{ApiAuth, AuthRateLimitCtx},
 	ctx::Ctx,
-	util::{as_auth_expired, basic_rate_limit},
+	util::{as_auth_expired, basic_rate_limit, basic_rate_limit_with_config},
 };
 use proto::claims::Claims;
+use rivet_cache::{RateLimitBucketConfig, RateLimitConfig};
 use rivet_claims::ClaimsDecode;
 use rivet_operation::prelude::*;
 
@@ -18,15 +19,43 @@ impl ApiAuth for Auth {
 		api_token: Option<String>,
 		rate_limit_ctx: AuthRateLimitCtx<'_>,
 	) -> GlobalResult<Auth> {
-		Self::rate_limit(rate_limit_ctx).await?;
+		// Decode claims
+		let claims = if let Some(api_token) = api_token {
+			Some(as_auth_expired(rivet_claims::decode(&api_token)?)?)
+		} else {
+			None
+		};
 
-		Ok(Auth {
-			claims: if let Some(api_token) = api_token {
-				Some(as_auth_expired(rivet_claims::decode(&api_token)?)?)
-			} else {
-				None
-			},
-		})
+		// Customize rate limit
+		if claims
+			.as_ref()
+			.and_then(|x| x.as_game_namespace_service_option().transpose())
+			.transpose()?
+			.is_some()
+		{
+			// TODO: Configure by route & by game ID
+			basic_rate_limit_with_config(
+				rate_limit_ctx,
+				Some(RateLimitConfig {
+					key: "service".into(),
+					buckets: vec![
+						RateLimitBucketConfig {
+							count: 256,
+							bucket_duration_ms: util::duration::minutes(1),
+						},
+						RateLimitBucketConfig {
+							count: 10_000,
+							bucket_duration_ms: util::duration::hours(1),
+						},
+					],
+				}),
+			)
+			.await?;
+		} else {
+			Self::rate_limit(rate_limit_ctx).await?;
+		}
+
+		Ok(Auth { claims })
 	}
 
 	async fn rate_limit(rate_limit_ctx: AuthRateLimitCtx<'_>) -> GlobalResult<()> {
@@ -54,6 +83,15 @@ impl Auth {
 			.transpose()?
 		{
 			return Ok(game_ns);
+		} else if let Some(ns_service) = self
+			.claims
+			.as_ref()
+			.and_then(|x| x.as_game_namespace_service_option().transpose())
+			.transpose()?
+		{
+			return Ok(rivet_claims::ent::GameNamespacePublic {
+				namespace_id: ns_service.namespace_id,
+			});
 		} else {
 			tracing::info!("no ns claims");
 		}

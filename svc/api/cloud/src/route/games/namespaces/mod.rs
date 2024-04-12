@@ -279,8 +279,8 @@ pub async fn create_token_service(
 	ctx: Ctx<Auth>,
 	game_id: Uuid,
 	namespace_id: Uuid,
-	body: models::CreateGameNamespaceTokenServiceRequest,
-) -> GlobalResult<models::CreateGameNamespaceTokenServiceResponse> {
+	body: models::CloudGamesNamespacesCreateGameNamespaceTokenServiceRequest,
+) -> GlobalResult<models::CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse> {
 	ctx.auth()
 		.check_game_write_or_admin(ctx.op_ctx(), game_id)
 		.await?;
@@ -309,7 +309,7 @@ pub async fn create_token_service(
 	}).await?;
 
 	Ok(
-		models::CloudGamesNamespacesCreateGameNamespaceTokenPublicResponse {
+		models::CloudGamesNamespacesCreateGameNamespaceTokenServiceResponse {
 			token: unwrap!(token_res.token).token,
 		},
 	)
