@@ -19,6 +19,7 @@ terraform {
 
 module "secrets" {
     source = "../modules/secrets"
+	optional = true
 
     keys = [
         "cloudflare/terraform/auth_token",

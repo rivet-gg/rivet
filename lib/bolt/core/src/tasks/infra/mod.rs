@@ -104,6 +104,17 @@ pub fn build_plan(
 ) -> Result<Vec<PlanStep>> {
 	let mut plan = Vec::new();
 
+	// Ngrok
+	if ctx.ns().ngrok.is_some() {
+		plan.push(PlanStep {
+			name_id: "ngrok",
+			kind: PlanStepKind::Terraform {
+				plan_id: "ngrok".into(),
+				needs_destroy: true,
+			},
+		});
+	}
+
 	// Infra
 	match ctx.ns().kubernetes.provider {
 		ns::KubernetesProvider::K3d { .. } => {
@@ -135,16 +146,14 @@ pub fn build_plan(
 		},
 	});
 
-	if ctx.tls_enabled() {
-		// TLS
-		plan.push(PlanStep {
-			name_id: "tls",
-			kind: PlanStepKind::Terraform {
-				plan_id: "tls".into(),
-				needs_destroy: true,
-			},
-		});
-	}
+	// TLS
+	plan.push(PlanStep {
+		name_id: "tls",
+		kind: PlanStepKind::Terraform {
+			plan_id: "tls".into(),
+			needs_destroy: true,
+		},
+	});
 
 	// Redis
 	match ctx.ns().redis.provider {

@@ -41,6 +41,14 @@ variable "extra_dns" {
 	}))
 }
 
+# MARK: Ngrok
+variable "ngrok_domain" {
+	type = object({
+	  api = string
+	})
+	nullable = true
+}
+
 # MARK: Cloudflare
 variable "cloudflare_account_id" {
 	type = string

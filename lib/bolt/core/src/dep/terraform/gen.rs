@@ -199,6 +199,7 @@ async fn vars(ctx: &ProjectContext) {
 	);
 
 	// Domains
+	vars.insert("dns_enabled".into(), json!(ctx.ns().dns.is_some()));
 	vars.insert("domain_main".into(), json!(ctx.domain_main()));
 	vars.insert("domain_cdn".into(), json!(ctx.domain_cdn()));
 	vars.insert("domain_job".into(), json!(ctx.domain_job()));
@@ -210,7 +211,6 @@ async fn vars(ctx: &ProjectContext) {
 			.as_ref()
 			.map_or(false, |x| x.deprecated_subdomains)),
 	);
-	vars.insert("tls_enabled".into(), json!(ctx.tls_enabled()));
 
 	// Cloudflare
 	if let Some(dns) = &config.dns {
@@ -564,6 +564,17 @@ async fn vars(ctx: &ProjectContext) {
 
 	// 	vars.insert("better_uptime".into(), json!(better_uptime.to_owned()));
 	// }
+
+	// Ngrok
+	if ctx.ns().ngrok.is_some() {
+		vars.insert(
+			"ngrok_domain".into(),
+			json!({
+				"api": ctx.ngrok_domain_api(),
+				"minio": ctx.ngrok_domain_minio(),
+			}),
+		);
+	}
 
 	// Media presets
 	vars.insert(

@@ -10,7 +10,7 @@ use anyhow::*;
 use sha2::{Digest, Sha256};
 use tokio::{fs, sync::Mutex};
 
-use crate::{config, context, utils::command_helper::CommandHelper};
+use crate::{config, context, dep::terraform, utils::command_helper::CommandHelper};
 
 use super::{RunContext, ServiceContext};
 
@@ -710,6 +710,8 @@ impl ProjectContextData {
 	pub fn host_api(&self) -> String {
 		if let Some(domain_main_api) = self.domain_main_api() {
 			domain_main_api
+		} else if self.ns().ngrok.is_some() {
+			self.ngrok_domain_api()
 		} else if let config::ns::ClusterKind::SingleNode {
 			public_ip,
 			api_http_port,
@@ -726,6 +728,8 @@ impl ProjectContextData {
 	pub fn origin_api(&self) -> String {
 		if let Some(domain_main_api) = self.domain_main_api() {
 			format!("https://{domain_main_api}")
+		} else if self.ns().ngrok.is_some() {
+			format!("https://{}", self.ngrok_domain_api())
 		} else if let config::ns::ClusterKind::SingleNode {
 			public_ip,
 			api_http_port,
@@ -740,7 +744,9 @@ impl ProjectContextData {
 
 	/// Origin used to access Minio. Only applicable if Minio provider is specified.
 	pub fn origin_minio(&self) -> String {
-		if let Some(domain_main) = self.domain_main() {
+		if self.ns().ngrok.is_some() {
+			format!("https://{}", self.ngrok_domain_minio())
+		} else if let Some(domain_main) = self.domain_main() {
 			format!("https://minio.{domain_main}")
 		} else if let config::ns::ClusterKind::SingleNode {
 			public_ip,
@@ -778,8 +784,27 @@ impl ProjectContextData {
 			})
 	}
 
-	pub fn tls_enabled(&self) -> bool {
-		self.ns().dns.is_some()
+	pub fn cluster_id_short(&self) -> String {
+		let uuid = self.ns().cluster.id.to_string();
+		uuid[..8].to_string()
+	}
+
+	pub fn ngrok_domain_api(&self) -> String {
+		format!("rivet-{}-api.ngrok.dev", self.cluster_id_short())
+	}
+
+	pub fn ngrok_domain_minio(&self) -> String {
+		format!("rivet-{}-minio.ngrok.dev", self.cluster_id_short())
+	}
+
+	pub async fn traefik_tunnel_external_host(self: &Arc<Self>) -> String {
+		if self.ns().ngrok.is_some() {
+			let ngrok = terraform::output::read_ngrok(self).await;
+			(*ngrok.tunnel_reserved_addr).clone()
+		} else {
+			let k8s_infra = terraform::output::read_k8s_infra(self).await;
+			format!("{}:5000", *k8s_infra.traefik_tunnel_external_ip)
+		}
 	}
 }
 

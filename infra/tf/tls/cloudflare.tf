@@ -43,11 +43,15 @@ locals {
 # MARK: Cloudflare origin cert (rivet.gg)
 # See https://developers.cloudflare.com/ssl/origin-configuration/authenticated-origin-pull#zone-level--cloudflare-certificate
 resource "tls_private_key" "cf_origin_rivet_gg" {
+	count = var.dns_enabled ? 1 : 0
+
 	algorithm = "RSA"
 }
 
 resource "tls_cert_request" "cf_origin_rivet_gg" {
-	private_key_pem = tls_private_key.cf_origin_rivet_gg.private_key_pem
+	count = var.dns_enabled ? 1 : 0
+
+	private_key_pem = tls_private_key.cf_origin_rivet_gg[0].private_key_pem
 
 	subject {
 		common_name  = ""
@@ -56,7 +60,9 @@ resource "tls_cert_request" "cf_origin_rivet_gg" {
 }
 
 resource "cloudflare_origin_ca_certificate" "rivet_gg" {
-	csr = tls_cert_request.cf_origin_rivet_gg.cert_request_pem
+	count = var.dns_enabled ? 1 : 0
+
+	csr = tls_cert_request.cf_origin_rivet_gg[0].cert_request_pem
 	hostnames = ["*.${var.domain_main}", "${var.domain_main}", "*.api.${var.domain_main}", "api.${var.domain_main}"]
 	request_type = "origin-rsa"
 	requested_validity = 15 * 365
@@ -65,10 +71,14 @@ resource "cloudflare_origin_ca_certificate" "rivet_gg" {
 
 # Must be created in every namespace it is used in
 resource "kubernetes_secret" "ingress_tls_cert" {
-	for_each = toset(flatten([
-		["traefik", "imagor", "rivet-service"],
-		local.has_minio ? ["minio"] : []
-	]))
+	for_each = toset(
+		var.dns_enabled
+			?  flatten([
+				["traefik", "imagor", "rivet-service"],
+				local.has_minio ? ["minio"] : []
+			])
+			: []
+	)
 
 	metadata {
 		name = "ingress-tls-cloudflare-cert"
@@ -78,13 +88,13 @@ resource "kubernetes_secret" "ingress_tls_cert" {
 	type = "kubernetes.io/tls"
 
 	data = {
-		"tls.crt" = cloudflare_origin_ca_certificate.rivet_gg.certificate
-		"tls.key" = tls_private_key.cf_origin_rivet_gg.private_key_pem
+		"tls.crt" = cloudflare_origin_ca_certificate.rivet_gg[0].certificate
+		"tls.key" = tls_private_key.cf_origin_rivet_gg[0].private_key_pem
 	}
 }
 
 resource "kubernetes_secret" "ingress_tls_ca_cert" {
-	for_each = toset(["traefik", "imagor", "rivet-service"])
+	for_each = toset(var.dns_enabled ? [ "imagor", "rivet-service"] : [])
 
 	metadata {
 		name = "ingress-tls-cloudflare-ca-cert"

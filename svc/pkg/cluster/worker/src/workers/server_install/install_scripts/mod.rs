@@ -86,16 +86,24 @@ pub async fn gen_initialize(pool_type: backend::cluster::PoolType) -> GlobalResu
 			);
 		}
 		backend::cluster::PoolType::Gg => {
+			let mut tls_certs = HashMap::new();
+			if let (Some(cert_pem), Some(key_pem)) = (
+				util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM").ok(),
+				util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM").ok(),
+			) {
+				tls_certs.insert(
+					"letsencrypt_rivet_job".into(),
+					components::TlsCert { cert_pem, key_pem },
+				);
+			} else {
+				tracing::warn!("missing gg certs required for https & tcp+tls routes")
+			};
+
 			script.push(components::traefik_instance(components::TraefikInstance {
 				name: "game_guard".into(),
 				static_config: gg_traefik_static_config().await?,
 				dynamic_config: String::new(),
-				tls_certs: hashmap! {
-					"letsencrypt_rivet_job".into() => components::TlsCert {
-						cert_pem: util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_CERT_PEM")?,
-						key_pem: util::env::var("TLS_CERT_LETSENCRYPT_RIVET_JOB_KEY_PEM")?,
-					},
-				},
+				tls_certs,
 				tcp_server_transports: Default::default(),
 			}));
 

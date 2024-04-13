@@ -9,7 +9,7 @@ terraform {
 }
 
 locals {
-	entrypoints = var.tls_enabled ? {
+	entrypoints = var.dns_enabled ? {
 		"web" = {}
 		"websecure" = {
 			tls = {

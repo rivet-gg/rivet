@@ -13,6 +13,10 @@ variable "public_ip" {
 }
 
 # MARK: DNS
+variable "dns_enabled" {
+	type = bool
+}
+
 variable "domain_main" {
 	type = string
 }
@@ -31,10 +35,6 @@ variable "domain_main_api" {
 }
 
 variable "dns_deprecated_subdomains" {
-	type = bool
-}
-
-variable "tls_enabled" {
 	type = bool
 }
 

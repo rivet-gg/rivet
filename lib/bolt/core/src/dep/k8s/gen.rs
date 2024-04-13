@@ -1009,7 +1009,7 @@ fn build_ingress_router(
 		}));
 
 		// Build secure router
-		if project_ctx.tls_enabled() {
+		if project_ctx.ns().dns.is_some() {
 			specs.push(json!({
 				"apiVersion": "traefik.io/v1alpha1",
 				"kind": "IngressRoute",
@@ -1081,7 +1081,7 @@ fn build_ingress_router(
 				}
 			}));
 
-			if project_ctx.tls_enabled() {
+			if project_ctx.ns().dns.is_some() {
 				specs.push(json!({
 					"apiVersion": "traefik.io/v1alpha1",
 					"kind": "IngressRoute",

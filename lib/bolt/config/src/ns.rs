@@ -45,6 +45,8 @@ pub struct Namespace {
 	pub bolt: Bolt,
 	#[serde(default)]
 	pub better_uptime: Option<BetterUptime>,
+	#[serde(default)]
+	pub ngrok: Option<Ngrok>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -711,6 +713,10 @@ pub struct BetterUptime {
 	/// by Better Uptime.
 	pub company_subdomain: String,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(deny_unknown_fields)]
+pub struct Ngrok {}
 
 fn default_docker_repo() -> String {
 	"ghcr.io/rivet-gg/".to_string()

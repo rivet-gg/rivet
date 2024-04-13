@@ -3,16 +3,23 @@ variable "namespace" {
 }
 
 # MARK: DNS
+variable "dns_enabled" {
+	type = bool
+}
+
 variable "domain_main" {
 	type = string
+	nullable = true
 }
 
 variable "domain_cdn" {
 	type = string
+	nullable = true
 }
 
 variable "domain_job" {
 	type = string
+	nullable = true
 }
 
 # MARK: Datacenters

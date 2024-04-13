@@ -15,11 +15,6 @@ variable "clickhouse_port_https" {
 	type = string
 }
 
-# MARK: DNS
-variable "tls_enabled" {
-	type = bool
-}
-
 # MARK: Services
 variable "services" {
 	type = map(object({

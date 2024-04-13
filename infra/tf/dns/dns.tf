@@ -46,6 +46,14 @@ locals {
 	])
 }
 
+locals {
+	main_record = var.ngrok_domain != null ? { type = "CNAME", value = var.ngrok_domain.api } : (
+		var.deploy_method_local
+			? { type = "A", value = data.terraform_remote_state.k8s_infra.outputs.traefik_external_ip }
+			: { type = "CNAME", value = data.terraform_remote_state.k8s_infra.outputs.traefik_external_ip }
+		)
+}
+
 resource "cloudflare_record" "main" {
 	for_each = {
 		for record in local.records:
@@ -55,8 +63,8 @@ resource "cloudflare_record" "main" {
 	zone_id = each.value.zone_id
 	name = each.value.name
     # Use local node's public IP if in local region
-	value = data.terraform_remote_state.k8s_infra.outputs.traefik_external_ip
-	type = var.deploy_method_local ? "A" : "CNAME"
+	value = local.main_record.value
+	type = local.main_record.type
 	# TODO: Increase the unproxied TTL once we have proper floating IP support on all providers
 	ttl = each.value.proxied ? 1 : 60  # 1 = automatic
 	proxied = each.value.proxied

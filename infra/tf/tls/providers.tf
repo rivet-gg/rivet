@@ -1,5 +1,6 @@
 provider "cloudflare" {
-	api_token = module.secrets.values["cloudflare/terraform/auth_token"]
+	# Provide placeholder token if Cloudflare enabled
+	api_token = var.dns_enabled ? module.secrets.values["cloudflare/terraform/auth_token"] : "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 }
 
 provider "acme" {

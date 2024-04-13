@@ -23,13 +23,18 @@ pub struct Cert {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct Ngrok {
+	pub tunnel_reserved_addr: TerraformOutputValue<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct K8sInfra {
 	pub traefik_tunnel_external_ip: TerraformOutputValue<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Tls {
-	pub tls_cert_letsencrypt_rivet_job: TerraformOutputValue<Cert>,
+	pub tls_cert_letsencrypt_rivet_job: Option<TerraformOutputValue<Cert>>,
 	pub tls_cert_locally_signed_tunnel_server: TerraformOutputValue<Cert>,
 	pub tls_cert_locally_signed_job: TerraformOutputValue<Cert>,
 	pub tls_cert_locally_signed_gg: TerraformOutputValue<Cert>,
@@ -71,6 +76,10 @@ pub struct ClickHouse {
 pub struct Redis {
 	pub host: TerraformOutputValue<HashMap<String, String>>,
 	pub port: TerraformOutputValue<HashMap<String, u32>>,
+}
+
+pub async fn read_ngrok(ctx: &ProjectContext) -> Ngrok {
+	read_plan::<Ngrok>(ctx, "ngrok").await
 }
 
 pub async fn read_k8s_infra(ctx: &ProjectContext) -> K8sInfra {

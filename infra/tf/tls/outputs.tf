@@ -1,24 +1,24 @@
 locals {
-	tls_cert_letsencrypt_rivet_gg = {
+	tls_cert_letsencrypt_rivet_gg = var.dns_enabled ? {
 		# Build full chain by concatenating the certificate with issuer.
 		#
 		# See
 		# https://registry.terraform.io/providers/vancluever/acme/latest/docs/resources/certificate#certificate_pem
-		cert_pem = "${acme_certificate.rivet_gg.certificate_pem}${acme_certificate.rivet_gg.issuer_pem}"
-		key_pem = acme_certificate.rivet_gg.private_key_pem
-	}
+		cert_pem = "${acme_certificate.rivet_gg[0].certificate_pem}${acme_certificate.rivet_gg[0].issuer_pem}"
+		key_pem = acme_certificate.rivet_gg[0].private_key_pem
+	} : null
 
-	tls_cert_letsencrypt_rivet_game = {
+	tls_cert_letsencrypt_rivet_game = var.dns_enabled ? {
 		# See above
-		cert_pem = "${acme_certificate.rivet_game.certificate_pem}${acme_certificate.rivet_game.issuer_pem}"
-		key_pem = acme_certificate.rivet_game.private_key_pem
-	}
+		cert_pem = "${acme_certificate.rivet_game[0].certificate_pem}${acme_certificate.rivet_game[0].issuer_pem}"
+		key_pem = acme_certificate.rivet_game[0].private_key_pem
+	} : null
 
-	tls_cert_letsencrypt_rivet_job = {
+	tls_cert_letsencrypt_rivet_job = var.dns_enabled ? {
 		# See above
-		cert_pem = "${acme_certificate.rivet_job.certificate_pem}${acme_certificate.rivet_job.issuer_pem}"
-		key_pem = acme_certificate.rivet_job.private_key_pem
-	}
+		cert_pem = "${acme_certificate.rivet_job[0].certificate_pem}${acme_certificate.rivet_job[0].issuer_pem}"
+		key_pem = acme_certificate.rivet_job[0].private_key_pem
+	} : null
 
 	tls_cert_locally_signed_tunnel_server = {
 		cert_pem = tls_locally_signed_cert.locally_signed_tunnel_server.cert_pem

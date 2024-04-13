@@ -1,17 +1,23 @@
 # MARK: Private key
 resource "tls_private_key" "acme_account_key" {
+	count = var.dns_enabled ? 1 : 0
+
 	algorithm = "RSA"
 }
 
 # MARK: Registration
 resource "acme_registration" "main" {
-	account_key_pem = tls_private_key.acme_account_key.private_key_pem
+	count = var.dns_enabled ? 1 : 0
+
+	account_key_pem = tls_private_key.acme_account_key[0].private_key_pem
 	email_address = "letsencrypt@rivet.gg"
 }
 
 # MARK: Certificates
 resource "acme_certificate" "rivet_gg" {
-	account_key_pem = acme_registration.main.account_key_pem
+	count = var.dns_enabled ? 1 : 0
+
+	account_key_pem = acme_registration.main[0].account_key_pem
 	common_name = var.domain_main
 	subject_alternative_names = flatten([
 		"*.${var.domain_main}",
@@ -41,7 +47,9 @@ resource "acme_certificate" "rivet_gg" {
 }
 
 resource "acme_certificate" "rivet_game" {
-	account_key_pem = acme_registration.main.account_key_pem
+	count = var.dns_enabled ? 1 : 0
+
+	account_key_pem = acme_registration.main[0].account_key_pem
 	common_name = var.domain_cdn
 	subject_alternative_names = ["*.${var.domain_cdn}"]
 
@@ -63,7 +71,9 @@ resource "acme_certificate" "rivet_game" {
 }
 
 resource "acme_certificate" "rivet_job" {
-	account_key_pem = acme_registration.main.account_key_pem
+	count = var.dns_enabled ? 1 : 0
+
+	account_key_pem = acme_registration.main[0].account_key_pem
 	common_name = var.domain_job
 	subject_alternative_names = flatten([
 		# Add dedicated subdomains for each region

@@ -273,7 +273,7 @@ pub fn traefik_tunnel() -> GlobalResult<String> {
 		name: "tunnel".into(),
 		static_config: tunnel_traefik_static_config(),
 		dynamic_config: tunnel_traefik_dynamic_config(&util::env::var(
-			"K8S_TRAEFIK_TUNNEL_EXTERNAL_IP",
+			"TRAEFIK_TUNNEL_EXTERNAL_HOST",
 		)?),
 		tls_certs: Default::default(),
 		tcp_server_transports,
@@ -301,7 +301,7 @@ fn tunnel_traefik_static_config() -> String {
 	config
 }
 
-fn tunnel_traefik_dynamic_config(tunnel_external_ip: &str) -> String {
+fn tunnel_traefik_dynamic_config(tunnel_external_host: &str) -> String {
 	let mut config = String::new();
 	for TunnelService { name, .. } in TUNNEL_SERVICES.iter() {
 		config.push_str(&formatdoc!(
@@ -315,7 +315,7 @@ fn tunnel_traefik_dynamic_config(tunnel_external_ip: &str) -> String {
 				serversTransport = "{name}"
 
 				[[tcp.services.{name}.loadBalancer.servers]]
-					address = "{tunnel_external_ip}:5000"
+					address = "{tunnel_external_host}"
 					tls = true
 			"#
 		))
