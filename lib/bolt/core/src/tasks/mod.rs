@@ -6,6 +6,7 @@ pub mod db;
 pub mod gen;
 pub mod infra;
 pub mod migrate;
+pub mod provision;
 pub mod ssh;
 pub mod template;
 pub mod test;

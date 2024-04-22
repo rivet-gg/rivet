@@ -34,6 +34,7 @@ pub enum PlanStepKind {
 	},
 	Migrate,
 	Up,
+	ProvisionDefaultCluster,
 }
 
 impl PlanStepKind {
@@ -60,6 +61,9 @@ impl PlanStepKind {
 				tasks::migrate::up_all(&ctx).await?;
 			}
 			PlanStepKind::Up => tasks::up::up_all(&ctx, false, false, false, false).await?,
+			PlanStepKind::ProvisionDefaultCluster => {
+				tasks::provision::default_cluster_create(&ctx).await?
+			}
 		}
 
 		Ok(())
@@ -88,7 +92,7 @@ impl PlanStepKind {
 
 				terraform::output::clear_cache(&ctx, &plan_id).await;
 			}
-			PlanStepKind::Migrate | PlanStepKind::Up => {
+			PlanStepKind::Migrate | PlanStepKind::Up | PlanStepKind::ProvisionDefaultCluster => {
 				// Do nothing
 			}
 		}
@@ -325,6 +329,11 @@ pub fn build_plan(
 	plan.push(PlanStep {
 		name_id: "up",
 		kind: PlanStepKind::Up,
+	});
+
+	plan.push(PlanStep {
+		name_id: "provision-default-cluster",
+		kind: PlanStepKind::ProvisionDefaultCluster,
 	});
 
 	// Start at the specified step
