@@ -4770,6 +4770,176 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+  /servers/docker:
+    post:
+      description: Create a new docker image.
+      operationId: servers_images_create
+      tags:
+        - ServersImages
+      parameters: []
+      responses:
+        '204':
+          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServersImagesCreateRequest'
+  /servers/servers:
+    post:
+      description: Create a new dynamic server.
+      operationId: servers_servers_create
+      tags:
+        - ServersServers
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServersServersCreateResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServersServersCreateRequest'
+  /servers/servers/{server_id}:
+    delete:
+      description: Destroy a dynamic server.
+      operationId: servers_servers_destroy
+      tags:
+        - ServersServers
+      parameters:
+        - name: server_id
+          in: path
+          description: The id of the server to destroy
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServersServersDestroyRequest'
   /auth/identity/access-token/complete-verification:
     post:
       description: Completes the access token verification process.
@@ -10017,6 +10187,46 @@ components:
         - datacenter_id
         - cluster_id
         - vlan_ip
+    ServersImagesCreateRequest:
+      type: object
+      properties:
+        'null': {}
+      required:
+        - 'null'
+    ServersServersCreateRequest:
+      type: object
+      properties:
+        metadata:
+          type: object
+          additionalProperties: {}
+        cluster:
+          type: string
+          description: The name id of the cluster
+        datacenter:
+          type: string
+          description: The name id of the datacenter
+        kill_timeout:
+          type: integer
+        runtime:
+          $ref: '#/components/schemas/ServersRuntime'
+      required:
+        - metadata
+        - cluster
+        - datacenter
+        - kill_timeout
+        - runtime
+    ServersServersCreateResponse:
+      type: object
+      properties:
+        server:
+          $ref: '#/components/schemas/ServersServer'
+      required:
+        - server
+    ServersServersDestroyRequest:
+      type: object
+      properties:
+        kill_timeout:
+          type: integer
     AdminPoolType:
       type: string
       enum:
@@ -13473,6 +13683,84 @@ components:
           $ref: '#/components/schemas/PortalNotificationRegisterService'
       required:
         - service
+    ServersRuntime:
+      type: object
+      properties:
+        docker:
+          $ref: '#/components/schemas/ServersDockerRuntime'
+    ServersDockerRuntime:
+      type: object
+      properties:
+        image_id:
+          type: string
+        args:
+          type: array
+          items:
+            type: string
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        network:
+          $ref: '#/components/schemas/ServersDockerNetwork'
+      required:
+        - image_id
+        - args
+        - environment
+        - network
+    ServersDockerNetwork:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/ServersDockerNetworkMode'
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ServersDockerPort'
+      required:
+        - mode
+        - ports
+    ServersDockerNetworkMode:
+      type: string
+      enum:
+        - host
+        - bridge
+    ServersGameGuardProtocol:
+      type: string
+      enum:
+        - http
+        - https
+        - tcp
+        - tcp_tls
+        - udp
+    ServersDockerPort:
+      type: object
+      properties:
+        port:
+          type: integer
+        routing:
+          $ref: '#/components/schemas/ServersDockerPortRouting'
+      required:
+        - routing
+    ServersDockerPortRouting:
+      type: object
+      properties:
+        game_guard:
+          $ref: '#/components/schemas/ServersGameGuardProtocol'
+        host:
+          $ref: '#/components/schemas/ServersDockerHostRouting'
+    ServersDockerHostRouting:
+      type: object
+      properties:
+        'null': {}
+      required:
+        - 'null'
+    ServersServer:
+      type: object
+      properties:
+        'null': {}
+      required:
+        - 'null'
     UploadPresignedRequest:
       type: object
       description: >-

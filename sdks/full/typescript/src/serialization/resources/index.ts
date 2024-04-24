@@ -5,6 +5,7 @@ export * as identity from "./identity";
 export * as kv from "./kv";
 export * as module_ from "./module";
 export * as provision from "./provision";
+export * as servers from "./servers";
 export * as auth from "./auth";
 export * as captcha from "./captcha";
 export * as common from "./common";

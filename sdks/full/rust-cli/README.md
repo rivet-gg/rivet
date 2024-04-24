@@ -168,6 +168,9 @@ Class | Method | HTTP request | Description
 *PortalNotificationsApi* | [**portal_notifications_unregister_notifications**](docs/PortalNotificationsApi.md#portal_notifications_unregister_notifications) | **DELETE** /portal/notifications/register | 
 *ProvisionDatacentersApi* | [**provision_datacenters_get_tls**](docs/ProvisionDatacentersApi.md#provision_datacenters_get_tls) | **GET** /datacenters/{datacenter_id}/tls | 
 *ProvisionServersApi* | [**provision_servers_get_info**](docs/ProvisionServersApi.md#provision_servers_get_info) | **GET** /servers/{ip} | 
+*ServersImagesApi* | [**servers_images_create**](docs/ServersImagesApi.md#servers_images_create) | **POST** /servers/docker | 
+*ServersServersApi* | [**servers_servers_create**](docs/ServersServersApi.md#servers_servers_create) | **POST** /servers/servers | 
+*ServersServersApi* | [**servers_servers_destroy**](docs/ServersServersApi.md#servers_servers_destroy) | **DELETE** /servers/servers/{server_id} | 
 
 
 ## Documentation For Models
@@ -475,6 +478,19 @@ Class | Method | HTTP request | Description
  - [PortalRegisterNotificationsRequest](docs/PortalRegisterNotificationsRequest.md)
  - [ProvisionDatacentersGetTlsResponse](docs/ProvisionDatacentersGetTlsResponse.md)
  - [ProvisionServersGetInfoResponse](docs/ProvisionServersGetInfoResponse.md)
+ - [ServersDockerHostRouting](docs/ServersDockerHostRouting.md)
+ - [ServersDockerNetwork](docs/ServersDockerNetwork.md)
+ - [ServersDockerNetworkMode](docs/ServersDockerNetworkMode.md)
+ - [ServersDockerPort](docs/ServersDockerPort.md)
+ - [ServersDockerPortRouting](docs/ServersDockerPortRouting.md)
+ - [ServersDockerRuntime](docs/ServersDockerRuntime.md)
+ - [ServersGameGuardProtocol](docs/ServersGameGuardProtocol.md)
+ - [ServersImagesCreateRequest](docs/ServersImagesCreateRequest.md)
+ - [ServersRuntime](docs/ServersRuntime.md)
+ - [ServersServer](docs/ServersServer.md)
+ - [ServersServersCreateRequest](docs/ServersServersCreateRequest.md)
+ - [ServersServersCreateResponse](docs/ServersServersCreateResponse.md)
+ - [ServersServersDestroyRequest](docs/ServersServersDestroyRequest.md)
  - [UploadPrepareFile](docs/UploadPrepareFile.md)
  - [UploadPresignedRequest](docs/UploadPresignedRequest.md)
  - [ValidationError](docs/ValidationError.md)
