@@ -4389,6 +4389,124 @@ components:
       - cluster_id
       - vlan_ip
       type: object
+    ServersDockerHostRouting:
+      properties:
+        'null': {}
+      required:
+      - 'null'
+      type: object
+    ServersDockerNetwork:
+      properties:
+        mode:
+          $ref: '#/components/schemas/ServersDockerNetworkMode'
+        ports:
+          additionalProperties:
+            $ref: '#/components/schemas/ServersDockerPort'
+          type: object
+      required:
+      - mode
+      - ports
+      type: object
+    ServersDockerNetworkMode:
+      enum:
+      - host
+      - bridge
+      type: string
+    ServersDockerPort:
+      properties:
+        port:
+          type: integer
+        routing:
+          $ref: '#/components/schemas/ServersDockerPortRouting'
+      required:
+      - routing
+      type: object
+    ServersDockerPortRouting:
+      properties:
+        game_guard:
+          $ref: '#/components/schemas/ServersGameGuardProtocol'
+        host:
+          $ref: '#/components/schemas/ServersDockerHostRouting'
+      type: object
+    ServersDockerRuntime:
+      properties:
+        args:
+          items:
+            type: string
+          type: array
+        environment:
+          additionalProperties:
+            type: string
+          type: object
+        image_id:
+          type: string
+        network:
+          $ref: '#/components/schemas/ServersDockerNetwork'
+      required:
+      - image_id
+      - args
+      - environment
+      - network
+      type: object
+    ServersGameGuardProtocol:
+      enum:
+      - http
+      - https
+      - tcp
+      - tcp_tls
+      - udp
+      type: string
+    ServersImagesCreateRequest:
+      properties:
+        'null': {}
+      required:
+      - 'null'
+      type: object
+    ServersRuntime:
+      properties:
+        docker:
+          $ref: '#/components/schemas/ServersDockerRuntime'
+      type: object
+    ServersServer:
+      properties:
+        'null': {}
+      required:
+      - 'null'
+      type: object
+    ServersServersCreateRequest:
+      properties:
+        cluster:
+          description: The name id of the cluster
+          type: string
+        datacenter:
+          description: The name id of the datacenter
+          type: string
+        kill_timeout:
+          type: integer
+        metadata:
+          additionalProperties: {}
+          type: object
+        runtime:
+          $ref: '#/components/schemas/ServersRuntime'
+      required:
+      - metadata
+      - cluster
+      - datacenter
+      - kill_timeout
+      - runtime
+      type: object
+    ServersServersCreateResponse:
+      properties:
+        server:
+          $ref: '#/components/schemas/ServersServer'
+      required:
+      - server
+      type: object
+    ServersServersDestroyRequest:
+      properties:
+        kill_timeout:
+          type: integer
+      type: object
     Timestamp:
       description: RFC3339 timestamp
       format: date-time
@@ -13159,6 +13277,176 @@ paths:
       security: *id001
       tags:
       - PortalGames
+  /servers/docker:
+    post:
+      description: Create a new docker image.
+      operationId: servers_images_create
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServersImagesCreateRequest'
+        required: true
+      responses:
+        '204':
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      tags:
+      - ServersImages
+  /servers/servers:
+    post:
+      description: Create a new dynamic server.
+      operationId: servers_servers_create
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServersServersCreateRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServersServersCreateResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      tags:
+      - ServersServers
+  /servers/servers/{server_id}:
+    delete:
+      description: Destroy a dynamic server.
+      operationId: servers_servers_destroy
+      parameters:
+      - description: The id of the server to destroy
+        in: path
+        name: server_id
+        required: true
+        schema:
+          format: uuid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServersServersDestroyRequest'
+        required: true
+      responses:
+        '204':
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      tags:
+      - ServersServers
   /servers/{ip}:
     get:
       operationId: provision_servers_getInfo
