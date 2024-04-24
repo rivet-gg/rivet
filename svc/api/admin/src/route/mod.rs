@@ -49,6 +49,12 @@ define_router! {
 			),
 		},
 
+		"clusters" / Uuid / "datacenters" / Uuid : {
+			PUT: clusters::datacenters::update(
+				body: models::AdminClustersDatacentersUpdateRequest,
+			),
+		},
+		
 		"clusters" / Uuid / "datacenters" / "list": {
 			GET: clusters::datacenters::get(),
 		},
