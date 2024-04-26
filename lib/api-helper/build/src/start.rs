@@ -82,7 +82,6 @@ where
 			let shared_client = shared_client.clone();
 			let pools = pools.clone();
 			let cache = cache.clone();
-			let health_check_config = health_check_config.clone();
 
 			// Handle request
 			let ray_id = Uuid::new_v4();
