@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.servers.server_create;
+
+import "proto/common.proto";
+import "proto/backend/servers.proto";
+
+message Request {
+    repeated rivet.backend.servers.Server servers = 1;
+}
+
+message Response {
+    repeated rivet.common.Uuid server_ids = 1;
+}
