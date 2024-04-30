@@ -211,6 +211,7 @@ members = [
 	"pkg/region/ops/recommend",
 	"pkg/region/ops/resolve",
 	"pkg/region/ops/resolve-for-game",
+	"pkg/servers/ops/server-create",
 	"pkg/team-invite/ops/get",
 	"pkg/team-invite/worker",
 	"pkg/team/ops/avatar-upload-complete",
