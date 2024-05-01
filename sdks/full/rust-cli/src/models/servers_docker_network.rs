@@ -13,16 +13,16 @@
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ServersDockerNetwork {
-    #[serde(rename = "mode")]
-    pub mode: crate::models::ServersDockerNetworkMode,
+    #[serde(rename = "mode", skip_serializing_if = "Option::is_none")]
+    pub mode: Option<crate::models::ServersDockerNetworkMode>,
     #[serde(rename = "ports")]
     pub ports: ::std::collections::HashMap<String, crate::models::ServersDockerPort>,
 }
 
 impl ServersDockerNetwork {
-    pub fn new(mode: crate::models::ServersDockerNetworkMode, ports: ::std::collections::HashMap<String, crate::models::ServersDockerPort>) -> ServersDockerNetwork {
+    pub fn new(ports: ::std::collections::HashMap<String, crate::models::ServersDockerPort>) -> ServersDockerNetwork {
         ServersDockerNetwork {
-            mode,
+            mode: None,
             ports,
         }
     }

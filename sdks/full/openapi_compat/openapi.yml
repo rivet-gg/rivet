@@ -856,6 +856,14 @@ components:
       required:
       - version_id
       type: object
+    CloudGamesCreateServiceTokenResponse:
+      properties:
+        token:
+          description: A JSON Web Token.
+          type: string
+      required:
+      - token
+      type: object
     CloudGamesDeleteMatchmakerLobbyResponse:
       properties:
         did_remove:
@@ -4389,11 +4397,51 @@ components:
       - cluster_id
       - vlan_ip
       type: object
-    ServersDockerHostRouting:
+    ServersCreateServerRequest:
       properties:
-        'null': {}
+        datacenter:
+          description: The name ID of the datacenter
+          type: string
+        kill_timeout:
+          description: The duration to wait for in milliseconds before killing the
+            server. This should be set to a safe default, and can be overridden during
+            a DELETE request if needed.
+          format: int64
+          type: integer
+        metadata: {}
+        resources:
+          $ref: '#/components/schemas/ServersResources'
+        runtime:
+          $ref: '#/components/schemas/ServersRuntime'
       required:
-      - 'null'
+      - datacenter
+      - metadata
+      - resources
+      - runtime
+      type: object
+    ServersCreateServerResponse:
+      properties:
+        server:
+          $ref: '#/components/schemas/ServersServer'
+          description: The server that was created
+      required:
+      - server
+      type: object
+    ServersDestroyServerResponse:
+      properties:
+        server_id:
+          format: uuid
+          type: string
+      required:
+      - server_id
+      type: object
+    ServersDockerGameGuardRouting:
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ServersGameGuardProtocol'
+      type: object
+    ServersDockerHostRouting:
+      properties: {}
       type: object
     ServersDockerNetwork:
       properties:
@@ -4404,13 +4452,12 @@ components:
             $ref: '#/components/schemas/ServersDockerPort'
           type: object
       required:
-      - mode
       - ports
       type: object
     ServersDockerNetworkMode:
       enum:
-      - host
       - bridge
+      - host
       type: string
     ServersDockerPort:
       properties:
@@ -4424,7 +4471,7 @@ components:
     ServersDockerPortRouting:
       properties:
         game_guard:
-          $ref: '#/components/schemas/ServersGameGuardProtocol'
+          $ref: '#/components/schemas/ServersDockerGameGuardRouting'
         host:
           $ref: '#/components/schemas/ServersDockerHostRouting'
       type: object
@@ -4439,13 +4486,12 @@ components:
             type: string
           type: object
         image_id:
+          format: uuid
           type: string
         network:
           $ref: '#/components/schemas/ServersDockerNetwork'
       required:
       - image_id
-      - args
-      - environment
       - network
       type: object
     ServersGameGuardProtocol:
@@ -4456,11 +4502,22 @@ components:
       - tcp_tls
       - udp
       type: string
-    ServersImagesCreateRequest:
+    ServersResources:
       properties:
-        'null': {}
+        cpu:
+          description: 'The number of CPU cores in millicores, or 1/1000 of a core.
+            For example,
+
+            1/8 of a core would be 125 millicores, and 1 core would be 1000
+
+            millicores.'
+          type: integer
+        memory:
+          description: The amount of memory in megabytes
+          type: integer
       required:
-      - 'null'
+      - cpu
+      - memory
       type: object
     ServersRuntime:
       properties:
@@ -4469,43 +4526,44 @@ components:
       type: object
     ServersServer:
       properties:
-        'null': {}
-      required:
-      - 'null'
-      type: object
-    ServersServersCreateRequest:
-      properties:
-        cluster:
-          description: The name id of the cluster
+        cluster_id:
+          format: uuid
           type: string
-        datacenter:
-          description: The name id of the datacenter
+        create_ts:
+          format: int64
+          type: integer
+        datacenter_id:
+          format: uuid
+          type: string
+        destroy_ts:
+          format: int64
+          type: integer
+        game_id:
+          format: uuid
           type: string
         kill_timeout:
+          description: The duration to wait for in milliseconds before killing the
+            server. This should be set to a safe default, and can be overridden during
+            a DELETE request if needed.
+          format: int64
           type: integer
-        metadata:
-          additionalProperties: {}
-          type: object
+        metadata: {}
+        resources:
+          $ref: '#/components/schemas/ServersResources'
         runtime:
           $ref: '#/components/schemas/ServersRuntime'
+        server_id:
+          format: uuid
+          type: string
       required:
+      - server_id
+      - game_id
+      - datacenter_id
+      - cluster_id
       - metadata
-      - cluster
-      - datacenter
-      - kill_timeout
+      - resources
       - runtime
-      type: object
-    ServersServersCreateResponse:
-      properties:
-        server:
-          $ref: '#/components/schemas/ServersServer'
-      required:
-      - server
-      type: object
-    ServersServersDestroyRequest:
-      properties:
-        kill_timeout:
-          type: integer
+      - create_ts
       type: object
     Timestamp:
       description: RFC3339 timestamp
@@ -8071,6 +8129,63 @@ paths:
     post:
       description: Creates a new game cloud token.
       operationId: cloud_games_tokens_createCloudToken
+      parameters:
+      - in: path
+        name: game_id
+        required: true
+        schema:
+          format: uuid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudGamesCreateCloudTokenResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '408':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+          description: ''
+      security: *id001
+      tags:
+      - CloudGamesTokens
+  /cloud/games/{game_id}/tokens/service:
+    post:
+      description: Creates a new game service token.
+      operationId: cloud_games_tokens_createServiceToken
       parameters:
       - in: path
         name: game_id
@@ -13277,59 +13392,6 @@ paths:
       security: *id001
       tags:
       - PortalGames
-  /servers/docker:
-    post:
-      description: Create a new docker image.
-      operationId: servers_images_create
-      parameters: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ServersImagesCreateRequest'
-        required: true
-      responses:
-        '204':
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '408':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorBody'
-          description: ''
-      security: *id001
-      tags:
-      - ServersImages
   /servers/servers:
     post:
       description: Create a new dynamic server.
@@ -13339,14 +13401,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ServersServersCreateRequest'
+              $ref: '#/components/schemas/ServersCreateServerRequest'
         required: true
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ServersServersCreateResponse'
+                $ref: '#/components/schemas/ServersCreateServerResponse'
           description: ''
         '400':
           content:
@@ -13399,14 +13461,21 @@ paths:
         schema:
           format: uuid
           type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ServersServersDestroyRequest'
-        required: true
+      - description: The duration to wait for in milliseconds before killing the server.
+          This should be used to override the default kill timeout if a faster time
+          is needed, say for ignoring a graceful shutdown.
+        in: query
+        name: override_kill_timeout
+        required: false
+        schema:
+          format: int64
+          type: integer
       responses:
-        '204':
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServersDestroyServerResponse'
           description: ''
         '400':
           content:

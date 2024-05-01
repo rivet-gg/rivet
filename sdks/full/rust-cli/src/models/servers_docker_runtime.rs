@@ -13,21 +13,21 @@
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ServersDockerRuntime {
-    #[serde(rename = "args")]
-    pub args: Vec<String>,
-    #[serde(rename = "environment")]
-    pub environment: ::std::collections::HashMap<String, String>,
+    #[serde(rename = "args", skip_serializing_if = "Option::is_none")]
+    pub args: Option<Vec<String>>,
+    #[serde(rename = "environment", skip_serializing_if = "Option::is_none")]
+    pub environment: Option<::std::collections::HashMap<String, String>>,
     #[serde(rename = "image_id")]
-    pub image_id: String,
+    pub image_id: uuid::Uuid,
     #[serde(rename = "network")]
     pub network: Box<crate::models::ServersDockerNetwork>,
 }
 
 impl ServersDockerRuntime {
-    pub fn new(args: Vec<String>, environment: ::std::collections::HashMap<String, String>, image_id: String, network: crate::models::ServersDockerNetwork) -> ServersDockerRuntime {
+    pub fn new(image_id: uuid::Uuid, network: crate::models::ServersDockerNetwork) -> ServersDockerRuntime {
         ServersDockerRuntime {
-            args,
-            environment,
+            args: None,
+            environment: None,
             image_id,
             network: Box::new(network),
         }

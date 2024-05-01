@@ -11,7 +11,7 @@ Method | HTTP request | Description
 
 ## servers_servers_create
 
-> crate::models::ServersServersCreateResponse servers_servers_create(servers_servers_create_request)
+> crate::models::ServersCreateServerResponse servers_servers_create(servers_create_server_request)
 
 
 Create a new dynamic server.
@@ -21,11 +21,11 @@ Create a new dynamic server.
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**servers_servers_create_request** | [**ServersServersCreateRequest**](ServersServersCreateRequest.md) |  | [required] |
+**servers_create_server_request** | [**ServersCreateServerRequest**](ServersCreateServerRequest.md) |  | [required] |
 
 ### Return type
 
-[**crate::models::ServersServersCreateResponse**](ServersServersCreateResponse.md)
+[**crate::models::ServersCreateServerResponse**](ServersCreateServerResponse.md)
 
 ### Authorization
 
@@ -41,7 +41,7 @@ Name | Type | Description  | Required | Notes
 
 ## servers_servers_destroy
 
-> servers_servers_destroy(server_id, servers_servers_destroy_request)
+> crate::models::ServersDestroyServerResponse servers_servers_destroy(server_id, override_kill_timeout)
 
 
 Destroy a dynamic server.
@@ -52,11 +52,11 @@ Destroy a dynamic server.
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **server_id** | **uuid::Uuid** | The id of the server to destroy | [required] |
-**servers_servers_destroy_request** | [**ServersServersDestroyRequest**](ServersServersDestroyRequest.md) |  | [required] |
+**override_kill_timeout** | Option<**i64**> | The duration to wait for in milliseconds before killing the server. This should be used to override the default kill timeout if a faster time is needed, say for ignoring a graceful shutdown. |  |
 
 ### Return type
 
- (empty response body)
+[**crate::models::ServersDestroyServerResponse**](ServersDestroyServerResponse.md)
 
 ### Authorization
 
@@ -64,7 +64,7 @@ Name | Type | Description  | Required | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: application/json
+- **Content-Type**: Not defined
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

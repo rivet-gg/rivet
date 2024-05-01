@@ -43,7 +43,7 @@ pub enum ServersServersDestroyError {
 
 
 /// Create a new dynamic server.
-pub async fn servers_servers_create(configuration: &configuration::Configuration, servers_servers_create_request: crate::models::ServersServersCreateRequest) -> Result<crate::models::ServersServersCreateResponse, Error<ServersServersCreateError>> {
+pub async fn servers_servers_create(configuration: &configuration::Configuration, servers_create_server_request: crate::models::ServersCreateServerRequest) -> Result<crate::models::ServersCreateServerResponse, Error<ServersServersCreateError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -57,7 +57,7 @@ pub async fn servers_servers_create(configuration: &configuration::Configuration
     if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
         local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
     };
-    local_var_req_builder = local_var_req_builder.json(&servers_servers_create_request);
+    local_var_req_builder = local_var_req_builder.json(&servers_create_server_request);
 
     let local_var_req = local_var_req_builder.build()?;
     let local_var_resp = local_var_client.execute(local_var_req).await?;
@@ -75,7 +75,7 @@ pub async fn servers_servers_create(configuration: &configuration::Configuration
 }
 
 /// Destroy a dynamic server.
-pub async fn servers_servers_destroy(configuration: &configuration::Configuration, server_id: &str, servers_servers_destroy_request: crate::models::ServersServersDestroyRequest) -> Result<(), Error<ServersServersDestroyError>> {
+pub async fn servers_servers_destroy(configuration: &configuration::Configuration, server_id: &str, override_kill_timeout: Option<i64>) -> Result<crate::models::ServersDestroyServerResponse, Error<ServersServersDestroyError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -83,13 +83,15 @@ pub async fn servers_servers_destroy(configuration: &configuration::Configuratio
     let local_var_uri_str = format!("{}/servers/servers/{server_id}", local_var_configuration.base_path, server_id=crate::apis::urlencode(server_id));
     let mut local_var_req_builder = local_var_client.request(reqwest::Method::DELETE, local_var_uri_str.as_str());
 
+    if let Some(ref local_var_str) = override_kill_timeout {
+        local_var_req_builder = local_var_req_builder.query(&[("override_kill_timeout", &local_var_str.to_string())]);
+    }
     if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
         local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
     }
     if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
         local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
     };
-    local_var_req_builder = local_var_req_builder.json(&servers_servers_destroy_request);
 
     let local_var_req = local_var_req_builder.build()?;
     let local_var_resp = local_var_client.execute(local_var_req).await?;
@@ -98,7 +100,7 @@ pub async fn servers_servers_destroy(configuration: &configuration::Configuratio
     let local_var_content = local_var_resp.text().await?;
 
     if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
-        Ok(())
+        serde_json::from_str(&local_var_content).map_err(Error::from)
     } else {
         let local_var_entity: Option<ServersServersDestroyError> = serde_json::from_str(&local_var_content).ok();
         let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };

@@ -5,12 +5,40 @@ package servers
 import (
 	json "encoding/json"
 	fmt "fmt"
+	uuid "github.com/google/uuid"
 	core "sdk/core"
 )
 
-type DockerHostRouting struct {
-	Null interface{} `json:"null,omitempty"`
+type DockerGameGuardRouting struct {
+	Protocol *GameGuardProtocol `json:"protocol,omitempty"`
 
+	_rawJSON json.RawMessage
+}
+
+func (d *DockerGameGuardRouting) UnmarshalJSON(data []byte) error {
+	type unmarshaler DockerGameGuardRouting
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*d = DockerGameGuardRouting(value)
+	d._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (d *DockerGameGuardRouting) String() string {
+	if len(d._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(d._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(d); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", d)
+}
+
+type DockerHostRouting struct {
 	_rawJSON json.RawMessage
 }
 
@@ -38,7 +66,7 @@ func (d *DockerHostRouting) String() string {
 }
 
 type DockerNetwork struct {
-	Mode  DockerNetworkMode      `json:"mode,omitempty"`
+	Mode  *DockerNetworkMode     `json:"mode,omitempty"`
 	Ports map[string]*DockerPort `json:"ports,omitempty"`
 
 	_rawJSON json.RawMessage
@@ -70,16 +98,16 @@ func (d *DockerNetwork) String() string {
 type DockerNetworkMode string
 
 const (
-	DockerNetworkModeHost   DockerNetworkMode = "host"
 	DockerNetworkModeBridge DockerNetworkMode = "bridge"
+	DockerNetworkModeHost   DockerNetworkMode = "host"
 )
 
 func NewDockerNetworkModeFromString(s string) (DockerNetworkMode, error) {
 	switch s {
-	case "host":
-		return DockerNetworkModeHost, nil
 	case "bridge":
 		return DockerNetworkModeBridge, nil
+	case "host":
+		return DockerNetworkModeHost, nil
 	}
 	var t DockerNetworkMode
 	return "", fmt.Errorf("%s is not a valid %T", s, t)
@@ -120,8 +148,8 @@ func (d *DockerPort) String() string {
 }
 
 type DockerPortRouting struct {
-	GameGuard *GameGuardProtocol `json:"game_guard,omitempty"`
-	Host      *DockerHostRouting `json:"host,omitempty"`
+	GameGuard *DockerGameGuardRouting `json:"game_guard,omitempty"`
+	Host      *DockerHostRouting      `json:"host,omitempty"`
 
 	_rawJSON json.RawMessage
 }
@@ -150,7 +178,7 @@ func (d *DockerPortRouting) String() string {
 }
 
 type DockerRuntime struct {
-	ImageId     string            `json:"image_id"`
+	ImageId     uuid.UUID         `json:"image_id"`
 	Args        []string          `json:"args,omitempty"`
 	Environment map[string]string `json:"environment,omitempty"`
 	Network     *DockerNetwork    `json:"network,omitempty"`
@@ -212,6 +240,40 @@ func (g GameGuardProtocol) Ptr() *GameGuardProtocol {
 	return &g
 }
 
+type Resources struct {
+	// The number of CPU cores in millicores, or 1/1000 of a core. For example,
+	// 1/8 of a core would be 125 millicores, and 1 core would be 1000
+	// millicores.
+	Cpu int `json:"cpu"`
+	// The amount of memory in megabytes
+	Memory int `json:"memory"`
+
+	_rawJSON json.RawMessage
+}
+
+func (r *Resources) UnmarshalJSON(data []byte) error {
+	type unmarshaler Resources
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*r = Resources(value)
+	r._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (r *Resources) String() string {
+	if len(r._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(r._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(r); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", r)
+}
+
 type Runtime struct {
 	Docker *DockerRuntime `json:"docker,omitempty"`
 
@@ -242,7 +304,17 @@ func (r *Runtime) String() string {
 }
 
 type Server struct {
-	Null interface{} `json:"null,omitempty"`
+	ServerId     uuid.UUID   `json:"server_id"`
+	GameId       uuid.UUID   `json:"game_id"`
+	DatacenterId uuid.UUID   `json:"datacenter_id"`
+	ClusterId    uuid.UUID   `json:"cluster_id"`
+	Metadata     interface{} `json:"metadata,omitempty"`
+	Resources    *Resources  `json:"resources,omitempty"`
+	// The duration to wait for in milliseconds before killing the server. This should be set to a safe default, and can be overridden during a DELETE request if needed.
+	KillTimeout *int64   `json:"kill_timeout,omitempty"`
+	Runtime     *Runtime `json:"runtime,omitempty"`
+	CreateTs    int64    `json:"create_ts"`
+	DestroyTs   *int64   `json:"destroy_ts,omitempty"`
 
 	_rawJSON json.RawMessage
 }

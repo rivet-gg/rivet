@@ -29,11 +29,11 @@ type Client struct {
 	Identity   *identityclient.Client
 	Kv         *kvclient.Client
 	Provision  *provisionclient.Client
-	Servers    *serversclient.Client
 	Auth       *authclient.Client
 	Job        *jobclient.Client
 	Matchmaker *matchmakerclient.Client
 	Portal     *portalclient.Client
+	Servers    *serversclient.Client
 }
 
 func NewClient(opts ...core.ClientOption) *Client {
@@ -51,10 +51,10 @@ func NewClient(opts ...core.ClientOption) *Client {
 		Identity:   identityclient.NewClient(opts...),
 		Kv:         kvclient.NewClient(opts...),
 		Provision:  provisionclient.NewClient(opts...),
-		Servers:    serversclient.NewClient(opts...),
 		Auth:       authclient.NewClient(opts...),
 		Job:        jobclient.NewClient(opts...),
 		Matchmaker: matchmakerclient.NewClient(opts...),
 		Portal:     portalclient.NewClient(opts...),
+		Servers:    serversclient.NewClient(opts...),
 	}
 }
