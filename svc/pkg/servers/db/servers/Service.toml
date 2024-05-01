@@ -1,0 +1,7 @@
+[service]
+name = "db-servers"
+
+[runtime]
+kind = "crdb"
+
+[database]
