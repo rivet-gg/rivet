@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package rivet.backend.dynamic_servers;
+
+import "proto/common.proto";
+
+message Server {
+    rivet.common.Uuid server_id = 1;
+    rivet.common.Uuid game_id = 2;
+    rivet.common.Uuid datacenter_id = 3;
+    rivet.common.Uuid cluster_id = 4;
+    map<string, string> metadata = 5;
+    rivet.backend.dynamic_servers.ServerResources resources = 6;
+    int64 kill_timeout_ms = 7;
+
+    int64 create_ts = 8;
+    optional int64 destroy_ts = 9;
+    
+    oneof runtime {
+        rivet.backend.dynamic_servers.DockerRuntime docker_runtime = 10;
+    }
+}
+
+message ServerResources {
+    int32 cpu_millicores = 1;
+    int32 memory_mib = 2;
+}
+
+message DockerRuntime {
+    repeated string args = 1;
+    map<string, string> environment = 2;
+    rivet.common.Uuid image_id = 3;
+    DockerNetwork network = 4;
+}
+
+message DockerNetwork {
+    DockerNetworkMode mode = 1;
+    map<string, DockerPort> ports = 2;
+}
+
+enum DockerNetworkMode {
+    BRIDGE = 0;
+    HOST = 1;
+}
+
+message DockerPort {
+    // Null when using host networking since one is automatially assigned
+    optional int32 port = 1;
+
+    oneof routing {
+        DockerGameGuardRouting game_guard = 2;
+        DockerHostRouting host = 3;
+    }
+}
+
+message DockerGameGuardRouting {
+    GameGuardProtocol protocol = 1;
+}
+
+enum GameGuardProtocol {
+    HTTP = 0;
+    HTTPS = 1;
+    TCP = 2;
+    TCP_TLS = 3;
+    UDP = 4;
+}
+
+message DockerHostRouting {}

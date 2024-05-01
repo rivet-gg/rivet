@@ -3,7 +3,6 @@ use hyper::{Body, Request, Response};
 use rivet_api::models;
 use uuid::Uuid;
 
-pub mod images;
 pub mod servers;
 
 pub async fn handle(
@@ -23,17 +22,13 @@ define_router! {
 	routes: {
 		"servers" : {
 			POST: servers::create(
-				body: models::ServersServersCreateRequest,
+				body: models::ServersCreateServerRequest,
 			),
 		},
 
 		"servers" / Uuid : {
-			DELETE: servers::delete(),
-		},
-
-		"images" : {
-			POST: images::create(
-				body: models::ServersImagesCreateRequest,
+			DELETE: servers::destroy(
+				query: servers::DeleteQuery,
 			),
 		},
 	},

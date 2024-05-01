@@ -10,11 +10,11 @@ import { Group } from "./api/resources/group/client/Client";
 import { Identity } from "./api/resources/identity/client/Client";
 import { Kv } from "./api/resources/kv/client/Client";
 import { Provision } from "./api/resources/provision/client/Client";
-import { Servers } from "./api/resources/servers/client/Client";
 import { Auth } from "./api/resources/auth/client/Client";
 import { Job } from "./api/resources/job/client/Client";
 import { Matchmaker } from "./api/resources/matchmaker/client/Client";
 import { Portal } from "./api/resources/portal/client/Client";
+import { Servers } from "./api/resources/servers/client/Client";
 
 export declare namespace RivetClient {
     interface Options {
@@ -68,12 +68,6 @@ export class RivetClient {
         return (this._provision ??= new Provision(this._options));
     }
 
-    protected _servers: Servers | undefined;
-
-    public get servers(): Servers {
-        return (this._servers ??= new Servers(this._options));
-    }
-
     protected _auth: Auth | undefined;
 
     public get auth(): Auth {
@@ -96,5 +90,11 @@ export class RivetClient {
 
     public get portal(): Portal {
         return (this._portal ??= new Portal(this._options));
+    }
+
+    protected _servers: Servers | undefined;
+
+    public get servers(): Servers {
+        return (this._servers ??= new Servers(this._options));
     }
 }

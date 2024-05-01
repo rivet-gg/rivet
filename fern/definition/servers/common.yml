@@ -1,26 +1,70 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
 
 types:
+  Server:
+    properties:
+      server_id: uuid
+      game_id: uuid
+      datacenter_id: uuid
+      cluster_id: uuid
+      metadata: unknown
+      resources: Resources
+      kill_timeout:
+        docs: >-
+          The duration to wait for in milliseconds before killing the server.
+          This should be set to a safe default, and can be overridden during a
+          DELETE request if needed.
+        type: optional<long>
+      runtime: Runtime
+      create_ts: long
+      destroy_ts: optional<long>
+
+  Resources:
+    properties:
+      cpu:
+        docs: |
+          The number of CPU cores in millicores, or 1/1000 of a core. For example,
+          1/8 of a core would be 125 millicores, and 1 core would be 1000
+          millicores.
+        type: integer
+      memory:
+        docs: The amount of memory in megabytes
+        type: integer
+
   Runtime:
     properties:
       docker: optional<DockerRuntime>
 
   DockerRuntime:
     properties:
-      image_id: string
-      args: list<string>
-      environment: map<string, string>
+      image_id: uuid
+      args: optional<list<string>>
+      environment: optional<map<string, string>>
       network: DockerNetwork
 
   DockerNetwork:
     properties:
-      mode: DockerNetworkMode
+      mode: optional<DockerNetworkMode>
       ports: map<string, DockerPort>
 
   DockerNetworkMode:
     enum:
-      - host
       - bridge
+      - host
+
+  DockerPort:
+    properties:
+      port: optional<integer>
+      routing: DockerPortRouting
+
+  DockerPortRouting:  
+    properties:
+      game_guard: optional<DockerGameGuardRouting>
+      host: optional<DockerHostRouting>
+
+  DockerGameGuardRouting:
+    properties:
+      protocol: optional<GameGuardProtocol>
 
   GameGuardProtocol:
     enum:
@@ -30,20 +74,5 @@ types:
       - tcp_tls
       - udp
 
-  DockerPort:
-    properties:
-      port: optional<integer>
-      routing: DockerPortRouting
-
-  DockerPortRouting:
-    properties:
-      game_guard: optional<GameGuardProtocol>
-      host: optional<DockerHostRouting>
-
   DockerHostRouting:
-    properties:
-      null: unknown
-
-  Server:
-    properties:
-      null: unknown
+    properties: {}

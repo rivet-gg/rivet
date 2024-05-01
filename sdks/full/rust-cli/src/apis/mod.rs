@@ -129,7 +129,6 @@ pub mod matchmaker_regions_api;
 pub mod portal_games_api;
 pub mod provision_datacenters_api;
 pub mod provision_servers_api;
-pub mod servers_images_api;
 pub mod servers_servers_api;
 
 pub mod configuration;

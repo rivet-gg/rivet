@@ -35,9 +35,9 @@ export class Servers {
      * @throws {@link Rivet.BadRequestError}
      */
     public async create(
-        request: Rivet.servers.servers.CreateRequest,
+        request: Rivet.servers.CreateServerRequest,
         requestOptions?: Servers.RequestOptions
-    ): Promise<Rivet.servers.servers.CreateResponse> {
+    ): Promise<Rivet.servers.CreateServerResponse> {
         const _response = await (this._options.fetcher ?? core.fetcher)({
             url: urlJoin(
                 (await core.Supplier.get(this._options.environment)) ?? environments.RivetEnvironment.Production,
@@ -48,14 +48,14 @@ export class Servers {
                 Authorization: await this._getAuthorizationHeader(),
             },
             contentType: "application/json",
-            body: await serializers.servers.servers.CreateRequest.jsonOrThrow(request, {
+            body: await serializers.servers.CreateServerRequest.jsonOrThrow(request, {
                 unrecognizedObjectKeys: "strip",
             }),
             timeoutMs: requestOptions?.timeoutInSeconds != null ? requestOptions.timeoutInSeconds * 1000 : 180000,
             maxRetries: requestOptions?.maxRetries,
         });
         if (_response.ok) {
-            return await serializers.servers.servers.CreateResponse.parseOrThrow(_response.body, {
+            return await serializers.servers.CreateServerResponse.parseOrThrow(_response.body, {
                 unrecognizedObjectKeys: "passthrough",
                 allowUnrecognizedUnionMembers: true,
                 allowUnrecognizedEnumValues: true,
@@ -160,9 +160,15 @@ export class Servers {
      */
     public async destroy(
         serverId: string,
-        request: Rivet.servers.servers.DestroyRequest,
+        request: Rivet.servers.DestroyServerRequest = {},
         requestOptions?: Servers.RequestOptions
-    ): Promise<void> {
+    ): Promise<Rivet.servers.DestroyServerResponse> {
+        const { overrideKillTimeout } = request;
+        const _queryParams: Record<string, string | string[]> = {};
+        if (overrideKillTimeout != null) {
+            _queryParams["override_kill_timeout"] = overrideKillTimeout.toString();
+        }
+
         const _response = await (this._options.fetcher ?? core.fetcher)({
             url: urlJoin(
                 (await core.Supplier.get(this._options.environment)) ?? environments.RivetEnvironment.Production,
@@ -173,14 +179,18 @@ export class Servers {
                 Authorization: await this._getAuthorizationHeader(),
             },
             contentType: "application/json",
-            body: await serializers.servers.servers.DestroyRequest.jsonOrThrow(request, {
-                unrecognizedObjectKeys: "strip",
-            }),
+            queryParameters: _queryParams,
             timeoutMs: requestOptions?.timeoutInSeconds != null ? requestOptions.timeoutInSeconds * 1000 : 180000,
             maxRetries: requestOptions?.maxRetries,
         });
         if (_response.ok) {
-            return;
+            return await serializers.servers.DestroyServerResponse.parseOrThrow(_response.body, {
+                unrecognizedObjectKeys: "passthrough",
+                allowUnrecognizedUnionMembers: true,
+                allowUnrecognizedEnumValues: true,
+                skipValidation: true,
+                breadcrumbsPrefix: ["response"],
+            });
         }
 
         if (_response.error.reason === "status-code") {

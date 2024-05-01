@@ -4,7 +4,6 @@
 
 import * as environments from "../../../../environments";
 import * as core from "../../../../core";
-import { Images } from "../resources/images/client/Client";
 import { Servers as Servers_ } from "../resources/servers/client/Client";
 
 export declare namespace Servers {
@@ -22,12 +21,6 @@ export declare namespace Servers {
 
 export class Servers {
     constructor(protected readonly _options: Servers.Options = {}) {}
-
-    protected _images: Images | undefined;
-
-    public get images(): Images {
-        return (this._images ??= new Images(this._options));
-    }
 
     protected _servers: Servers_ | undefined;
 

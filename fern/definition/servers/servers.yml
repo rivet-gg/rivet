@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  commons: common.yml
+
+service:
+  auth: true
+  base-path: /servers/servers
+  endpoints:
+    create:
+      path: ""
+      method: POST
+      docs: Create a new dynamic server.
+      request:
+        body: CreateServerRequest
+      response: CreateServerResponse
+    destroy:
+      path: "/{server_id}"
+      method: DELETE
+      docs: Destroy a dynamic server.
+      path-parameters:
+        server_id:
+          docs: The id of the server to destroy
+          type: uuid
+      request:
+        name: DestroyServerRequest
+        query-parameters:
+          override_kill_timeout:
+            docs: >-
+              The duration to wait for in milliseconds before killing the server.
+              This should be used to override the default kill timeout if a faster
+              time is needed, say for ignoring a graceful shutdown.
+            type: optional<long>
+      response: DestroyServerResponse
+
+types:
+  CreateServerRequest:
+    properties:
+      datacenter:
+        docs: The name ID of the datacenter
+        type: string
+      metadata: unknown
+      resources: commons.Resources
+      kill_timeout:
+        docs: >-
+          The duration to wait for in milliseconds before killing the server.
+          This should be set to a safe default, and can be overridden during a
+          DELETE request if needed.
+        type: optional<long>
+      runtime: commons.Runtime
+  CreateServerResponse:
+    properties:
+      server:
+        docs: The server that was created
+        type: commons.Server
+  DestroyServerResponse:
+    properties:
+      server_id:
+        type: uuid

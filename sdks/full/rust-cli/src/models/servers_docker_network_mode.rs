@@ -12,25 +12,25 @@
 /// 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum ServersDockerNetworkMode {
-    #[serde(rename = "host")]
-    Host,
     #[serde(rename = "bridge")]
     Bridge,
+    #[serde(rename = "host")]
+    Host,
 
 }
 
 impl ToString for ServersDockerNetworkMode {
     fn to_string(&self) -> String {
         match self {
-            Self::Host => String::from("host"),
             Self::Bridge => String::from("bridge"),
+            Self::Host => String::from("host"),
         }
     }
 }
 
 impl Default for ServersDockerNetworkMode {
     fn default() -> ServersDockerNetworkMode {
-        Self::Host
+        Self::Bridge
     }
 }
 

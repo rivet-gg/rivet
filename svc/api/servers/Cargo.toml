@@ -16,6 +16,7 @@ rivet-api = { path = "../../../sdks/full/rust" }
 rivet-cache = { path = "../../../lib/cache/build" }
 rivet-claims = { path = "../../../lib/claims" }
 rivet-health-checks = { path = "../../../lib/health-checks" }
+rivet-convert = { path = "../../../lib/convert" }
 rivet-pools = { path = "../../../lib/pools" }
 s3-util = { path = "../../../lib/s3-util" }
 serde = { version = "1.0", features = ["derive"] }
@@ -27,12 +28,15 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["f
 url = "2.2.2"
 uuid = { version = "1", features = ["v4"] }
 
-cluster-get = { path = "../../pkg/cluster/ops/get" }
-cluster-list = { path = "../../pkg/cluster/ops/list" }
-cluster-datacenter-list = { path = "../../pkg/cluster/ops/datacenter-list" }
 cluster-datacenter-get = { path = "../../pkg/cluster/ops/datacenter-get" }
-cluster-resolve-for-name-id = { path = "../../pkg/cluster/ops/resolve-for-name-id" }
+cluster-datacenter-list = { path = "../../pkg/cluster/ops/datacenter-list" }
 cluster-datacenter-resolve-for-name-id = { path = "../../pkg/cluster/ops/datacenter-resolve-for-name-id" }
+cluster-get = { path = "../../pkg/cluster/ops/get" }
+cluster-get-for-game = { path = "../../pkg/cluster/ops/get-for-game" }
+cluster-list = { path = "../../pkg/cluster/ops/list" }
+cluster-resolve-for-name-id = { path = "../../pkg/cluster/ops/resolve-for-name-id" }
+ds-server-create = { path = "../../pkg/ds/ops/server-create" }
+ds-server-delete = { path = "../../pkg/ds/ops/server-delete" }
 
 [dev-dependencies]
 rivet-connection = { path = "../../../lib/connection" }

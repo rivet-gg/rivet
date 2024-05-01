@@ -18,18 +18,20 @@ impl Ctx {
 				.init();
 		});
 
-		let pools = rivet_pools::from_env("api-servers-test").await.unwrap();
+		let pools = rivet_pools::from_env("api-dynamic-servers-test")
+			.await
+			.unwrap();
 		let cache = rivet_cache::CacheInner::new(
-			"api-servers-test".to_string(),
+			"api-dynamic-servers-test".to_string(),
 			util::env::var("RIVET_SOURCE_HASH").unwrap(),
 			pools.redis_cache().unwrap(),
 		);
 		let client = chirp_client::SharedClient::from_env(pools.clone())
 			.expect("create client")
-			.wrap_new("api-servers-test");
+			.wrap_new("api-dynamic-servers-test");
 		let conn = rivet_connection::Connection::new(client, pools, cache);
 		let op_ctx = OperationContext::new(
-			"api-servers-test".to_string(),
+			"api-dynamic-servers-test".to_string(),
 			std::time::Duration::from_secs(60),
 			conn,
 			Uuid::new_v4(),
@@ -37,7 +39,6 @@ impl Ctx {
 			util::timestamp::now(),
 			util::timestamp::now(),
 			(),
-			Vec::new(),
 		);
 
 		Ctx { op_ctx }
