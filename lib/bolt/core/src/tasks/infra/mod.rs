@@ -126,6 +126,15 @@ pub fn build_plan(
 		}
 	}
 
+	// Kubernetes
+	plan.push(PlanStep {
+		name_id: "k8s-infra",
+		kind: PlanStepKind::Terraform {
+			plan_id: "k8s_infra".into(),
+			needs_destroy: false,
+		},
+	});
+
 	// CockroachDB
 	match ctx.ns().cockroachdb.provider {
 		ns::CockroachDBProvider::Kubernetes {} => {
@@ -147,15 +156,6 @@ pub fn build_plan(
 			});
 		}
 	}
-
-	// Kubernetes
-	plan.push(PlanStep {
-		name_id: "k8s-infra",
-		kind: PlanStepKind::Terraform {
-			plan_id: "k8s_infra".into(),
-			needs_destroy: false,
-		},
-	});
 
 	if ctx.tls_enabled() {
 		// TLS
@@ -225,6 +225,13 @@ pub fn build_plan(
 
 	// Vector
 	if ctx.ns().prometheus.is_some() {
+		plan.push(PlanStep {
+			name_id: "grafana",
+			kind: PlanStepKind::Terraform {
+				plan_id: "grafana".into(),
+				needs_destroy: false,
+			},
+		});
 		plan.push(PlanStep {
 			name_id: "vector",
 			kind: PlanStepKind::Terraform {
