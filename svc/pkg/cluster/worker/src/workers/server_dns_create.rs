@@ -140,7 +140,7 @@ async fn inner(
 		[ctx, @tx tx]
 		"
 		UPDATE db_cluster.servers_cloudflare
-		SET dns_record_id = $2
+		SET secondary_dns_record_id = $2
 		WHERE
 			server_id = $1 AND
 			destroy_ts IS NULL
