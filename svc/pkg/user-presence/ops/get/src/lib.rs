@@ -49,7 +49,7 @@ async fn handle(
 		>>(&mut redis)
 			.await?
 			.into_iter()
-            .flatten()
+			.flatten()
 			.map(
 				|(user_id, game_id, message, public_metadata, friend_metadata)| {
 					if user_id.is_none() {
@@ -93,7 +93,7 @@ async fn handle(
 		pipe.query_async::<_, Vec<Vec<(Option<String>, Option<i64>, Option<i64>)>>>(&mut redis)
 			.await?
 			.into_iter()
-            .flatten()
+			.flatten()
 			.map(|(user_id, update_ts, status)| {
 				if user_id.is_none() {
 					return GlobalResult::Ok(None);
