@@ -1,6 +1,7 @@
 use proto::backend::pkg::*;
 use redis::AsyncCommands;
 use rivet_operation::prelude::*;
+use rivet_pools::prelude::redis::Commands;
 
 #[tracing::instrument(skip_all)]
 pub async fn run_from_env(ts: i64, pools: rivet_pools::Pools) -> GlobalResult<()> {
@@ -86,11 +87,13 @@ async fn cull_unregistered_players(
 	mut redis_mm: RedisPool,
 	client: chirp_client::Client,
 ) -> GlobalResult<()> {
-	// We don't remove from the set here since this will be removed in the mm-player-remove
-	// service.
-	let remove_player_ids = redis_mm
-		.zrangebyscore::<_, _, _, Vec<String>>(util_mm::key::player_unregistered(), 0, ts as isize)
+	let remove_player_ids = redis::pipe()
+		.zrangebyscore(util_mm::key::player_unregistered(), 0, ts as isize)
+		.zrembyscore(util_mm::key::player_unregistered(), 0, ts as isize)
+		.ignore()
+		.query_async::<_, (Vec<String>,)>(&mut redis_mm)
 		.await?
+		.0
 		.into_iter()
 		.filter_map(|x| util::uuid::parse(&x).ok())
 		.collect::<Vec<_>>();
@@ -115,11 +118,13 @@ async fn cull_auto_remove_players(
 	mut redis_mm: RedisPool,
 	client: chirp_client::Client,
 ) -> GlobalResult<()> {
-	// We don't remove from the set here since this will be removed in the mm-player-remove
-	// service.
-	let remove_player_ids = redis_mm
-		.zrangebyscore::<_, _, _, Vec<String>>(util_mm::key::player_auto_remove(), 0, ts as isize)
+	let remove_player_ids = redis::pipe()
+		.zrangebyscore(util_mm::key::player_auto_remove(), 0, ts as isize)
+		.zrembyscore(util_mm::key::player_auto_remove(), 0, ts as isize)
+		.ignore()
+		.query_async::<_, (Vec<String>,)>(&mut redis_mm)
 		.await?
+		.0
 		.into_iter()
 		.filter_map(|x| util::uuid::parse(&x).ok())
 		.collect::<Vec<_>>();

@@ -48,7 +48,11 @@ async fn worker(ctx: &OperationContext<job_run::msg::stop::Message>) -> GlobalRe
 			tracing::error!("discarding stale message");
 			return Ok(());
 		} else {
-			retry_bail!("run not found, may be race condition with insertion");
+			// retry_bail!("run not found, may be race condition with insertion");
+
+			// TODO: This has amplifying failures, so we just fail once here
+			tracing::error!("job run not found, may have leaked");
+			return Ok(());
 		}
 	};
 

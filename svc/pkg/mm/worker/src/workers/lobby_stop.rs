@@ -43,7 +43,11 @@ async fn worker(ctx: &OperationContext<mm::msg::lobby_stop::Message>) -> GlobalR
 			tracing::error!("discarding stale message");
 			return Ok(());
 		} else {
-			retry_bail!("lobby not found, may be race condition with insertion");
+			// retry_bail!("lobby not found, may be race condition with insertion");
+
+			// TODO: This has amplifying failures, so we just fail once here
+			tracing::error!("lobby not found, may have leaked");
+			return Ok(());
 		}
 	};
 

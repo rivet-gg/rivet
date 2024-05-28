@@ -27,12 +27,16 @@ async fn worker(ctx: &OperationContext<job_run::msg::cleanup::Message>) -> Globa
 		})
 		.await?
 	else {
-		if ctx.req_dt() > util::duration::minutes(5) {
-			tracing::error!("discarding stale message");
-			return Ok(());
-		} else {
-			retry_bail!("run not found, may be race condition with insertion");
-		}
+		// if ctx.req_dt() > util::duration::minutes(5) {
+		// 	tracing::error!("discarding stale message");
+		// 	return Ok(());
+		// } else {
+		// 	retry_bail!("run not found, may be race condition with insertion");
+		// }
+
+		// TODO: This has amplifying failures, so we just fail once here
+		tracing::error!("job run not found, may have leaked");
+		return Ok(());
 	};
 
 	tracing::info!("removing from cache");

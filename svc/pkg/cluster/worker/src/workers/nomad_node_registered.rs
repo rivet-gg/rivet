@@ -38,7 +38,7 @@ async fn worker(
 
 	// Insert metrics
 	if let Some(install_complete_ts) = install_complete_ts {
-	insert_metrics(ctx, datacenter_id, nomad_join_ts, install_complete_ts).await?;
+		insert_metrics(ctx, datacenter_id, nomad_join_ts, install_complete_ts).await?;
 	} else {
 		tracing::warn!("missing install_complete_ts for nomad-node-registered");
 	}
