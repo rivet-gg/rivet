@@ -1,0 +1,13 @@
+[service]
+name = "cf-tail-event-read"
+
+[runtime]
+kind = "rust"
+
+[operation]
+
+[secrets]
+"clickhouse/users/chirp/password" = {}
+
+[databases]
+db-job-log = {}

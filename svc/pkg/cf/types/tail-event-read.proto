@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package rivet.backend.pkg.cf.tail_event_read;
+
+import "google/protobuf/empty.proto";
+import "proto/common.proto";
+
+message Request {
+	message TsRangeQuery {
+		int64 after_ts = 1;
+		int64 before_ts = 2;
+	}
+
+	string script_name = 1;
+	int64 count = 2;
+	bool order_asc = 3;
+
+	oneof query {
+		google.protobuf.Empty all = 101;
+		int64 before_ts = 102;
+		int64 after_ts = 103;
+		TsRangeQuery ts_range = 104;
+	}
+}
+
+message Response {
+	repeated TailEvent events = 1;
+}
+
+message TailEvent {
+	int64 ts = 1;
+	string json = 2;
+}
+

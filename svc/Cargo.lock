@@ -1939,6 +1939,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cf-tail-event-read"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "chrono",
+ "clickhouse",
+ "prost 0.10.4",
+ "rivet-operation",
+ "serde",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

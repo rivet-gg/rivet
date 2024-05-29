@@ -48,6 +48,7 @@ members = [
 	"pkg/cf-custom-hostname/ops/list-for-namespace-id",
 	"pkg/cf-custom-hostname/ops/resolve-hostname",
 	"pkg/cf-custom-hostname/worker",
+	"pkg/cf/ops/tail-event-read",
 	"pkg/cloud/ops/device-link-create",
 	"pkg/cloud/ops/game-config-create",
 	"pkg/cloud/ops/game-config-get",
