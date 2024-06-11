@@ -923,6 +923,7 @@ dependencies = [
  "s3-util",
  "serde",
  "serde_json",
+ "sqlx 0.7.4 (git+https://github.com/rivet-gg/sqlx?rev=08d6e61aa0572e7ec557abbedb72cebb96e1ac5b)",
  "thiserror",
  "tokio",
  "tracing",
@@ -3149,16 +3150,42 @@ checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 name = "ds-server-create"
 version = "0.0.1"
 dependencies = [
+ "bit-vec",
+ "build-get",
  "chirp-client",
  "chirp-worker",
+ "cjson",
+ "cluster-datacenter-list",
+ "cluster-list",
  "faker-build",
  "faker-game",
  "faker-region",
+ "heck 0.3.3",
+ "hex",
+ "http 0.2.12",
+ "ip-info",
  "lazy_static",
- "nomad-client",
+ "mm-lobby-list-for-user-id",
+ "nomad-util",
  "nomad_client",
+ "rand",
+ "regex",
+ "region-get",
+ "reqwest",
  "rivet-operation",
+ "rivet-util",
+ "rivet-util-build",
+ "s3-util",
+ "serde",
+ "serde_json",
+ "sha2",
  "sqlx 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "strum 0.24.1",
+ "tier-list",
+ "token-create",
+ "upload-get",
+ "user-identity-get",
+ "uuid",
 ]
 
 [[package]]
@@ -3167,8 +3194,36 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "nomad-util",
+ "nomad_client",
+ "region-get",
+ "reqwest",
  "rivet-operation",
- "sqlx 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rivet-util-job",
+ "sqlx 0.7.4 (git+https://github.com/rivet-gg/sqlx?rev=08d6e61aa0572e7ec557abbedb72cebb96e1ac5b)",
+]
+
+[[package]]
+name = "ds-worker"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "chrono",
+ "job-run-get",
+ "lazy_static",
+ "mm-config-version-get",
+ "mm-lobby-get",
+ "nomad-util",
+ "nomad_client",
+ "region-get",
+ "rivet-convert",
+ "rivet-health-checks",
+ "rivet-metrics",
+ "rivet-runtime",
+ "rivet-util-job",
+ "serde",
+ "sqlx 0.7.4 (git+https://github.com/rivet-gg/sqlx?rev=08d6e61aa0572e7ec557abbedb72cebb96e1ac5b)",
 ]
 
 [[package]]
@@ -6000,6 +6055,7 @@ dependencies = [
  "chirp-client",
  "cloud-worker",
  "cluster-worker",
+ "ds-worker",
  "external-worker",
  "game-user-worker",
  "job-log-worker",

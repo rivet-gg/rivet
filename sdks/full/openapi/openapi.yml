@@ -13684,7 +13684,14 @@ components:
         - udp
     ServersDockerHostRouting:
       type: object
-      properties: {}
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ServersHostProtocol'
+    ServersHostProtocol:
+      type: string
+      enum:
+        - tcp
+        - udp
     ServersCreateServerRequest:
       type: object
       properties:

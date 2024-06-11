@@ -75,4 +75,10 @@ types:
       - udp
 
   DockerHostRouting:
-    properties: {}
+    properties:
+      protocol: optional<HostProtocol>
+
+  HostProtocol:
+    enum:
+      - tcp
+      - udp

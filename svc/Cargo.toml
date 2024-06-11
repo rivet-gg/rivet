@@ -85,6 +85,7 @@ members = [
 	"pkg/debug/ops/email-res",
 	"pkg/ds/ops/server-create",
 	"pkg/ds/ops/server-delete",
+	"pkg/ds/worker",
 	"pkg/email-verification/ops/complete",
 	"pkg/email-verification/ops/create",
 	"pkg/email/ops/send",

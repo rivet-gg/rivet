@@ -16,7 +16,7 @@ pub struct ServersDockerPortRouting {
     #[serde(rename = "game_guard", skip_serializing_if = "Option::is_none")]
     pub game_guard: Option<Box<crate::models::ServersDockerGameGuardRouting>>,
     #[serde(rename = "host", skip_serializing_if = "Option::is_none")]
-    pub host: Option<serde_json::Value>,
+    pub host: Option<Box<crate::models::ServersDockerHostRouting>>,
 }
 
 impl ServersDockerPortRouting {

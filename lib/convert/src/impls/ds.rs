@@ -201,8 +201,8 @@ impl ApiTryFrom<models::ServersDockerPortRouting>
 			(Some(game_guard), None) => Ok(
 				backend::dynamic_servers::docker_port::Routing::GameGuard((*game_guard).api_into()),
 			),
-			(None, Some(_)) => Ok(backend::dynamic_servers::docker_port::Routing::Host(
-				backend::dynamic_servers::DockerHostRouting {},
+			(None, Some(host)) => Ok(backend::dynamic_servers::docker_port::Routing::Host(
+				(*host).api_into(),
 			)),
 			(None, None) => bail_with!(SERVERS_NO_PORT_ROUTERS),
 			_ => bail_with!(SERVERS_MULTIPLE_PORT_ROUTERS),
@@ -225,10 +225,10 @@ impl ApiTryFrom<backend::dynamic_servers::docker_port::Routing>
 					host: None,
 				})
 			}
-			backend::dynamic_servers::docker_port::Routing::Host(_) => {
+			backend::dynamic_servers::docker_port::Routing::Host(host) => {
 				Ok(models::ServersDockerPortRouting {
 					game_guard: None,
-					host: Some(to_value({})?),
+					host: Some(Box::new(host.api_try_into()?)),
 				})
 			}
 		}
@@ -260,6 +260,35 @@ impl ApiTryFrom<backend::dynamic_servers::DockerGameGuardRouting>
 		Ok(models::ServersDockerGameGuardRouting {
 			protocol: Some(
 				unwrap!(backend::dynamic_servers::GameGuardProtocol::from_i32(
+					value.protocol
+				))
+				.api_into(),
+			),
+		})
+	}
+}
+
+impl ApiFrom<models::ServersDockerHostRouting> for backend::dynamic_servers::DockerHostRouting {
+	fn api_from(
+		value: models::ServersDockerHostRouting,
+	) -> backend::dynamic_servers::DockerHostRouting {
+		backend::dynamic_servers::DockerHostRouting {
+			protocol: backend::dynamic_servers::HostProtocol::api_from(
+				value.protocol.unwrap_or_default().into(),
+			) as i32,
+		}
+	}
+}
+
+impl ApiTryFrom<backend::dynamic_servers::DockerHostRouting> for models::ServersDockerHostRouting {
+	type Error = GlobalError;
+
+	fn api_try_from(
+		value: backend::dynamic_servers::DockerHostRouting,
+	) -> GlobalResult<models::ServersDockerHostRouting> {
+		Ok(models::ServersDockerHostRouting {
+			protocol: Some(
+				unwrap!(backend::dynamic_servers::HostProtocol::from_i32(
 					value.protocol
 				))
 				.api_into(),
@@ -312,6 +341,24 @@ impl ApiFrom<backend::dynamic_servers::GameGuardProtocol> for models::ServersGam
 			backend::dynamic_servers::GameGuardProtocol::TcpTls => {
 				models::ServersGameGuardProtocol::TcpTls
 			}
+		}
+	}
+}
+
+impl ApiFrom<models::ServersHostProtocol> for backend::dynamic_servers::HostProtocol {
+	fn api_from(value: models::ServersHostProtocol) -> backend::dynamic_servers::HostProtocol {
+		match value {
+			models::ServersHostProtocol::Udp => backend::dynamic_servers::HostProtocol::HostUdp,
+			models::ServersHostProtocol::Tcp => backend::dynamic_servers::HostProtocol::HostTcp,
+		}
+	}
+}
+
+impl ApiFrom<backend::dynamic_servers::HostProtocol> for models::ServersHostProtocol {
+	fn api_from(value: backend::dynamic_servers::HostProtocol) -> models::ServersHostProtocol {
+		match value {
+			backend::dynamic_servers::HostProtocol::HostUdp => models::ServersHostProtocol::Udp,
+			backend::dynamic_servers::HostProtocol::HostTcp => models::ServersHostProtocol::Tcp,
 		}
 	}
 }

@@ -7,11 +7,39 @@ license = "Apache-2.0"
 
 [dependencies]
 chirp-client = { path = "../../../../../lib/chirp/client" }
+chirp-worker = { path = "../../../../../lib/chirp/worker" }
 rivet-operation = { path = "../../../../../lib/operation/core" }
-nomad-client = "0.0.9"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 lazy_static = "1.4.0"
+uuid = { version = "1", features = ["v4", "serde"] }
+http = "0.2"
+bit-vec = "0.6"
+cjson = "0.1"
+nomad-util = { path = "../../../../../lib/nomad-util" }
+strum = { version = "0.24", features = ["derive"] }
+sha2 = "0.10"
+hex = "0.4"
+rivet-util = { path = "../../../../../lib/util/core" }
+heck = "0.3"
+s3-util = { path = "../../../../../lib/s3-util" }
+util-build = { package = "rivet-util-build", path = "../../../build/util" }
+regex = "1.10"
+rand = "0.8"
+reqwest = "0.11"
 
-[dependencies.nomad_client_new]
+mm-lobby-list-for-user-id = { path = "../../../mm/ops/lobby-list-for-user-id" }
+build-get = { path = "../../../build/ops/get" }
+user-identity-get = { path = "../../../user-identity/ops/get" }
+upload-get = { path = "../../../upload/ops/get" }
+region-get = { path = "../../../region/ops/get" }
+ip-info = { path = "../../../ip/ops/info" }
+tier-list = { path = "../../../tier/ops/list" }
+token-create = { path = "../../../token/ops/create" }
+cluster-datacenter-list = { path = "../../../cluster/ops/datacenter-list" }
+cluster-list = { path = "../../../cluster/ops/list" }
+
+[dependencies.nomad_client]
 package = "nomad_client"
 git = "https://github.com/rivet-gg/nomad-client"
 rev = "abb66bf0c30c7ff5b0c695dae952481c33e538b5" # pragma: allowlist secret

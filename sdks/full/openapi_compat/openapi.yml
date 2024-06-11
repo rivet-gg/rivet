@@ -4441,7 +4441,9 @@ components:
           $ref: '#/components/schemas/ServersGameGuardProtocol'
       type: object
     ServersDockerHostRouting:
-      properties: {}
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ServersHostProtocol'
       type: object
     ServersDockerNetwork:
       properties:
@@ -4500,6 +4502,11 @@ components:
       - https
       - tcp
       - tcp_tls
+      - udp
+      type: string
+    ServersHostProtocol:
+      enum:
+      - tcp
       - udp
       type: string
     ServersResources:

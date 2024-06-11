@@ -6,7 +6,6 @@ use crate::auth::Auth;
 
 // Also see user-token-create/src/main.rs
 pub const TOKEN_TTL: i64 = util::duration::minutes(15);
-pub const REFRESH_TOKEN_TTL: i64 = util::duration::days(90);
 
 // MARK: POST /games/{}/tokens/cloud
 pub async fn create_cloud_token(
@@ -42,9 +41,7 @@ pub async fn create_service_token(
 		token_config: Some(token::create::request::TokenConfig {
 			ttl: TOKEN_TTL,
 		}),
-		refresh_token_config: Some(token::create::request::TokenConfig {
-			ttl: REFRESH_TOKEN_TTL,
-		}),
+		refresh_token_config: None,
 		issuer: "api-cloud".to_owned(),
 		client: Some(ctx.client_info()),
 		kind: Some(token::create::request::Kind::New(
