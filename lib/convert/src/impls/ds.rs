@@ -9,7 +9,9 @@ use serde_json::to_value;
 
 impl ApiTryFrom<backend::dynamic_servers::Server> for models::DynamicServersServer {
 	type Error = GlobalError;
-	fn api_try_from(value: backend::dynamic_servers::Server) -> GlobalResult<models::DynamicServersServer> {
+	fn api_try_from(
+		value: backend::dynamic_servers::Server,
+	) -> GlobalResult<models::DynamicServersServer> {
 		Ok(models::DynamicServersServer {
 			cluster_id: unwrap!(value.cluster_id).as_uuid(),
 			create_ts: value.create_ts,
@@ -26,7 +28,9 @@ impl ApiTryFrom<backend::dynamic_servers::Server> for models::DynamicServersServ
 }
 
 impl ApiFrom<models::DynamicServersResources> for backend::dynamic_servers::ServerResources {
-	fn api_from(value: models::DynamicServersResources) -> backend::dynamic_servers::ServerResources {
+	fn api_from(
+		value: models::DynamicServersResources,
+	) -> backend::dynamic_servers::ServerResources {
 		backend::dynamic_servers::ServerResources {
 			cpu_millicores: value.cpu,
 			memory_mib: value.memory,
@@ -35,7 +39,9 @@ impl ApiFrom<models::DynamicServersResources> for backend::dynamic_servers::Serv
 }
 
 impl ApiFrom<backend::dynamic_servers::ServerResources> for models::DynamicServersResources {
-	fn api_from(value: backend::dynamic_servers::ServerResources) -> models::DynamicServersResources {
+	fn api_from(
+		value: backend::dynamic_servers::ServerResources,
+	) -> models::DynamicServersResources {
 		models::DynamicServersResources {
 			cpu: value.cpu_millicores,
 			memory: value.memory_mib,
@@ -43,7 +49,9 @@ impl ApiFrom<backend::dynamic_servers::ServerResources> for models::DynamicServe
 	}
 }
 
-impl ApiTryFrom<models::DynamicServersRuntime> for backend::pkg::dynamic_servers::server_create::request::Runtime {
+impl ApiTryFrom<models::DynamicServersRuntime>
+	for backend::pkg::dynamic_servers::server_create::request::Runtime
+{
 	type Error = GlobalError;
 
 	fn api_try_from(
@@ -97,8 +105,9 @@ impl ApiTryFrom<models::DynamicServersDockerNetwork> for backend::dynamic_server
 		value: models::DynamicServersDockerNetwork,
 	) -> GlobalResult<backend::dynamic_servers::DockerNetwork> {
 		Ok(backend::dynamic_servers::DockerNetwork {
-			mode: backend::dynamic_servers::DockerNetworkMode::api_from(value.mode.unwrap_or_default())
-				as i32,
+			mode: backend::dynamic_servers::DockerNetworkMode::api_from(
+				value.mode.unwrap_or_default(),
+			) as i32,
 			ports: unwrap!(value
 				.ports
 				.into_iter()
@@ -114,7 +123,10 @@ impl ApiTryInto<models::DynamicServersDockerNetwork> for backend::dynamic_server
 	fn api_try_into(self) -> GlobalResult<models::DynamicServersDockerNetwork> {
 		Ok(models::DynamicServersDockerNetwork {
 			mode: Some(
-				unwrap!(backend::dynamic_servers::DockerNetworkMode::from_i32(self.mode)).api_into(),
+				unwrap!(backend::dynamic_servers::DockerNetworkMode::from_i32(
+					self.mode
+				))
+				.api_into(),
 			),
 			ports: self
 				.ports
@@ -125,20 +137,36 @@ impl ApiTryInto<models::DynamicServersDockerNetwork> for backend::dynamic_server
 	}
 }
 
-impl ApiFrom<models::DynamicServersDockerNetworkMode> for backend::dynamic_servers::DockerNetworkMode {
-	fn api_from(value: models::DynamicServersDockerNetworkMode) -> backend::dynamic_servers::DockerNetworkMode {
+impl ApiFrom<models::DynamicServersDockerNetworkMode>
+	for backend::dynamic_servers::DockerNetworkMode
+{
+	fn api_from(
+		value: models::DynamicServersDockerNetworkMode,
+	) -> backend::dynamic_servers::DockerNetworkMode {
 		match value {
-			models::DynamicServersDockerNetworkMode::Bridge => backend::dynamic_servers::DockerNetworkMode::Bridge,
-			models::DynamicServersDockerNetworkMode::Host => backend::dynamic_servers::DockerNetworkMode::Host,
+			models::DynamicServersDockerNetworkMode::Bridge => {
+				backend::dynamic_servers::DockerNetworkMode::Bridge
+			}
+			models::DynamicServersDockerNetworkMode::Host => {
+				backend::dynamic_servers::DockerNetworkMode::Host
+			}
 		}
 	}
 }
 
-impl ApiFrom<backend::dynamic_servers::DockerNetworkMode> for models::DynamicServersDockerNetworkMode {
-	fn api_from(value: backend::dynamic_servers::DockerNetworkMode) -> models::DynamicServersDockerNetworkMode {
+impl ApiFrom<backend::dynamic_servers::DockerNetworkMode>
+	for models::DynamicServersDockerNetworkMode
+{
+	fn api_from(
+		value: backend::dynamic_servers::DockerNetworkMode,
+	) -> models::DynamicServersDockerNetworkMode {
 		match value {
-			backend::dynamic_servers::DockerNetworkMode::Bridge => models::DynamicServersDockerNetworkMode::Bridge,
-			backend::dynamic_servers::DockerNetworkMode::Host => models::DynamicServersDockerNetworkMode::Host,
+			backend::dynamic_servers::DockerNetworkMode::Bridge => {
+				models::DynamicServersDockerNetworkMode::Bridge
+			}
+			backend::dynamic_servers::DockerNetworkMode::Host => {
+				models::DynamicServersDockerNetworkMode::Host
+			}
 		}
 	}
 }
@@ -169,18 +197,20 @@ impl ApiTryFrom<backend::dynamic_servers::DockerPort> for models::DynamicServers
 	}
 }
 
-impl ApiTryFrom<models::DynamicServersDockerPortRouting> for backend::dynamic_servers::docker_port::Routing {
+impl ApiTryFrom<models::DynamicServersDockerPortRouting>
+	for backend::dynamic_servers::docker_port::Routing
+{
 	type Error = GlobalError;
 
 	fn api_try_from(
 		value: models::DynamicServersDockerPortRouting,
 	) -> GlobalResult<backend::dynamic_servers::docker_port::Routing> {
 		match (value.game_guard, value.host) {
-			(Some(game_guard), None) => Ok(backend::dynamic_servers::docker_port::Routing::GameGuard(
-				(*game_guard).api_into(),
-			)),
-			(None, Some(_)) => Ok(backend::dynamic_servers::docker_port::Routing::Host(
-				backend::dynamic_servers::DockerHostRouting {},
+			(Some(game_guard), None) => Ok(
+				backend::dynamic_servers::docker_port::Routing::GameGuard((*game_guard).api_into()),
+			),
+			(None, Some(host)) => Ok(backend::dynamic_servers::docker_port::Routing::Host(
+				(*host).api_into(),
 			)),
 			(None, None) => bail_with!(SERVERS_NO_PORT_ROUTERS),
 			_ => bail_with!(SERVERS_MULTIPLE_PORT_ROUTERS),
@@ -188,7 +218,9 @@ impl ApiTryFrom<models::DynamicServersDockerPortRouting> for backend::dynamic_se
 	}
 }
 
-impl ApiTryFrom<backend::dynamic_servers::docker_port::Routing> for models::DynamicServersDockerPortRouting {
+impl ApiTryFrom<backend::dynamic_servers::docker_port::Routing>
+	for models::DynamicServersDockerPortRouting
+{
 	type Error = GlobalError;
 
 	fn api_try_from(
@@ -201,17 +233,19 @@ impl ApiTryFrom<backend::dynamic_servers::docker_port::Routing> for models::Dyna
 					host: None,
 				})
 			}
-			backend::dynamic_servers::docker_port::Routing::Host(_) => {
+			backend::dynamic_servers::docker_port::Routing::Host(host) => {
 				Ok(models::DynamicServersDockerPortRouting {
 					game_guard: None,
-					host: Some(to_value({})?),
+					host: Some(Box::new(host.api_try_into()?)),
 				})
 			}
 		}
 	}
 }
 
-impl ApiFrom<models::DynamicServersDockerGameGuardRouting> for backend::dynamic_servers::DockerGameGuardRouting {
+impl ApiFrom<models::DynamicServersDockerGameGuardRouting>
+	for backend::dynamic_servers::DockerGameGuardRouting
+{
 	fn api_from(
 		value: models::DynamicServersDockerGameGuardRouting,
 	) -> backend::dynamic_servers::DockerGameGuardRouting {
@@ -242,26 +276,117 @@ impl ApiTryFrom<backend::dynamic_servers::DockerGameGuardRouting>
 	}
 }
 
-impl ApiFrom<models::DynamicServersGameGuardProtocol> for backend::dynamic_servers::GameGuardProtocol {
-	fn api_from(value: models::DynamicServersGameGuardProtocol) -> backend::dynamic_servers::GameGuardProtocol {
-		match value {
-			models::DynamicServersGameGuardProtocol::Udp => backend::dynamic_servers::GameGuardProtocol::Udp,
-			models::DynamicServersGameGuardProtocol::Tcp => backend::dynamic_servers::GameGuardProtocol::Tcp,
-			models::DynamicServersGameGuardProtocol::Http => backend::dynamic_servers::GameGuardProtocol::Http,
-			models::DynamicServersGameGuardProtocol::Https => backend::dynamic_servers::GameGuardProtocol::Https,
-			models::DynamicServersGameGuardProtocol::TcpTls => backend::dynamic_servers::GameGuardProtocol::TcpTls,
+impl ApiFrom<models::DynamicServersDockerHostRouting>
+	for backend::dynamic_servers::DockerHostRouting
+{
+	fn api_from(
+		value: models::DynamicServersDockerHostRouting,
+	) -> backend::dynamic_servers::DockerHostRouting {
+		backend::dynamic_servers::DockerHostRouting {
+			protocol: backend::dynamic_servers::HostProtocol::api_from(
+				value.protocol.unwrap_or_default().into(),
+			) as i32,
 		}
 	}
 }
 
-impl ApiFrom<backend::dynamic_servers::GameGuardProtocol> for models::DynamicServersGameGuardProtocol {
-	fn api_from(value: backend::dynamic_servers::GameGuardProtocol) -> models::DynamicServersGameGuardProtocol {
+impl ApiTryFrom<backend::dynamic_servers::DockerHostRouting>
+	for models::DynamicServersDockerHostRouting
+{
+	type Error = GlobalError;
+
+	fn api_try_from(
+		value: backend::dynamic_servers::DockerHostRouting,
+	) -> GlobalResult<models::DynamicServersDockerHostRouting> {
+		Ok(models::DynamicServersDockerHostRouting {
+			protocol: Some(
+				unwrap!(backend::dynamic_servers::HostProtocol::from_i32(
+					value.protocol
+				))
+				.api_into(),
+			),
+		})
+	}
+}
+
+impl ApiFrom<models::DynamicServersGameGuardProtocol>
+	for backend::dynamic_servers::GameGuardProtocol
+{
+	fn api_from(
+		value: models::DynamicServersGameGuardProtocol,
+	) -> backend::dynamic_servers::GameGuardProtocol {
 		match value {
-			backend::dynamic_servers::GameGuardProtocol::Udp => models::DynamicServersGameGuardProtocol::Udp,
-			backend::dynamic_servers::GameGuardProtocol::Tcp => models::DynamicServersGameGuardProtocol::Tcp,
-			backend::dynamic_servers::GameGuardProtocol::Http => models::DynamicServersGameGuardProtocol::Http,
-			backend::dynamic_servers::GameGuardProtocol::Https => models::DynamicServersGameGuardProtocol::Https,
-			backend::dynamic_servers::GameGuardProtocol::TcpTls => models::DynamicServersGameGuardProtocol::TcpTls,
+			models::DynamicServersGameGuardProtocol::Udp => {
+				backend::dynamic_servers::GameGuardProtocol::Udp
+			}
+			models::DynamicServersGameGuardProtocol::Tcp => {
+				backend::dynamic_servers::GameGuardProtocol::Tcp
+			}
+			models::DynamicServersGameGuardProtocol::Http => {
+				backend::dynamic_servers::GameGuardProtocol::Http
+			}
+			models::DynamicServersGameGuardProtocol::Https => {
+				backend::dynamic_servers::GameGuardProtocol::Https
+			}
+			models::DynamicServersGameGuardProtocol::TcpTls => {
+				backend::dynamic_servers::GameGuardProtocol::TcpTls
+			}
+		}
+	}
+}
+
+impl ApiFrom<backend::dynamic_servers::GameGuardProtocol>
+	for models::DynamicServersGameGuardProtocol
+{
+	fn api_from(
+		value: backend::dynamic_servers::GameGuardProtocol,
+	) -> models::DynamicServersGameGuardProtocol {
+		match value {
+			backend::dynamic_servers::GameGuardProtocol::Udp => {
+				models::DynamicServersGameGuardProtocol::Udp
+			}
+			backend::dynamic_servers::GameGuardProtocol::Tcp => {
+				models::DynamicServersGameGuardProtocol::Tcp
+			}
+			backend::dynamic_servers::GameGuardProtocol::Http => {
+				models::DynamicServersGameGuardProtocol::Http
+			}
+			backend::dynamic_servers::GameGuardProtocol::Https => {
+				models::DynamicServersGameGuardProtocol::Https
+			}
+			backend::dynamic_servers::GameGuardProtocol::TcpTls => {
+				models::DynamicServersGameGuardProtocol::TcpTls
+			}
+		}
+	}
+}
+
+impl ApiFrom<models::DynamicServersHostProtocol> for backend::dynamic_servers::HostProtocol {
+	fn api_from(
+		value: models::DynamicServersHostProtocol,
+	) -> backend::dynamic_servers::HostProtocol {
+		match value {
+			models::DynamicServersHostProtocol::Udp => {
+				backend::dynamic_servers::HostProtocol::HostUdp
+			}
+			models::DynamicServersHostProtocol::Tcp => {
+				backend::dynamic_servers::HostProtocol::HostTcp
+			}
+		}
+	}
+}
+
+impl ApiFrom<backend::dynamic_servers::HostProtocol> for models::DynamicServersHostProtocol {
+	fn api_from(
+		value: backend::dynamic_servers::HostProtocol,
+	) -> models::DynamicServersHostProtocol {
+		match value {
+			backend::dynamic_servers::HostProtocol::HostUdp => {
+				models::DynamicServersHostProtocol::Udp
+			}
+			backend::dynamic_servers::HostProtocol::HostTcp => {
+				models::DynamicServersHostProtocol::Tcp
+			}
 		}
 	}
 }

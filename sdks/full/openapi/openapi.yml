@@ -12416,7 +12416,14 @@ components:
         - udp
     DynamicServersDockerHostRouting:
       type: object
-      properties: {}
+      properties:
+        protocol:
+          $ref: '#/components/schemas/DynamicServersHostProtocol'
+    DynamicServersHostProtocol:
+      type: string
+      enum:
+        - tcp
+        - udp
     DynamicServersCreateServerRequest:
       type: object
       properties:
