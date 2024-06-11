@@ -36,6 +36,7 @@ pub async fn create(
 	let metadata = serde_json::from_value(body.metadata.unwrap_or_default())?;
 
 	let server = op!([ctx] ds_server_create {
+		game_id: Some(game_id.into()),
 		cluster_id: Some(cluster_id),
 		datacenter_id: Some(datacenter_id),
 		resources: Some((*body.resources).api_into()),

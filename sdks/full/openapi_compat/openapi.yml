@@ -4397,10 +4397,41 @@ components:
       - cluster_id
       - vlan_ip
       type: object
+    ServersCreateServerNetworkRequest:
+      properties:
+        mode:
+          $ref: '#/components/schemas/ServersNetworkMode'
+        ports:
+          additionalProperties:
+            $ref: '#/components/schemas/ServersCreateServerPortRequest'
+          type: object
+      required:
+      - ports
+      type: object
+    ServersCreateServerPortRequest:
+      properties:
+        routing:
+          $ref: '#/components/schemas/ServersPortRouting'
+        server_port:
+          type: integer
+      required:
+      - routing
+      type: object
     ServersCreateServerRequest:
       properties:
+        args:
+          items:
+            type: string
+          type: array
         datacenter:
           description: The name ID of the datacenter
+          type: string
+        environment:
+          additionalProperties:
+            type: string
+          type: object
+        image_id:
+          format: uuid
           type: string
         kill_timeout:
           description: The duration to wait for in milliseconds before killing the
@@ -4409,15 +4440,16 @@ components:
           format: int64
           type: integer
         metadata: {}
+        network:
+          $ref: '#/components/schemas/ServersCreateServerNetworkRequest'
         resources:
           $ref: '#/components/schemas/ServersResources'
-        runtime:
-          $ref: '#/components/schemas/ServersRuntime'
       required:
       - datacenter
       - metadata
+      - image_id
+      - network
       - resources
-      - runtime
       type: object
     ServersCreateServerResponse:
       properties:
@@ -4435,65 +4467,6 @@ components:
       required:
       - server_id
       type: object
-    ServersDockerGameGuardRouting:
-      properties:
-        protocol:
-          $ref: '#/components/schemas/ServersGameGuardProtocol'
-      type: object
-    ServersDockerHostRouting:
-      properties: {}
-      type: object
-    ServersDockerNetwork:
-      properties:
-        mode:
-          $ref: '#/components/schemas/ServersDockerNetworkMode'
-        ports:
-          additionalProperties:
-            $ref: '#/components/schemas/ServersDockerPort'
-          type: object
-      required:
-      - ports
-      type: object
-    ServersDockerNetworkMode:
-      enum:
-      - bridge
-      - host
-      type: string
-    ServersDockerPort:
-      properties:
-        port:
-          type: integer
-        routing:
-          $ref: '#/components/schemas/ServersDockerPortRouting'
-      required:
-      - routing
-      type: object
-    ServersDockerPortRouting:
-      properties:
-        game_guard:
-          $ref: '#/components/schemas/ServersDockerGameGuardRouting'
-        host:
-          $ref: '#/components/schemas/ServersDockerHostRouting'
-      type: object
-    ServersDockerRuntime:
-      properties:
-        args:
-          items:
-            type: string
-          type: array
-        environment:
-          additionalProperties:
-            type: string
-          type: object
-        image_id:
-          format: uuid
-          type: string
-        network:
-          $ref: '#/components/schemas/ServersDockerNetwork'
-      required:
-      - image_id
-      - network
-      type: object
     ServersGameGuardProtocol:
       enum:
       - http
@@ -4502,6 +4475,57 @@ components:
       - tcp_tls
       - udp
       type: string
+    ServersGameGuardRouting:
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ServersGameGuardProtocol'
+      type: object
+    ServersHostProtocol:
+      enum:
+      - tcp
+      - udp
+      type: string
+    ServersHostRouting:
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ServersHostProtocol'
+      type: object
+    ServersNetwork:
+      properties:
+        mode:
+          $ref: '#/components/schemas/ServersNetworkMode'
+        ports:
+          additionalProperties:
+            $ref: '#/components/schemas/ServersPort'
+          type: object
+      required:
+      - ports
+      type: object
+    ServersNetworkMode:
+      enum:
+      - bridge
+      - host
+      type: string
+    ServersPort:
+      properties:
+        public_host:
+          type: string
+        public_port:
+          type: integer
+        routing:
+          $ref: '#/components/schemas/ServersPortRouting'
+        server_port:
+          type: integer
+      required:
+      - routing
+      type: object
+    ServersPortRouting:
+      properties:
+        game_guard:
+          $ref: '#/components/schemas/ServersGameGuardRouting'
+        host:
+          $ref: '#/components/schemas/ServersHostRouting'
+      type: object
     ServersResources:
       properties:
         cpu:
@@ -4519,13 +4543,12 @@ components:
       - cpu
       - memory
       type: object
-    ServersRuntime:
-      properties:
-        docker:
-          $ref: '#/components/schemas/ServersDockerRuntime'
-      type: object
     ServersServer:
       properties:
+        args:
+          items:
+            type: string
+          type: array
         cluster_id:
           format: uuid
           type: string
@@ -4538,7 +4561,14 @@ components:
         destroy_ts:
           format: int64
           type: integer
+        environment:
+          additionalProperties:
+            type: string
+          type: object
         game_id:
+          format: uuid
+          type: string
+        image_id:
           format: uuid
           type: string
         kill_timeout:
@@ -4548,10 +4578,10 @@ components:
           format: int64
           type: integer
         metadata: {}
+        network:
+          $ref: '#/components/schemas/ServersNetwork'
         resources:
           $ref: '#/components/schemas/ServersResources'
-        runtime:
-          $ref: '#/components/schemas/ServersRuntime'
         server_id:
           format: uuid
           type: string
@@ -4561,8 +4591,9 @@ components:
       - datacenter_id
       - cluster_id
       - metadata
+      - image_id
+      - network
       - resources
-      - runtime
       - create_ts
       type: object
     Timestamp:

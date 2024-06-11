@@ -16,12 +16,15 @@ type DestroyServerRequest struct {
 
 type CreateServerRequest struct {
 	// The name ID of the datacenter
-	Datacenter string      `json:"datacenter"`
-	Metadata   interface{} `json:"metadata,omitempty"`
-	Resources  *Resources  `json:"resources,omitempty"`
+	Datacenter  string                      `json:"datacenter"`
+	Metadata    interface{}                 `json:"metadata,omitempty"`
+	ImageId     uuid.UUID                   `json:"image_id"`
+	Args        []string                    `json:"args,omitempty"`
+	Environment map[string]string           `json:"environment,omitempty"`
+	Network     *CreateServerNetworkRequest `json:"network,omitempty"`
+	Resources   *Resources                  `json:"resources,omitempty"`
 	// The duration to wait for in milliseconds before killing the server. This should be set to a safe default, and can be overridden during a DELETE request if needed.
-	KillTimeout *int64   `json:"kill_timeout,omitempty"`
-	Runtime     *Runtime `json:"runtime,omitempty"`
+	KillTimeout *int64 `json:"kill_timeout,omitempty"`
 
 	_rawJSON json.RawMessage
 }

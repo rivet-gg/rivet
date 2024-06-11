@@ -39,6 +39,13 @@ uuid = { version = "1", features = ["v4"] }
 
 cluster-server-list = { path = "../../pkg/cluster/ops/server-list" }
 
+[dependencies.sqlx]
+git = "https://github.com/rivet-gg/sqlx"
+rev = "08d6e61aa0572e7ec557abbedb72cebb96e1ac5b"
+default-features = false
+features = ["json"]
+
+
 [dev-dependencies]
 rivet-connection = { path = "../../../lib/connection" }
 rivet-route = { path = "../../../lib/smithy-output/api-traefik-provider/rust" }

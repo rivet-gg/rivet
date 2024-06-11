@@ -8,6 +8,10 @@ types:
       datacenter_id: uuid
       cluster_id: uuid
       metadata: unknown
+      image_id: uuid
+      args: optional<list<string>>
+      environment: optional<map<string, string>>
+      network: Network
       resources: Resources
       kill_timeout:
         docs: >-
@@ -15,7 +19,6 @@ types:
           This should be set to a safe default, and can be overridden during a
           DELETE request if needed.
         type: optional<long>
-      runtime: Runtime
       create_ts: long
       destroy_ts: optional<long>
 
@@ -31,38 +34,29 @@ types:
         docs: The amount of memory in megabytes
         type: integer
 
-  Runtime:
+  Network:
     properties:
-      docker: optional<DockerRuntime>
+      mode: optional<NetworkMode>
+      ports: map<string, Port>
 
-  DockerRuntime:
-    properties:
-      image_id: uuid
-      args: optional<list<string>>
-      environment: optional<map<string, string>>
-      network: DockerNetwork
-
-  DockerNetwork:
-    properties:
-      mode: optional<DockerNetworkMode>
-      ports: map<string, DockerPort>
-
-  DockerNetworkMode:
+  NetworkMode:
     enum:
       - bridge
       - host
 
-  DockerPort:
+  Port:
     properties:
-      port: optional<integer>
-      routing: DockerPortRouting
+      routing: PortRouting
+      server_port: optional<integer>
+      public_host: optional<string>
+      public_port: optional<integer>
 
-  DockerPortRouting:  
+  PortRouting:  
     properties:
-      game_guard: optional<DockerGameGuardRouting>
-      host: optional<DockerHostRouting>
+      game_guard: optional<GameGuardRouting>
+      host: optional<HostRouting>
 
-  DockerGameGuardRouting:
+  GameGuardRouting:
     properties:
       protocol: optional<GameGuardProtocol>
 
@@ -74,5 +68,11 @@ types:
       - tcp_tls
       - udp
 
-  DockerHostRouting:
-    properties: {}
+  HostRouting:
+    properties:
+      protocol: optional<HostProtocol>
+
+  HostProtocol:
+    enum:
+      - tcp
+      - udp

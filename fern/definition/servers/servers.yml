@@ -40,6 +40,10 @@ types:
         docs: The name ID of the datacenter
         type: string
       metadata: unknown
+      image_id: uuid
+      args: optional<list<string>>
+      environment: optional<map<string, string>>
+      network: CreateServerNetworkRequest
       resources: commons.Resources
       kill_timeout:
         docs: >-
@@ -47,7 +51,17 @@ types:
           This should be set to a safe default, and can be overridden during a
           DELETE request if needed.
         type: optional<long>
-      runtime: commons.Runtime
+
+  CreateServerNetworkRequest:
+    properties:
+      mode: optional<commons.NetworkMode>
+      ports: map<string, CreateServerPortRequest>
+
+  CreateServerPortRequest:
+    properties:
+      routing: commons.PortRouting
+      server_port: optional<integer>
+  
   CreateServerResponse:
     properties:
       server:

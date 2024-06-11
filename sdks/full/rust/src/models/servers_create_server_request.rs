@@ -13,28 +13,37 @@
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ServersCreateServerRequest {
+    #[serde(rename = "args", skip_serializing_if = "Option::is_none")]
+    pub args: Option<Vec<String>>,
     /// The name ID of the datacenter
     #[serde(rename = "datacenter")]
     pub datacenter: String,
+    #[serde(rename = "environment", skip_serializing_if = "Option::is_none")]
+    pub environment: Option<::std::collections::HashMap<String, String>>,
+    #[serde(rename = "image_id")]
+    pub image_id: uuid::Uuid,
     /// The duration to wait for in milliseconds before killing the server. This should be set to a safe default, and can be overridden during a DELETE request if needed.
     #[serde(rename = "kill_timeout", skip_serializing_if = "Option::is_none")]
     pub kill_timeout: Option<i64>,
     #[serde(rename = "metadata", deserialize_with = "Option::deserialize")]
     pub metadata: Option<serde_json::Value>,
+    #[serde(rename = "network")]
+    pub network: Box<crate::models::ServersCreateServerNetworkRequest>,
     #[serde(rename = "resources")]
     pub resources: Box<crate::models::ServersResources>,
-    #[serde(rename = "runtime")]
-    pub runtime: Box<crate::models::ServersRuntime>,
 }
 
 impl ServersCreateServerRequest {
-    pub fn new(datacenter: String, metadata: Option<serde_json::Value>, resources: crate::models::ServersResources, runtime: crate::models::ServersRuntime) -> ServersCreateServerRequest {
+    pub fn new(datacenter: String, image_id: uuid::Uuid, metadata: Option<serde_json::Value>, network: crate::models::ServersCreateServerNetworkRequest, resources: crate::models::ServersResources) -> ServersCreateServerRequest {
         ServersCreateServerRequest {
+            args: None,
             datacenter,
+            environment: None,
+            image_id,
             kill_timeout: None,
             metadata,
+            network: Box::new(network),
             resources: Box::new(resources),
-            runtime: Box::new(runtime),
         }
     }
 }

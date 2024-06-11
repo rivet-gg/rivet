@@ -9,206 +9,6 @@ import (
 	core "sdk/core"
 )
 
-type DockerGameGuardRouting struct {
-	Protocol *GameGuardProtocol `json:"protocol,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (d *DockerGameGuardRouting) UnmarshalJSON(data []byte) error {
-	type unmarshaler DockerGameGuardRouting
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*d = DockerGameGuardRouting(value)
-	d._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (d *DockerGameGuardRouting) String() string {
-	if len(d._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(d._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(d); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", d)
-}
-
-type DockerHostRouting struct {
-	_rawJSON json.RawMessage
-}
-
-func (d *DockerHostRouting) UnmarshalJSON(data []byte) error {
-	type unmarshaler DockerHostRouting
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*d = DockerHostRouting(value)
-	d._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (d *DockerHostRouting) String() string {
-	if len(d._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(d._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(d); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", d)
-}
-
-type DockerNetwork struct {
-	Mode  *DockerNetworkMode     `json:"mode,omitempty"`
-	Ports map[string]*DockerPort `json:"ports,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (d *DockerNetwork) UnmarshalJSON(data []byte) error {
-	type unmarshaler DockerNetwork
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*d = DockerNetwork(value)
-	d._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (d *DockerNetwork) String() string {
-	if len(d._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(d._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(d); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", d)
-}
-
-type DockerNetworkMode string
-
-const (
-	DockerNetworkModeBridge DockerNetworkMode = "bridge"
-	DockerNetworkModeHost   DockerNetworkMode = "host"
-)
-
-func NewDockerNetworkModeFromString(s string) (DockerNetworkMode, error) {
-	switch s {
-	case "bridge":
-		return DockerNetworkModeBridge, nil
-	case "host":
-		return DockerNetworkModeHost, nil
-	}
-	var t DockerNetworkMode
-	return "", fmt.Errorf("%s is not a valid %T", s, t)
-}
-
-func (d DockerNetworkMode) Ptr() *DockerNetworkMode {
-	return &d
-}
-
-type DockerPort struct {
-	Port    *int               `json:"port,omitempty"`
-	Routing *DockerPortRouting `json:"routing,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (d *DockerPort) UnmarshalJSON(data []byte) error {
-	type unmarshaler DockerPort
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*d = DockerPort(value)
-	d._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (d *DockerPort) String() string {
-	if len(d._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(d._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(d); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", d)
-}
-
-type DockerPortRouting struct {
-	GameGuard *DockerGameGuardRouting `json:"game_guard,omitempty"`
-	Host      *DockerHostRouting      `json:"host,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (d *DockerPortRouting) UnmarshalJSON(data []byte) error {
-	type unmarshaler DockerPortRouting
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*d = DockerPortRouting(value)
-	d._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (d *DockerPortRouting) String() string {
-	if len(d._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(d._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(d); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", d)
-}
-
-type DockerRuntime struct {
-	ImageId     uuid.UUID         `json:"image_id"`
-	Args        []string          `json:"args,omitempty"`
-	Environment map[string]string `json:"environment,omitempty"`
-	Network     *DockerNetwork    `json:"network,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (d *DockerRuntime) UnmarshalJSON(data []byte) error {
-	type unmarshaler DockerRuntime
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*d = DockerRuntime(value)
-	d._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (d *DockerRuntime) String() string {
-	if len(d._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(d._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(d); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", d)
-}
-
 type GameGuardProtocol string
 
 const (
@@ -238,6 +38,200 @@ func NewGameGuardProtocolFromString(s string) (GameGuardProtocol, error) {
 
 func (g GameGuardProtocol) Ptr() *GameGuardProtocol {
 	return &g
+}
+
+type GameGuardRouting struct {
+	Protocol *GameGuardProtocol `json:"protocol,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (g *GameGuardRouting) UnmarshalJSON(data []byte) error {
+	type unmarshaler GameGuardRouting
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*g = GameGuardRouting(value)
+	g._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (g *GameGuardRouting) String() string {
+	if len(g._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(g._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(g); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", g)
+}
+
+type HostProtocol string
+
+const (
+	HostProtocolTcp HostProtocol = "tcp"
+	HostProtocolUdp HostProtocol = "udp"
+)
+
+func NewHostProtocolFromString(s string) (HostProtocol, error) {
+	switch s {
+	case "tcp":
+		return HostProtocolTcp, nil
+	case "udp":
+		return HostProtocolUdp, nil
+	}
+	var t HostProtocol
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (h HostProtocol) Ptr() *HostProtocol {
+	return &h
+}
+
+type HostRouting struct {
+	Protocol *HostProtocol `json:"protocol,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (h *HostRouting) UnmarshalJSON(data []byte) error {
+	type unmarshaler HostRouting
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*h = HostRouting(value)
+	h._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (h *HostRouting) String() string {
+	if len(h._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(h._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(h); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", h)
+}
+
+type Network struct {
+	Mode  *NetworkMode     `json:"mode,omitempty"`
+	Ports map[string]*Port `json:"ports,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (n *Network) UnmarshalJSON(data []byte) error {
+	type unmarshaler Network
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*n = Network(value)
+	n._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (n *Network) String() string {
+	if len(n._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(n._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(n); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", n)
+}
+
+type NetworkMode string
+
+const (
+	NetworkModeBridge NetworkMode = "bridge"
+	NetworkModeHost   NetworkMode = "host"
+)
+
+func NewNetworkModeFromString(s string) (NetworkMode, error) {
+	switch s {
+	case "bridge":
+		return NetworkModeBridge, nil
+	case "host":
+		return NetworkModeHost, nil
+	}
+	var t NetworkMode
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (n NetworkMode) Ptr() *NetworkMode {
+	return &n
+}
+
+type Port struct {
+	Routing    *PortRouting `json:"routing,omitempty"`
+	ServerPort *int         `json:"server_port,omitempty"`
+	PublicHost *string      `json:"public_host,omitempty"`
+	PublicPort *int         `json:"public_port,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (p *Port) UnmarshalJSON(data []byte) error {
+	type unmarshaler Port
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*p = Port(value)
+	p._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (p *Port) String() string {
+	if len(p._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(p._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(p); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", p)
+}
+
+type PortRouting struct {
+	GameGuard *GameGuardRouting `json:"game_guard,omitempty"`
+	Host      *HostRouting      `json:"host,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (p *PortRouting) UnmarshalJSON(data []byte) error {
+	type unmarshaler PortRouting
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*p = PortRouting(value)
+	p._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (p *PortRouting) String() string {
+	if len(p._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(p._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(p); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", p)
 }
 
 type Resources struct {
@@ -274,47 +268,21 @@ func (r *Resources) String() string {
 	return fmt.Sprintf("%#v", r)
 }
 
-type Runtime struct {
-	Docker *DockerRuntime `json:"docker,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (r *Runtime) UnmarshalJSON(data []byte) error {
-	type unmarshaler Runtime
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*r = Runtime(value)
-	r._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (r *Runtime) String() string {
-	if len(r._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(r._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(r); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", r)
-}
-
 type Server struct {
-	ServerId     uuid.UUID   `json:"server_id"`
-	GameId       uuid.UUID   `json:"game_id"`
-	DatacenterId uuid.UUID   `json:"datacenter_id"`
-	ClusterId    uuid.UUID   `json:"cluster_id"`
-	Metadata     interface{} `json:"metadata,omitempty"`
-	Resources    *Resources  `json:"resources,omitempty"`
+	ServerId     uuid.UUID         `json:"server_id"`
+	GameId       uuid.UUID         `json:"game_id"`
+	DatacenterId uuid.UUID         `json:"datacenter_id"`
+	ClusterId    uuid.UUID         `json:"cluster_id"`
+	Metadata     interface{}       `json:"metadata,omitempty"`
+	ImageId      uuid.UUID         `json:"image_id"`
+	Args         []string          `json:"args,omitempty"`
+	Environment  map[string]string `json:"environment,omitempty"`
+	Network      *Network          `json:"network,omitempty"`
+	Resources    *Resources        `json:"resources,omitempty"`
 	// The duration to wait for in milliseconds before killing the server. This should be set to a safe default, and can be overridden during a DELETE request if needed.
-	KillTimeout *int64   `json:"kill_timeout,omitempty"`
-	Runtime     *Runtime `json:"runtime,omitempty"`
-	CreateTs    int64    `json:"create_ts"`
-	DestroyTs   *int64   `json:"destroy_ts,omitempty"`
+	KillTimeout *int64 `json:"kill_timeout,omitempty"`
+	CreateTs    int64  `json:"create_ts"`
+	DestroyTs   *int64 `json:"destroy_ts,omitempty"`
 
 	_rawJSON json.RawMessage
 }
@@ -340,4 +308,64 @@ func (s *Server) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", s)
+}
+
+type CreateServerNetworkRequest struct {
+	Mode  *NetworkMode                        `json:"mode,omitempty"`
+	Ports map[string]*CreateServerPortRequest `json:"ports,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (c *CreateServerNetworkRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateServerNetworkRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = CreateServerNetworkRequest(value)
+	c._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *CreateServerNetworkRequest) String() string {
+	if len(c._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
+}
+
+type CreateServerPortRequest struct {
+	Routing    *PortRouting `json:"routing,omitempty"`
+	ServerPort *int         `json:"server_port,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (c *CreateServerPortRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateServerPortRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = CreateServerPortRequest(value)
+	c._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *CreateServerPortRequest) String() string {
+	if len(c._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
 }

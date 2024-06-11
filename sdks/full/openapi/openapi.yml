@@ -13569,6 +13569,19 @@ components:
           type: string
           format: uuid
         metadata: {}
+        image_id:
+          type: string
+          format: uuid
+        args:
+          type: array
+          items:
+            type: string
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        network:
+          $ref: '#/components/schemas/ServersNetwork'
         resources:
           $ref: '#/components/schemas/ServersResources'
         kill_timeout:
@@ -13578,8 +13591,6 @@ components:
             The duration to wait for in milliseconds before killing the server.
             This should be set to a safe default, and can be overridden during a
             DELETE request if needed.
-        runtime:
-          $ref: '#/components/schemas/ServersRuntime'
         create_ts:
           type: integer
           format: int64
@@ -13592,8 +13603,9 @@ components:
         - datacenter_id
         - cluster_id
         - metadata
+        - image_id
+        - network
         - resources
-        - runtime
         - create_ts
     ServersResources:
       type: object
@@ -13613,63 +13625,43 @@ components:
       required:
         - cpu
         - memory
-    ServersRuntime:
-      type: object
-      properties:
-        docker:
-          $ref: '#/components/schemas/ServersDockerRuntime'
-    ServersDockerRuntime:
-      type: object
-      properties:
-        image_id:
-          type: string
-          format: uuid
-        args:
-          type: array
-          items:
-            type: string
-        environment:
-          type: object
-          additionalProperties:
-            type: string
-        network:
-          $ref: '#/components/schemas/ServersDockerNetwork'
-      required:
-        - image_id
-        - network
-    ServersDockerNetwork:
+    ServersNetwork:
       type: object
       properties:
         mode:
-          $ref: '#/components/schemas/ServersDockerNetworkMode'
+          $ref: '#/components/schemas/ServersNetworkMode'
         ports:
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/ServersDockerPort'
+            $ref: '#/components/schemas/ServersPort'
       required:
         - ports
-    ServersDockerNetworkMode:
+    ServersNetworkMode:
       type: string
       enum:
         - bridge
         - host
-    ServersDockerPort:
+    ServersPort:
       type: object
       properties:
-        port:
-          type: integer
         routing:
-          $ref: '#/components/schemas/ServersDockerPortRouting'
+          $ref: '#/components/schemas/ServersPortRouting'
+        server_port:
+          type: integer
+        public_host:
+          type: string
+        public_port:
+          type: integer
       required:
         - routing
-    ServersDockerPortRouting:
+    ServersPortRouting:
       type: object
       properties:
         game_guard:
-          $ref: '#/components/schemas/ServersDockerGameGuardRouting'
+          $ref: '#/components/schemas/ServersGameGuardRouting'
         host:
-          $ref: '#/components/schemas/ServersDockerHostRouting'
-    ServersDockerGameGuardRouting:
+          $ref: '#/components/schemas/ServersHostRouting'
+    ServersGameGuardRouting:
       type: object
       properties:
         protocol:
@@ -13682,9 +13674,16 @@ components:
         - tcp
         - tcp_tls
         - udp
-    ServersDockerHostRouting:
+    ServersHostRouting:
       type: object
-      properties: {}
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ServersHostProtocol'
+    ServersHostProtocol:
+      type: string
+      enum:
+        - tcp
+        - udp
     ServersCreateServerRequest:
       type: object
       properties:
@@ -13692,6 +13691,19 @@ components:
           type: string
           description: The name ID of the datacenter
         metadata: {}
+        image_id:
+          type: string
+          format: uuid
+        args:
+          type: array
+          items:
+            type: string
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        network:
+          $ref: '#/components/schemas/ServersCreateServerNetworkRequest'
         resources:
           $ref: '#/components/schemas/ServersResources'
         kill_timeout:
@@ -13701,13 +13713,32 @@ components:
             The duration to wait for in milliseconds before killing the server.
             This should be set to a safe default, and can be overridden during a
             DELETE request if needed.
-        runtime:
-          $ref: '#/components/schemas/ServersRuntime'
       required:
         - datacenter
         - metadata
+        - image_id
+        - network
         - resources
-        - runtime
+    ServersCreateServerNetworkRequest:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/ServersNetworkMode'
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ServersCreateServerPortRequest'
+      required:
+        - ports
+    ServersCreateServerPortRequest:
+      type: object
+      properties:
+        routing:
+          $ref: '#/components/schemas/ServersPortRouting'
+        server_port:
+          type: integer
+      required:
+        - routing
     ServersCreateServerResponse:
       type: object
       properties:
