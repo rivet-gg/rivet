@@ -33,13 +33,13 @@ resource "kubernetes_secret" "docker_auth" {
 		".dockerconfigjson" = jsonencode({
 			auths = {
 				"https://index.docker.io/v1/" = (
-					var.authenticate_all_docker_hub_pulls ?
-					{
-						auth = base64encode(
-							"${module.docker_secrets.values["docker/registry/docker.io/read/username"]}:${module.docker_secrets.values["docker/registry/docker.io/read/password"]}"
-						)
-					}
-					: null
+				var.authenticate_all_docker_hub_pulls ?
+				{
+					auth = base64encode(
+						"${module.docker_secrets[0].values["docker/registry/docker.io/read/username"]}:${module.docker_secrets[0].values["docker/registry/docker.io/read/password"]}"
+					)
+				}
+				: null
 				)
 				"ghcr.io" = (
 					var.deploy_method_cluster ?
