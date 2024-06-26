@@ -338,6 +338,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "api-dynamic-servers"
+version = "0.0.1"
+dependencies = [
+ "api-helper",
+ "chirp-client",
+ "chrono",
+ "cluster-datacenter-get",
+ "cluster-datacenter-list",
+ "cluster-datacenter-resolve-for-name-id",
+ "cluster-get",
+ "cluster-get-for-game",
+ "cluster-list",
+ "cluster-resolve-for-name-id",
+ "ds-server-create",
+ "ds-server-delete",
+ "http 0.2.12",
+ "hyper",
+ "rivet-api",
+ "rivet-cache",
+ "rivet-claims",
+ "rivet-connection",
+ "rivet-convert",
+ "rivet-health-checks",
+ "rivet-operation",
+ "rivet-pools",
+ "s3-util",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-futures",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "api-group"
 version = "0.0.1"
 dependencies = [
@@ -3101,6 +3138,29 @@ name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
+
+[[package]]
+name = "ds-server-create"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "lazy_static",
+ "nomad-client",
+ "nomad_client",
+ "rivet-operation",
+ "sqlx",
+]
+
+[[package]]
+name = "ds-server-delete"
+version = "0.0.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "rivet-operation",
+ "sqlx",
+]
 
 [[package]]
 name = "ecdsa"

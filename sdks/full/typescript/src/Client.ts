@@ -11,6 +11,7 @@ import { Identity } from "./api/resources/identity/client/Client";
 import { Kv } from "./api/resources/kv/client/Client";
 import { Provision } from "./api/resources/provision/client/Client";
 import { Auth } from "./api/resources/auth/client/Client";
+import { DynamicServers } from "./api/resources/dynamicServers/client/Client";
 import { Job } from "./api/resources/job/client/Client";
 import { Matchmaker } from "./api/resources/matchmaker/client/Client";
 import { Portal } from "./api/resources/portal/client/Client";
@@ -71,6 +72,12 @@ export class RivetClient {
 
     public get auth(): Auth {
         return (this._auth ??= new Auth(this._options));
+    }
+
+    protected _dynamicServers: DynamicServers | undefined;
+
+    public get dynamicServers(): DynamicServers {
+        return (this._dynamicServers ??= new DynamicServers(this._options));
     }
 
     protected _job: Job | undefined;

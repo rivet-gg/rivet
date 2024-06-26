@@ -8,6 +8,7 @@ import (
 	authclient "sdk/auth/client"
 	cloudclient "sdk/cloud/client"
 	core "sdk/core"
+	dynamicserversclient "sdk/dynamicservers/client"
 	groupclient "sdk/group/client"
 	identityclient "sdk/identity/client"
 	jobclient "sdk/job/client"
@@ -22,16 +23,17 @@ type Client struct {
 	caller  *core.Caller
 	header  http.Header
 
-	Admin      *adminclient.Client
-	Cloud      *cloudclient.Client
-	Group      *groupclient.Client
-	Identity   *identityclient.Client
-	Kv         *kvclient.Client
-	Provision  *provisionclient.Client
-	Auth       *authclient.Client
-	Job        *jobclient.Client
-	Matchmaker *matchmakerclient.Client
-	Portal     *portalclient.Client
+	Admin          *adminclient.Client
+	Cloud          *cloudclient.Client
+	Group          *groupclient.Client
+	Identity       *identityclient.Client
+	Kv             *kvclient.Client
+	Provision      *provisionclient.Client
+	Auth           *authclient.Client
+	DynamicServers *dynamicserversclient.Client
+	Job            *jobclient.Client
+	Matchmaker     *matchmakerclient.Client
+	Portal         *portalclient.Client
 }
 
 func NewClient(opts ...core.ClientOption) *Client {
@@ -40,18 +42,19 @@ func NewClient(opts ...core.ClientOption) *Client {
 		opt(options)
 	}
 	return &Client{
-		baseURL:    options.BaseURL,
-		caller:     core.NewCaller(options.HTTPClient),
-		header:     options.ToHeader(),
-		Admin:      adminclient.NewClient(opts...),
-		Cloud:      cloudclient.NewClient(opts...),
-		Group:      groupclient.NewClient(opts...),
-		Identity:   identityclient.NewClient(opts...),
-		Kv:         kvclient.NewClient(opts...),
-		Provision:  provisionclient.NewClient(opts...),
-		Auth:       authclient.NewClient(opts...),
-		Job:        jobclient.NewClient(opts...),
-		Matchmaker: matchmakerclient.NewClient(opts...),
-		Portal:     portalclient.NewClient(opts...),
+		baseURL:        options.BaseURL,
+		caller:         core.NewCaller(options.HTTPClient),
+		header:         options.ToHeader(),
+		Admin:          adminclient.NewClient(opts...),
+		Cloud:          cloudclient.NewClient(opts...),
+		Group:          groupclient.NewClient(opts...),
+		Identity:       identityclient.NewClient(opts...),
+		Kv:             kvclient.NewClient(opts...),
+		Provision:      provisionclient.NewClient(opts...),
+		Auth:           authclient.NewClient(opts...),
+		DynamicServers: dynamicserversclient.NewClient(opts...),
+		Job:            jobclient.NewClient(opts...),
+		Matchmaker:     matchmakerclient.NewClient(opts...),
+		Portal:         portalclient.NewClient(opts...),
 	}
 }

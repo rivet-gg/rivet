@@ -6667,6 +6667,63 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+  /cloud/games/{game_id}/tokens/service:
+    post:
+      description: Creates a new game service token.
+      operationId: cloud_games_tokens_createServiceToken
+      tags:
+        - CloudGamesTokens
+      parameters:
+        - name: game_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudGamesCreateCloudTokenResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
   /cloud/games/{game_id}/versions:
     post:
       description: Creates a new game version.
@@ -7097,6 +7154,131 @@ paths:
       responses:
         '204':
           description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+  /dynamic-servers/servers:
+    post:
+      description: Create a new dynamic server.
+      operationId: dynamicServers_servers_create
+      tags:
+        - DynamicServersServers
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DynamicServersCreateServerResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DynamicServersCreateServerRequest'
+  /dynamic-servers/servers/{server_id}:
+    delete:
+      description: Destroy a dynamic server.
+      operationId: dynamicServers_servers_destroy
+      tags:
+        - DynamicServersServers
+      parameters:
+        - name: server_id
+          in: path
+          description: The id of the server to destroy
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: override_kill_timeout
+          in: query
+          description: >-
+            The duration to wait for in milliseconds before killing the server.
+            This should be used to override the default kill timeout if a faster
+            time is needed, say for ignoring a graceful shutdown.
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DynamicServersDestroyServerResponse'
         '400':
           description: ''
           content:
@@ -11386,6 +11568,14 @@ components:
             JSON.
       required:
         - token
+    CloudGamesCreateServiceTokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: A JSON Web Token.
+      required:
+        - token
     CloudGamesCreateGameVersionRequest:
       type: object
       properties:
@@ -12095,6 +12285,177 @@ components:
         - code
         - message
         - ray_id
+    DynamicServersServer:
+      type: object
+      properties:
+        server_id:
+          type: string
+          format: uuid
+        game_id:
+          type: string
+          format: uuid
+        datacenter_id:
+          type: string
+          format: uuid
+        cluster_id:
+          type: string
+          format: uuid
+        metadata: {}
+        resources:
+          $ref: '#/components/schemas/DynamicServersResources'
+        kill_timeout:
+          type: integer
+          format: int64
+          description: >-
+            The duration to wait for in milliseconds before killing the server.
+            This should be set to a safe default, and can be overridden during a
+            DELETE request if needed.
+        runtime:
+          $ref: '#/components/schemas/DynamicServersRuntime'
+        create_ts:
+          type: integer
+          format: int64
+        destroy_ts:
+          type: integer
+          format: int64
+      required:
+        - server_id
+        - game_id
+        - datacenter_id
+        - cluster_id
+        - metadata
+        - resources
+        - runtime
+        - create_ts
+    DynamicServersResources:
+      type: object
+      properties:
+        cpu:
+          type: integer
+          description: >-
+            The number of CPU cores in millicores, or 1/1000 of a core. For
+            example,
+
+            1/8 of a core would be 125 millicores, and 1 core would be 1000
+
+            millicores.
+        memory:
+          type: integer
+          description: The amount of memory in megabytes
+      required:
+        - cpu
+        - memory
+    DynamicServersRuntime:
+      type: object
+      properties:
+        docker:
+          $ref: '#/components/schemas/DynamicServersDockerRuntime'
+    DynamicServersDockerRuntime:
+      type: object
+      properties:
+        image_id:
+          type: string
+          format: uuid
+        args:
+          type: array
+          items:
+            type: string
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        network:
+          $ref: '#/components/schemas/DynamicServersDockerNetwork'
+      required:
+        - image_id
+        - network
+    DynamicServersDockerNetwork:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/DynamicServersDockerNetworkMode'
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/DynamicServersDockerPort'
+      required:
+        - ports
+    DynamicServersDockerNetworkMode:
+      type: string
+      enum:
+        - bridge
+        - host
+    DynamicServersDockerPort:
+      type: object
+      properties:
+        port:
+          type: integer
+        routing:
+          $ref: '#/components/schemas/DynamicServersDockerPortRouting'
+      required:
+        - routing
+    DynamicServersDockerPortRouting:
+      type: object
+      properties:
+        game_guard:
+          $ref: '#/components/schemas/DynamicServersDockerGameGuardRouting'
+        host:
+          $ref: '#/components/schemas/DynamicServersDockerHostRouting'
+    DynamicServersDockerGameGuardRouting:
+      type: object
+      properties:
+        protocol:
+          $ref: '#/components/schemas/DynamicServersGameGuardProtocol'
+    DynamicServersGameGuardProtocol:
+      type: string
+      enum:
+        - http
+        - https
+        - tcp
+        - tcp_tls
+        - udp
+    DynamicServersDockerHostRouting:
+      type: object
+      properties: {}
+    DynamicServersCreateServerRequest:
+      type: object
+      properties:
+        datacenter:
+          type: string
+          description: The name ID of the datacenter
+        metadata: {}
+        resources:
+          $ref: '#/components/schemas/DynamicServersResources'
+        kill_timeout:
+          type: integer
+          format: int64
+          description: >-
+            The duration to wait for in milliseconds before killing the server.
+            This should be set to a safe default, and can be overridden during a
+            DELETE request if needed.
+        runtime:
+          $ref: '#/components/schemas/DynamicServersRuntime'
+      required:
+        - datacenter
+        - metadata
+        - resources
+        - runtime
+    DynamicServersCreateServerResponse:
+      type: object
+      properties:
+        server:
+          $ref: '#/components/schemas/DynamicServersServer'
+          description: The server that was created
+      required:
+        - server
+    DynamicServersDestroyServerResponse:
+      type: object
+      properties:
+        server_id:
+          type: string
+          format: uuid
+      required:
+        - server_id
     GameHandle:
       type: object
       properties:

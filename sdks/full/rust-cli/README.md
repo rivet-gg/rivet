@@ -82,6 +82,7 @@ Class | Method | HTTP request | Description
 *CloudGamesNamespacesLogsApi* | [**cloud_games_namespaces_logs_get_namespace_lobby**](docs/CloudGamesNamespacesLogsApi.md#cloud_games_namespaces_logs_get_namespace_lobby) | **GET** /cloud/games/{game_id}/namespaces/{namespace_id}/logs/lobbies/{lobby_id} | 
 *CloudGamesNamespacesLogsApi* | [**cloud_games_namespaces_logs_list_namespace_lobbies**](docs/CloudGamesNamespacesLogsApi.md#cloud_games_namespaces_logs_list_namespace_lobbies) | **GET** /cloud/games/{game_id}/namespaces/{namespace_id}/logs/lobbies | 
 *CloudGamesTokensApi* | [**cloud_games_tokens_create_cloud_token**](docs/CloudGamesTokensApi.md#cloud_games_tokens_create_cloud_token) | **POST** /cloud/games/{game_id}/tokens/cloud | 
+*CloudGamesTokensApi* | [**cloud_games_tokens_create_service_token**](docs/CloudGamesTokensApi.md#cloud_games_tokens_create_service_token) | **POST** /cloud/games/{game_id}/tokens/service | 
 *CloudGamesVersionsApi* | [**cloud_games_versions_create_game_version**](docs/CloudGamesVersionsApi.md#cloud_games_versions_create_game_version) | **POST** /cloud/games/{game_id}/versions | 
 *CloudGamesVersionsApi* | [**cloud_games_versions_get_game_version_by_id**](docs/CloudGamesVersionsApi.md#cloud_games_versions_get_game_version_by_id) | **GET** /cloud/games/{game_id}/versions/{version_id} | 
 *CloudGamesVersionsApi* | [**cloud_games_versions_reserve_version_name**](docs/CloudGamesVersionsApi.md#cloud_games_versions_reserve_version_name) | **POST** /cloud/games/{game_id}/versions/reserve-name | 
@@ -90,6 +91,8 @@ Class | Method | HTTP request | Description
 *CloudLogsApi* | [**cloud_logs_get_ray_perf_logs**](docs/CloudLogsApi.md#cloud_logs_get_ray_perf_logs) | **GET** /cloud/rays/{ray_id}/perf | 
 *CloudTiersApi* | [**cloud_tiers_get_region_tiers**](docs/CloudTiersApi.md#cloud_tiers_get_region_tiers) | **GET** /cloud/region-tiers | 
 *CloudUploadsApi* | [**cloud_uploads_complete_upload**](docs/CloudUploadsApi.md#cloud_uploads_complete_upload) | **POST** /cloud/uploads/{upload_id}/complete | 
+*DynamicServersServersApi* | [**dynamic_servers_servers_create**](docs/DynamicServersServersApi.md#dynamic_servers_servers_create) | **POST** /dynamic-servers/servers | 
+*DynamicServersServersApi* | [**dynamic_servers_servers_destroy**](docs/DynamicServersServersApi.md#dynamic_servers_servers_destroy) | **DELETE** /dynamic-servers/servers/{server_id} | 
 *GroupApi* | [**group_ban_identity**](docs/GroupApi.md#group_ban_identity) | **POST** /group/groups/{group_id}/bans/{identity_id} | 
 *GroupApi* | [**group_complete_avatar_upload**](docs/GroupApi.md#group_complete_avatar_upload) | **POST** /group/groups/{group_id}/avatar-upload/{upload_id}/complete | 
 *GroupApi* | [**group_create**](docs/GroupApi.md#group_create) | **POST** /group/groups | 
@@ -237,6 +240,7 @@ Class | Method | HTTP request | Description
  - [CloudGamesCreateGameResponse](docs/CloudGamesCreateGameResponse.md)
  - [CloudGamesCreateGameVersionRequest](docs/CloudGamesCreateGameVersionRequest.md)
  - [CloudGamesCreateGameVersionResponse](docs/CloudGamesCreateGameVersionResponse.md)
+ - [CloudGamesCreateServiceTokenResponse](docs/CloudGamesCreateServiceTokenResponse.md)
  - [CloudGamesDeleteMatchmakerLobbyResponse](docs/CloudGamesDeleteMatchmakerLobbyResponse.md)
  - [CloudGamesExportLobbyLogsRequest](docs/CloudGamesExportLobbyLogsRequest.md)
  - [CloudGamesExportLobbyLogsResponse](docs/CloudGamesExportLobbyLogsResponse.md)
@@ -349,6 +353,19 @@ Class | Method | HTTP request | Description
  - [CloudVersionMatchmakerPortRange](docs/CloudVersionMatchmakerPortRange.md)
  - [CloudVersionMatchmakerProxyKind](docs/CloudVersionMatchmakerProxyKind.md)
  - [CloudVersionSummary](docs/CloudVersionSummary.md)
+ - [DynamicServersCreateServerRequest](docs/DynamicServersCreateServerRequest.md)
+ - [DynamicServersCreateServerResponse](docs/DynamicServersCreateServerResponse.md)
+ - [DynamicServersDestroyServerResponse](docs/DynamicServersDestroyServerResponse.md)
+ - [DynamicServersDockerGameGuardRouting](docs/DynamicServersDockerGameGuardRouting.md)
+ - [DynamicServersDockerNetwork](docs/DynamicServersDockerNetwork.md)
+ - [DynamicServersDockerNetworkMode](docs/DynamicServersDockerNetworkMode.md)
+ - [DynamicServersDockerPort](docs/DynamicServersDockerPort.md)
+ - [DynamicServersDockerPortRouting](docs/DynamicServersDockerPortRouting.md)
+ - [DynamicServersDockerRuntime](docs/DynamicServersDockerRuntime.md)
+ - [DynamicServersGameGuardProtocol](docs/DynamicServersGameGuardProtocol.md)
+ - [DynamicServersResources](docs/DynamicServersResources.md)
+ - [DynamicServersRuntime](docs/DynamicServersRuntime.md)
+ - [DynamicServersServer](docs/DynamicServersServer.md)
  - [ErrorBody](docs/ErrorBody.md)
  - [GameHandle](docs/GameHandle.md)
  - [GameLeaderboardCategory](docs/GameLeaderboardCategory.md)

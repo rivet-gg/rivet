@@ -8,6 +8,7 @@ export * as auth from "./auth";
 export * as captcha from "./captcha";
 export * as common from "./common";
 export * from "./common/types";
+export * as dynamicServers from "./dynamicServers";
 export * as game from "./game";
 export * as geo from "./geo";
 export * as matchmaker from "./matchmaker";
