@@ -273,6 +273,9 @@ async fn vars(ctx: &ProjectContext) {
 		"cargo_target_dir".into(),
 		json!(ctx.cargo_target_dir().display().to_string()),
 	);
+	if let ns::KubernetesProvider::K3d { use_local_repo } = &config.kubernetes.provider {
+		vars.insert("k3d_use_local_repo".into(), json!(use_local_repo));
+	}
 
 	// Services
 	{
