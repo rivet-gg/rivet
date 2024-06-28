@@ -2710,7 +2710,9 @@ components:
           $ref: '#/components/schemas/DynamicServersGameGuardProtocol'
       type: object
     DynamicServersDockerHostRouting:
-      properties: {}
+      properties:
+        protocol:
+          $ref: '#/components/schemas/DynamicServersHostProtocol'
       type: object
     DynamicServersDockerNetwork:
       properties:
@@ -2769,6 +2771,11 @@ components:
       - https
       - tcp
       - tcp_tls
+      - udp
+      type: string
+    DynamicServersHostProtocol:
+      enum:
+      - tcp
       - udp
       type: string
     DynamicServersResources:

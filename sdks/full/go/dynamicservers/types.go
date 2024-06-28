@@ -39,6 +39,8 @@ func (d *DockerGameGuardRouting) String() string {
 }
 
 type DockerHostRouting struct {
+	Protocol *HostProtocol `json:"protocol,omitempty"`
+
 	_rawJSON json.RawMessage
 }
 
@@ -238,6 +240,28 @@ func NewGameGuardProtocolFromString(s string) (GameGuardProtocol, error) {
 
 func (g GameGuardProtocol) Ptr() *GameGuardProtocol {
 	return &g
+}
+
+type HostProtocol string
+
+const (
+	HostProtocolTcp HostProtocol = "tcp"
+	HostProtocolUdp HostProtocol = "udp"
+)
+
+func NewHostProtocolFromString(s string) (HostProtocol, error) {
+	switch s {
+	case "tcp":
+		return HostProtocolTcp, nil
+	case "udp":
+		return HostProtocolUdp, nil
+	}
+	var t HostProtocol
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (h HostProtocol) Ptr() *HostProtocol {
+	return &h
 }
 
 type Resources struct {
