@@ -70,7 +70,13 @@ resource "helm_release" "cockroachdb" {
 				]
 			}
 		}
-
+		image = {
+			credentials = var.authenticate_all_docker_hub_pulls ? {
+				registry = "https://index.docker.io/v1/"
+				username = module.docker_auth.docker_secrets[0].values["docker/registry/docker.io/read/username"]
+				password = module.docker_auth.docker_secrets[0].values["docker/registry/docker.io/read/password"]
+			} : null
+		}
 		serviceMonitor = {
 			# TODO: Doesn't work without insecure TLS
 			enabled = false
