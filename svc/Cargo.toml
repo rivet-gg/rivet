@@ -155,6 +155,7 @@ members = [
 	"pkg/linode/ops/instance-type-get",
 	"pkg/linode/ops/server-destroy",
 	"pkg/linode/ops/server-provision",
+	"pkg/linode/standalone/doctor",
 	"pkg/linode/standalone/gc",
 	"pkg/linode/worker",
 	"pkg/load-test/standalone/api-cloud",

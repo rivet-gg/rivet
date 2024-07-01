@@ -1,0 +1,11 @@
+[service]
+name = "linode-doctor"
+
+[runtime]
+kind = "rust"
+
+[headless]
+singleton = true
+
+[secrets]
+"linode/token" = { optional = true }
