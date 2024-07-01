@@ -141,7 +141,6 @@ members = [
 	"pkg/kv/ops/list",
 	"pkg/kv/worker",
 	"pkg/linode",
-	"pkg/linode/standalone/gc",
 	"pkg/load-test/standalone/api-cloud",
 	"pkg/load-test/standalone/mm",
 	"pkg/load-test/standalone/mm-sustain",
