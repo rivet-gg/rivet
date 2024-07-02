@@ -1,0 +1,12 @@
+[service]
+name = "cluster"
+
+[runtime]
+kind = "rust"
+
+[package]
+
+[secrets]
+
+[databases]
+db-cluster = {}

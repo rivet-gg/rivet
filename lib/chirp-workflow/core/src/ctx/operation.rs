@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::{DatabaseHandle, Operation, OperationInput, WorkflowError};
 
+#[derive(Clone)]
 pub struct OperationCtx {
 	ray_id: Uuid,
 	name: &'static str,

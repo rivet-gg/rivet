@@ -33,11 +33,8 @@ serde_yaml = "0.9"
 ssh2 = "0.9.4"
 thiserror = "1.0"
 trust-dns-resolver = { version = "0.23.2", features = ["dns-over-native-tls"] }
-util-cluster = { package = "rivet-util-cluster", path = "../../util" }
 
-cluster-datacenter-get = { path = "../../ops/datacenter-get" }
-cluster-datacenter-list = { path = "../../ops/datacenter-list" }
-cluster-datacenter-topology-get = { path = "../../ops/datacenter-topology-get" }
+cluster = { path = "../.." }
 linode-instance-type-get = { path = "../../../linode/ops/instance-type-get" }
 linode-server-destroy = { path = "../../../linode/ops/server-destroy" }
 linode-server-provision = { path = "../../../linode/ops/server-provision" }
