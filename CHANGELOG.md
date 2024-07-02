@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [24.5.0](https://github.com/rivet-gg/rivet/compare/v24.4.1...v24.5.0) (2024-07-02)
+
+
+### Features
+
+* add json cache ([#939](https://github.com/rivet-gg/rivet/issues/939)) ([7c2897a](https://github.com/rivet-gg/rivet/commit/7c2897a1b5bb9cca714fa0ed915554b67fb5ebf7))
+* **better_uptime:** allow disabling notifications ([#923](https://github.com/rivet-gg/rivet/issues/923)) ([7eb12b0](https://github.com/rivet-gg/rivet/commit/7eb12b0a8898a37affc5d4c23c01ae5c75d254ae))
+* **bolt:** build svcs as docker containers locally ([#945](https://github.com/rivet-gg/rivet/issues/945)) ([11f4258](https://github.com/rivet-gg/rivet/commit/11f425878ffad357d4a1da3bfef7cd07ca8d98f4))
+* **bolt:** run tests in containers ([#947](https://github.com/rivet-gg/rivet/issues/947)) ([08a53e3](https://github.com/rivet-gg/rivet/commit/08a53e353df3678e333f4e95c55275e2fa6dfcf5))
+* **clusters:** add toggle for prebakes ([#932](https://github.com/rivet-gg/rivet/issues/932)) ([09890e5](https://github.com/rivet-gg/rivet/commit/09890e5e7783877d2c6bb2681a39601b1bf9e4fa))
+* **clusters:** gg monitor for better uptime ([#921](https://github.com/rivet-gg/rivet/issues/921)) ([152c55b](https://github.com/rivet-gg/rivet/commit/152c55b28a2a41fb57115bc706e85b91bf09642e))
+* **infra:** enable configuring min & max cockroach pool conns ([#922](https://github.com/rivet-gg/rivet/issues/922)) ([e8e7255](https://github.com/rivet-gg/rivet/commit/e8e725538d53c5e317163f5ffad81ca572c871be))
+* update billing to use tiers ([#900](https://github.com/rivet-gg/rivet/issues/900)) ([918038a](https://github.com/rivet-gg/rivet/commit/918038a02a995f7eea73910181bc1adf61cac0ff))
+* **workflows:** add api ctx for workflows ([#865](https://github.com/rivet-gg/rivet/issues/865)) ([1a468d3](https://github.com/rivet-gg/rivet/commit/1a468d3cd62c902c927b482e79c1469091c8f5f9))
+* **workflows:** add observe workflows fn ([#901](https://github.com/rivet-gg/rivet/issues/901)) ([22a1ebd](https://github.com/rivet-gg/rivet/commit/22a1ebd5f27926ca5c6eaeddd8fa2818e0c5cf3d))
+* **workflows:** add operations service type ([#898](https://github.com/rivet-gg/rivet/issues/898)) ([0a0d377](https://github.com/rivet-gg/rivet/commit/0a0d377a7bc2cfda92848beae454b596cdd4bc2b))
+
+
+### Bug Fixes
+
+* add ip whitelist to tunnels ([#930](https://github.com/rivet-gg/rivet/issues/930)) ([88ce4b3](https://github.com/rivet-gg/rivet/commit/88ce4b3313a812d2ef80e7db13eb371c05bc25c3))
+* **better_uptime:** handle null verify_ssl ([#950](https://github.com/rivet-gg/rivet/issues/950)) ([e9d8edb](https://github.com/rivet-gg/rivet/commit/e9d8edbf220690788cb207e8ecb422902f42079c))
+* **bolt:** exclude volumes when using native docker builder ([#969](https://github.com/rivet-gg/rivet/issues/969)) ([8ac0a55](https://github.com/rivet-gg/rivet/commit/8ac0a55776c2a648527d9f9562ecc2077f03f3a4))
+* **bolt:** explicitly handle no nomad leader error ([#971](https://github.com/rivet-gg/rivet/issues/971)) ([20822fc](https://github.com/rivet-gg/rivet/commit/20822fcc6f780f298f472dc2871670ababf06c10))
+* **cache:** mixed values in Cache::fetch_all ([#927](https://github.com/rivet-gg/rivet/issues/927)) ([d69a072](https://github.com/rivet-gg/rivet/commit/d69a0727019fa512ee686993ab7344168d44e006))
+* **cloud:** add clean timeout for matchmaker logs ([#942](https://github.com/rivet-gg/rivet/issues/942)) ([a395e3f](https://github.com/rivet-gg/rivet/commit/a395e3f0e432b10d670a8cef4a488c125bb177d0))
+* **cluster:** dc-get column mismatch ([#958](https://github.com/rivet-gg/rivet/issues/958)) ([53e276a](https://github.com/rivet-gg/rivet/commit/53e276abcd403b6460e06da7fada6ee92165f3fd))
+* **clusters:** continue provisioning a server even when marked for deletion ([#924](https://github.com/rivet-gg/rivet/issues/924)) ([8b551f4](https://github.com/rivet-gg/rivet/commit/8b551f4ebbb1f1bb20612bc840fa9953fb684c84))
+* **clusters:** fix vlan ip query ([#911](https://github.com/rivet-gg/rivet/issues/911)) ([0ab1ec9](https://github.com/rivet-gg/rivet/commit/0ab1ec9faba864b4ab527da8cd7ff89556ebfbcf))
+* **clusters:** query vlan ips per datacenter ([#961](https://github.com/rivet-gg/rivet/issues/961)) ([c2a7e3f](https://github.com/rivet-gg/rivet/commit/c2a7e3f707346ac5d0bc27a8d72a65066500273f))
+* **clusters:** update pools in dc-update ([#959](https://github.com/rivet-gg/rivet/issues/959)) ([9b31345](https://github.com/rivet-gg/rivet/commit/9b3134583cd9063f26861d5ec275687544b244a6))
+* **infra:** force linux/amd64 platform for building job-runner artifact ([#937](https://github.com/rivet-gg/rivet/issues/937)) ([1a32f90](https://github.com/rivet-gg/rivet/commit/1a32f90f2c60883e4a9f4a04d5d8a7ff6b445f93))
+* **infra:** remove dep on unused api_route secret ([#935](https://github.com/rivet-gg/rivet/issues/935)) ([7fca24b](https://github.com/rivet-gg/rivet/commit/7fca24b22b6e12ef8f361c5e25f29ae85cc629bc))
+* **infra:** remove k8s_infra -&gt; cockroach_k8s circular dependency ([#936](https://github.com/rivet-gg/rivet/issues/936)) ([41b6cdb](https://github.com/rivet-gg/rivet/commit/41b6cdb7c82ce78245a322b0d44b0ef722be9f01))
+* **ip:** cache ip queries ([#907](https://github.com/rivet-gg/rivet/issues/907)) ([c36d150](https://github.com/rivet-gg/rivet/commit/c36d15081096abea64679070aac50791d6c5ded7))
+* **mm:** clean up players from gc zset ([#914](https://github.com/rivet-gg/rivet/issues/914)) ([d6d05f6](https://github.com/rivet-gg/rivet/commit/d6d05f634d7fa2c57be97e41e808ad8742440982))
+* **mm:** move runtime aggregate logic into query ([#966](https://github.com/rivet-gg/rivet/issues/966)) ([e545271](https://github.com/rivet-gg/rivet/commit/e545271d0c3a3fb00f19924c8c2618e4cc0c911c))
+* **mm:** skip prewarming ats if no nodes booted ([#970](https://github.com/rivet-gg/rivet/issues/970)) ([61e9f14](https://github.com/rivet-gg/rivet/commit/61e9f14c046ff5fe395435e7919bb76e89ccef52))
+* **opengb:** opengb. -&gt; backend. ([#919](https://github.com/rivet-gg/rivet/issues/919)) ([dfe5f8b](https://github.com/rivet-gg/rivet/commit/dfe5f8b17f017c43666d38edece48b886dfc8c28))
+* revert hotfix ([#934](https://github.com/rivet-gg/rivet/issues/934)) ([115f02e](https://github.com/rivet-gg/rivet/commit/115f02e43db2c16b474dcc5dbee76f8d69ab1465))
+* workflow ts hotfix ([#933](https://github.com/rivet-gg/rivet/issues/933)) ([20796db](https://github.com/rivet-gg/rivet/commit/20796db7811683b6c3a16caaaa40fac865259b4c))
+* **workflows:** add ts dt ([#943](https://github.com/rivet-gg/rivet/issues/943)) ([1b362fd](https://github.com/rivet-gg/rivet/commit/1b362fd83141328d4da0b3528a9691bdd14c5878))
+
+
+### Chores
+
+* add lines to provisioning metrics ([#912](https://github.com/rivet-gg/rivet/issues/912)) ([d0371e0](https://github.com/rivet-gg/rivet/commit/d0371e00d9f05eecc7b6ec03e95061fa8c3dea49))
+* add sqlx max connection timeout jitter ([#916](https://github.com/rivet-gg/rivet/issues/916)) ([4513a1f](https://github.com/rivet-gg/rivet/commit/4513a1fcadedcf7f4f3ca2609558f24a11c438d4))
+* cache mm-config-version-get ([#913](https://github.com/rivet-gg/rivet/issues/913)) ([3b24383](https://github.com/rivet-gg/rivet/commit/3b2438338307e91d39117d7ea13592036163ff9d))
+* cleanup runtime aggregate op ([#902](https://github.com/rivet-gg/rivet/issues/902)) ([538d9b8](https://github.com/rivet-gg/rivet/commit/538d9b811ecb76ad95d201754745ed0c82224063))
+* **cluster:** cache datacenter-get and datacenter-location-get ([#908](https://github.com/rivet-gg/rivet/issues/908)) ([8863a8b](https://github.com/rivet-gg/rivet/commit/8863a8b075e0cd31ed6a349e655559efd4da4427))
+* **clusters:** remove git as a dependency for cluster util ([#931](https://github.com/rivet-gg/rivet/issues/931)) ([7c7eec3](https://github.com/rivet-gg/rivet/commit/7c7eec38fb617887d57e35458df32fe36e1ca55a))
+* handle game version configs with bad proto migrations ([#926](https://github.com/rivet-gg/rivet/issues/926)) ([853cf06](https://github.com/rivet-gg/rivet/commit/853cf068d920e142a25994b7a4f824ecc05e762f))
+* increase sql conn acquire rate limits ([#915](https://github.com/rivet-gg/rivet/issues/915)) ([deca712](https://github.com/rivet-gg/rivet/commit/deca712ddecf91fb3713c31669de4aaf6ca88109))
+* increase ttl of public tokens ([#905](https://github.com/rivet-gg/rivet/issues/905)) ([93e705c](https://github.com/rivet-gg/rivet/commit/93e705c9a8373e52b7d4f5f3d6f37058daa330c7))
+* increase workflow tick interval ([#941](https://github.com/rivet-gg/rivet/issues/941)) ([fb75556](https://github.com/rivet-gg/rivet/commit/fb75556fd902bbdcd558e1dc6a326e32607b1d53))
+* make logs query consistent with nanoseconds ([#862](https://github.com/rivet-gg/rivet/issues/862)) ([4ffab51](https://github.com/rivet-gg/rivet/commit/4ffab516e794ff2d53dcfe58bacce8199efe8b78))
+* read job-runner from ats ([#968](https://github.com/rivet-gg/rivet/issues/968)) ([3fa0611](https://github.com/rivet-gg/rivet/commit/3fa0611b336f45c014d550d03876412e955936ff))
+* remove duplicate smithy code ([#946](https://github.com/rivet-gg/rivet/issues/946)) ([7ebe1f1](https://github.com/rivet-gg/rivet/commit/7ebe1f1ea3c3622354f88637c475c4fb27f49070))
+* traffic-server forward script ([#909](https://github.com/rivet-gg/rivet/issues/909)) ([a3528db](https://github.com/rivet-gg/rivet/commit/a3528db07bfac20a68b845e3650c960ae960bad2))
+* **workflows:** add workflow name to logs ([#928](https://github.com/rivet-gg/rivet/issues/928)) ([a3b31e0](https://github.com/rivet-gg/rivet/commit/a3b31e0a2a6abd4771dce8466612f29f1725344e))
+* **workflows:** clean up internals ([#899](https://github.com/rivet-gg/rivet/issues/899)) ([b840019](https://github.com/rivet-gg/rivet/commit/b84001926ef052f37cc3e1f59f50c953f9b8dfa9))
+
 ## [24.4.1](https://github.com/rivet-gg/rivet/compare/v24.4.0...v24.4.1) (2024-06-06)
 
 
