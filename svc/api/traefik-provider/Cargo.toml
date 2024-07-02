@@ -37,7 +37,7 @@ util-cdn = { package = "rivet-util-cdn", path = "../../pkg/cdn/util" }
 util-job = { package = "rivet-util-job", path = "../../pkg/job/util" }
 uuid = { version = "1", features = ["v4"] }
 
-cluster-server-list = { path = "../../pkg/cluster/ops/server-list" }
+cluster = { path = "../../pkg/cluster" }
 
 [dev-dependencies]
 rivet-connection = { path = "../../../lib/connection" }

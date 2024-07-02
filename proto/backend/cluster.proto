@@ -94,3 +94,8 @@ message ServerFilter {
 	bool filter_public_ips = 9;
 	repeated string public_ips = 10;
 }
+
+// Helper proto for writing to sql
+message Pools {
+    repeated rivet.backend.cluster.Pool pools = 1;
+}
