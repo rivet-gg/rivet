@@ -27,7 +27,6 @@ in
 			# Kubernetes tools
 			k3d
 			kubectl
-			k9s
 			kubernetes-helm
 
 			# Clouds
