@@ -36,6 +36,7 @@ gen/tf/
 gen/docker/
 gen/tests/
 gen/k8s/
+gen/volumes/
 
 # Rust
 lib/**/Cargo.lock
