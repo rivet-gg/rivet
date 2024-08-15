@@ -30,16 +30,10 @@ pub async fn handle(
 					server_id = $1
 					AND delete_ts IS NULL
 				RETURNING
-					server_id,
-					datacenter_id
-					server_nomad.nomad_dispatched_job_id,
-					server_nomad.nomad_alloc_id,
-				FROM
-					db_ds.servers
-				JOIN
-					db_ds.server_nomad
-				ON
-					db_ds.servers.server_id = db_ds.server_nomad.server_id
+					server_id AS ds_server_id,
+					datacenter_id AS ds_datacenter_id,
+					(SELECT nomad_alloc_id FROM db_ds.server_nomad WHERE server_id = db_ds.servers.server_id) AS alloc_id,
+					(SELECT nomad_dispatched_job_id FROM db_ds.server_nomad WHERE server_id = db_ds.servers.server_id) AS dispatched_job_id
 				",
 				server_id,
 				ctx.ts(),
