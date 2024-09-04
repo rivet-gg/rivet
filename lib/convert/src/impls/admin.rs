@@ -29,6 +29,7 @@ impl ApiFrom<models::AdminClustersProvider> for cluster::types::Provider {
 	fn api_from(value: models::AdminClustersProvider) -> cluster::types::Provider {
 		match value {
 			models::AdminClustersProvider::Linode => cluster::types::Provider::Linode,
+			models::AdminClustersProvider::Vultr => cluster::types::Provider::Vultr,
 		}
 	}
 }
@@ -37,6 +38,7 @@ impl ApiFrom<cluster::types::Provider> for models::AdminClustersProvider {
 	fn api_from(value: cluster::types::Provider) -> models::AdminClustersProvider {
 		match value {
 			cluster::types::Provider::Linode => models::AdminClustersProvider::Linode,
+			cluster::types::Provider::Vultr => models::AdminClustersProvider::Vultr,
 		}
 	}
 }

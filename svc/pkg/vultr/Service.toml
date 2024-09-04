@@ -1,0 +1,11 @@
+[service]
+name = "vultr"
+
+[runtime]
+kind = "rust"
+
+[package]
+
+[secrets]
+"vultr/token" = {}
+"ssh/server/private_key_openssh" = {}

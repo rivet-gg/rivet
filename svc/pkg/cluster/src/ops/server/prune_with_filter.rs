@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use chirp_workflow::prelude::*;
-use linode::util::{api, client};
+use linode::util::{api as linode_api, client as linode_client};
 use reqwest::header;
 use serde_json::json;
 
@@ -67,6 +67,7 @@ pub async fn cluster_server_prune_with_filter(
 			Provider::Linode => {
 				run_for_linode_account(&servers_res.servers, &api_token, &headers).await?;
 			}
+			Provider::Vultr => unimplemented!(),
 		}
 	}
 
@@ -80,7 +81,8 @@ async fn run_for_linode_account(
 ) -> GlobalResult<()> {
 	// Build HTTP client
 	let client =
-		client::Client::new_with_headers(Some(api_token.to_string()), headers.clone()).await?;
+		linode_client::Client::new_with_headers(Some(api_token.to_string()), headers.clone())
+			.await?;
 
 	tracing::info!("pruning {} servers", servers.len());
 
@@ -89,13 +91,13 @@ async fn run_for_linode_account(
 
 		tracing::info!("pruning {} (linode_id {})", server.server_id, linode_id);
 
-		let firewalls = api::list_linode_firewalls(&client, linode_id).await?;
+		let firewalls = linode_api::list_linode_firewalls(&client, linode_id).await?;
 
 		for firewall in firewalls {
-			api::delete_firewall(&client, firewall.id).await?;
+			linode_api::delete_firewall(&client, firewall.id).await?;
 		}
 
-		api::delete_instance(&client, linode_id).await?;
+		linode_api::delete_instance(&client, linode_id).await?;
 
 		// NOTE: Does not delete ssh keys
 	}

@@ -21,10 +21,12 @@ fn convert_datacenter(
 		nomad_datacenter: datacenter.datacenter_id.to_string(),
 		provider: match datacenter.provider {
 			cluster::types::Provider::Linode => "linode".to_string(),
+			cluster::types::Provider::Vultr => "vultr".to_string(),
 		},
 		provider_region: datacenter.provider_datacenter_id.clone(),
 		provider_display_name: match datacenter.provider {
 			cluster::types::Provider::Linode => "Linode".to_string(),
+			cluster::types::Provider::Vultr => "Vultr".to_string(),
 		},
 		region_display_name: datacenter.display_name.clone(),
 		name_id: datacenter.name_id.clone(),

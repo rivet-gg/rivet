@@ -364,7 +364,7 @@ async fn scale_down_job_servers(
 
 	let destroy_count = match pctx.provider {
 		// Never destroy servers when scaling down with Linode, always drain
-		Provider::Linode => 0,
+		Provider::Linode | Provider::Vultr => 0,
 		#[allow(unreachable_patterns)]
 		_ => diff.min(without_nomad_servers.len()),
 	};

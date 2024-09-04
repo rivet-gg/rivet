@@ -236,7 +236,12 @@ pub struct ServerCreate {
 	pub tags: Vec<String>,
 }
 
-join_signal!(Main, [Update, Scale, ServerCreate, TlsRenew]);
+join_signal!(Main {
+	Update,
+	Scale,
+	ServerCreate,
+	TlsRenew
+});
 
 #[message("cluster_datacenter_create_complete")]
 pub struct CreateComplete {}

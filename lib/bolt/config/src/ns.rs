@@ -670,6 +670,8 @@ pub struct ProvisioningDatacenter {
 pub enum ProvisioningProvider {
 	#[serde(rename = "linode")]
 	Linode,
+	#[serde(rename = "vultr")]
+	Vultr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, strum_macros::Display)]

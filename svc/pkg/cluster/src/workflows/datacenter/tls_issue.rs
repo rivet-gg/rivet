@@ -14,10 +14,7 @@ use trust_dns_resolver::{
 	TokioAsyncResolver,
 };
 
-use crate::{
-	types::TlsState,
-	util::{cf_client, create_dns_record, delete_dns_record},
-};
+use crate::{types::TlsState, util::cf as util_cf};
 
 const ENCRYPT_EMAIL: &str = "letsencrypt@rivet.gg";
 
@@ -94,7 +91,7 @@ struct OrderOutput {
 #[timeout = 130]
 async fn order(ctx: &ActivityCtx, input: &OrderInput) -> GlobalResult<OrderOutput> {
 	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
-	let client = cf_client(Some(&cf_token)).await?;
+	let client = util_cf::client(Some(&cf_token)).await?;
 
 	// Fetch ACME account registration
 	let account = acme_account().await?;
@@ -133,7 +130,7 @@ async fn order(ctx: &ActivityCtx, input: &OrderInput) -> GlobalResult<OrderOutpu
 					let proof = challenge.dns_proof();
 
 					let hostname = format!("_acme-challenge.{}", auth.api_auth().identifier.value);
-					let dns_record_id = create_dns_record(
+					let dns_record_id = util_cf::create_dns_record(
 						client,
 						cf_token,
 						&input.zone_id,
@@ -156,7 +153,7 @@ async fn order(ctx: &ActivityCtx, input: &OrderInput) -> GlobalResult<OrderOutpu
 					.await;
 
 					// Delete regardless of success of the above try block
-					delete_dns_record(client, &input.zone_id, &dns_record_id).await?;
+					util_cf::delete_dns_record(client, &input.zone_id, &dns_record_id).await?;
 
 					try_block
 				}

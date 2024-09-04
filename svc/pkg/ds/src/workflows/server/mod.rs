@@ -1200,9 +1200,16 @@ pub struct NomadEvalUpdate {
 	pub eval: nomad_client::models::Evaluation,
 }
 
-join_signal!(Eval, [NomadEvalUpdate, Destroy,]);
+join_signal!(Eval {
+	NomadEvalUpdate,
+	Destroy
+});
 
-join_signal!(Main, [NomadAllocPlan, NomadAllocUpdate, Destroy,]);
+join_signal!(Main {
+	NomadAllocPlan,
+	NomadAllocUpdate,
+	Destroy,
+});
 
 /// Choose which port to assign for a job's ingress port.
 ///

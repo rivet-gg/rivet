@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use chirp_workflow::prelude::*;
 use cloudflare::endpoints as cf;
 
-use crate::util::{cf_client, create_dns_record};
+use crate::util::cf as util_cf;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Input {
@@ -100,9 +100,9 @@ async fn create_dns_record(
 	input: &CreateDnsRecordInput,
 ) -> GlobalResult<String> {
 	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
-	let client = cf_client(Some(&cf_token)).await?;
+	let client = util_cf::client(Some(&cf_token)).await?;
 
-	let record_id = create_dns_record(
+	let record_id = util_cf::create_dns_record(
 		&client,
 		&cf_token,
 		&input.zone_id,

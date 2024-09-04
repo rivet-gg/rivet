@@ -1,37 +1,105 @@
+use std::net::{Ipv4Addr, Ipv6Addr};
+
 pub struct FirewallRule {
 	pub label: String,
-	pub ports: String,
-	pub protocol: String,
-	pub inbound_ipv4_cidr: Vec<String>,
-	pub inbound_ipv6_cidr: Vec<String>,
+	pub ports: Port,
+	pub protocol: Protocol,
+	pub inbound_ipv4_cidr: Vec<Ipv4CidrAddr>,
+	pub inbound_ipv6_cidr: Vec<Ipv6CidrAddr>,
 }
+
+pub enum Port {
+	Single(u16),
+	Range(u16, u16),
+}
+
+pub enum Protocol {
+	Tcp,
+	Udp,
+	Icmp,
+
+	// Linode only
+	Ipencap,
+
+	// Vultr only
+	Gre,
+	Esp,
+	Ah,
+}
+
+impl Protocol {
+	pub fn as_uppercase(&self) -> &str {
+		match self {
+			Protocol::Tcp => "TCP",
+			Protocol::Udp => "UDP",
+			Protocol::Icmp => "ICMP",
+			Protocol::Ipencap => "IPENCAP",
+			Protocol::Gre => "GRE",
+			Protocol::Esp => "ESP",
+			Protocol::Ah => "AH",
+		}
+	}
+}
+
+pub struct Ipv4CidrAddr(Ipv4Addr, u8);
+
+impl Ipv4CidrAddr {
+	pub fn subnet(&self) -> Ipv4Addr {
+		self.0
+	}
+
+	pub fn subnet_size(&self) -> u8 {
+		self.1
+	}
+}
+
+impl std::fmt::Display for Ipv4CidrAddr {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let Ipv4CidrAddr(subnet, subnet_size) = self;
+
+		write!(f, "{}", subnet)?;
+		write!(f, "{}", subnet_size)
+	}
+}
+
+pub struct Ipv6CidrAddr(Ipv6Addr, u8);
+
+impl Ipv6CidrAddr {
+	pub fn subnet(&self) -> Ipv6Addr {
+		self.0
+	}
+
+	pub fn subnet_size(&self) -> u8 {
+		self.1
+	}
+}
+
+impl std::fmt::Display for Ipv6CidrAddr {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let Ipv6CidrAddr(subnet, subnet_size) = self;
+		
+		write!(f, "{}", subnet)?;
+		write!(f, "{}", subnet_size)
+	}
+}
+
 
 pub fn default_firewall() -> FirewallRule {
 	FirewallRule {
 		label: "ssh".into(),
-		ports: "22".into(),
-		protocol: "tcp".into(),
-		inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
-		inbound_ipv6_cidr: vec!["::/0".into()],
-	}
-}
-
-pub mod region {
-	use std::net::Ipv4Addr;
-
-	use ipnet::Ipv4Net;
-
-	pub fn vlan_ip_net() -> Ipv4Net {
-		Ipv4Net::new(Ipv4Addr::new(10, 0, 0, 0), 16).unwrap()
+		ports: Port::Single(22),
+		protocol: Protocol::Tcp,
+		inbound_ipv4_cidr: vec![Ipv4CidrAddr(Ipv4Addr::new(0, 0, 0, 0), 0)],
+		inbound_ipv6_cidr: vec![Ipv6CidrAddr(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 0)],
 	}
 }
 
 pub mod gg {
-	use std::net::Ipv4Addr;
+	use std::net::{Ipv4Addr, Ipv6Addr};
 
 	use ipnet::{Ipv4AddrRange, Ipv4Net};
 
-	use super::{default_firewall, job, FirewallRule};
+	use super::{default_firewall, job, Protocol, FirewallRule, Ipv4CidrAddr, Ipv6CidrAddr, Port};
 
 	pub fn vlan_ip_net() -> Ipv4Net {
 		Ipv4Net::new(Ipv4Addr::new(10, 0, 0, 0), 26).unwrap()
@@ -47,62 +115,54 @@ pub mod gg {
 			// HTTP(S)
 			FirewallRule {
 				label: "http-tcp".into(),
-				ports: "80".into(),
-				protocol: "tcp".into(),
-				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
-				inbound_ipv6_cidr: vec!["::/0".into()],
+				ports: Port::Single(80),
+				protocol: Protocol::Tcp,
+				inbound_ipv4_cidr: vec![Ipv4CidrAddr(Ipv4Addr::new(0, 0, 0, 0), 0)],
+				inbound_ipv6_cidr: vec![Ipv6CidrAddr(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 0)],
 			},
 			FirewallRule {
 				label: "http-udp".into(),
-				ports: "80".into(),
-				protocol: "udp".into(),
-				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
-				inbound_ipv6_cidr: vec!["::/0".into()],
+				ports: Port::Single(80),
+				protocol: Protocol::Udp,
+				inbound_ipv4_cidr: vec![Ipv4CidrAddr(Ipv4Addr::new(0, 0, 0, 0), 0)],
+				inbound_ipv6_cidr: vec![Ipv6CidrAddr(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 0)],
 			},
 			FirewallRule {
 				label: "https-tcp".into(),
-				ports: "443".into(),
-				protocol: "tcp".into(),
-				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
-				inbound_ipv6_cidr: vec!["::/0".into()],
+				ports: Port::Single(443),
+				protocol: Protocol::Tcp,
+				inbound_ipv4_cidr: vec![Ipv4CidrAddr(Ipv4Addr::new(0, 0, 0, 0), 0)],
+				inbound_ipv6_cidr: vec![Ipv6CidrAddr(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 0)],
 			},
 			FirewallRule {
 				label: "https-udp".into(),
-				ports: "443".into(),
-				protocol: "udp".into(),
-				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
-				inbound_ipv6_cidr: vec!["::/0".into()],
+				ports: Port::Single(443),
+				protocol: Protocol::Udp,
+				inbound_ipv4_cidr: vec![Ipv4CidrAddr(Ipv4Addr::new(0, 0, 0, 0), 0)],
+				inbound_ipv6_cidr: vec![Ipv6CidrAddr(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 0)],
 			},
 			// Dynamic TCP
 			FirewallRule {
 				label: "dynamic-tcp".into(),
-				ports: format!(
-					"{}-{}",
-					job::MIN_INGRESS_PORT_TCP,
-					job::MAX_INGRESS_PORT_TCP
-				),
-				protocol: "tcp".into(),
-				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
-				inbound_ipv6_cidr: vec!["::/0".into()],
+				ports: Port::Range(job::MIN_INGRESS_PORT_TCP, job::MAX_INGRESS_PORT_TCP),
+				protocol: Protocol::Tcp,
+				inbound_ipv4_cidr: vec![Ipv4CidrAddr(Ipv4Addr::new(0, 0, 0, 0), 0)],
+				inbound_ipv6_cidr: vec![Ipv6CidrAddr(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 0)],
 			},
 			// Dynamic UDP
 			FirewallRule {
 				label: "dynamic-udp".into(),
-				ports: format!(
-					"{}-{}",
-					job::MIN_INGRESS_PORT_UDP,
-					job::MAX_INGRESS_PORT_UDP
-				),
-				protocol: "udp".into(),
-				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
-				inbound_ipv6_cidr: vec!["::/0".into()],
+				ports: Port::Range(job::MIN_INGRESS_PORT_UDP, job::MAX_INGRESS_PORT_UDP),
+				protocol: Protocol::Udp,
+				inbound_ipv4_cidr: vec![Ipv4CidrAddr(Ipv4Addr::new(0, 0, 0, 0), 0)],
+				inbound_ipv6_cidr: vec![Ipv6CidrAddr(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 0)],
 			},
 		]
 	}
 }
 
 pub mod ats {
-	use std::net::Ipv4Addr;
+	use std::net::{Ipv4Addr};
 
 	use ipnet::{Ipv4AddrRange, Ipv4Net};
 
@@ -121,14 +181,12 @@ pub mod ats {
 	}
 }
 
-// 10.0.64-10.0.4.0 reserved for more services
-
 pub mod job {
-	use std::net::Ipv4Addr;
+	use std::net::{Ipv4Addr, Ipv6Addr};
 
 	use ipnet::Ipv4AddrRange;
 
-	use super::{default_firewall, FirewallRule};
+	use super::{default_firewall, Protocol, FirewallRule, Ipv4CidrAddr, Ipv6CidrAddr, Port};
 
 	// Port ranges for the load balancer hosts
 	// 20000-26000 are for traffic from gg on LAN
@@ -150,17 +208,17 @@ pub mod job {
 			// Ports available to Nomad jobs using the host network
 			FirewallRule {
 				label: "nomad-host-tcp".into(),
-				ports: format!("{}-{}", MIN_HOST_PORT_TCP, MAX_INGRESS_PORT_TCP),
-				protocol: "tcp".into(),
-				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
-				inbound_ipv6_cidr: vec!["::/0".into()],
+				ports: Port::Range(MIN_HOST_PORT_TCP, MAX_INGRESS_PORT_TCP),
+				protocol: Protocol::Tcp,
+				inbound_ipv4_cidr: vec![Ipv4CidrAddr(Ipv4Addr::new(0, 0, 0, 0), 0)],
+				inbound_ipv6_cidr: vec![Ipv6CidrAddr(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 0)],
 			},
 			FirewallRule {
 				label: "nomad-host-udp".into(),
-				ports: format!("{}-{}", MIN_HOST_PORT_UDP, MAX_INGRESS_PORT_UDP),
-				protocol: "udp".into(),
-				inbound_ipv4_cidr: vec!["0.0.0.0/0".into()],
-				inbound_ipv6_cidr: vec!["::/0".into()],
+				ports: Port::Range(MIN_HOST_PORT_UDP, MAX_INGRESS_PORT_UDP),
+				protocol: Protocol::Udp,
+				inbound_ipv4_cidr: vec![Ipv4CidrAddr(Ipv4Addr::new(0, 0, 0, 0), 0)],
+				inbound_ipv6_cidr: vec![Ipv6CidrAddr(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 0)],
 			},
 		]
 	}

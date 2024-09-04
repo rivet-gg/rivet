@@ -107,6 +107,7 @@ pub async fn cluster_prebake(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 				}
 			}
 		}
+		Provider::Vultr => unimplemented!("snapshots not implemented"),
 	}
 
 	ctx.activity(SetDestroyedInput {

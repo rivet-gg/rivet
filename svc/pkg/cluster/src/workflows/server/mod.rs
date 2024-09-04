@@ -128,6 +128,44 @@ pub(crate) async fn cluster_server(ctx: &mut WorkflowCtx, input: &Input) -> Glob
 					}
 				}
 			}
+			Provider::Vultr => {
+				let workflow_id = ctx
+					.workflow(vultr::workflows::server::Input {
+						server_id: input.server_id,
+						provider_datacenter_id: dc.provider_datacenter_id.clone(),
+						custom_image: custom_image.clone(),
+						api_token: dc.provider_api_token.clone(),
+						hardware: hardware.provider_hardware.clone(),
+						firewall_preset: match input.pool_type {
+							PoolType::Job => vultr::types::FirewallPreset::Job,
+							PoolType::Gg => vultr::types::FirewallPreset::Gg,
+							PoolType::Ats => vultr::types::FirewallPreset::Ats,
+						},
+						vlan_ip: Some(vlan_ip),
+						tags: input.tags.clone(),
+					})
+					.tag("server_id", input.server_id)
+					.dispatch()
+					.await?;
+
+				match ctx.listen::<Vultr>().await? {
+					Vultr::ProvisionComplete(sig) => {
+						break Some(ProvisionResponse {
+							provider_server_workflow_id: workflow_id,
+							provider_server_id: sig.instance_id.to_string(),
+							provider_hardware: hardware.provider_hardware.clone(),
+							public_ip: sig.public_ip,
+						});
+					}
+					Vultr::ProvisionFailed(_) => {
+						tracing::error!(
+							provision_workflow_id=%workflow_id,
+							server_id=?input.server_id,
+							"failed to provision server"
+						);
+					}
+				}
+			}
 		}
 	};
 
@@ -685,6 +723,20 @@ async fn cleanup(
 			)
 			.await?;
 		}
+		Provider::Vultr => {
+			tracing::info!(server_id=?input.server_id, "destroying vultr server");
+
+			ctx.signal(vultr::workflows::server::Destroy {})
+				.tag("server_id", input.server_id)
+				.send()
+				.await?;
+
+			// Wait for workflow to complete
+			ctx.wait_for_workflow::<vultr::workflows::server::Workflow>(
+				provider_server_workflow_id,
+			)
+			.await?;
+		}
 	}
 
 	Ok(())
@@ -786,10 +838,24 @@ impl Default for State {
 	}
 }
 
-// Listen for linode provision signals
-type ProvisionComplete = linode::workflows::server::ProvisionComplete;
-type ProvisionFailed = linode::workflows::server::ProvisionFailed;
-join_signal!(pub(crate) Linode, [ProvisionComplete, ProvisionFailed]);
+// Listen for provision signals
+mod linode_signals {
+	use chirp_workflow::prelude::*;
+
+	type ProvisionComplete = linode::workflows::server::ProvisionComplete;
+	type ProvisionFailed = linode::workflows::server::ProvisionFailed;
+	join_signal!(pub Linode { ProvisionComplete, ProvisionFailed });
+}
+pub(crate) use linode_signals::Linode;
+
+mod vultr_signals {
+	use chirp_workflow::prelude::*;
+
+	type ProvisionComplete = vultr::workflows::server::ProvisionComplete;
+	type ProvisionFailed = vultr::workflows::server::ProvisionFailed;
+	join_signal!(pub Vultr { ProvisionComplete, ProvisionFailed });
+}
+pub(crate) use vultr_signals::Vultr;
 
 #[signal("cluster_server_drain")]
 pub struct Drain {}
@@ -814,15 +880,12 @@ pub struct NomadRegistered {
 	pub node_id: String,
 }
 
-join_signal!(
-	Main,
-	[
-		Drain,
-		Undrain,
-		Taint,
-		DnsCreate,
-		DnsDelete,
-		Destroy,
-		NomadRegistered
-	]
-);
+join_signal!(Main {
+	Drain,
+	Undrain,
+	Taint,
+	DnsCreate,
+	DnsDelete,
+	Destroy,
+	NomadRegistered
+});

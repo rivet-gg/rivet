@@ -32,22 +32,8 @@ pub trait Signal {
 /// ````
 #[macro_export]
 macro_rules! join_signal {
-	(pub $join:ident, [$($signals:ident),* $(,)?]) => {
-		pub enum $join {
-			$($signals($signals)),*
-		}
-
-		join_signal!(@ $join, [$($signals),*]);
-	};
-	(pub($($vis:tt)*) $join:ident, [$($signals:ident),* $(,)?]) => {
-		pub($($vis)*) enum $join {
-			$($signals($signals)),*
-		}
-
-		join_signal!(@ $join, [$($signals),*]);
-	};
-	($join:ident, [$($signals:ident),* $(,)?]) => {
-		enum $join {
+	($vis:vis $join:ident { $($signals:ident),* $(,)? }) => {
+		$vis enum $join {
 			$($signals($signals)),*
 		}
 

@@ -32,9 +32,10 @@ pub struct Datacenter {
 	pub create_ts: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, FromRepr)]
 pub enum Provider {
-	Linode,
+	Linode = 0,
+	Vultr = 1,
 }
 
 // Backwards compatibility
@@ -82,11 +83,11 @@ impl TryFrom<backend::cluster::Pool> for Pool {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, FromRepr)]
 pub enum PoolType {
-	Job,
-	Gg,
-	Ats,
+	Job = 0,
+	Gg = 1,
+	Ats = 2,
 }
 
 // Backwards compatibility

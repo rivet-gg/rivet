@@ -2,13 +2,12 @@ use chirp_workflow::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct InstanceType {
+pub struct Plan {
 	pub hardware_id: String,
-	pub memory: u64, // MB
-	pub disk: u64, // MB
+	pub memory: u64,
+	pub disk: u64,
 	pub vcpus: u64,
-	pub transfer: u64, // MB
-	pub network_out: u64, // Mbits
+	pub transfer: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]

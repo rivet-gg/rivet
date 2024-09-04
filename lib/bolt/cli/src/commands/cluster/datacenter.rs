@@ -12,6 +12,7 @@ impl From<DatacenterProvider> for models::AdminClustersProvider {
 	fn from(provider: DatacenterProvider) -> Self {
 		match provider {
 			DatacenterProvider::Linode => models::AdminClustersProvider::Linode,
+			DatacenterProvider::Vultr => models::AdminClustersProvider::Vultr,
 		}
 	}
 }

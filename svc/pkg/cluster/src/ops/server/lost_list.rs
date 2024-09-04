@@ -72,6 +72,7 @@ pub async fn cluster_server_lost_list(ctx: &OperationCtx, input: &Input) -> Glob
 					run_for_linode_account(ctx, &input.filter, &api_token, &headers).await?,
 				);
 			}
+			Provider::Vultr => unimplemented!(),
 		}
 	}
 

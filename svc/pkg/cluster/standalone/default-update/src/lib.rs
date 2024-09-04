@@ -13,25 +13,11 @@ struct Cluster {
 struct Datacenter {
 	datacenter_id: Uuid,
 	display_name: String,
-	provider: Provider,
+	provider: cluster::types::Provider,
 	provider_datacenter_name: String,
-	pools: HashMap<PoolType, Pool>,
-	build_delivery_method: BuildDeliveryMethod,
+	pools: HashMap<cluster::types::PoolType, Pool>,
+	build_delivery_method: cluster::types::BuildDeliveryMethod,
 	prebakes_enabled: bool,
-}
-
-#[derive(Deserialize)]
-enum Provider {
-	#[serde(rename = "linode")]
-	Linode,
-}
-
-impl From<Provider> for cluster::types::Provider {
-	fn from(value: Provider) -> cluster::types::Provider {
-		match value {
-			Provider::Linode => cluster::types::Provider::Linode,
-		}
-	}
 }
 
 #[derive(Deserialize)]
@@ -43,26 +29,6 @@ struct Pool {
 	drain_timeout: u64,
 }
 
-#[derive(Deserialize, PartialEq, Eq, Hash)]
-enum PoolType {
-	#[serde(rename = "job")]
-	Job,
-	#[serde(rename = "gg")]
-	Gg,
-	#[serde(rename = "ats")]
-	Ats,
-}
-
-impl From<PoolType> for cluster::types::PoolType {
-	fn from(value: PoolType) -> cluster::types::PoolType {
-		match value {
-			PoolType::Job => cluster::types::PoolType::Job,
-			PoolType::Gg => cluster::types::PoolType::Gg,
-			PoolType::Ats => cluster::types::PoolType::Ats,
-		}
-	}
-}
-
 #[derive(Deserialize)]
 struct Hardware {
 	name: String,
@@ -72,25 +38,6 @@ impl From<Hardware> for cluster::types::Hardware {
 	fn from(value: Hardware) -> cluster::types::Hardware {
 		cluster::types::Hardware {
 			provider_hardware: value.name,
-		}
-	}
-}
-
-#[derive(Deserialize)]
-enum BuildDeliveryMethod {
-	#[serde(rename = "traffic_server")]
-	TrafficServer,
-	#[serde(rename = "s3_direct")]
-	S3Direct,
-}
-
-impl From<BuildDeliveryMethod> for cluster::types::BuildDeliveryMethod {
-	fn from(value: BuildDeliveryMethod) -> cluster::types::BuildDeliveryMethod {
-		match value {
-			BuildDeliveryMethod::TrafficServer => {
-				cluster::types::BuildDeliveryMethod::TrafficServer
-			}
-			BuildDeliveryMethod::S3Direct => cluster::types::BuildDeliveryMethod::S3Direct,
 		}
 	}
 }
