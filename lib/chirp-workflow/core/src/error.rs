@@ -63,6 +63,12 @@ pub enum WorkflowError {
 	#[error("deserialize signal body: {0}")]
 	DeserializeSignalBody(serde_json::Error),
 
+	#[error("serialize nats signal: {0}")]
+	SerializeNatsSignal(serde_json::Error),
+
+	#[error("deserialize nats signal: {0}")]
+	DeserializeNatsSignal(serde_json::Error),
+
 	#[error("serialize message body: {0}")]
 	SerializeMessageBody(serde_json::Error),
 
