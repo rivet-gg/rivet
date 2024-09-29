@@ -1,5 +1,21 @@
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
 pub trait Signal {
 	const NAME: &'static str;
+}
+
+/// A signal received from a NATS subscription.
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct NatsSignal {
+	pub target: NatsSignalTarget,
+	// body: ,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) enum NatsSignalTarget {
+	WorkflowId(Uuid),
+	Tags(serde_json::Value),
 }
 
 /// Creates an enum that implements `Listen` and selects one of X signals.
