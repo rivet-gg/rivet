@@ -36,8 +36,9 @@ variable "kubeconfig_path" {
 }
 
 # MARK: S3
-variable "s3_providers" {
+variable "s3" {
 	type = map(object({
+		provider = string
 		endpoint_internal = string
 		endpoint_external = string
 		region = string

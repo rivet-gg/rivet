@@ -56,7 +56,7 @@ impl PlanStepKind {
 				terraform::output::clear_cache(&ctx, plan_id).await;
 			}
 			PlanStepKind::Migrate => {
-				tasks::migrate::up_all(&ctx).await?;
+				todo!("migrate");
 			}
 			PlanStepKind::Up => tasks::up::up_all(&ctx, false, false, false, false).await?,
 		}
@@ -308,34 +308,7 @@ pub fn build_plan(
 	}
 
 	// S3
-	let s3_providers = &ctx.ns().s3.providers;
-	if s3_providers.minio.is_some() {
-		plan.push(PlanStep {
-			name_id: "s3-minio",
-			kind: PlanStepKind::Terraform {
-				plan_id: "s3_minio".into(),
-				needs_destroy: false,
-			},
-		});
-	}
-	if s3_providers.backblaze.is_some() {
-		plan.push(PlanStep {
-			name_id: "s3-backblaze",
-			kind: PlanStepKind::Terraform {
-				plan_id: "s3_backblaze".into(),
-				needs_destroy: true,
-			},
-		});
-	}
-	if s3_providers.aws.is_some() {
-		plan.push(PlanStep {
-			name_id: "s3-aws",
-			kind: PlanStepKind::Terraform {
-				plan_id: "s3_aws".into(),
-				needs_destroy: true,
-			},
-		});
-	}
+	todo!("s3");
 
 	plan.push(PlanStep {
 		name_id: "infra-artifacts",
@@ -345,10 +318,11 @@ pub fn build_plan(
 		},
 	});
 
-	plan.push(PlanStep {
-		name_id: "migrate",
-		kind: PlanStepKind::Migrate,
-	});
+	todo!("migrate");
+	// plan.push(PlanStep {
+	// 	name_id: "migrate",
+	// 	kind: PlanStepKind::Migrate,
+	// });
 
 	plan.push(PlanStep {
 		name_id: "up",

@@ -136,12 +136,9 @@ variable "k8s_dashboard_enabled" {
 }
 
 # MARK: S3
-variable "s3_default_provider" {
-	type = string
-}
-
-variable "s3_providers" {
+variable "s3" {
 	type = map(object({
+		provider = string
 		endpoint_internal = string
 		endpoint_external = string
 		region = string

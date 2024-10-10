@@ -21,7 +21,7 @@ use serde_json::json;
 use tokio::{io::AsyncWriteExt, process::Command};
 
 use crate::{
-	config::{ns, service::RuntimeKind},
+	config::ns,
 	context::{ProjectContext, RunContext, ServiceContext},
 	dep::{
 		self,
@@ -104,8 +104,6 @@ pub async fn test_services<T: AsRef<str>>(
 
 	let rust_svcs = all_svcs
 		.iter()
-		// Find all services that are executables
-		.filter(|svc_ctx| matches!(svc_ctx.config().runtime, RuntimeKind::Rust {}))
 		// Filter/include load tests
 		.filter(|svc_ctx| run_load_tests || !svc_ctx.config().service.load_test)
 		.collect::<Vec<_>>();
@@ -125,16 +123,15 @@ pub async fn test_services<T: AsRef<str>>(
 	eprintln!();
 	rivet_term::status::progress("Building", "(batch)");
 	let test_binaries = {
-		// Collect rust services by their workspace root
-		let mut svcs_by_workspace = HashMap::new();
-		for svc in &rust_svcs {
-			let workspace = svcs_by_workspace
-				.entry(svc.workspace_path())
-				.or_insert_with(Vec::new);
-			workspace.push(svc.cargo_name().expect("no cargo name"));
-		}
+		// Build all the Rust modules in parallel
+		let package_names = rust_svcs
+			.iter()
+			.map(|svc| svc.cargo_name().to_string())
+			.collect::<HashSet<_>>()
+			.into_iter()
+			.collect::<Vec<_>>();
 		ensure!(
-			!svcs_by_workspace.is_empty(),
+			!package_names.is_empty(),
 			"no matching services (to run load tests set `rivet.test.load_tests = true`)"
 		);
 
@@ -142,13 +139,10 @@ pub async fn test_services<T: AsRef<str>>(
 		let test_binaries = cargo::cli::build_tests(
 			ctx,
 			cargo::cli::BuildTestOpts {
-				build_calls: svcs_by_workspace
-					.iter()
-					.map(|(workspace_path, svc_names)| cargo::cli::BuildTestCall {
-						path: workspace_path.strip_prefix(ctx.path()).unwrap(),
-						packages: &svc_names,
-					})
-					.collect::<Vec<_>>(),
+				build_calls: vec![cargo::cli::BuildTestCall {
+					path: ctx.path(),
+					packages: &package_names,
+				}],
 				release: false,
 				jobs: ctx.config_local().rust.num_jobs,
 				test_filters: &test_ctx.filters,
@@ -333,7 +327,7 @@ async fn run_test(
 		.all_services()
 		.await
 		.into_iter()
-		.find(|x| x.cargo_name() == Some(&test_binary.package))
+		.find(|x| x.cargo_name() == &test_binary.package)
 		.context("svc not found for package")?;
 	let display_name = format!("{}::{}", svc_ctx.name(), test_binary.test_name);
 
@@ -999,27 +993,7 @@ pub async fn build_volumes(
 	// Add Redis CA
 	match project_ctx.ns().redis.provider {
 		ns::RedisProvider::Kubernetes {} => {
-			let mut redis_deps = IndexSet::with_capacity(2);
-
-			for svc in svcs {
-				let svc_redis_deps =
-					svc.redis_dependencies(run_context)
-						.await
-						.into_iter()
-						.map(|redis_dep| {
-							if let RuntimeKind::Redis { persistent } = redis_dep.config().runtime {
-								if persistent {
-									"persistent"
-								} else {
-									"ephemeral"
-								}
-							} else {
-								unreachable!();
-							}
-						});
-
-				redis_deps.extend(svc_redis_deps);
-			}
+			let redis_deps = vec!["persistent", "ephemeral"];
 
 			volumes.extend(redis_deps.iter().map(|db| {
 				json!({

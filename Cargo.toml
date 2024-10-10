@@ -46,6 +46,7 @@ build-default-create = { path = "svc/pkg/build/standalone/default-create", optio
 cluster-default-update = { path = "svc/pkg/cluster/standalone/default-update", optional = true }
 cluster-workflow-backfill = { path = "svc/pkg/cluster/standalone/workflow-backfill", optional = true }
 pegboard-dc-init = { path = "svc/pkg/pegboard/standalone/dc-init", optional = true }
+s3-util = { version = "0.1.0", path = "lib/s3-util" }
 
 [features]
 default = ["standalone", "cron", "api-internal", "api", "oneshot"]

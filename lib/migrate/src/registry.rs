@@ -181,32 +181,6 @@ const SQL_SERVICES: &[SqlService] = &[
 	},
 ];
 
-// buckets = [
-// 	{ name = "build" },
-// 	{ name = "cdn" },
-// 	{ name = "export" },
-// 	{ name = "banner" },
-// 	{ name = "logo" },
-// 	{ name = "artifacts" },
-// 	{ name = "export" },
-// 	{ name = "log" },
-// 	{ name = "imagor-result-storage" },
-// 	{ name = "svc-build" },
-// 	{ name = "lobby-history-export" },
-// 	{ name = "log" },
-// 	{ name = "avatar" },
-// 	{ name = "billing" },
-// 	{ name = "avatar" },
-// ]
-// redis = [
-// 	{ name = "redis-cdn", ephemeral = false },
-// 	{ name = "redis-job", ephemeral = false },
-// 	{ name = "redis-cache", ephemeral = true },
-// 	{ name = "redis-chirp", ephemeral = false },
-// 	{ name = "redis-chirp-ephemeral", ephemeral = true },
-// 	{ name = "redis-mm", ephemeral = false },
-// ]
-
 pub fn get_service(name: &str) -> Option<&'static SqlService> {
 	SQL_SERVICES.iter().filter(|x| x.db_name == name).next()
 }

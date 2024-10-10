@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use anyhow::*;
 use futures_util::stream::StreamExt;
@@ -10,10 +10,7 @@ use tokio::{
 };
 
 use crate::{
-	config::{
-		self,
-		service::{ComponentClass, RuntimeKind},
-	},
+	config,
 	context::{
 		BuildContext, BuildOptimization, ProjectContext, RunContext, ServiceBuildPlan,
 		ServiceContext,
@@ -74,7 +71,6 @@ pub async fn up_services<T: AsRef<str>>(
 	// Find all services that are executables
 	let all_exec_svcs = all_svcs
 		.iter()
-		.filter(|svc| svc.config().kind.component_class() == ComponentClass::Executable)
 		.filter(|svc| load_tests || !svc.config().service.load_test)
 		.cloned()
 		.collect::<Vec<_>>();
@@ -97,43 +93,6 @@ pub async fn up_services<T: AsRef<str>>(
 
 	eprintln!();
 	rivet_term::status::progress("Preparing", format!("{} services", all_exec_svcs.len()));
-
-	// Generate configs for individual services
-	{
-		eprintln!();
-		rivet_term::status::progress("Generating", "");
-		{
-			let mut join_handles = Vec::new();
-			let pb = utils::MultiProgress::new(all_exec_svcs.len());
-			let all_exec_svcs = Arc::new(Mutex::new(all_exec_svcs.clone()));
-			for _ in 0..32 {
-				let pb = pb.clone();
-				let all_svc = all_exec_svcs.clone();
-
-				let handle = tokio::spawn(async move {
-					while let Some(svc_ctx) = {
-						let mut lock = all_svc.lock().await;
-						let val = (*lock).pop();
-						drop(lock);
-						val
-					} {
-						let svc_name = svc_ctx.name();
-
-						pb.insert(&svc_name).await;
-						// Generate artifacts
-						tasks::artifact::generate_service(&svc_ctx).await;
-						// Generate service
-						tasks::gen::generate_service(&svc_ctx).await;
-						pb.remove(&svc_name).await;
-					}
-				});
-
-				join_handles.push(handle);
-			}
-			futures_util::future::try_join_all(join_handles).await?;
-			pb.finish();
-		}
-	}
 
 	// Determine build plans for each service
 	eprintln!();
@@ -175,44 +134,29 @@ pub async fn up_services<T: AsRef<str>>(
 	rivet_term::status::progress("Building", "(batch)");
 	{
 		// Build all the Rust modules in parallel
-		let rust_svcs = all_exec_svcs_with_build_plan
+		let package_names = all_exec_svcs_with_build_plan
 			.iter()
-			.filter(|(svc, build_plan)| match svc.config().runtime {
-				RuntimeKind::Rust {} => {
-					!matches!(build_plan, ServiceBuildPlan::ExistingUploadedBuild { .. })
-				}
-				_ => false,
+			.filter(|(svc, build_plan)| {
+				!matches!(build_plan, ServiceBuildPlan::ExistingUploadedBuild { .. })
 			})
-			.map(|(svc, _)| svc);
+			.map(|(svc, _)| svc.cargo_name().to_string())
+			.collect::<HashSet<_>>()
+			.into_iter()
+			.collect::<Vec<_>>();
 
-		// Collect rust services by their workspace root
-		let mut svcs_by_workspace = HashMap::new();
-		for svc in rust_svcs {
-			let workspace = svcs_by_workspace
-				.entry(svc.workspace_path())
-				.or_insert_with(Vec::new);
-			workspace.push(svc.cargo_name().expect("no cargo name"));
-		}
-
-		if !svcs_by_workspace.is_empty() {
-			// Run build
-			cargo::cli::build(
-				ctx,
-				cargo::cli::BuildOpts {
-					build_calls: svcs_by_workspace
-						.iter()
-						.map(|(workspace_path, svc_names)| cargo::cli::BuildCall {
-							path: workspace_path.strip_prefix(ctx.path()).unwrap(),
-							bins: svc_names,
-						})
-						.collect::<Vec<_>>(),
-					release: ctx.build_optimization() == BuildOptimization::Release,
-					jobs: ctx.config_local().rust.num_jobs,
-				},
-			)
-			.await
-			.unwrap();
-		}
+		cargo::cli::build(
+			ctx,
+			cargo::cli::BuildOpts {
+				build_calls: vec![cargo::cli::BuildCall {
+					path: ctx.path(),
+					bins: &package_names,
+				}],
+				release: ctx.build_optimization() == BuildOptimization::Release,
+				jobs: ctx.config_local().rust.num_jobs,
+			},
+		)
+		.await
+		.unwrap();
 	}
 
 	if build_only {
@@ -258,17 +202,6 @@ pub async fn up_services<T: AsRef<str>>(
 
 			// Build the service if needed
 			if let ServiceBuildPlan::BuildAndUpload { .. } = &build_plan {
-				// Read modified ts
-				let svc_path = svc_ctx.path().to_owned();
-				let _svc_modified_ts =
-					tokio::task::spawn_blocking(move || utils::deep_modified_ts(&svc_path))
-						.await
-						.unwrap()
-						.unwrap();
-
-				// Build service
-				build_svc(svc_ctx, &build_context, ctx.build_optimization()).await;
-
 				// Upload build
 				upload_join_set.spawn(upload_svc_build(svc_ctx.clone(), upload_semaphore.clone()));
 			}
@@ -347,45 +280,17 @@ async fn upload_svc_build(svc_ctx: ServiceContext, upload_semaphore: Arc<Semapho
 	Result::Ok(())
 }
 
-async fn build_svc(
-	svc_ctx: &ServiceContext,
-	_build_context: &BuildContext,
-	_optimization: BuildOptimization,
-) {
-	match &svc_ctx.config().runtime {
-		RuntimeKind::Rust {} => {
-			// Do nothing
-		}
-		RuntimeKind::CRDB { .. }
-		| RuntimeKind::ClickHouse { .. }
-		| RuntimeKind::Redis { .. }
-		| RuntimeKind::S3 { .. }
-		| RuntimeKind::Nats { .. } => {
-			unreachable!()
-		}
-	}
-}
-
 async fn derive_local_build_driver(
 	svc_ctx: &ServiceContext,
 	exec_path: PathBuf,
 ) -> ExecServiceDriver {
-	match &svc_ctx.config().runtime {
-		RuntimeKind::Rust {} => ExecServiceDriver::LocalBinaryArtifact {
-			// Convert path to be relative to the project root
-			exec_path: exec_path
-				.strip_prefix(svc_ctx.project().await.cargo_target_dir())
-				.expect("rust binary path not inside of project dir")
-				.to_owned(),
-			args: Vec::new(),
-		},
-		RuntimeKind::CRDB { .. }
-		| RuntimeKind::ClickHouse { .. }
-		| RuntimeKind::Redis { .. }
-		| RuntimeKind::S3 { .. }
-		| RuntimeKind::Nats { .. } => {
-			unreachable!()
-		}
+	ExecServiceDriver::LocalBinaryArtifact {
+		// Convert path to be relative to the project root
+		exec_path: exec_path
+			.strip_prefix(svc_ctx.project().await.cargo_target_dir())
+			.expect("rust binary path not inside of project dir")
+			.to_owned(),
+		args: Vec::new(),
 	}
 }
 
@@ -394,17 +299,8 @@ async fn derive_uploaded_svc_driver(
 	image_tag: String,
 	force_pull: bool,
 ) -> ExecServiceDriver {
-	match &svc_ctx.config().runtime {
-		RuntimeKind::Rust {} => ExecServiceDriver::Docker {
-			image_tag,
-			force_pull,
-		},
-		RuntimeKind::CRDB { .. }
-		| RuntimeKind::ClickHouse { .. }
-		| RuntimeKind::Redis { .. }
-		| RuntimeKind::S3 { .. }
-		| RuntimeKind::Nats { .. } => {
-			unreachable!()
-		}
+	ExecServiceDriver::Docker {
+		image_tag,
+		force_pull,
 	}
 }

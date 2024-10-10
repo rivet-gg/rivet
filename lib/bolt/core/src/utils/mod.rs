@@ -10,7 +10,6 @@ use tokio::{net::TcpStream, sync::Mutex};
 use crate::context::ProjectContext;
 
 pub mod command_helper;
-pub mod db_conn;
 pub mod media_resize;
 pub mod telemetry;
 

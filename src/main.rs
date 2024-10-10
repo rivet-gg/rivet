@@ -33,6 +33,12 @@ enum SubCommand {
 		#[clap(subcommand)]
 		command: db::SubCommand,
 	},
+	/// Manages buckets
+	#[clap(alias = "storage")]
+	Storage {
+		#[clap(subcommand)]
+		command: storage::SubCommand,
+	},
 }
 
 #[tokio::main]
@@ -42,5 +48,6 @@ async fn main() -> Result<()> {
 	match cli.command {
 		SubCommand::Server(opts) => opts.execute().await,
 		SubCommand::Database { command } => command.execute().await,
+		SubCommand::Storage { command } => command.execute().await,
 	}
 }
