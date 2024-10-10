@@ -10,11 +10,7 @@ use tokio::{fs, task::block_in_place};
 use toml_edit::value;
 use uuid::Uuid;
 
-use crate::{
-	config::{self, service::RuntimeKind},
-	context::ProjectContextData,
-	utils,
-};
+use crate::{config, context::ProjectContextData, utils};
 
 /// Comment attached to the head of the namespace config.
 const NS_CONFIG_COMMENT: &str = r#"# Documentation: doc/bolt/config/NAMESPACE.md
@@ -279,37 +275,38 @@ pub async fn generate(project_path: &Path, ns_id: &str) -> Result<()> {
 
 	// MARK: Redis
 	for svc in ctx.all_services().await {
-		let RuntimeKind::Redis { persistent } = svc.config().runtime else {
-			continue;
-		};
-
-		let db_name = if persistent {
-			"persistent"
-		} else {
-			"ephemeral"
-		};
-		let (db_name, username) = match &ctx.ns().redis.provider {
-			config::ns::RedisProvider::Kubernetes {} | config::ns::RedisProvider::Aiven { .. } => {
-				(db_name.to_string(), "default".to_string())
-			}
-			config::ns::RedisProvider::Aws {} => {
-				let db_name = format!("rivet-{}-{}", ctx.ns_id(), db_name);
-				let username = format!("{db_name}-root");
-
-				(db_name, username)
-			}
-		};
-
-		generator
-			.generate_secret(&["redis", &db_name, "username"], || async {
-				Ok(value(username))
-			})
-			.await?;
-		generator
-			.generate_secret(&["redis", &db_name, "password"], || async {
-				Ok(value(generate_password(32)))
-			})
-			.await?;
+		todo!();
+		// let RuntimeKind::Redis { persistent } = svc.config().runtime else {
+		// 	continue;
+		// };
+		//
+		// let db_name = if persistent {
+		// 	"persistent"
+		// } else {
+		// 	"ephemeral"
+		// };
+		// let (db_name, username) = match &ctx.ns().redis.provider {
+		// 	config::ns::RedisProvider::Kubernetes {} | config::ns::RedisProvider::Aiven { .. } => {
+		// 		(db_name.to_string(), "default".to_string())
+		// 	}
+		// 	config::ns::RedisProvider::Aws {} => {
+		// 		let db_name = format!("rivet-{}-{}", ctx.ns_id(), db_name);
+		// 		let username = format!("{db_name}-root");
+		//
+		// 		(db_name, username)
+		// 	}
+		// };
+		//
+		// generator
+		// 	.generate_secret(&["redis", &db_name, "username"], || async {
+		// 		Ok(value(username))
+		// 	})
+		// 	.await?;
+		// generator
+		// 	.generate_secret(&["redis", &db_name, "password"], || async {
+		// 		Ok(value(generate_password(32)))
+		// 	})
+		// 	.await?;
 	}
 
 	// MARK: CRDB

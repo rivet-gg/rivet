@@ -1,5 +1,5 @@
 locals {
-	has_minio = can(var.s3_providers["minio"])
+	has_minio = var.s3.provider == "minio"
 	service_minio = lookup(var.services, "minio", {
 		count = 1
 		resources = {

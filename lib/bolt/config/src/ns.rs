@@ -212,7 +212,7 @@ pub struct S3 {
 	#[serde(default)]
 	pub cors: S3Cors,
 	#[serde(flatten, default)]
-	pub providers: S3Providers,
+	pub provider: S3Provider,
 	/// Used to migrate data from an old S3 provider to the new one.
 	pub backfill: Option<String>,
 }
@@ -223,29 +223,19 @@ pub struct S3Cors {
 	pub allowed_origins: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub struct S3Providers {
-	pub minio: Option<S3Provider>,
-	pub backblaze: Option<S3Provider>,
-	pub aws: Option<S3Provider>,
+pub enum S3Provider {
+	#[serde(rename = "minio")]
+	Minio,
+	#[serde(rename = "aws")]
+	Aws,
 }
 
-impl Default for S3Providers {
+impl Default for S3Provider {
 	fn default() -> Self {
-		Self {
-			minio: Some(S3Provider { default: true }),
-			backblaze: None,
-			aws: None,
-		}
+		Self::Minio
 	}
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct S3Provider {
-	#[serde(default)]
-	pub default: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
