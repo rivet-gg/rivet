@@ -18,7 +18,7 @@ use crate::{
 	history::{
 		cursor::{Cursor, HistoryResult},
 		event::{EventId, SleepState},
-		location::Location,
+		location::{Coordinate, Location},
 		removed::Removed,
 		History,
 	},
@@ -356,39 +356,39 @@ impl WorkflowCtx {
 	/// - **Not to be used directly by workflow users. For implementation uses only.**
 	/// - **Remember to validate history after this branch is used.**
 	pub(crate) async fn branch(&mut self) -> WorkflowResult<Self> {
-		self.branch_inner(self.input.clone(), self.version, None)
-			.await
+		self.custom_branch(self.input.clone(), self.version).await
 	}
 
-	pub(crate) async fn branch_inner(
+	pub(crate) async fn custom_branch(
 		&mut self,
 		input: Arc<Box<serde_json::value::RawValue>>,
 		version: usize,
-		// We allow providing a custom location in the case of loops, which take the spot of the branch event.
-		custom_location: Option<Location>,
 	) -> WorkflowResult<Self> {
-		let location = if let Some(location) = custom_location {
-			location
-		} else {
-			let history_res = self.cursor.compare_branch(version)?;
-			let location = self.cursor.current_location_for(&history_res);
+		let history_res = self.cursor.compare_branch(version)?;
+		let location = self.cursor.current_location_for(&history_res);
 
-			// Validate history is consistent
-			if !matches!(history_res, HistoryResult::Event(_)) {
-				self.db
-					.commit_workflow_branch_event(
-						self.workflow_id,
-						&location,
-						self.version,
-						self.loop_location.as_ref(),
-					)
-					.await?;
-			}
+		// Validate history is consistent
+		if !matches!(history_res, HistoryResult::Event(_)) {
+			self.db
+				.commit_workflow_branch_event(
+					self.workflow_id,
+					&location,
+					self.version,
+					self.loop_location.as_ref(),
+				)
+				.await?;
+		}
 
-			location
-		};
+		Ok(self.branch_inner(input, version, location))
+	}
 
-		Ok(WorkflowCtx {
+	pub(crate) fn branch_inner(
+		&mut self,
+		input: Arc<Box<serde_json::value::RawValue>>,
+		version: usize,
+		location: Location,
+	) -> WorkflowCtx {
+		WorkflowCtx {
 			workflow_id: self.workflow_id,
 			name: self.name.clone(),
 			create_ts: self.create_ts,
@@ -408,7 +408,7 @@ impl WorkflowCtx {
 			loop_location: self.loop_location.clone(),
 
 			msg_ctx: self.msg_ctx.clone(),
-		})
+		}
 	}
 
 	/// Like `branch` but it does not add another layer of depth.
@@ -632,6 +632,7 @@ impl WorkflowCtx {
 
 			loop {
 				interval.tick().await;
+				ctx.reset();
 
 				match T::listen(&mut ctx).await {
 					Ok(res) => break res,
@@ -686,6 +687,7 @@ impl WorkflowCtx {
 
 			loop {
 				interval.tick().await;
+				ctx.reset();
 
 				match listener.listen(&mut ctx).await {
 					Ok(res) => break res,
@@ -730,6 +732,7 @@ impl WorkflowCtx {
 	// 	// Listen for new message
 	// 	else {
 	// 		let mut ctx = ListenCtx::new(self);
+	// 		ctx.reset();
 
 	// 		match T::listen(&mut ctx).await {
 	// 			Ok(res) => Some(res),
@@ -766,7 +769,7 @@ impl WorkflowCtx {
 		let loop_location = self.cursor.current_location_for(&history_res);
 
 		// Loop existed before
-		let (iteration, output) = if let HistoryResult::Event(loop_event) = history_res {
+		let (mut iteration, output) = if let HistoryResult::Event(loop_event) = history_res {
 			let output = loop_event.parse_output().map_err(GlobalError::raw)?;
 
 			(loop_event.iteration, output)
@@ -774,16 +777,9 @@ impl WorkflowCtx {
 			(0, None)
 		};
 
-		let mut loop_branch = self
-			.branch_inner(
-				self.input.clone(),
-				self.version,
-				Some(loop_location.clone()),
-			)
-			.await
-			.map_err(GlobalError::raw)?;
-		// Shift by iteration count
-		loop_branch.cursor.set_idx(iteration);
+		// Create a branch but no branch event (loop event takes its place)
+		let mut loop_branch =
+			self.branch_inner(self.input.clone(), self.version, loop_location.clone());
 
 		// Loop complete
 		let output = if let Some(output) = output {
@@ -796,26 +792,46 @@ impl WorkflowCtx {
 			tracing::info!(name=%self.name, id=%self.workflow_id, "running loop");
 
 			loop {
-				// HACK: We have to temporarily set the loop location to the current loop so that the branch
-				// event created in `WorkflowCtx::branch` has the correct loop location.
-				let old_loop_location = loop_branch.loop_location.replace(loop_location.clone());
-				let mut iteration_branch = loop_branch.branch().await.map_err(GlobalError::raw)?;
-
-				// Set back to previous loop location
-				loop_branch.loop_location = old_loop_location;
+				// Create a new branch for each iteration of the loop at location {...loop location, iteration idx}
+				let mut iteration_branch = loop_branch.branch_inner(
+					self.input.clone(),
+					self.version,
+					loop_branch
+						.cursor
+						.root()
+						.join(Coordinate::simple(iteration + 1)),
+				);
 
 				// Set branch loop location to the current loop
 				iteration_branch.loop_location = Some(loop_location.clone());
 
+				// Insert event if iteration is not a replay
+				if !loop_branch
+					.cursor
+					.compare_loop_branch(iteration)
+					.map_err(GlobalError::raw)?
+				{
+					self.db
+						.commit_workflow_branch_event(
+							self.workflow_id,
+							iteration_branch.cursor.root(),
+							self.version,
+							Some(&loop_location),
+						)
+						.await?;
+				}
+
 				// Run loop
 				match cb(&mut iteration_branch).await? {
 					Loop::Continue => {
+						iteration += 1;
+
 						self.db
-							.upsert_loop(
+							.upsert_workflow_loop_event(
 								self.workflow_id,
 								&loop_location,
 								self.version,
-								loop_branch.cursor.iter_idx(),
+								iteration,
 								None,
 								self.loop_location(),
 							)
@@ -826,21 +842,20 @@ impl WorkflowCtx {
 							.cursor
 							.check_clear()
 							.map_err(GlobalError::raw)?;
-
-						// Move to next event
-						self.cursor.update(iteration_branch.cursor().root());
 					}
 					Loop::Break(res) => {
+						iteration += 1;
+
 						let output_val = serde_json::value::to_raw_value(&res)
 							.map_err(WorkflowError::SerializeLoopOutput)
 							.map_err(GlobalError::raw)?;
 
 						self.db
-							.upsert_loop(
+							.upsert_workflow_loop_event(
 								self.workflow_id,
 								&loop_location,
 								self.version,
-								loop_branch.cursor.iter_idx(),
+								iteration,
 								Some(&output_val),
 								self.loop_location(),
 							)
@@ -852,14 +867,14 @@ impl WorkflowCtx {
 							.check_clear()
 							.map_err(GlobalError::raw)?;
 
-						// Move to next event
-						self.cursor.update(iteration_branch.cursor().root());
-
 						break res;
 					}
 				}
 			}
 		};
+
+		// Move to next event
+		self.cursor.update(&loop_location);
 
 		Ok(output)
 	}
@@ -1045,6 +1060,7 @@ impl WorkflowCtx {
 
 					loop {
 						interval.tick().await;
+						ctx.reset();
 
 						match T::listen(&mut ctx).await {
 							// Retry
@@ -1077,6 +1093,7 @@ impl WorkflowCtx {
 
 			loop {
 				interval.tick().await;
+				ctx.reset();
 
 				match T::listen(&mut ctx).await {
 					Ok(res) => break Some(res),
