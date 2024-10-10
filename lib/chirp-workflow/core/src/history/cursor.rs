@@ -30,16 +30,8 @@ impl Cursor {
 
 			// This is the only place a coordinate of `0` can exist. It is used as a left-most bound for
 			// coordinates; no coordinates can come before 0.
-			prev_coord: Coordinate::new(Box::new([0])),
+			prev_coord: Coordinate::simple(0),
 		}
-	}
-
-	pub(crate) fn iter_idx(&self) -> usize {
-		self.iter_idx
-	}
-
-	pub(crate) fn set_idx(&mut self, iter_idx: usize) {
-		self.iter_idx = iter_idx;
 	}
 
 	pub fn current_coord(&self) -> Coordinate {
@@ -68,7 +60,7 @@ impl Cursor {
 				idx + 1
 			};
 
-			Coordinate::new(Box::new([int]))
+			Coordinate::simple(int)
 		}
 	}
 
@@ -77,11 +69,7 @@ impl Cursor {
 	}
 
 	pub fn current_location(&self) -> Location {
-		self.root_location
-			.iter()
-			.cloned()
-			.chain(std::iter::once(self.current_coord()))
-			.collect()
+		self.root_location.join(self.current_coord())
 	}
 
 	/// Returns the current location based on the history result of a comparison. The returned location
@@ -96,7 +84,7 @@ impl Cursor {
 				// The difference between these two is `historical_prev` will always come from history,
 				// whereas `prev` might be the last returned value from this function (not in history)
 				let historical_prev = if self.iter_idx == 0 {
-					Coordinate::new(Box::new([0]))
+					Coordinate::simple(0)
 				} else {
 					self.coord_at(self.iter_idx - 1)
 				};
@@ -125,16 +113,23 @@ impl Cursor {
 			}
 		};
 
-		self.root_location
-			.iter()
-			.cloned()
-			.chain(std::iter::once(coord))
-			.collect()
+		self.root_location.join(coord)
 	}
 
 	pub fn current_event(&self) -> Option<&Event> {
 		if let Some(branch) = self.events.get(&self.root_location) {
-			branch.get(self.iter_idx)
+			let event = branch.get(self.iter_idx);
+
+			// Empty events are considered `None`
+			if let Some(Event {
+				data: EventData::Empty,
+				..
+			}) = &event
+			{
+				None
+			} else {
+				event
+			}
 		} else {
 			None
 		}
@@ -170,8 +165,9 @@ impl Cursor {
 		if self.iter_idx < branch.len() {
 			let latent = branch.len() - self.iter_idx;
 			return Err(WorkflowError::LatentHistoryFound(format!(
-				"expected {latent} more event{}",
-				if latent == 1 { "s" } else { "" }
+				"expected {latent} more event{} in root at {}",
+				if latent == 1 { "" } else { "s" },
+				self.root_location,
 			)));
 		};
 
@@ -462,6 +458,30 @@ impl Cursor {
 	}
 
 	/// Returns `true` if the current event is a replay.
+	/// Because loops have a sparse history with potentially 0 events (after forgetting), they create branches
+	/// at specific locations instead of using `current_location_for`. This means the cursor cannot use
+	/// `current_event` to compare the history and instead we just find the correct event via coordinate.
+	pub fn compare_loop_branch(&self, iteration: usize) -> WorkflowResult<bool> {
+		let empty_vec = Vec::new();
+		let branch = self.events.get(&self.root_location).unwrap_or(&empty_vec);
+		let coordinate = Coordinate::simple(iteration + 1);
+
+		if let Some(event) = branch.iter().find(|x| x.coordinate == coordinate) {
+			// Validate history is consistent
+			let EventData::Branch = &event.data else {
+				return Err(WorkflowError::HistoryDiverged(format!(
+					"expected {event} at {}, found branch",
+					self.current_location(),
+				)));
+			};
+
+			Ok(true)
+		} else {
+			Ok(false)
+		}
+	}
+
+	/// Returns `true` if the current event is a replay.
 	pub fn compare_removed<T: Removed>(&self) -> WorkflowResult<bool> {
 		if let Some(event) = self.current_event() {
 			// Validate history is consistent
@@ -558,6 +578,31 @@ mod tests {
 		($($i:expr),*) => {
 			Coordinate::new(Box::new([$($i),*]))
 		};
+	}
+
+	#[test]
+	fn coord_with_sparse_events() {
+		let events = [(
+			loc![],
+			vec![
+				Event {
+					coordinate: coord![2, 1],
+					version: 1,
+					data: EventData::VersionCheck,
+				},
+				Event {
+					coordinate: coord![4],
+					version: 1,
+					data: EventData::VersionCheck,
+				},
+			],
+		)]
+		.into_iter()
+		.collect();
+		let mut cursor = Cursor::new(Arc::new(events), Location::empty());
+
+		assert_eq!(coord![2, 1], cursor.coord_at(0));
+		assert_eq!(coord![5], cursor.coord_at(2));
 	}
 
 	/// Before 1 is 0.1

@@ -23,7 +23,7 @@ use crate::{
 /// Max amount of workflows pulled from the database with each call to `pull_workflows`.
 const MAX_PULLED_WORKFLOWS: i64 = 50;
 // Base retry for query retry backoff
-const QUERY_RETRY_MS: usize = 750;
+const QUERY_RETRY_MS: usize = 500;
 // Time in between transaction retries
 const TXN_RETRY: Duration = Duration::from_millis(100);
 /// Maximum times a query ran by this database adapter is retried.
@@ -83,7 +83,7 @@ impl DatabasePgNats {
 		Fut: std::future::Future<Output = WorkflowResult<T>> + 'a,
 		T: 'a,
 	{
-		let mut backoff = rivet_util::Backoff::new(3, None, QUERY_RETRY_MS, 50);
+		let mut backoff = rivet_util::Backoff::new(4, None, QUERY_RETRY_MS, 50);
 		let mut i = 0;
 
 		loop {
@@ -337,33 +337,36 @@ impl Database for DatabasePgNats {
 			"
 			-- Activity events
 			SELECT
-				ev.workflow_id,
-				ev.location,
-				ev.location2,
+				workflow_id,
+				location,
+				location2,
+				version,
 				0 AS event_type, -- EventType
-				ev.activity_name AS name,
+				activity_name AS name,
 				NULL AS auxiliary_id,
-				ev.input_hash AS hash,
-				ev.output AS output,
-				ev.create_ts AS create_ts,
-				COUNT(err.*) AS error_count,
+				input_hash AS hash,
+				output AS output,
+				create_ts AS create_ts,
+				(
+					SELECT COUNT(*)
+					FROM db_workflow.workflow_activity_errors AS err
+					WHERE
+						ev.workflow_id = err.workflow_id AND
+						ev.location2 = err.location2
+				) AS error_count,
 				NULL AS iteration,
 				NULL AS deadline_ts,
 				NULL AS state,
 				NULL AS inner_event_type
 			FROM db_workflow.workflow_activity_events AS ev
-			LEFT JOIN db_workflow.workflow_activity_errors AS err
-			ON
-				ev.workflow_id = err.workflow_id AND
-				ev.location2_hash = err.location2_hash
 			WHERE ev.workflow_id = ANY($1) AND forgotten = FALSE
-			GROUP BY ev.workflow_id, ev.location2
 			UNION ALL
 			-- Signal listen events
 			SELECT
 				workflow_id,
 				location,
 				location2,
+				version,
 				1 AS event_type, -- EventType
 				signal_name AS name,
 				NULL AS auxiliary_id,
@@ -383,6 +386,7 @@ impl Database for DatabasePgNats {
 				workflow_id,
 				location,
 				location2,
+				version,
 				2 AS event_type, -- EventType
 				signal_name AS name,
 				signal_id AS auxiliary_id,
@@ -402,6 +406,7 @@ impl Database for DatabasePgNats {
 				workflow_id,
 				location,
 				location2,
+				version,
 				3 AS event_type, -- EventType
 				message_name AS name,
 				NULL AS auxiliary_id,
@@ -421,6 +426,7 @@ impl Database for DatabasePgNats {
 				sw.workflow_id,
 				sw.location,
 				sw.location2,
+				version,
 				4 AS event_type, -- pg_nats::types::EventType
 				w.workflow_name AS name,
 				sw.sub_workflow_id AS auxiliary_id,
@@ -442,6 +448,7 @@ impl Database for DatabasePgNats {
 				workflow_id,
 				location,
 				location2,
+				version,
 				5 AS event_type, -- pg_nats::types::EventType
 				NULL AS name,
 				NULL AS auxiliary_id,
@@ -461,6 +468,7 @@ impl Database for DatabasePgNats {
 				workflow_id,
 				location,
 				location2,
+				version,
 				6 AS event_type, -- pg_nats::types::EventType
 				NULL AS name,
 				NULL AS auxiliary_id,
@@ -474,11 +482,13 @@ impl Database for DatabasePgNats {
 				NULL AS inner_event_type
 			FROM db_workflow.workflow_sleep_events
 			WHERE workflow_id = ANY($1) AND forgotten = FALSE
+			UNION ALL
 			-- Branch events
 			SELECT
 				workflow_id,
 				ARRAY[] AS location,
 				location AS location2,
+				version,
 				7 AS event_type, -- pg_nats::types::EventType
 				NULL AS name,
 				NULL AS auxiliary_id,
@@ -490,13 +500,15 @@ impl Database for DatabasePgNats {
 				NULL AS deadline_ts,
 				NULL AS state,
 				NULL AS inner_event_type
-			FROM db_workflow.workflow_sleep_events
+			FROM db_workflow.workflow_branch_events
 			WHERE workflow_id = ANY($1) AND forgotten = FALSE
+			UNION ALL
 			-- Removed events
 			SELECT
 				workflow_id,
 				ARRAY[] AS location,
 				location AS location2,
+				1 AS version, -- Default
 				8 AS event_type, -- pg_nats::types::EventType
 				event_name AS name,
 				NULL AS auxiliary_id,
@@ -508,13 +520,15 @@ impl Database for DatabasePgNats {
 				NULL AS deadline_ts,
 				NULL AS state,
 				event_type AS inner_event_type
-			FROM db_workflow.workflow_sleep_events
+			FROM db_workflow.workflow_removed_events
 			WHERE workflow_id = ANY($1) AND forgotten = FALSE
+			UNION ALL
 			-- Version check events
 			SELECT
 				workflow_id,
 				ARRAY[] AS location,
 				location AS location2,
+				1 AS version, -- Default
 				9 AS event_type, -- pg_nats::types::EventType
 				NULL AS name,
 				NULL AS auxiliary_id,
@@ -526,10 +540,11 @@ impl Database for DatabasePgNats {
 				NULL AS deadline_ts,
 				NULL AS state,
 				NULL AS inner_event_type
-			FROM db_workflow.workflow_sleep_events
+			FROM db_workflow.workflow_version_check_events
 			WHERE workflow_id = ANY($1) AND forgotten = FALSE
-			-- We don't order by location2 because it is a JSONB type (probably inefficient)
-			ORDER BY workflow_id ASC;
+			-- NOTE: We don't order by location2 because of https://go.crdb.dev/issue-v/35706/v23.1. We need
+			-- to update our helm chart
+			ORDER BY workflow_id ASC
 			",
 		))
 		.bind(&workflow_ids)
@@ -669,7 +684,7 @@ impl Database for DatabasePgNats {
 							loop_location2
 						)
 						VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-						ON CONFLICT (workflow_id, location2) DO UPDATE
+						ON CONFLICT (workflow_id, location2_hash) DO UPDATE
 						SET output = excluded.output
 						",
 					))
@@ -704,7 +719,7 @@ impl Database for DatabasePgNats {
 									loop_location2
 								)
 								VALUES ($1, $2, $3, $4, $5, $7, $8)
-								ON CONFLICT (workflow_id, location2) DO NOTHING
+								ON CONFLICT (workflow_id, location2_hash) DO NOTHING
 								RETURNING 1
 							),
 							err AS (
@@ -1020,7 +1035,7 @@ impl Database for DatabasePgNats {
 						INSERT INTO db_workflow.workflows (
 							workflow_id, workflow_name, create_ts, ray_id, tags, input, wake_immediate
 						)
-						VALUES ($8, $2, $3, $4, $5, $6, true)
+						VALUES ($9, $2, $3, $4, $5, $6, true)
 						RETURNING 1
 					),
 					sub_workflow AS (
@@ -1115,7 +1130,7 @@ impl Database for DatabasePgNats {
 		Ok(())
 	}
 
-	async fn upsert_loop(
+	async fn upsert_workflow_loop_event(
 		&self,
 		workflow_id: Uuid,
 		location: &Location,
@@ -1133,15 +1148,16 @@ impl Database for DatabasePgNats {
 				INSERT INTO db_workflow.workflow_loop_events (
 					workflow_id,
 					location2,
+					version,
 					iteration,
 					output,
 					loop_location2
 				)
 				VALUES ($1, $2, $3, $4, $5, $6)
-				ON CONFLICT (workflow_id, location2) DO UPDATE
+				ON CONFLICT (workflow_id, location2_hash) DO UPDATE
 				SET
-					iteration = $3,
-					output = $4
+					iteration = $4,
+					output = $5
 				RETURNING 1
 				",
 			))
@@ -1149,7 +1165,7 @@ impl Database for DatabasePgNats {
 			.bind(&location)
 			.bind(version as i64)
 			.bind(iteration as i64)
-			.bind(sqlx::types::Json(output))
+			.bind(output.map(sqlx::types::Json))
 			.bind(loop_location)
 			.execute(&mut *tx)
 			.await
@@ -1329,7 +1345,7 @@ impl Database for DatabasePgNats {
 				INSERT INTO db_workflow.workflow_branch_events(
 					workflow_id, location, version, loop_location
 				)
-				VALUES($1, $2, $3)
+				VALUES($1, $2, $3, $4)
 				RETURNING 1
 				",
 			))
@@ -1474,7 +1490,7 @@ mod types {
 	}
 
 	/// Stores data for all event types in one.
-	#[derive(sqlx::FromRow)]
+	#[derive(Debug, sqlx::FromRow)]
 	pub struct AmalgamEventRow {
 		workflow_id: Uuid,
 		location: Vec<i64>,
@@ -1503,10 +1519,10 @@ mod types {
 				.as_ref()
 				.map(|x| x.tail().cloned().expect("empty location"))
 				.unwrap_or_else(|| {
-					Coordinate::new(Box::new([
+					Coordinate::simple(
 						// NOTE: Add 1 because we switched from 0-based to 1-based
 						*value.location.last().expect("empty location") as usize + 1,
-					]))
+					)
 				});
 
 			let event_type = value
@@ -1650,13 +1666,17 @@ mod types {
 	}
 
 	// Implements sqlx postgres types for `Location`
-	impl sqlx::Type<sqlx::Postgres> for Location {
-		fn type_info() -> sqlx::postgres::PgTypeInfo {
-			<i64 as sqlx::postgres::PgHasArrayType>::array_type_info()
+	impl<DB> sqlx::Type<DB> for Location
+	where
+		DB: sqlx::Database,
+		serde_json::Value: sqlx::Type<DB>,
+	{
+		fn type_info() -> DB::TypeInfo {
+			<serde_json::Value as sqlx::Type<DB>>::type_info()
 		}
 
-		fn compatible(ty: &sqlx::postgres::PgTypeInfo) -> bool {
-			<i64 as sqlx::postgres::PgHasArrayType>::array_compatible(ty)
+		fn compatible(ty: &DB::TypeInfo) -> bool {
+			<serde_json::Value as sqlx::Type<DB>>::compatible(ty)
 		}
 	}
 
@@ -1675,16 +1695,17 @@ mod types {
 	impl sqlx::Decode<'_, sqlx::Postgres> for Location {
 		fn decode(value: sqlx::postgres::PgValueRef) -> Result<Self, sqlx::error::BoxDynError> {
 			let value =
-				<sqlx::types::Json<Vec<Vec<usize>>> as sqlx::Decode<sqlx::Postgres>>::decode(
+				<sqlx::types::Json<Box<[Box<[usize]>]>> as sqlx::Decode<sqlx::Postgres>>::decode(
 					value,
 				)?;
 
-			Ok(value.0.into_iter().collect())
+			Ok(IntoIterator::into_iter(value.0).collect())
 		}
 	}
 
+	// TODO: Implement serde serialize and deserialize for `Location`
 	/// Convert location to json as `number[][]`.
-	fn serialize_location(location: &Location) -> serde_json::Value {
+	pub fn serialize_location(location: &Location) -> serde_json::Value {
 		serde_json::Value::Array(
 			location
 				.as_ref()
@@ -1750,7 +1771,7 @@ mod types {
 						.iter()
 						.take(event_row.location.len().saturating_sub(1))
 						// NOTE: Add 1 because we switched from 0-based to 1-based
-						.map(|x| Coordinate::new(Box::new([(*x) as usize + 1])))
+						.map(|x| Coordinate::simple((*x) as usize + 1))
 						.collect()
 				});
 
@@ -1771,6 +1792,39 @@ mod types {
 				for events in events_by_location.values_mut() {
 					// Events are already mostly sorted themselves so this should be fairly cheap
 					events.sort_by_key(|event| event.coordinate().clone());
+
+					// NOTE: The following is only for the purpose of backwards compatibility for workflows
+					// that were created before the branch event was formally added.
+
+					// This if statement handles the side effect of inserting a large amount of useless
+					// `Empty` placeholders in loops. Because the direct children of a loop are only ever
+					// branches, we skip inserting `Empty` placeholders if there are only branches in the
+					// events list
+					if !events.iter().all(|e| matches!(e.data, EventData::Branch)) {
+						// Check for missing indexes and insert a `Empty` placeholder event for each missing
+						// spot.
+						let mut expected_int = 1;
+						*events = events
+							.drain(..)
+							.into_iter()
+							.flat_map(|event| {
+								let int = event.coordinate.head();
+								assert!(expected_int <= int, "invalid history");
+
+								let offset = int.saturating_sub(expected_int);
+								expected_int = int + 1;
+
+								(1..=offset)
+									.map(move |i| Event {
+										coordinate: Coordinate::simple(int - i),
+										version: 0,
+										data: EventData::Empty,
+									})
+									.rev()
+									.chain(std::iter::once(event))
+							})
+							.collect();
+					}
 				}
 
 				PulledWorkflow {
