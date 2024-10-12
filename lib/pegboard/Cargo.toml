@@ -1,7 +1,8 @@
 [workspace]
 members = [
 	"container-runner",
+	"echo",
 	"manager",
-	"echo"
+	"runner-protocol",
+	"v8-isolate-runner",
 ]
-
