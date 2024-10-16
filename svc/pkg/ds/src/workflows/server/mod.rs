@@ -403,7 +403,7 @@ pub(crate) async fn resolve_image_artifact_url(
 			let addr = format!(
 				"http://{vlan_ip}:8080/s3-cache/{namespace}-bucket-build/{upload_id}/{build_file_name}",
 				vlan_ip = ats_vlan_ip,
-				namespace = util::env::namespace(),
+				namespace = ctx.config().rivet.namespace,
 				upload_id = upload_id,
 			);
 

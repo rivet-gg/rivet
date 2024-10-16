@@ -26,10 +26,10 @@ impl Ctx {
 				.init();
 		});
 
-		let pools = rivet_pools::from_env().await?;
+		let pools = rivet_pools::Pools::new(config).await?;
 		let cache = rivet_cache::CacheInner::new(
 			"api-servers-test".to_string(),
-			util::env::var("RIVET_SOURCE_HASH")?,
+			ctx.server()?.rivet.source_hash.clone(),
 			pools.redis_cache()?,
 		);
 		let client = chirp_client::SharedClient::from_env(pools.clone())
@@ -83,7 +83,7 @@ impl Ctx {
 				headers.insert(
 					http::header::HOST,
 					unwrap!(http::header::HeaderValue::from_str(unwrap!(
-						util::env::domain_main_api()
+						self.op_ctx.config().server()?.rivet.domain.main_api
 					))),
 				);
 				headers.insert(

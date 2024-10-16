@@ -1018,7 +1018,7 @@ async fn resolve_job_runner_binary_url(
 	datacenter_id: Uuid,
 	build_delivery_method: BuildDeliveryMethod,
 ) -> GlobalResult<String> {
-	let file_name = std::env::var("JOB_RUNNER_BINARY_KEY")?;
+	let file_name = ctx.ocnfig().server()?.rivet.job_runner_binary_key;
 
 	// Build URL
 	match build_delivery_method {
@@ -1082,7 +1082,7 @@ async fn resolve_job_runner_binary_url(
 			let addr = format!(
 				"http://{vlan_ip}:8080/s3-cache/{namespace}-bucket-infra-artifacts/{file_name}",
 				vlan_ip = ats_vlan_ip,
-				namespace = util::env::namespace(),
+				namespace = ctx.config().rivet.namespace,
 			);
 
 			tracing::info!(%addr, "resolved artifact s3 url");

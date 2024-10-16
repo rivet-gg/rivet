@@ -13,11 +13,11 @@ use regex::Regex;
 use rivet_claims::ClaimsDecode;
 
 /// Origins that the hub may be requesting from.
-pub fn hub_origin_regex() -> Regex {
+pub fn hub_origin_regex(config: &rivet_config::Config) -> Result<Regex> {
 	// TODO: Make this lazy static to prevent reparsing regex for every request
-	let regex_str =
-		std::env::var("RIVET_API_HUB_ORIGIN_REGEX").expect("RIVET_API_HUB_ORIGIN_REGEX");
-	Regex::new(&regex_str).expect("invalid regex")
+	let regex_str = config.server()?.rivet.api.hub_origin_regex;
+	let regex = Regex::new(&regex_str)?;
+	Ok(regex)
 }
 
 #[derive(Default)]
@@ -41,9 +41,9 @@ impl CorsConfigBuilder {
 	}
 
 	/// CORS config for services intended to be exposed to the Hub.
-	pub fn hub() -> Self {
+	pub fn hub(config: &rivet_config::Config) -> Self {
 		Self::default()
-			.origin_regex(hub_origin_regex())
+			.origin_regex(hub_origin_regex(config)?)
 			.methods(&["GET", "POST", "PUT", "PATCH", "DELETE"])
 			.headers(&["Content-Type", "Authorization"])
 			.credentials()

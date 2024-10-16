@@ -24,6 +24,7 @@ pub struct ApiCtx {
 
 	db: DatabaseHandle,
 
+	config: rivet_config::Config,
 	conn: rivet_connection::Connection,
 	msg_ctx: MessageCtx,
 
@@ -34,6 +35,7 @@ pub struct ApiCtx {
 impl ApiCtx {
 	pub async fn new(
 		db: DatabaseHandle,
+		config: rivet_config::Config,
 		conn: rivet_connection::Connection,
 		req_id: Uuid,
 		ray_id: Uuid,
@@ -43,6 +45,7 @@ impl ApiCtx {
 		let op_ctx = rivet_operation::OperationContext::new(
 			name.to_string(),
 			std::time::Duration::from_secs(60),
+			config.clone(),
 			conn.clone(),
 			req_id,
 			ray_id,
@@ -58,6 +61,7 @@ impl ApiCtx {
 			name,
 			ts,
 			db,
+			config,
 			conn,
 			op_ctx,
 			msg_ctx,
@@ -100,6 +104,7 @@ impl ApiCtx {
 	{
 		common::op(
 			&self.db,
+			&self.config,
 			&self.conn,
 			self.ray_id,
 			self.op_ctx.req_ts(),
@@ -192,12 +197,6 @@ impl ApiCtx {
 
 	pub fn trace(&self) -> &[chirp_client::TraceEntry] {
 		self.conn.trace()
-	}
-
-	pub fn test(&self) -> bool {
-		self.trace()
-			.iter()
-			.any(|x| x.run_context == chirp_client::RunContext::Test as i32)
 	}
 
 	pub fn chirp(&self) -> &chirp_client::Client {

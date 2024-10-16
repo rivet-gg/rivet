@@ -4,7 +4,7 @@ use chirp_workflow::prelude::*;
 use nomad_client::apis::{allocations_api, configuration::Configuration, nodes_api};
 
 lazy_static::lazy_static! {
-	static ref NOMAD_CONFIG: Configuration = nomad_util::new_config_from_env().unwrap();
+	static ref NOMAD_CONFIG: Configuration = nomad_util::new_build_config().unwrap();
 }
 
 #[derive(sqlx::FromRow)]

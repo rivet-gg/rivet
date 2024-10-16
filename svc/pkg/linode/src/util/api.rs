@@ -74,6 +74,7 @@ pub struct InstanceSpec {
 }
 
 pub async fn create_instance(
+	config: &rivet_config::Config,
 	client: &Client,
 	name: &str,
 	datacenter: &str,
@@ -81,7 +82,7 @@ pub async fn create_instance(
 	tags: &[String],
 	ssh_key: &str,
 ) -> GlobalResult<CreateInstanceResponse> {
-	let ns = util::env::namespace();
+	let ns = &config.rivet.namespace;
 
 	tracing::info!("creating linode instance");
 
@@ -150,6 +151,7 @@ pub async fn create_swap_disk(client: &Client, linode_id: u64) -> GlobalResult<u
 }
 
 pub async fn create_instance_config(
+	config: &rivet_config::Config,
 	client: &Client,
 	vlan_ip: Option<&Ipv4Addr>,
 	linode_id: u64,
@@ -158,7 +160,7 @@ pub async fn create_instance_config(
 ) -> GlobalResult<()> {
 	tracing::info!("creating instance config");
 
-	let ns = util::env::namespace();
+	let ns = &config.rivet.namespace;
 
 	let interfaces = if let Some(vlan_ip) = vlan_ip {
 		let region_vlan = util::net::region::vlan_ip_net();
@@ -210,6 +212,7 @@ pub struct CreateFirewallResponse {
 }
 
 pub async fn create_firewall(
+	config: &rivet_config::Config,
 	client: &Client,
 	firewall: &FirewallPreset,
 	tags: &[String],
@@ -217,7 +220,7 @@ pub async fn create_firewall(
 ) -> GlobalResult<CreateFirewallResponse> {
 	tracing::info!("creating firewall");
 
-	let ns = util::env::namespace();
+	let ns = &config.rivet.namespace;
 
 	let firewall_inbound = firewall
 		.rules()
@@ -460,10 +463,13 @@ pub struct CustomImage {
 	pub created: DateTime<Utc>,
 }
 
-pub async fn list_custom_images(client: &Client) -> GlobalResult<Vec<CustomImage>> {
+pub async fn list_custom_images(
+	config: &rivet_config::Config,
+	client: &Client,
+) -> GlobalResult<Vec<CustomImage>> {
 	tracing::info!("listing custom images");
 
-	let ns = util::env::namespace();
+	let ns = &config.rivet.namespace;
 
 	let req = client
 		.inner()

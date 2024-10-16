@@ -60,6 +60,7 @@ pub struct WorkflowCtx {
 	registry: RegistryHandle,
 	db: DatabaseHandle,
 
+	config: rivet_config::Config,
 	conn: rivet_connection::Connection,
 
 	/// Input data passed to this workflow.
@@ -78,6 +79,7 @@ impl WorkflowCtx {
 	pub async fn new(
 		registry: RegistryHandle,
 		db: DatabaseHandle,
+		config: rivet_config::Config,
 		conn: rivet_connection::Connection,
 		workflow: PulledWorkflow,
 	) -> GlobalResult<Self> {
@@ -95,6 +97,7 @@ impl WorkflowCtx {
 			registry,
 			db,
 
+			config,
 			conn,
 
 			input: Arc::new(workflow.input),
@@ -246,6 +249,7 @@ impl WorkflowCtx {
 		let ctx = ActivityCtx::new(
 			self.workflow_id,
 			self.db.clone(),
+			&self.config,
 			&self.conn,
 			self.create_ts,
 			self.ray_id,
@@ -399,6 +403,7 @@ impl WorkflowCtx {
 			registry: self.registry.clone(),
 			db: self.db.clone(),
 
+			config: self.config.clone(),
 			conn: self.conn.clone(),
 
 			input,

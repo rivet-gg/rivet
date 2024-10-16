@@ -54,8 +54,7 @@ pub async fn get(
 					let client = client.clone();
 
 					async move {
-						if util::feature::cf_custom_hostname() {
-							let game_zone_id = unwrap!(util::env::cloudflare::zone::game::id());
+						if let Some(game_zone_id) = ctx.config().server()?.cloudflare.zone.game {
 							let res = client
 								.get(format!(
 							"https://api.cloudflare.com/client/v4/zones/{game_zone_id}/custom_hostnames/{identifier}",
@@ -63,7 +62,10 @@ pub async fn get(
 						))
 								.header(
 									reqwest::header::AUTHORIZATION,
-									format!("Bearer {}", util::env::cloudflare::auth_token()),
+									format!(
+										"Bearer {}",
+										ctx.config().server()?.cloudflare.auth_token
+									),
 								)
 								.send()
 								.await?;
@@ -110,7 +112,7 @@ pub async fn get(
 					.iter()
 					.find(|res| res.hostname == domain.domain)
 				{
-					let domain_cdn = unwrap!(util::env::domain_cdn());
+					let domain_cdn = unwrap!(ctx.config().server()?.rivet.domain.cdn);
 
 					// Create CNAME url
 					let cname_url = if game_namespace.name_id.as_str() == "prod" {

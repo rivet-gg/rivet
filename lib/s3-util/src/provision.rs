@@ -13,7 +13,10 @@ pub enum ProvisionError {
 }
 
 /// Provisions all required S3 buckets.
-pub async fn provision(buckets: &[S3Bucket]) -> Result<(), ProvisionError> {
+pub async fn provision(
+	config: rivet_config::Config,
+	buckets: &[S3Bucket],
+) -> Result<(), ProvisionError> {
 	// Build client
 	let region = crate::s3_region()?;
 	let (access_key_id, secret_access_key) = crate::s3_credentials()?;
@@ -22,7 +25,7 @@ pub async fn provision(buckets: &[S3Bucket]) -> Result<(), ProvisionError> {
 
 	// Provision buckets
 	for bucket in buckets {
-		let bucket_name = crate::namespaced_bucket_name(&bucket.name);
+		let bucket_name = crate::namespaced_bucket_name(&config, &bucket.name);
 
 		match client.create_bucket().bucket(&bucket_name).send().await {
 			Ok(_) => tracing::info!(bucket = ?bucket_name, "bucket created"),

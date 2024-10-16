@@ -198,7 +198,6 @@ pub fn gen_lobby_docker_job(
 				("RIVET_MATCHMAKER_API_URL", "matchmaker"),
 			]
 			.iter()
-			.filter(|_| util::env::support_deprecated_subdomains())
 			.map(|(env, service)| {
 				(
 					env.to_string(),

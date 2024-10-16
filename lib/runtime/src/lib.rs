@@ -1,7 +1,6 @@
-use std::{env, future::Future, sync::Once, time::Duration};
+use std::{future::Future, sync::Once, time::Duration};
 
 use thiserror::Error;
-use tracing_subscriber::prelude::*;
 
 mod metrics;
 
@@ -18,13 +17,14 @@ pub enum Error {
 
 #[derive(Default)]
 pub struct RunConfig {
+	pub config: rivet_config::Config,
 	pub customize_tokio_runtime: Option<Box<dyn FnOnce(&mut tokio::runtime::Builder) -> ()>>,
 	pub pretty_logs: bool,
 }
 
 impl RunConfig {
 	pub fn run<F: Future>(self, f: F) -> Result<F::Output, Error> {
-		self.setup_tracing();
+		self.setup_tracing()?;
 
 		// Build runtime
 		let mut rt_builder = self.build_tokio_runtime_builder()?;
@@ -39,7 +39,7 @@ impl RunConfig {
 		Ok(output)
 	}
 
-	fn setup_tracing(&self) {
+	fn setup_tracing(&self) ->Result<()>{
 		SETUP_TRACING.call_once(|| {
 			if self.pretty_logs {
 				// Pretty print
@@ -50,7 +50,7 @@ impl RunConfig {
 			} else {
 				let fmt_filter = tracing_subscriber::filter::LevelFilter::INFO;
 
-				if std::env::var("TOKIO_CONSOLE_ENABLE").is_ok() {
+				if self.config.server()?.tokio.console_enable {
 					// logfmt + tokio-console
 					tracing_subscriber::registry()
 						.with(
@@ -74,9 +74,13 @@ impl RunConfig {
 				}
 			}
 		})
+
+		Ok(())
 	}
 
 	fn build_tokio_runtime_builder(&self) -> Result<tokio::runtime::Builder, Error> {
+		let tokio_config = &self.config.server()?.tokio;
+
 		let mut rt_builder = tokio::runtime::Builder::new_multi_thread();
 		rt_builder.enable_all();
 
@@ -87,14 +91,14 @@ impl RunConfig {
 			metrics::TOKIO_THREAD_COUNT.dec();
 		});
 
-		if let Ok(thread_stack_size) = env::var("TOKIO_THREAD_STACK_SIZE") {
+		if let Ok(thread_stack_size) = tokio_config.thread_stack_size {
 			rt_builder.thread_stack_size(thread_stack_size.parse()?);
 		} else {
 			// async-nats requires a fat stack
 			rt_builder.thread_stack_size(8 * 1024 * 1024);
 		}
 
-		if let Ok(worker_threads) = env::var("TOKIO_WORKER_THREADS") {
+		if let Ok(worker_threads) = tokio_config.worker_threads {
 			rt_builder.worker_threads(worker_threads.parse()?);
 		} else {
 			// Default to 2 threads since this is likely running in a shared
@@ -106,19 +110,19 @@ impl RunConfig {
 			rt_builder.worker_threads(2);
 		}
 
-		if let Ok(max_blocking_threads) = env::var("TOKIO_MAX_BLOCKING_THREADS") {
+		if let Ok(max_blocking_threads) = tokio_config.max_blocking_threads {
 			rt_builder.max_blocking_threads(max_blocking_threads.parse()?);
 		}
 
-		if let Ok(global_queue_interval) = env::var("TOKIO_GLOBAL_QUEUE_INTERVAL") {
+		if let Ok(global_queue_interval) = tokio_config.global_queue_interval {
 			rt_builder.global_queue_interval(global_queue_interval.parse()?);
 		}
 
-		if let Ok(event_interval) = env::var("TOKIO_EVENT_INTERVAL") {
+		if let Ok(event_interval) = tokio_config.event_interval {
 			rt_builder.event_interval(event_interval.parse()?);
 		}
 
-		if let Ok(thread_keep_alive) = env::var("TOKIO_THREAD_KEEP_ALIVE") {
+		if let Ok(thread_keep_alive) = tokio_config.thread_keep_alive {
 			rt_builder.thread_keep_alive(Duration::from_millis(thread_keep_alive.parse()?));
 		}
 

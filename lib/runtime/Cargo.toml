@@ -14,4 +14,5 @@ tokio = { version = "1.40", features = ["full", "tracing"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "ansi"] }  # Used with attribute
 tracing-logfmt = "0.3"
+rivet-config = { version = "0.1.0", path = "../config" }
 

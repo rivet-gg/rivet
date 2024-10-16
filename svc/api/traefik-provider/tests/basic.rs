@@ -34,7 +34,7 @@ impl Ctx {
 				.init();
 		});
 
-		let pools = rivet_pools::from_env().await.unwrap();
+		let pools = rivet_pools::Pools::new(config).await.unwrap();
 		let cache = rivet_cache::CacheInner::new(
 			"api-auth-test".to_string(),
 			std::env::var("RIVET_SOURCE_HASH").unwrap(),
@@ -471,7 +471,7 @@ mod cdn_suite {
 			base: format!(
 				"https://{}.{}",
 				game.name_id,
-				util::env::domain_cdn().unwrap()
+				ctx.config().server()?.rivet.domain.cdn
 			),
 			game,
 		}

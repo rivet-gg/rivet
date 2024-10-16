@@ -38,4 +38,7 @@ pub enum Error {
 
 	#[error("build clickhouse url: {0}")]
 	BuildClickHouseUrl(url::ParseError),
+
+	#[error("{0}")]
+	Global(global_error::GlobalError),
 }

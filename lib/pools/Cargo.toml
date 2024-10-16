@@ -15,12 +15,13 @@ hyper-tls = { version = "0.5.0" }
 lazy_static = "1.4"
 rand = "0.8"
 rivet-metrics = { path = "../metrics" }
-thiserror = "1.0"
 tokio = { version = "1.40", features = ["tracing"] }
 tokio-util = "0.7"
 tracing = "0.1"
 governor = "0.6"
 url = "2.5.0"
+rivet-config = { version = "0.1.0", path = "../config" }
+thiserror = "1.0.64"
 
 [dependencies.sqlx]
 git = "https://github.com/rivet-gg/sqlx"

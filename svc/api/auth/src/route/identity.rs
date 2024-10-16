@@ -116,7 +116,7 @@ pub async fn complete(
 
 		// Set refresh token
 		{
-			let (k, v) = refresh_token_header(origin, token_res.refresh_token)?;
+			let (k, v) = refresh_token_header(ctx.config(), origin, token_res.refresh_token)?;
 			unwrap!(response.headers_mut()).insert(k, v);
 		}
 
@@ -184,7 +184,7 @@ pub async fn complete_access_token(
 
 		// Set refresh token
 		{
-			let (k, v) = refresh_token_header(origin, token_res.refresh_token)?;
+			let (k, v) = refresh_token_header(ctx.config(), origin, token_res.refresh_token)?;
 			unwrap!(response.headers_mut()).insert(k, v);
 		}
 	}

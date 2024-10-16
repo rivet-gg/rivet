@@ -10,20 +10,6 @@ pub enum EnvVarError {
 }
 
 lazy_static::lazy_static! {
-	static ref RUN_CONTEXT: Option<RunContext> = std::env::var("RIVET_RUN_CONTEXT")
-		.ok()
-		.and_then(|ctx| RunContext::from_str(&ctx));
-	static ref NAMESPACE: Option<String> = std::env::var("RIVET_NAMESPACE").ok();
-	static ref CLUSTER_ID: Option<String> = std::env::var("RIVET_CLUSTER_ID").ok();
-	static ref SOURCE_HASH: Option<String> = std::env::var("RIVET_SOURCE_HASH").ok();
-	static ref DOMAIN_MAIN: Option<String> = std::env::var("RIVET_DOMAIN_MAIN").ok();
-	static ref DOMAIN_CDN: Option<String> = std::env::var("RIVET_DOMAIN_CDN").ok();
-	static ref DOMAIN_JOB: Option<String> = std::env::var("RIVET_DOMAIN_JOB").ok();
-	static ref DOMAIN_MAIN_API: Option<String> = std::env::var("RIVET_DOMAIN_MAIN_API").ok();
-	static ref SUPPORT_DEPRECATED_SUBDOMAINS: bool = std::env::var("RIVET_SUPPORT_DEPRECATED_SUBDOMAINS")
-		.ok()
-		.map(|s| s == "1")
-		.unwrap_or_default();
 	static ref HOST_API: Option<String> = std::env::var("RIVET_HOST_API").ok();
 	static ref ORIGIN_API: Option<String> = std::env::var("RIVET_ORIGIN_API").ok();
 	static ref ORIGIN_HUB: Option<String> = std::env::var("RIVET_ORIGIN_HUB").ok();
@@ -33,79 +19,6 @@ lazy_static::lazy_static! {
 		.ok()
 		.map(|x| serde_json::from_str(&x).expect("failed to parse billing"));
 	static ref TEST_ID: Option<String> = std::env::var("RIVET_TEST_ID").ok();
-}
-
-/// Where this code is being written from. This is derived from the `RIVET_RUN_CONTEXT` environment
-/// variable.
-///
-/// The production run context is not the same as the production namespace.
-#[derive(Clone, Debug, PartialEq)]
-pub enum RunContext {
-	Service,
-	Test,
-}
-
-impl RunContext {
-	fn from_str(ctx: &str) -> Option<RunContext> {
-		match ctx {
-			"service" => Some(RunContext::Service),
-			"test" => Some(RunContext::Test),
-			_ => None,
-		}
-	}
-}
-
-pub fn run_context() -> RunContext {
-	RUN_CONTEXT.clone().expect("RIVET_RUN_CONTEXT")
-}
-
-/// The namespace this service is running in. This is derived from the `NAMESPACE` environment
-/// variable.
-pub fn namespace() -> &'static str {
-	match &*NAMESPACE {
-		Some(x) => x.as_str(),
-		None => panic!("{}", EnvVarError::Missing("RIVET_NAMESPACE".to_string())),
-	}
-}
-
-pub fn cluster_id() -> &'static str {
-	match &*CLUSTER_ID {
-		Some(x) => x.as_str(),
-		None => panic!("{}", EnvVarError::Missing("RIVET_CLUSTER_ID".to_string())),
-	}
-}
-
-/// See `ServiceContextData::source_hash`.
-pub fn source_hash() -> &'static str {
-	match &*NAMESPACE {
-		Some(x) => x.as_str(),
-		None => panic!("{}", EnvVarError::Missing("RIVET_SOURCE_HASH".to_string())),
-	}
-}
-
-/// The base domain in which all subdomains are mounted.
-pub fn domain_main() -> Option<&'static str> {
-	DOMAIN_MAIN.as_ref().map(|x| x.as_str())
-}
-
-/// The base domain in which all game subdomains are mounted.
-pub fn domain_cdn() -> Option<&'static str> {
-	DOMAIN_CDN.as_ref().map(|x| x.as_str())
-}
-
-/// The base domain in which all job subdomains are mounted.
-pub fn domain_job() -> Option<&'static str> {
-	DOMAIN_JOB.as_ref().map(|x| x.as_str())
-}
-
-/// Domain to host the API endpoint on. This is the default domain for all endpoints without a
-/// specific subdomain.
-pub fn domain_main_api() -> Option<&'static str> {
-	DOMAIN_MAIN_API.as_ref().map(|x| x.as_str())
-}
-
-pub fn support_deprecated_subdomains() -> bool {
-	*SUPPORT_DEPRECATED_SUBDOMAINS
 }
 
 pub fn test_id_param() -> Vec<types_proto::rivet::backend::job::Parameter> {

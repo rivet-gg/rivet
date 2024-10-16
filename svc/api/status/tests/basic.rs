@@ -21,7 +21,7 @@
 // 				.init();
 // 		});
 
-// 		let pools = rivet_pools::from_env().await.unwrap();
+// 		let pools = rivet_pools::Pools::new(config).await.unwrap();
 // 		let cache = rivet_cache::CacheInner::new(
 // 			"api-status-test".to_string(),
 // 			std::env::var("RIVET_SOURCE_HASH").unwrap(),
@@ -31,16 +31,16 @@
 // 			.expect("create client")
 // 			.wrap_new("api-status-test");
 // 		let conn = rivet_connection::Connection::new(client, pools, cache);
-// 		let op_ctx = OperationContext::new(
-// 			"api-status-test".to_string(),
-// 			std::time::Duration::from_secs(60),
-// 			conn,
-// 			Uuid::new_v4(),
-// 			Uuid::new_v4(),
-// 			util::timestamp::now(),
-// 			util::timestamp::now(),
-// 			(),
-// 		);
+/ 		let op_ctx = OperationContext::new(
+/ 			"api-status-test".to_string(),
+/ 			std::time::Duration::from_secs(60),
+/ 			conn,
+/ 			Uuid::new_v4(),
+/ 			Uuid::new_v4(),
+/ 			util::timestamp::now(),
+/ 			util::timestamp::now(),
+/ 			(),
+/ 		);
 
 // 		let http_client = rivet_status::Config::builder()
 // 			.set_uri("http://traefik.traefik.svc.cluster.local:80/status")

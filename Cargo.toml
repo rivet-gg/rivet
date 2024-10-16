@@ -289,6 +289,7 @@ members = [
 "lib/server/",
 "lib/redis-util/",
 "lib/cli/",
+"lib/config/",
 "lib/types-proto/core/",
 "lib/types-proto/build/",
 "lib/smithy-output/api-status/rust-server/",
@@ -326,7 +327,7 @@ members = [
 "lib/convert/",
 "lib/chirp-workflow/core/",
 "lib/chirp-workflow/macros/",
-"lib/claims/",
+"lib/claims/", "lib/config",
 ]
 
 # Speed up compilation

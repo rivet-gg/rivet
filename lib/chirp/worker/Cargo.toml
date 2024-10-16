@@ -40,6 +40,7 @@ tracing-subscriber = { version = "0.3", optional = true, default-features = fals
 	"json",
 	"ansi",
 ] } # Used with attribute
+rivet-config = { version = "0.1.0", path = "../../config" }
 
 [dependencies.uuid]
 version = "1.1"

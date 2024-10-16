@@ -60,7 +60,7 @@ pub async fn cluster_server_lost_list(ctx: &OperationCtx, input: &Input) -> Glob
 	// Filter by namespace
 	let filter = json!({
 		"label": {
-			"+contains": format!("{}-", util::env::namespace()),
+			"+contains": format!("{}-", ctx.config().rivet.namespace),
 		}
 	});
 	let mut headers = header::HeaderMap::new();
@@ -117,7 +117,7 @@ async fn run_for_linode_account(
 		.filter_map(|linode| {
 			linode
 				.label
-				.get(util::env::namespace().len() + 1..)
+				.get(ctx.config().rivet.namespace.len() + 1..)
 				.map(util::uuid::parse)
 		})
 		.collect::<GlobalResult<Vec<_>>>()?;

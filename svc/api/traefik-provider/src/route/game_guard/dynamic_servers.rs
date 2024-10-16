@@ -24,16 +24,16 @@ struct DynamicServer {
 }
 
 impl DynamicServer {
-	fn parent_host(&self) -> GlobalResult<String> {
+	fn parent_host(&self, config: &rivet_config::Config) -> GlobalResult<String> {
 		Ok(format!(
 			"lobby.{}.{}",
 			self.datacenter_id,
-			unwrap!(util::env::domain_job()),
+			unwrap!(config.server()?.rivet.domain.job),
 		))
 	}
 
-	fn hostname(&self) -> GlobalResult<String> {
-		ds::util::build_ds_hostname(self.server_id, &self.port_name, self.datacenter_id)
+	fn hostname(&self, config: &rivet_config::Config) -> GlobalResult<String> {
+		ds::util::build_ds_hostname(config, self.server_id, &self.port_name, self.datacenter_id)
 	}
 }
 

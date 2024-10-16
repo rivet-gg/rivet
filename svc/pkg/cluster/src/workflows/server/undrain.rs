@@ -8,7 +8,7 @@ use rivet_operation::prelude::proto::backend::pkg::*;
 use crate::types::PoolType;
 
 lazy_static::lazy_static! {
-	static ref NOMAD_CONFIG: Configuration = nomad_util::new_config_from_env().unwrap();
+	static ref NOMAD_CONFIG: Configuration = nomad_util::new_build_config().unwrap();
 }
 
 #[derive(Debug, Serialize, Deserialize)]

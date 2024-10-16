@@ -42,6 +42,7 @@ pub async fn info(
 	let datacenter = unwrap!(datacenter_res.datacenters.first());
 
 	let name = cluster::util::server_name(
+		ctx.config(),
 		&datacenter.provider_datacenter_id,
 		server.pool_type,
 		server.server_id,

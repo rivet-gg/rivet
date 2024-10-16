@@ -41,6 +41,7 @@ game-namespace-resolve-name-id = { path = "../../pkg/game/ops/namespace-resolve-
 
 token-create = { path = "../../pkg/token/ops/create" }
 trust-dns-resolver = "0.23.2"
+rivet-config = { version = "0.1.0", path = "../../../lib/config" }
 
 [dev-dependencies]
 rivet-connection = { path = "../../../lib/connection" }

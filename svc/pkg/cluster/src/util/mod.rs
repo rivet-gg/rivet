@@ -18,8 +18,13 @@ pub fn default_cluster_id() -> Uuid {
 	Uuid::nil()
 }
 
-pub fn server_name(provider_datacenter_id: &str, pool_type: PoolType, server_id: Uuid) -> String {
-	let ns = util::env::namespace();
+pub fn server_name(
+	config: &rivet_config::Config,
+	provider_datacenter_id: &str,
+	pool_type: PoolType,
+	server_id: Uuid,
+) -> String {
+	let ns = ctx.config().rivet.namespace;
 
 	format!("{ns}-{provider_datacenter_id}-{pool_type}-{server_id}")
 }
