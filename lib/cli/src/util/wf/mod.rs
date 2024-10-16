@@ -98,8 +98,7 @@ struct HistoryEvent {
 	forgotten: bool,
 }
 
-pub async fn get_workflow(workflow_id: Uuid) -> Result<Option<WorkflowRow>> {
-	let pool = build_pool().await?;
+pub async fn get_workflow(pool: PgPool, workflow_id: Uuid) -> Result<Option<WorkflowRow>> {
 	let mut conn = pool.acquire().await?;
 
 	let workflow = sqlx::query_as::<_, WorkflowRow>(indoc!(
@@ -132,11 +131,11 @@ pub async fn get_workflow(workflow_id: Uuid) -> Result<Option<WorkflowRow>> {
 }
 
 pub async fn find_workflows(
+	pool: PgPool,
 	tags: Vec<KvPair>,
 	name: Option<String>,
 	state: Option<WorkflowState>,
 ) -> Result<Vec<WorkflowRow>> {
-	let pool = build_pool().await?;
 	let mut conn = pool.acquire().await?;
 
 	let mut query_str = indoc!(
@@ -284,8 +283,7 @@ pub async fn print_workflows(workflows: Vec<WorkflowRow>, pretty: bool) -> Resul
 	Ok(())
 }
 
-pub async fn silence_workflow(workflow_id: Uuid) -> Result<()> {
-	let pool = build_pool().await?;
+pub async fn silence_workflow(pool: PgPool, workflow_id: Uuid) -> Result<()> {
 	let mut conn = pool.acquire().await?;
 
 	sqlx::query(indoc!(
@@ -303,8 +301,7 @@ pub async fn silence_workflow(workflow_id: Uuid) -> Result<()> {
 	Ok(())
 }
 
-pub async fn wake_workflow(workflow_id: Uuid) -> Result<()> {
-	let pool = build_pool().await?;
+pub async fn wake_workflow(pool: PgPool, workflow_id: Uuid) -> Result<()> {
 	let mut conn = pool.acquire().await?;
 
 	sqlx::query(indoc!(
@@ -322,11 +319,11 @@ pub async fn wake_workflow(workflow_id: Uuid) -> Result<()> {
 }
 
 pub async fn print_history(
+	pool: PgPool,
 	workflow_id: Uuid,
 	include_forgotten: bool,
 	print_location: bool,
 ) -> Result<()> {
-	let pool = build_pool().await?;
 	let mut conn = pool.acquire().await?;
 	let mut conn2 = pool.acquire().await?;
 
@@ -576,10 +573,8 @@ pub async fn print_history(
 	Ok(())
 }
 
-async fn build_pool() -> Result<PgPool> {
-	let pool = rivet_pools::crdb_from_env("rivet-workflow".into())
-		.await?
-		.context("missing crdb pool")?;
+pub async fn build_pool(config: rivet_config::Config) -> Result<PgPool> {
+	let pool = rivet_pools::db::crdb::setup(config).await?;
 	Ok(pool)
 }
 

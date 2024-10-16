@@ -11,12 +11,16 @@ pub struct ShellContext<'a> {
 	pub queries: &'a [ShellQuery],
 }
 
-pub async fn redis_shell(shell_ctx: ShellContext<'_>) -> Result<()> {
+pub async fn redis_shell(config: rivet_config::Config, shell_ctx: ShellContext<'_>) -> Result<()> {
 	let ShellContext { queries, .. } = shell_ctx;
 
 	for ShellQuery { svc, query } in queries {
-		let url_var = format!("REDIS_URL_{}", svc.to_uppercase().replace("-", "_"));
-		let url = std::env::var(&url_var).context(format!("{url_var} not set"))?;
+		let server_config = config.server.as_ref().context("missing server")?;
+		let url = match svc.as_str() {
+			"ephemeral" => server_config.redis.ephemeral.url.read(),
+			"persistent" => server_config.redis.ephemeral.url.read(),
+			_ => bail!("redis svc can only be ephemeral or persistent"),
+		};
 
 		tracing::info!(?svc, "connecting to redis");
 
@@ -58,7 +62,10 @@ pub async fn redis_shell(shell_ctx: ShellContext<'_>) -> Result<()> {
 	Ok(())
 }
 
-pub async fn cockroachdb_shell(shell_ctx: ShellContext<'_>) -> Result<()> {
+pub async fn cockroachdb_shell(
+	config: rivet_config::Config,
+	shell_ctx: ShellContext<'_>,
+) -> Result<()> {
 	let ShellContext { queries, .. } = shell_ctx;
 
 	tracing::info!("connecting to cockroachdb");
@@ -69,8 +76,13 @@ pub async fn cockroachdb_shell(shell_ctx: ShellContext<'_>) -> Result<()> {
 		query,
 	} in queries
 	{
-		let url = rivet_pools::crdb_url_from_env()?.context("missing cockroachdb url")?;
-		let mut parsed_url = url::Url::parse(&url)?;
+		let url = &config
+			.server
+			.as_ref()
+			.context("server not enabled")?
+			.cockroachdb
+			.url;
+		let mut parsed_url = url::Url::parse(url.read())?;
 		parsed_url.set_path(&format!("/{}", db_name));
 
 		let ca_path = "/usr/local/share/ca-certificates/crdb-ca.crt";
@@ -100,7 +112,10 @@ pub async fn cockroachdb_shell(shell_ctx: ShellContext<'_>) -> Result<()> {
 	Ok(())
 }
 
-pub async fn clickhouse_shell(shell_ctx: ShellContext<'_>) -> Result<()> {
+pub async fn clickhouse_shell(
+	config: rivet_config::Config,
+	shell_ctx: ShellContext<'_>,
+) -> Result<()> {
 	let ShellContext { queries, .. } = shell_ctx;
 
 	tracing::info!("connecting to clickhouse");
@@ -110,8 +125,15 @@ pub async fn clickhouse_shell(shell_ctx: ShellContext<'_>) -> Result<()> {
 		query,
 	} in queries
 	{
-		let url = rivet_pools::clickhouse_url_from_env()?.context("missing clickhouse url")?;
-		let parsed_url = url::Url::parse(&url)?;
+		let url = &config
+			.server
+			.as_ref()
+			.context("server not enabled")?
+			.clickhouse
+			.as_ref()
+			.context("clickhouse disabled")?
+			.url;
+		let parsed_url = url::Url::parse(url.read())?;
 
 		let hostname = parsed_url.host_str().unwrap_or("localhost");
 		let port = parsed_url.port().unwrap_or(9440).to_string();

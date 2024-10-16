@@ -1,7 +1,7 @@
 use chirp_workflow::prelude::*;
 
-pub async fn install() -> GlobalResult<String> {
-	let binary_url = resolve_manager_binary_url().await?;
+pub async fn install(config: &rivet_config::Config) -> GlobalResult<String> {
+	let binary_url = resolve_manager_binary_url(config).await?;
 
 	Ok(include_str!("../files/pegboard_install.sh").replace("__BINARY_URL__", &binary_url))
 }
@@ -23,13 +23,16 @@ pub fn configure() -> GlobalResult<String> {
 }
 
 /// Generates a presigned URL for the pegboard manager binary.
-async fn resolve_manager_binary_url() -> GlobalResult<String> {
-	let file_name = util::env::var("PEGBOARD_MANAGER_BINARY_KEY")?;
+async fn resolve_manager_binary_url(config: &rivet_config::Config) -> GlobalResult<String> {
+	let file_name = &config.server()?.rivet.pegboard.manager_binary_key;
 
 	// Build client
-	let s3_client =
-		s3_util::Client::from_env_opt("bucket-infra-artifacts", s3_util::EndpointKind::External)
-			.await?;
+	let s3_client = s3_util::Client::with_bucket_and_endpoint(
+		config,
+		"bucket-infra-artifacts",
+		s3_util::EndpointKind::External,
+	)
+	.await?;
 	let presigned_req = s3_client
 		.get_object()
 		.bucket(s3_client.bucket())

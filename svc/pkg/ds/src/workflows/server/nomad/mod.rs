@@ -23,7 +23,7 @@ use crate::{
 			escape_go_template, gen_oci_bundle_config, inject_consul_env_template,
 			nomad_host_port_env_var, template_env_var_int, DecodedPort, TransportProtocol,
 		},
-		NOMAD_CONFIG, NOMAD_REGION, RUNC_CLEANUP_CPU, RUNC_CLEANUP_MEMORY,
+		NOMAD_REGION, RUNC_CLEANUP_CPU, RUNC_CLEANUP_MEMORY,
 	},
 };
 
@@ -400,7 +400,7 @@ async fn submit_job(ctx: &ActivityCtx, input: &SubmitJobInput) -> GlobalResult<S
 		// })
 		.chain([(
 			"RIVET_API_ENDPOINT".to_string(),
-			util::env::origin_api().to_string(),
+			ctx.config().server()?.rivet.origin.api.clone(),
 		)])
 		// Ports
 		// TODO
@@ -744,7 +744,7 @@ async fn submit_job(ctx: &ActivityCtx, input: &SubmitJobInput) -> GlobalResult<S
 			
 							print('\n> Finished')
 							"#,
-							origin_api = util::env::origin_api(),
+							origin_api = ctx.config().server()?.rivet.origin.api,
 						)),
 						..Template::new()
 					}]),
@@ -791,7 +791,7 @@ async fn submit_job(ctx: &ActivityCtx, input: &SubmitJobInput) -> GlobalResult<S
 	tracing::info!("submitting job");
 
 	nomad_client::apis::jobs_api::post_job(
-		&NOMAD_CONFIG,
+		&nomad_util::new_build_config(ctx.config())?,
 		&job_id,
 		nomad_client::models::JobRegisterRequest {
 			job: Some(Box::new(job_spec)),
@@ -881,7 +881,7 @@ async fn dispatch_job(ctx: &ActivityCtx, input: &DispatchJobInput) -> GlobalResu
 
 	// MARK: Dispatch job
 	let dispatch_res = nomad_client::apis::jobs_api::post_job_dispatch(
-		&NOMAD_CONFIG,
+		&nomad_util::new_build_config(ctx.config())?,
 		&input.job_id,
 		nomad_client::models::JobDispatchRequest {
 			job_id: Some(input.job_id.clone()),
@@ -1018,7 +1018,7 @@ async fn resolve_job_runner_binary_url(
 	datacenter_id: Uuid,
 	build_delivery_method: BuildDeliveryMethod,
 ) -> GlobalResult<String> {
-	let file_name = std::env::var("JOB_RUNNER_BINARY_KEY")?;
+	let file_name = &ctx.config().server()?.rivet.job_runner_binary_key;
 
 	// Build URL
 	match build_delivery_method {
@@ -1026,7 +1026,8 @@ async fn resolve_job_runner_binary_url(
 			tracing::info!("job runner using s3 direct delivery");
 
 			// Build client
-			let s3_client = s3_util::Client::from_env_opt(
+			let s3_client = s3_util::Client::with_bucket_and_endpoint(
+				ctx.config(),
 				"bucket-infra-artifacts",
 				s3_util::EndpointKind::External,
 			)
@@ -1082,7 +1083,7 @@ async fn resolve_job_runner_binary_url(
 			let addr = format!(
 				"http://{vlan_ip}:8080/s3-cache/{namespace}-bucket-infra-artifacts/{file_name}",
 				vlan_ip = ats_vlan_ip,
-				namespace = util::env::namespace(),
+				namespace = ctx.config().rivet.namespace,
 			);
 
 			tracing::info!(%addr, "resolved artifact s3 url");

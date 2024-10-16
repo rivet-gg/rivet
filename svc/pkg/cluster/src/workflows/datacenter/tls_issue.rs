@@ -7,6 +7,7 @@ use cloudflare::endpoints as cf;
 
 use chirp_workflow::prelude::*;
 use futures_util::StreamExt;
+use rivet_config::config::TlsAcmeDirectory;
 use tokio::task;
 use trust_dns_resolver::{
 	config::{ResolverConfig, ResolverOpts},
@@ -35,12 +36,21 @@ pub(crate) async fn cluster_datacenter_tls_issue(
 	let datacenter_id = input.datacenter_id;
 
 	let base_zone_id = unwrap!(
-		util::env::cloudflare::zone::main::id(),
+		ctx.config().server()?.cloudflare.zone.main.clone(),
 		"dns not configured"
 	);
-	let job_zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
-	let domain_main = unwrap!(util::env::domain_main(), "dns not enabled");
-	let domain_job = unwrap!(util::env::domain_job(), "dns not enabled");
+	let job_zone_id = unwrap!(
+		ctx.config().server()?.cloudflare.zone.job.clone(),
+		"dns not configured"
+	);
+	let domain_main = unwrap!(
+		ctx.config().server()?.rivet.domain.main.clone(),
+		"dns not enabled"
+	);
+	let domain_job = unwrap!(
+		ctx.config().server()?.rivet.domain.job.clone(),
+		"dns not enabled"
+	);
 
 	let (gg_cert, job_cert) = ctx
 		.join((
@@ -93,11 +103,11 @@ struct OrderOutput {
 #[activity(Order)]
 #[timeout = 130]
 async fn order(ctx: &ActivityCtx, input: &OrderInput) -> GlobalResult<OrderOutput> {
-	let cf_token = util::env::read_secret(&["cloudflare", "terraform", "auth_token"]).await?;
-	let client = cf_client(Some(&cf_token)).await?;
+	let cf_token = &*ctx.config().server()?.cloudflare.auth_token.read();
+	let client = cf_client(ctx.config(), Some(&cf_token)).await?;
 
 	// Fetch ACME account registration
-	let account = acme_account().await?;
+	let account = acme_account(ctx.config()).await?;
 
 	tracing::info!(cn=%input.common_name, "creating order");
 
@@ -195,11 +205,10 @@ async fn order(ctx: &ActivityCtx, input: &OrderInput) -> GlobalResult<OrderOutpu
 	})
 }
 
-async fn acme_account() -> GlobalResult<Account<MemoryPersist>> {
-	let url = match util::env::var("TLS_ACME_DIRECTORY")?.as_str() {
-		"lets_encrypt" => DirectoryUrl::LetsEncrypt,
-		"lets_encrypt_staging" => DirectoryUrl::LetsEncryptStaging,
-		x => bail!(format!("unknown ACME directory: {x}")),
+async fn acme_account(config: &rivet_config::Config) -> GlobalResult<Account<MemoryPersist>> {
+	let url = match &config.server()?.tls.acme.directory {
+		TlsAcmeDirectory::LetsEncrypt => DirectoryUrl::LetsEncrypt,
+		TlsAcmeDirectory::LetsEncryptStaging => DirectoryUrl::LetsEncryptStaging,
 	};
 
 	tracing::info!("fetching account from directory {:?}", url);
@@ -212,7 +221,7 @@ async fn acme_account() -> GlobalResult<Account<MemoryPersist>> {
 		PersistKind::AccountPrivateKey,
 		"acme_account",
 	);
-	let pem = util::env::var("TLS_ACME_ACCOUNT_PRIVATE_KEY_PEM")?;
+	let pem = config.server()?.tls.acme.account_private_key_pem.read();
 	persist.put(&pem_key, pem.as_bytes())?;
 
 	// Get ACME account info
