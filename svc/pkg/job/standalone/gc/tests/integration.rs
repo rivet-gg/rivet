@@ -5,7 +5,7 @@ use tracing_subscriber::prelude::*;
 
 lazy_static::lazy_static! {
 	static ref NOMAD_CONFIG: nomad_client::apis::configuration::Configuration =
-		nomad_util::config_from_env().unwrap();
+		nomad_util::build_config().unwrap();
 }
 
 #[tokio::test]
@@ -30,7 +30,7 @@ async fn test_kill_orphaned_job(ctx: TestCtx) {
 		return;
 	}
 
-	let pools = rivet_pools::from_env().await.unwrap();
+	let pools = rivet_pools::Pools::new(config).await.unwrap();
 
 	// Run the job
 	let run_res = op!([ctx] faker_job_run {}).await.unwrap();

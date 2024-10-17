@@ -34,20 +34,17 @@ impl QueryTiming {
 	}
 }
 
-lazy_static::lazy_static! {
-	static ref PROMETHEUS_URL: String = util::env::var("PROMETHEUS_URL").unwrap();
-}
-
 #[operation(name = "job-run-metrics-log")]
 async fn handle(
 	ctx: OperationContext<job_run::metrics_log::Request>,
 ) -> GlobalResult<job_run::metrics_log::Response> {
-	let Ok(prometheus_url) = util::env::var("PROMETHEUS_URL") else {
+	let Ok(prometheus) = &ctx.config().server()?.prometheus else {
 		// Prometheus disabled
 		return Ok(job_run::metrics_log::Response {
 			metrics: Vec::new(),
 		});
 	};
+	let prometheus_url = &prometheus.url;
 
 	let mut metrics = Vec::new();
 

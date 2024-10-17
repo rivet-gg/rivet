@@ -183,11 +183,7 @@ async fn validate_profanity_scores(
 				})
 				.await?;
 
-				if ctx.test()
-					|| std::env::var("RIVET_UPLOAD_NSFW_ERROR_VERBOSE")
-						.ok()
-						.map_or(false, |x| x == "1")
-				{
+				if ctx.test() || ctx.config().server()?.rivet.upload_nsfw_error_verbose {
 					bail_with!(UPLOAD_NSFW_CONTENT_DETECTED {
 						metadata: serde_json::json!({
 							"url": score.url,

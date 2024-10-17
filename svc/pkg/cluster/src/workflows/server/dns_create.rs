@@ -18,8 +18,11 @@ pub async fn cluster_server_dns_create(ctx: &mut WorkflowCtx, input: &Input) -> 
 		})
 		.await?;
 
-	let zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
-	let domain_job = unwrap!(util::env::domain_job());
+	let zone_id = unwrap!(
+		ctx.config().server()?.cloudflare.zone.job,
+		"dns not configured"
+	);
+	let domain_job = unwrap!(ctx.config().server()?.rivet.domain.job);
 
 	let (primary_dns_record_id, secondary_dns_record_id) = ctx
 		.join((

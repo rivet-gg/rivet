@@ -20,8 +20,9 @@ impl TestCtx {
 			std::env::var("CHIRP_SERVICE_NAME").unwrap(),
 			test_name
 		);
-		let source_hash = std::env::var("RIVET_SOURCE_HASH").unwrap();
-		let pools = rivet_pools::from_env().await?;
+		let config = todo!();
+		let source_hash = &config.server()?.rivet.source_hash;
+		let pools = rivet_pools::Pools::new(config).await?;
 		let cache =
 			rivet_cache::CacheInner::new(service_name.clone(), source_hash, pools.redis_cache()?);
 		let client = chirp_client::SharedClient::from_env(pools.clone())
@@ -31,6 +32,7 @@ impl TestCtx {
 		let op_ctx = OperationContext::new(
 			service_name.clone(),
 			Duration::from_secs(60),
+			config,
 			conn,
 			Uuid::new_v4(),
 			Uuid::new_v4(),

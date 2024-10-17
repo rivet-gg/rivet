@@ -5,14 +5,23 @@ use rivet_operation::prelude::*;
 async fn handle(
 	ctx: OperationContext<captcha::turnstile_config_get::Request>,
 ) -> GlobalResult<captcha::turnstile_config_get::Response> {
-	let config = unwrap_ref!(ctx.config);
+	let config = unwrap_ref!((*ctx).config);
 
 	// Check for "rivet.game" host
 	let site_key = if let Some(origin_host) = &ctx.origin_host {
-		if util::env::domain_cdn().map_or(false, |domain_cdn| {
-			domain_cdn == origin_host || origin_host.ends_with(&format!(".{domain_cdn}"))
-		}) {
-			Some(util::env::var("TURNSTILE_SITE_KEY_CDN")?)
+		if ctx
+			.config()
+			.server()?
+			.rivet
+			.domain
+			.cdn
+			.map_or(false, |domain_cdn| {
+				domain_cdn == origin_host || origin_host.ends_with(&format!(".{domain_cdn}"))
+			}) {
+			Some(unwrap!(
+				ctx.config().server()?.turnstile.site_key_cdn,
+				"missing turnstile cdn site key"
+			))
 		} else {
 			None
 		}

@@ -10,13 +10,11 @@ pub async fn validate(
 	ctx: Ctx<Auth>,
 	body: models::CloudValidateGroupRequest,
 ) -> GlobalResult<models::CloudValidateGroupResponse> {
-	let publicity = util::env::var("RIVET_ACCESS_KIND")?;
-	match publicity.as_str() {
-		"public" => {}
-		"private" => {
-			ctx.auth().admin(ctx.op_ctx()).await?;
-		}
-		_ => bail!("invalid RIVET_ACCESS_KIND"),
+	if !matches!(
+		RivetAccessKind::Public,
+		ctx.config().server()?.rivet.access_kind
+	) {
+		ctx.auth().admin(ctx.op_ctx()).await?;
 	}
 
 	let res = op!([ctx] team_validate {

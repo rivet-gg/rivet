@@ -23,7 +23,11 @@ pub async fn linode_image(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<
 	// NOTE: Linode imposes a restriction of 50 characters on custom image labels, so unfortunately we cannot
 	// use the image variant as the name. All we need from the label is for it to be unique. Keep in mind that
 	// the UUID and hyphen take 37 characters, leaving us with 13 for the namespace name
-	let name = format!("{}-{}", util::env::namespace(), input.prebake_server_id);
+	let name = format!(
+		"{}-{}",
+		ctx.config().rivet.namespace,
+		input.prebake_server_id
+	);
 
 	let image_id = ctx
 		.activity(CreateCustomImageInput {

@@ -35,12 +35,15 @@ pub(crate) async fn cluster_datacenter_tls_issue(
 	let datacenter_id = input.datacenter_id;
 
 	let base_zone_id = unwrap!(
-		util::env::cloudflare::zone::main::id(),
+		ctx.config().server()?.cloudflare.zone.main,
 		"dns not configured"
 	);
-	let job_zone_id = unwrap!(util::env::cloudflare::zone::job::id(), "dns not configured");
-	let domain_main = unwrap!(util::env::domain_main(), "dns not enabled");
-	let domain_job = unwrap!(util::env::domain_job(), "dns not enabled");
+	let job_zone_id = unwrap!(
+		ctx.config().server()?.cloudflare.zone.job,
+		"dns not configured"
+	);
+	let domain_main = unwrap!(ctx.config().server()?.rivet.domain.main, "dns not enabled");
+	let domain_job = unwrap!(ctx.config().server()?.rivet.domain.job, "dns not enabled");
 
 	let (gg_cert, job_cert) = ctx
 		.join((
@@ -195,11 +198,10 @@ async fn order(ctx: &ActivityCtx, input: &OrderInput) -> GlobalResult<OrderOutpu
 	})
 }
 
-async fn acme_account() -> GlobalResult<Account<MemoryPersist>> {
-	let url = match util::env::var("TLS_ACME_DIRECTORY")?.as_str() {
-		"lets_encrypt" => DirectoryUrl::LetsEncrypt,
-		"lets_encrypt_staging" => DirectoryUrl::LetsEncryptStaging,
-		x => bail!(format!("unknown ACME directory: {x}")),
+async fn acme_account(config: &rivet_config::Config) -> GlobalResult<Account<MemoryPersist>> {
+	let url = match &config.server()?.tls.acme.directory {
+		TlsAcmeDirectory::LetsEncrypt => DirectoryUrl::LetsEncrypt,
+		TlsAcmeDirectory::LetsEncryptStaging => DirectoryUrl::LetsEncryptStaging,
 	};
 
 	tracing::info!("fetching account from directory {:?}", url);
@@ -212,7 +214,7 @@ async fn acme_account() -> GlobalResult<Account<MemoryPersist>> {
 		PersistKind::AccountPrivateKey,
 		"acme_account",
 	);
-	let pem = util::env::var("TLS_ACME_ACCOUNT_PRIVATE_KEY_PEM")?;
+	let pem = config.server()?.tls.acme.account_private_key_pem;
 	persist.put(&pem_key, pem.as_bytes())?;
 
 	// Get ACME account info

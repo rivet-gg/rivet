@@ -106,7 +106,7 @@ pub async fn identity(
 					|| err.is(formatted_error::code::TOKEN_REVOKED)
 				{
 					// Delete refresh token
-					let (k, v) = delete_refresh_token_header(origin)?;
+					let (k, v) = delete_refresh_token_header(ctx.config(), origin)?;
 					unwrap!(response.headers_mut()).insert(k, v);
 				}
 
@@ -124,7 +124,7 @@ pub async fn identity(
 
 	// Set refresh token
 	{
-		let (k, v) = refresh_token_header(origin, refresh_token)?;
+		let (k, v) = refresh_token_header(ctx.config(), origin, refresh_token)?;
 		unwrap!(response.headers_mut()).insert(k, v);
 	}
 
@@ -149,7 +149,7 @@ pub async fn identity(
 			.await?;
 
 			// Delete refresh token
-			let (k, v) = delete_refresh_token_header(origin)?;
+			let (k, v) = delete_refresh_token_header(ctx.config(), origin)?;
 			unwrap!(response.headers_mut()).insert(k, v);
 
 			bail_with!(TOKEN_REVOKED);

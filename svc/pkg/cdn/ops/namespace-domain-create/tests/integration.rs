@@ -46,28 +46,28 @@ async fn invalid_domain(ctx: TestCtx) {
 
 	op!([ctx] cdn_namespace_domain_create {
 		namespace_id: Some(namespace_id),
-		domain: util::env::domain_main().unwrap().to_owned(),
+		domain: ctx.config().server()?.rivet.domain.main.unwrap().to_owned(),
 	})
 	.await
 	.unwrap_err();
 
 	op!([ctx] cdn_namespace_domain_create {
 		namespace_id: Some(namespace_id),
-		domain: util::env::domain_cdn().unwrap().to_owned(),
+		domain: ctx.config().server()?.rivet.domain.cdn.unwrap().to_owned(),
 	})
 	.await
 	.unwrap_err();
 
 	op!([ctx] cdn_namespace_domain_create {
 		namespace_id: Some(namespace_id),
-		domain: format!("test.{}", util::env::domain_main().unwrap()),
+		domain: format!("test.{}", ctx.config().server()?.rivet.domain.main.unwrap()),
 	})
 	.await
 	.unwrap_err();
 
 	op!([ctx] cdn_namespace_domain_create {
 		namespace_id: Some(namespace_id),
-		domain: format!("test.{}", util::env::domain_cdn().unwrap()),
+		domain: format!("test.{}", ctx.config().server()?.rivet.domain.cdn.unwrap()),
 	})
 	.await
 	.unwrap_err();

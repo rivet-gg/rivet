@@ -32,11 +32,12 @@ struct MigrateCmd {
 	args: Vec<String>,
 }
 
-pub async fn up(services: &[SqlService]) -> Result<()> {
-	let crdb = rivet_pools::crdb_from_env("rivet".into())
-		.await?
-		.context("missing crdb")?;
-	let clickhouse = rivet_pools::clickhouse_from_env()?;
+pub async fn up(config: rivet_config::Config, services: &[SqlService]) -> Result<()> {
+	let crdb = rivet_pools::db::crdb::setup(config.clone())
+		.await
+		.map_err(|err| anyhow!("{err}"))?;
+	let clickhouse =
+		rivet_pools::db::clickhouse::setup(config.clone()).map_err(|err| anyhow!("{err}"))?;
 
 	let mut crdb_pre_queries = Vec::new();
 	let mut crdb_post_queries = Vec::new();
@@ -190,7 +191,7 @@ pub async fn up(services: &[SqlService]) -> Result<()> {
 			args: vec!["up".to_string()],
 		})
 		.collect::<Vec<_>>();
-	run_migrations(&migrations).await?;
+	run_migrations(config.clone(), &migrations).await?;
 
 	// Run post-migration queries in parallel
 	tracing::info!(crdb = ?crdb_post_queries.len(), clickhouse = ?clickhouse_post_queries.len(), "running post-migrations");
@@ -221,31 +222,40 @@ pub async fn up(services: &[SqlService]) -> Result<()> {
 	Ok(())
 }
 
-pub async fn down(service: &SqlService, num: usize) -> Result<()> {
-	run_migrations(&[MigrateCmd {
-		service: service.clone(),
-		args: vec!["down".into(), num.to_string()],
-	}])
+pub async fn down(config: rivet_config::Config, service: &SqlService, num: usize) -> Result<()> {
+	run_migrations(
+		config,
+		&[MigrateCmd {
+			service: service.clone(),
+			args: vec!["down".into(), num.to_string()],
+		}],
+	)
 	.await
 }
 
-pub async fn force(service: &SqlService, num: usize) -> Result<()> {
-	run_migrations(&[MigrateCmd {
-		service: service.clone(),
-		args: vec!["force".to_string(), num.to_string()],
-	}])
+pub async fn force(config: rivet_config::Config, service: &SqlService, num: usize) -> Result<()> {
+	run_migrations(
+		config,
+		&[MigrateCmd {
+			service: service.clone(),
+			args: vec!["force".to_string(), num.to_string()],
+		}],
+	)
 	.await
 }
 
-pub async fn drop(service: &SqlService) -> Result<()> {
-	run_migrations(&[MigrateCmd {
-		service: service.clone(),
-		args: vec!["drop".to_string(), "-f".to_string()],
-	}])
+pub async fn drop(config: rivet_config::Config, service: &SqlService) -> Result<()> {
+	run_migrations(
+		config,
+		&[MigrateCmd {
+			service: service.clone(),
+			args: vec!["drop".to_string(), "-f".to_string()],
+		}],
+	)
 	.await
 }
 
-async fn run_migrations(migration_cmds: &[MigrateCmd]) -> Result<()> {
+async fn run_migrations(config: rivet_config::Config, migration_cmds: &[MigrateCmd]) -> Result<()> {
 	for cmd in migration_cmds {
 		tracing::info!(db_name=%cmd.service.db_name, "running db migration");
 
@@ -254,7 +264,7 @@ async fn run_migrations(migration_cmds: &[MigrateCmd]) -> Result<()> {
 		block_in_place(|| cmd.service.migrations.extract(dir.path()))?;
 
 		// Run migration
-		let migrate_url = migrate_db_url(&cmd.service).await?;
+		let migrate_url = migrate_db_url(config.clone(), &cmd.service).await?;
 		let mut child = tokio::process::Command::new("migrate")
 			.arg("-database")
 			.arg(migrate_url)
@@ -303,10 +313,14 @@ async fn run_migrations(migration_cmds: &[MigrateCmd]) -> Result<()> {
 }
 
 /// Returns the URL to use for database migrations.
-async fn migrate_db_url(service: &SqlService) -> Result<String> {
+async fn migrate_db_url(config: rivet_config::Config, service: &SqlService) -> Result<String> {
 	match &service.kind {
 		SqlServiceKind::CockroachDB => {
-			let crdb_url = rivet_pools::crdb_url_from_env()?.context("missing crdb_url")?;
+			let crdb_url = &config
+				.server()
+				.map_err(|err| anyhow!("{err}"))?
+				.cockroachdb
+				.url;
 			let crdb_url_parsed = url::Url::parse(&crdb_url)?;
 			let crdb_host = crdb_url_parsed.host_str().context("crdb missing host")?;
 			let crdb_port = crdb_url_parsed
@@ -326,8 +340,13 @@ async fn migrate_db_url(service: &SqlService) -> Result<String> {
 			))
 		}
 		SqlServiceKind::ClickHouse => {
-			let clickhouse_url =
-				rivet_pools::clickhouse_url_from_env()?.context("missing clickhouse_url")?;
+			let clickhouse_url = &config
+				.server()
+				.map_err(|err| anyhow!("{err}"))?
+				.clickhouse
+				.as_ref()
+				.context("missing clickhouse")?
+				.url;
 			let clickhouse_url_parsed = url::Url::parse(&clickhouse_url)?;
 			let clickhouse_host = clickhouse_url_parsed
 				.host_str()

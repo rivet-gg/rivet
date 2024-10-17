@@ -99,7 +99,7 @@ async fn provision(
 	cleanup: &mut CleanupCtx,
 ) -> GlobalResult<ProvisionOutput> {
 	let is_test = input.tags.iter().any(|tag| tag == "test");
-	let ns = util::env::namespace();
+	let ns = &ctx.config().rivet.namespace;
 	// Linode label must be 3-64 characters, UUID's are 36
 	let name = format!("{ns}-{}", input.server_id);
 
@@ -238,7 +238,7 @@ async fn create_ssh_key(
 	// Build HTTP client
 	let client = client::Client::new(input.api_token.clone()).await?;
 
-	let ns = util::env::namespace();
+	let ns = &ctx.config().rivet.namespace;
 
 	let ssh_key_label = format!("{ns}-{}", input.server_id);
 	let ssh_key_res = api::create_ssh_key(&client, &ssh_key_label, input.is_test).await?;
@@ -275,6 +275,7 @@ async fn create_instance(
 	let client = client::Client::new(input.api_token.clone()).await?;
 
 	let create_instance_res = api::create_instance(
+		ctx.config(),
 		&client,
 		&input.name,
 		&input.datacenter,
@@ -380,6 +381,7 @@ async fn create_instance_config(
 	let client = client::Client::new(input.api_token.clone()).await?;
 
 	api::create_instance_config(
+		ctx.config(),
 		&client,
 		input.vlan_ip.as_ref(),
 		input.linode_id,
@@ -404,6 +406,7 @@ async fn create_firewall(ctx: &ActivityCtx, input: &CreateFirewallInput) -> Glob
 	let client = client::Client::new(input.api_token.clone()).await?;
 
 	let firewall_res = api::create_firewall(
+		ctx.config(),
 		&client,
 		&input.firewall_preset,
 		&input.tags,

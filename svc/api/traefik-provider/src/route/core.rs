@@ -76,7 +76,7 @@ pub async fn build_cdn(
 
 	// Process namespaces
 	for ns in &cdn_fetch {
-		let register_res = register_namespace(ns, config, &s3_client);
+		let register_res = register_namespace(ctx.config(), ns, config, &s3_client);
 		match register_res {
 			Ok(_) => {}
 			Err(err) => tracing::error!(?err, ?ns, "failed to register namespace route"),
@@ -93,7 +93,7 @@ pub async fn build_cdn(
 			// This number needs to be high to allow for parallel requests
 			amount: 128,
 			source_criterion: types::InFlightReqSourceCriterion::RequestHeaderName(
-				if util::env::dns_provider() == Some("cloudflare") {
+				if ctx.config().server()?.rivet.dns_provider == DnsProvider::Cloudflare {
 					"cf-connecting-ip".to_string()
 				} else {
 					"x-forwarded-for".to_string()
@@ -187,11 +187,12 @@ async fn fetch_cdn(
 
 #[tracing::instrument(skip(config, s3_client))]
 fn register_namespace(
+	config: &rivet_config::Config,
 	ns: &cdn::redis_cdn::NamespaceCdnConfig,
 	config: &mut types::TraefikConfigResponse,
 	s3_client: &s3_util::Client,
 ) -> GlobalResult<()> {
-	let Some(domain_cdn) = util::env::domain_cdn() else {
+	let Some(domain_cdn) = config.server()?.rivet.domain.cdn else {
 		return Ok(());
 	};
 
@@ -355,6 +356,7 @@ fn register_namespace(
 
 	for route in &ns.routes {
 		register_custom_cdn_route(
+			ctx.config(),
 			ns,
 			config,
 			service,
@@ -369,14 +371,15 @@ fn register_namespace(
 
 #[tracing::instrument(skip(config))]
 fn register_custom_cdn_route(
+	config: &rivet_config::Config,
 	ns: &cdn::redis_cdn::NamespaceCdnConfig,
-	config: &mut types::TraefikConfigResponse,
+	traefik_config: &mut types::TraefikConfigResponse,
 	service: &str,
 	router_middlewares_cdn: Vec<String>,
 	router_middlewares_html: Vec<String>,
 	route: &backend::cdn::Route,
 ) -> GlobalResult<()> {
-	let Some(domain_cdn) = util::env::domain_cdn() else {
+	let Some(domain_cdn) = config.server()?.rivet.domain.cdn else {
 		return Ok(());
 	};
 
@@ -456,7 +459,7 @@ fn register_custom_cdn_route(
 								},
 							);
 
-							config
+							traefik_config
 								.http
 								.middlewares
 								.insert(custom_header_key.clone(), headers);
@@ -468,7 +471,7 @@ fn register_custom_cdn_route(
 				}
 
 				// Create routers
-				config.http.routers.insert(
+				traefik_config.http.routers.insert(
 					format!("ns-custom-headers:{}-insecure:{}", ns_id, glob_hash),
 					types::TraefikRouter {
 						entry_points: vec!["web".into()],
@@ -481,7 +484,7 @@ fn register_custom_cdn_route(
 						tls: None,
 					},
 				);
-				config.http.routers.insert(
+				traefik_config.http.routers.insert(
 					format!("ns-custom-headers:{}-insecure-html:{}", ns_id, glob_hash),
 					types::TraefikRouter {
 						entry_points: vec!["web".into()],
@@ -494,7 +497,7 @@ fn register_custom_cdn_route(
 						tls: None,
 					},
 				);
-				config.http.routers.insert(
+				traefik_config.http.routers.insert(
 					format!("ns-custom-headers:{}-secure:{}", ns_id, glob_hash),
 					types::TraefikRouter {
 						entry_points: vec!["websecure".into()],
@@ -507,7 +510,7 @@ fn register_custom_cdn_route(
 						tls: Some(types::TraefikTls::build_cloudflare()),
 					},
 				);
-				config.http.routers.insert(
+				traefik_config.http.routers.insert(
 					format!("ns-custom-headers:{}-secure-html:{}", ns_id, glob_hash),
 					types::TraefikRouter {
 						entry_points: vec!["websecure".into()],

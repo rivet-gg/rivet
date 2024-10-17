@@ -59,7 +59,7 @@ pub async fn cluster_server_prune_with_filter(
 	// Filter by namespace
 	let filter = json!({
 		"label": {
-			"+contains": format!("{}-", util::env::namespace()),
+			"+contains": format!("{}-", ctx.config().rivet.namespace),
 		}
 	});
 	let mut headers = header::HeaderMap::new();

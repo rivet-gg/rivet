@@ -152,18 +152,19 @@ pub fn instance(config: Instance) -> String {
 	script
 }
 
-pub fn tunnel(name: &str) -> GlobalResult<String> {
+pub fn tunnel(config: &rivet_config::Config, name: &str) -> GlobalResult<String> {
 	// Build transports for each service
+	let tls_config = &config.server()?.tls;
 	let mut tcp_server_transports = HashMap::new();
 	for TunnelService { name, .. } in TUNNEL_SERVICES {
 		tcp_server_transports.insert(
 			name.to_string(),
 			ServerTransport {
 				server_name: format!("{name}.tunnel.rivet.gg"),
-				root_cas: vec![util::env::var("TLS_ROOT_CA_CERT_PEM")?],
+				root_cas: vec![tls_config.root_ca_cert_pem.clone()],
 				certs: vec![TlsCert {
-					cert_pem: util::env::var("TLS_CERT_LOCALLY_SIGNED_JOB_CERT_PEM")?,
-					key_pem: util::env::var("TLS_CERT_LOCALLY_SIGNED_JOB_KEY_PEM")?,
+					cert_pem: tls_config.cert_locally_signed_job_cert_pem.clone(),
+					key_pem: tls_config.cert_locally_signed_job_key_pemc.clone(),
 				}],
 			},
 		);
@@ -172,7 +173,7 @@ pub fn tunnel(name: &str) -> GlobalResult<String> {
 	Ok(instance(Instance {
 		name: name.to_string(),
 		static_config: tunnel_static_config(),
-		dynamic_config: tunnel_dynamic_config(&util::env::var("RIVET_HOST_TUNNEL")?),
+		dynamic_config: tunnel_dynamic_config(&config.server()?.rivet.host.tunnel),
 		tcp_server_transports,
 	}))
 }
@@ -288,8 +289,11 @@ pub async fn gg_static_config() -> GlobalResult<String> {
 	Ok(config)
 }
 
-pub fn gg_dynamic_config(datacenter_id: Uuid) -> GlobalResult<String> {
-	let domain_job = unwrap!(util::env::domain_job(), "dns not enabled");
+pub fn gg_dynamic_config(
+	config: &rivet_config::Config,
+	datacenter_id: Uuid,
+) -> GlobalResult<String> {
+	let domain_job = unwrap!(config.server()?.rivet.domain.job, "dns not enabled");
 
 	let main = format!("{datacenter_id}.{domain_job}");
 

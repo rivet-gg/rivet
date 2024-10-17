@@ -20,6 +20,7 @@ game-get = { path = "../../game/ops/get" }
 game-namespace-list = { path = "../../game/ops/namespace-list" }
 game-resolve-namespace-id = { path = "../../game/ops/resolve-namespace-id" }
 game-list-for-team = { path = "../../game/ops/list-for-team" }
+rivet-config = { version = "0.1.0", path = "../../../../lib/config" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../lib/chirp/worker" }

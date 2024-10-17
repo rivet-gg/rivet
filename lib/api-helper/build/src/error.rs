@@ -21,6 +21,7 @@ pub struct ErrorReply {
 }
 
 pub fn handle_rejection(
+	config: &rivet_config::Config,
 	err: GlobalError,
 	mut response: http::response::Builder,
 	ray_id: Uuid,
@@ -35,26 +36,17 @@ pub fn handle_rejection(
 			tracing::error!(?err, "internal error response");
 
 			// Replace internal errors with global errors
-			if std::env::var("RIVET_API_ERROR_VERBOSE")
-				.ok()
-				.map_or(false, |x| x == "1")
-			{
+			if config.server()?.api.error_verbose {
 				err_code!(ERROR, error = err.to_string())
 			} else {
-				err_code!(
-					ERROR,
-					error = "An internal error has occurred.",
-				)
+				err_code!(ERROR, error = "An internal error has occurred.",)
 			}
 		}
 		GlobalError::Raw(err) => {
 			tracing::error!(?err, "internal error response");
 
 			// Replace internal errors with global errors
-			if std::env::var("RIVET_API_ERROR_VERBOSE")
-				.ok()
-				.map_or(false, |x| x == "1")
-			{
+			if config.server()?.api.error_verbose {
 				err_code!(ERROR, error = err.to_string())
 			} else {
 				err_code!(

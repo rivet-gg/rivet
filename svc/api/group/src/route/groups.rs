@@ -578,13 +578,11 @@ pub async fn create(
 ) -> GlobalResult<models::CreateGroupResponse> {
 	let (_, user_ent) = ctx.auth().user(ctx.op_ctx()).await?;
 
-	let publicity = util::env::var("RIVET_ACCESS_KIND")?;
-	match publicity.as_str() {
-		"public" => {}
-		"private" => {
-			ctx.auth().admin(ctx.op_ctx()).await?;
-		}
-		_ => bail!("invalid RIVET_ACCESS_KIND"),
+	if !matches!(
+		RivetAccessKind::Public,
+		ctx.config().sever()?.rivet.access_kind
+	) {
+		ctx.auth().admin(ctx.op_ctx()).await?;
 	}
 
 	let team_id = Uuid::new_v4();

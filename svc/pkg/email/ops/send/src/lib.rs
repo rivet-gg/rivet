@@ -5,10 +5,6 @@ use rivet_operation::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-lazy_static::lazy_static! {
-	static ref SENDGRID_KEY: String = util::env::var("SENDGRID_KEY").unwrap();
-}
-
 #[derive(Serialize, Deserialize)]
 struct SendGridPersonalization {
 	to: Option<Vec<SendGridAddress>>,
@@ -142,10 +138,13 @@ async fn handle(
 				.collect::<Vec<_>>(),
 		})
 	};
+
+	let sendgrid_key = unwrap!(ctx.config().server()?.sendgrid.key, "missing sendgrid key");
+
 	tracing::info!(body = %serde_json::to_string(&body).unwrap(), "body");
 	let res = client
 		.post("https://api.sendgrid.com/v3/mail/send")
-		.header("Authorization", format!("Bearer {}", &*SENDGRID_KEY))
+		.header("Authorization", format!("Bearer {}", &sendgrid_key)
 		.json(&body)
 		.send()
 		.await?;

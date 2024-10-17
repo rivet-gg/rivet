@@ -13,8 +13,8 @@ const LOBBY_GROUP_NAME_ID: &str = "test";
 const CHUNK_SIZE: usize = 2048;
 const BUFFER_SIZE: usize = 16;
 
-pub async fn start() -> GlobalResult<()> {
-	run_from_env(util::timestamp::now()).await?;
+pub async fn start(config: rivet_config::Config, pools: rivet_pools::Pools) -> GlobalResult<()> {
+	run_from_env(config, pools, util::timestamp::now()).await?;
 
 	tracing::info!("finished");
 
@@ -67,20 +67,23 @@ impl Conn {
 }
 
 #[tracing::instrument(skip_all)]
-pub async fn run_from_env(_ts: i64) -> GlobalResult<()> {
-	let pools = rivet_pools::from_env().await?;
+pub async fn run_from_env(
+	config: rivet_config::Config,
+	pools: rivet_pools::Pools,
+	_ts: i64,
+) -> GlobalResult<()> {
 	let client = chirp_client::SharedClient::from_env(pools.clone())?.wrap_new("load-test-mm");
 	let cache = rivet_cache::CacheInner::from_env(pools.clone())?;
-	let ctx = OperationContext::new(
-		"load-test-mm".into(),
-		std::time::Duration::from_secs(60),
-		rivet_connection::Connection::new(client, pools, cache),
-		Uuid::new_v4(),
-		Uuid::new_v4(),
-		util::timestamp::now(),
-		util::timestamp::now(),
-		(),
-	);
+let ctx = OperationContext::new(
+	"load-test-mm".into(),
+	std::time::Duration::from_secs(60),
+	config,rivet_connection::Connection::new(client, pools, cache),
+	Uuid::new_v4(),
+	Uuid::new_v4(),
+	util::timestamp::now(),
+	util::timestamp::now(),
+	(),
+);
 
 	// Setup
 	let (primary_region_id, primary_region_name_id) = setup_region(&ctx).await?;

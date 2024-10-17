@@ -166,6 +166,7 @@ impl EndpointRouter {
 
 								#mount_path::__inner(
 									shared_client.clone(),
+									config.clone(),
 									pools.clone(),
 									cache.clone(),
 									ray_id,
@@ -189,6 +190,7 @@ impl EndpointRouter {
 				#[tracing::instrument(skip_all)]
 				pub async fn __inner(
 					shared_client: chirp_client::SharedClientHandle,
+					config: rivet_config::Config,
 					pools: rivet_pools::Pools,
 					cache: rivet_cache::Cache,
 					ray_id: uuid::Uuid,
@@ -217,6 +219,7 @@ impl EndpointRouter {
 				#[tracing::instrument(skip_all)]
 				pub async fn handle(
 					shared_client: chirp_client::SharedClientHandle,
+					config: rivet_config::Config,
 					pools: rivet_pools::Pools,
 					cache: rivet_cache::Cache,
 					ray_id: uuid::Uuid,
@@ -233,7 +236,7 @@ impl EndpointRouter {
 
 					// Handle router
 					let res = Self::__inner(
-						shared_client, pools, cache,
+						shared_client, config, pools, cache,
 						ray_id, &mut request, &mut response,
 						&mut router_config,
 					).await;
@@ -497,7 +500,7 @@ impl Endpoint {
 		} else {
 			quote! {}
 		};
-		
+
 		// Generate a path to use for the metrics
 		//
 		// This path can't contain the actual variables from the real
@@ -902,6 +905,7 @@ impl EndpointFunction {
 
 				let ctx = macro_util::__with_ctx(
 					shared_client.clone(),
+					config.clone(),
 					pools.clone(),
 					cache.clone(),
 					&request,

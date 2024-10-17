@@ -4,12 +4,6 @@ use proto::{backend::pkg::*, claims};
 use rivet_claims::{ClaimsDecode, EntitlementTag};
 use rivet_operation::prelude::*;
 
-lazy_static::lazy_static! {
-	/// The private EdDSA key in a PEM format. Corresponds to
-	/// `rivet_claims::Config::jwt_key_public`.
-	static ref JWT_KEY_PRIVATE: String = util::env::var("RIVET_JWT_KEY_PRIVATE").unwrap();
-}
-
 #[operation(name = "token-create")]
 async fn handle(
 	ctx: OperationContext<token::create::Request>,
@@ -258,7 +252,7 @@ async fn create_token(
 			..Default::default()
 		},
 		&claims,
-		&EncodingKey::from_ed_pem(JWT_KEY_PRIVATE.as_bytes())?,
+		&EncodingKey::from_ed_pem(ctx.config().server()?.jwt_key.private.as_bytes())?,
 	)?;
 
 	// Write to database
