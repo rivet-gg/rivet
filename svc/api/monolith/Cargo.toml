@@ -34,3 +34,4 @@ api-matchmaker = { path = "../matchmaker" }
 api-portal = { path = "../portal" }
 api-servers = { path = "../servers" }
 api-status = { path = "../status" }
+rivet-config = { version = "0.1.0", path = "../../../lib/config" }

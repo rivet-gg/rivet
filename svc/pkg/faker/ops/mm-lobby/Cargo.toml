@@ -21,3 +21,4 @@ mm-config-version-get = { path = "../../../mm-config/ops/version-get" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../../lib/chirp/worker" }
+rivet-test = { version = "0.1.0", path = "../../../../../lib/test" }

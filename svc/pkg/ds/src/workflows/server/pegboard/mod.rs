@@ -539,7 +539,12 @@ async fn resolve_container_runner_binary_url(
 	datacenter_id: Uuid,
 	build_delivery_method: BuildDeliveryMethod,
 ) -> GlobalResult<String> {
-	let file_name = std::env::var("CONTAINER_RUNNER_BINARY_KEY")?;
+	let file_name = &ctx
+		.config()
+		.server()?
+		.rivet
+		.pegboard
+		.container_runner_binary_key;
 
 	// Build URL
 	match build_delivery_method {
@@ -547,7 +552,8 @@ async fn resolve_container_runner_binary_url(
 			tracing::info!("container runner using s3 direct delivery");
 
 			// Build client
-			let s3_client = s3_util::Client::from_env_opt(
+			let s3_client = s3_util::Client::with_bucket_and_endpoint(
+				ctx.config(),
 				"bucket-infra-artifacts",
 				s3_util::EndpointKind::External,
 			)
@@ -603,7 +609,7 @@ async fn resolve_container_runner_binary_url(
 			let addr = format!(
 				"http://{vlan_ip}:8080/s3-cache/{namespace}-bucket-infra-artifacts/{file_name}",
 				vlan_ip = ats_vlan_ip,
-				namespace = util::env::namespace(),
+				namespace = ctx.config().rivet.namespace,
 			);
 
 			tracing::info!(%addr, "resolved artifact s3 url");

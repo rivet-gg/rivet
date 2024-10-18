@@ -32,11 +32,14 @@ struct MigrateCmd {
 	args: Vec<String>,
 }
 
-pub async fn up(services: &[SqlService]) -> Result<()> {
-	let crdb = rivet_pools::crdb_from_env("rivet".into())
-		.await?
-		.context("missing crdb")?;
-	let clickhouse = rivet_pools::clickhouse_from_env()?;
+pub async fn up(config: rivet_config::Config, services: &[SqlService]) -> Result<()> {
+	let server_config = config.server.as_ref().context("missing server")?;
+
+	let crdb = rivet_pools::db::crdb::setup(config.clone())
+		.await
+		.map_err(|err| anyhow!("{err}"))?;
+	let clickhouse =
+		rivet_pools::db::clickhouse::setup(config.clone()).map_err(|err| anyhow!("{err}"))?;
 
 	let mut crdb_pre_queries = Vec::new();
 	let mut crdb_post_queries = Vec::new();
@@ -52,10 +55,8 @@ pub async fn up(services: &[SqlService]) -> Result<()> {
 				crdb_pre_queries.push(query);
 
 				// Create users
-				let username =
-					rivet_util::env::read_secret(&["crdb", "user", "grafana", "username"]).await?;
-				let password =
-					rivet_util::env::read_secret(&["crdb", "user", "grafana", "password"]).await?;
+				let username = &server_config.cockroachdb.users.grafana.username;
+				let password = &*server_config.cockroachdb.users.grafana.username;
 				let query = formatdoc!(
 					r#"
 					CREATE USER IF NOT EXISTS {username}
@@ -118,19 +119,19 @@ pub async fn up(services: &[SqlService]) -> Result<()> {
 					"
 				));
 
-				for (username, role) in [
-					("bolt", ClickhouseRole::Admin),
-					("chirp", ClickhouseRole::Write),
-					("grafana", ClickhouseRole::Readonly),
-					("vector", ClickhouseRole::Write),
+				let clickhouse_users = &server_config
+					.clickhouse
+					.as_ref()
+					.context("missing clickhouse")?
+					.users;
+				for (user, role) in [
+					(&clickhouse_users.bolt, ClickhouseRole::Admin),
+					(&clickhouse_users.chirp, ClickhouseRole::Write),
+					(&clickhouse_users.grafana, ClickhouseRole::Readonly),
+					(&clickhouse_users.vector, ClickhouseRole::Write),
 				] {
-					let password = rivet_util::env::read_secret(&[
-						"clickhouse",
-						"users",
-						username,
-						"password",
-					])
-					.await?;
+					let username = &user.username;
+					let password = &*user.password.read();
 
 					clickhouse_pre_queries.push(formatdoc!(
 						"
@@ -190,7 +191,7 @@ pub async fn up(services: &[SqlService]) -> Result<()> {
 			args: vec!["up".to_string()],
 		})
 		.collect::<Vec<_>>();
-	run_migrations(&migrations).await?;
+	run_migrations(config.clone(), &migrations).await?;
 
 	// Run post-migration queries in parallel
 	tracing::info!(crdb = ?crdb_post_queries.len(), clickhouse = ?clickhouse_post_queries.len(), "running post-migrations");
@@ -221,31 +222,40 @@ pub async fn up(services: &[SqlService]) -> Result<()> {
 	Ok(())
 }
 
-pub async fn down(service: &SqlService, num: usize) -> Result<()> {
-	run_migrations(&[MigrateCmd {
-		service: service.clone(),
-		args: vec!["down".into(), num.to_string()],
-	}])
+pub async fn down(config: rivet_config::Config, service: &SqlService, num: usize) -> Result<()> {
+	run_migrations(
+		config,
+		&[MigrateCmd {
+			service: service.clone(),
+			args: vec!["down".into(), num.to_string()],
+		}],
+	)
 	.await
 }
 
-pub async fn force(service: &SqlService, num: usize) -> Result<()> {
-	run_migrations(&[MigrateCmd {
-		service: service.clone(),
-		args: vec!["force".to_string(), num.to_string()],
-	}])
+pub async fn force(config: rivet_config::Config, service: &SqlService, num: usize) -> Result<()> {
+	run_migrations(
+		config,
+		&[MigrateCmd {
+			service: service.clone(),
+			args: vec!["force".to_string(), num.to_string()],
+		}],
+	)
 	.await
 }
 
-pub async fn drop(service: &SqlService) -> Result<()> {
-	run_migrations(&[MigrateCmd {
-		service: service.clone(),
-		args: vec!["drop".to_string(), "-f".to_string()],
-	}])
+pub async fn drop(config: rivet_config::Config, service: &SqlService) -> Result<()> {
+	run_migrations(
+		config,
+		&[MigrateCmd {
+			service: service.clone(),
+			args: vec!["drop".to_string(), "-f".to_string()],
+		}],
+	)
 	.await
 }
 
-async fn run_migrations(migration_cmds: &[MigrateCmd]) -> Result<()> {
+async fn run_migrations(config: rivet_config::Config, migration_cmds: &[MigrateCmd]) -> Result<()> {
 	for cmd in migration_cmds {
 		tracing::info!(db_name=%cmd.service.db_name, "running db migration");
 
@@ -254,7 +264,7 @@ async fn run_migrations(migration_cmds: &[MigrateCmd]) -> Result<()> {
 		block_in_place(|| cmd.service.migrations.extract(dir.path()))?;
 
 		// Run migration
-		let migrate_url = migrate_db_url(&cmd.service).await?;
+		let migrate_url = migrate_db_url(config.clone(), &cmd.service).await?;
 		let mut child = tokio::process::Command::new("migrate")
 			.arg("-database")
 			.arg(migrate_url)
@@ -303,18 +313,20 @@ async fn run_migrations(migration_cmds: &[MigrateCmd]) -> Result<()> {
 }
 
 /// Returns the URL to use for database migrations.
-async fn migrate_db_url(service: &SqlService) -> Result<String> {
+async fn migrate_db_url(config: rivet_config::Config, service: &SqlService) -> Result<String> {
+	let server_config = config.server.as_ref().context("missing server")?;
+
 	match &service.kind {
 		SqlServiceKind::CockroachDB => {
-			let crdb_url = rivet_pools::crdb_url_from_env()?.context("missing crdb_url")?;
+			let crdb_url = &server_config.cockroachdb.url.read();
 			let crdb_url_parsed = url::Url::parse(&crdb_url)?;
 			let crdb_host = crdb_url_parsed.host_str().context("crdb missing host")?;
 			let crdb_port = crdb_url_parsed
 				.port_or_known_default()
 				.context("crdb missing port")?;
 
-			let username = rivet_util::env::read_secret(&["crdb", "username"]).await?;
-			let password = rivet_util::env::read_secret(&["crdb", "password"]).await?;
+			let username = &server_config.cockroachdb.users.admin.username;
+			let password = &server_config.cockroachdb.users.admin.password.read();
 
 			Ok(format!(
 				"cockroach://{}:{}@{}:{}/{}?sslmode=verify-ca&sslrootcert=/usr/local/share/ca-certificates/crdb-ca.crt",
@@ -326,8 +338,11 @@ async fn migrate_db_url(service: &SqlService) -> Result<String> {
 			))
 		}
 		SqlServiceKind::ClickHouse => {
-			let clickhouse_url =
-				rivet_pools::clickhouse_url_from_env()?.context("missing clickhouse_url")?;
+			let clickhouse_config = server_config
+				.clickhouse
+				.as_ref()
+				.context("missing clickhouse")?;
+			let clickhouse_url = &*clickhouse_config.url.read();
 			let clickhouse_url_parsed = url::Url::parse(&clickhouse_url)?;
 			let clickhouse_host = clickhouse_url_parsed
 				.host_str()
@@ -336,9 +351,8 @@ async fn migrate_db_url(service: &SqlService) -> Result<String> {
 				.port_or_known_default()
 				.context("clickhouse missing port")?;
 
-			let clickhouse_user = "bolt";
-			let clickhouse_password =
-				rivet_util::env::read_secret(&["clickhouse", "users", "bolt", "password"]).await?;
+			let clickhouse_username = &clickhouse_config.users.bolt.username;
+			let clickhouse_password = &clickhouse_config.users.bolt.password.read();
 
 			let query_other = "&x-multi-statement=true&x-migrations-table-engine=ReplicatedMergeTree&secure=true&skip_verify=true".to_string();
 
@@ -347,7 +361,7 @@ async fn migrate_db_url(service: &SqlService) -> Result<String> {
 				clickhouse_host,
 				clickhouse_port,
 				encode(&service.db_name),
-				encode(&clickhouse_user),
+				encode(&clickhouse_username),
 				encode(&clickhouse_password),
 				query_other,
 			))

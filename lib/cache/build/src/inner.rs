@@ -29,7 +29,7 @@ impl CacheInner {
 			.map_err(|_| Error::MissingEnvVar("CHIRP_SERVICE_NAME".into()))?;
 		let service_source_hash = env::var("RIVET_SOURCE_HASH")
 			.map_err(|_| Error::MissingEnvVar("RIVET_SOURCE_HASH".into()))?;
-		let redis_cache = pools.redis_cache()?;
+		let redis_cache = pools.redis_cache().map_err(|err| Error::Pools(err))?;
 
 		Ok(Self::new(service_name, service_source_hash, redis_cache))
 	}

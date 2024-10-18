@@ -1,8 +1,5 @@
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-	#[error("{0}")]
-	Env(std::env::VarError),
-
 	#[error("missing nats pool")]
 	MissingNatsPool,
 
@@ -38,4 +35,7 @@ pub enum Error {
 
 	#[error("build clickhouse url: {0}")]
 	BuildClickHouseUrl(url::ParseError),
+
+	#[error("{0}")]
+	Global(global_error::GlobalError),
 }

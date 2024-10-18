@@ -19,6 +19,7 @@ md5 = "0.7.0"
 prost = "0.12.4"
 prost-types = "0.12.4"
 rivet-cache = { path = "../../cache/build" }
+rivet-config = { version = "0.1.0", path = "../../config" }
 rivet-connection = { path = "../../connection" }
 rivet-metrics = { path = "../../metrics" }
 rivet-operation = { path = "../../operation/core" }

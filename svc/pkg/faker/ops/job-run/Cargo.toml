@@ -16,3 +16,4 @@ job-run = { path = "../../../job-run" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../../lib/chirp/worker" }
+rivet-test = { version = "0.1.0", path = "../../../../../lib/test" }

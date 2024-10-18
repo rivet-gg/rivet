@@ -9,16 +9,17 @@ pub struct Auth {
 #[async_trait]
 impl ApiAuth for Auth {
 	async fn new(
+		config: rivet_config::Config,
 		api_token: Option<String>,
 		rate_limit_ctx: AuthRateLimitCtx<'_>,
 	) -> GlobalResult<Auth> {
-		Self::rate_limit(rate_limit_ctx).await?;
+		Self::rate_limit(&config, rate_limit_ctx).await?;
 
 		// TODO: Use JWT
 		if let Some(api_token) = api_token {
 			ensure_eq_with!(
 				api_token,
-				util::env::read_secret(&["rivet", "api_status", "token"]).await?,
+				*config.server()?.rivet.tokens.api_status.read(),
 				API_FORBIDDEN,
 				reason = "Invalid auth"
 			);
@@ -28,7 +29,10 @@ impl ApiAuth for Auth {
 		}
 	}
 
-	async fn rate_limit(_rate_limit_ctx: AuthRateLimitCtx<'_>) -> GlobalResult<()> {
+	async fn rate_limit(
+		config: &rivet_config::Config,
+		_rate_limit_ctx: AuthRateLimitCtx<'_>,
+	) -> GlobalResult<()> {
 		Ok(())
 	}
 }

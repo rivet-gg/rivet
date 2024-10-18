@@ -3,10 +3,6 @@ use std::collections::HashMap;
 use chirp_workflow::prelude::*;
 use nomad_client::apis::{allocations_api, configuration::Configuration, nodes_api};
 
-lazy_static::lazy_static! {
-	static ref NOMAD_CONFIG: Configuration = nomad_util::new_config_from_env().unwrap();
-}
-
 #[derive(sqlx::FromRow)]
 struct ServerRow {
 	server_id: Uuid,
@@ -80,8 +76,9 @@ pub async fn cluster_datacenter_topology_get(
 	let (allocation_info, node_info, pb_client_usage_res) = tokio::try_join!(
 		async {
 			// Request is not paginated
+			let nomad_config = nomad_util::new_build_config(ctx.config())?;
 			allocations_api::get_allocations(
-				&NOMAD_CONFIG,
+				&nomad_config,
 				None,
 				None,
 				None,
@@ -99,8 +96,9 @@ pub async fn cluster_datacenter_topology_get(
 		},
 		async {
 			// Request is not paginated
+			let nomad_config = nomad_util::new_build_config(ctx.config())?;
 			nodes_api::get_nodes(
-				&NOMAD_CONFIG,
+				&nomad_config,
 				None,
 				None,
 				None,

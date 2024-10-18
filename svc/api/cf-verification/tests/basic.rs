@@ -16,7 +16,7 @@
 // 			.with_target(false)
 // 			.try_init();
 
-// 		let pools = rivet_pools::from_env("api-cf-verification-test")
+// 		let pools = rivet_pools::Pools::new(config"api-cf-verification-test")
 // 			.await
 // 			.unwrap();
 // 		let cache = rivet_cache::CacheInner::new(

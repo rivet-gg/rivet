@@ -10,9 +10,6 @@ mod oci_config;
 mod seccomp;
 
 lazy_static::lazy_static! {
-	static ref NOMAD_CONFIG: nomad_client::apis::configuration::Configuration =
-		nomad_util::config_from_env().unwrap();
-
 	static ref REDIS_SCRIPT: redis::Script = redis::Script::new(include_str!("../../../redis-scripts/lobby_create.lua"));
 }
 
@@ -268,7 +265,6 @@ async fn worker(ctx: &OperationContext<mm::msg::lobby_create::Message>) -> Globa
 			analytics::msg::event_create::Event {
 				event_id: Some(Uuid::new_v4().into()),
 				name: "mm.lobby.create".into(),
-				namespace_id: ctx.namespace_id,
 				properties_json: Some(serde_json::to_string(&json!({
 					"lobby_id": lobby_id,
 					"lobby_group_id": lobby_group_id,
@@ -621,6 +617,7 @@ async fn create_docker_job(
 
 	// Generate the Docker job
 	let job_spec = nomad_job::gen_lobby_docker_job(
+		ctx.config(),
 		runtime,
 		&build.image_tag,
 		tier,
@@ -640,13 +637,13 @@ async fn create_docker_job(
 				&& port.port_range.is_none()
 		})
 		.flat_map(|port| {
-			let mut ports = vec![direct_proxied_port(lobby_id, region_id, port)];
+			let mut ports = vec![direct_proxied_port(ctx.config(), lobby_id, region_id, port)];
 			match backend::matchmaker::lobby_runtime::ProxyProtocol::from_i32(port.proxy_protocol) {
 				Some(
 					backend::matchmaker::lobby_runtime::ProxyProtocol::Http
 					| backend::matchmaker::lobby_runtime::ProxyProtocol::Https,
 				) => {
-					ports.push(path_proxied_port(lobby_id, region_id, port));
+					ports.push(path_proxied_port(ctx.config(), lobby_id, region_id, port));
 				}
 				Some(
 					backend::matchmaker::lobby_runtime::ProxyProtocol::Udp
@@ -762,7 +759,7 @@ async fn resolve_job_runner_binary_url(
 	ctx: &OperationContext<mm::msg::lobby_create::Message>,
 	region: &backend::region::Region,
 ) -> GlobalResult<String> {
-	let file_name = std::env::var("JOB_RUNNER_BINARY_KEY")?;
+	let file_name = &ctx.config().server()?.rivet.job_runner_binary_key;
 
 	// Build URL
 	let mm_lobby_delivery_method = unwrap!(
@@ -774,7 +771,8 @@ async fn resolve_job_runner_binary_url(
 			tracing::info!("job runner using s3 direct delivery");
 
 			// Build client
-			let s3_client = s3_util::Client::from_env_opt(
+			let s3_client = s3_util::Client::with_bucket_and_endpoint(
+				ctx.config(),
 				"bucket-infra-artifacts",
 				s3_util::EndpointKind::External,
 			)
@@ -833,7 +831,7 @@ async fn resolve_job_runner_binary_url(
 			let addr = format!(
 				"http://{vlan_ip}:8080/s3-cache/{namespace}-bucket-infra-artifacts/{file_name}",
 				vlan_ip = ats_vlan_ip,
-				namespace = util::env::namespace(),
+				namespace = ctx.config().rivet.namespace,
 			);
 
 			tracing::info!(%addr, "resolved artifact s3 url");
@@ -880,8 +878,12 @@ async fn resolve_image_artifact_url(
 			let bucket = "bucket-build";
 
 			// Build client
-			let s3_client =
-				s3_util::Client::from_env_opt(bucket, s3_util::EndpointKind::External).await?;
+			let s3_client = s3_util::Client::with_bucket_and_endpoint(
+				ctx.config(),
+				bucket,
+				s3_util::EndpointKind::External,
+			)
+			.await?;
 
 			let upload_id = unwrap_ref!(upload.upload_id).as_uuid();
 			let presigned_req = s3_client
@@ -948,7 +950,7 @@ async fn resolve_image_artifact_url(
 			let addr = format!(
 				"http://{vlan_ip}:8080/s3-cache/{namespace}-bucket-build/{upload_id}/{file_name}",
 				vlan_ip = ats_vlan_ip,
-				namespace = util::env::namespace(),
+				namespace = ctx.config().rivet.namespace,
 				upload_id = upload_id,
 			);
 
@@ -960,6 +962,7 @@ async fn resolve_image_artifact_url(
 }
 
 fn direct_proxied_port(
+	config: &rivet_config::Config,
 	lobby_id: Uuid,
 	region_id: Uuid,
 	port: &backend::matchmaker::lobby_runtime::Port,
@@ -974,7 +977,7 @@ fn direct_proxied_port(
 			lobby_id,
 			port.label,
 			region_id,
-			unwrap!(util::env::domain_job()),
+			unwrap_ref!(config.server()?.rivet.domain.job),
 		)],
 		proxy_protocol: job_proxy_protocol(port.proxy_protocol)? as i32,
 		ssl_domain_mode: backend::job::SslDomainMode::ParentWildcard as i32,
@@ -982,6 +985,7 @@ fn direct_proxied_port(
 }
 
 fn path_proxied_port(
+	config: &rivet_config::Config,
 	lobby_id: Uuid,
 	region_id: Uuid,
 	port: &backend::matchmaker::lobby_runtime::Port,
@@ -995,7 +999,7 @@ fn path_proxied_port(
 		ingress_hostnames: vec![format!(
 			"lobby.{}.{}/{}-{}",
 			region_id,
-			unwrap!(util::env::domain_job()),
+			unwrap_ref!(config.server()?.rivet.domain.job),
 			lobby_id,
 			port.label,
 		)],
