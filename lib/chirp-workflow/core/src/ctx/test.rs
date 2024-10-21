@@ -1,7 +1,6 @@
 use global_error::{GlobalError, GlobalResult};
 use rivet_pools::prelude::*;
 use serde::Serialize;
-use tokio::time::Duration;
 use uuid::Uuid;
 
 use crate::{
@@ -12,7 +11,6 @@ use crate::{
 		MessageCtx,
 	},
 	db::{DatabaseHandle, DatabasePgNats},
-	error::WorkflowError,
 	message::{AsTags, Message, NatsMessage},
 	operation::{Operation, OperationInput},
 	signal::Signal,

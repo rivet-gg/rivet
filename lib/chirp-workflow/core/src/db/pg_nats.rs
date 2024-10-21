@@ -1,6 +1,9 @@
 //! Implementation of a workflow database driver with PostgreSQL (CockroachDB) and NATS.
 
-use std::{sync::Arc, time::Duration};
+use std::{
+	sync::Arc,
+	time::{Duration, Instant},
+};
 
 use futures_util::StreamExt;
 use indoc::indoc;
@@ -17,7 +20,7 @@ use crate::{
 		event::{EventId, EventType, SleepState},
 		location::Location,
 	},
-	message, worker,
+	message, metrics, worker,
 };
 
 /// Max amount of workflows pulled from the database with each call to `pull_workflows`.
@@ -196,6 +199,8 @@ impl Database for DatabasePgNats {
 		worker_instance_id: Uuid,
 		filter: &[&str],
 	) -> WorkflowResult<Vec<PulledWorkflow>> {
+		let start_instant = Instant::now();
+
 		// Select all workflows that have a wake condition
 		let workflow_rows = self
 			.query(|| async {
@@ -237,6 +242,8 @@ impl Database for DatabasePgNats {
 									worker_instance_id IS NULL AND
 									-- Not silenced
 									silence_ts IS NULL AND
+									-- Has signals to listen to
+									array_length(wake_signals, 1) != 0 AND
 									-- Signal exists
 									(
 										SELECT true
@@ -260,6 +267,8 @@ impl Database for DatabasePgNats {
 									worker_instance_id IS NULL AND
 									-- Not silenced
 									silence_ts IS NULL AND
+									-- Has signals to listen to
+									array_length(wake_signals, 1) != 0 AND
 									-- Tagged signal exists
 									(
 										SELECT true
@@ -283,7 +292,7 @@ impl Database for DatabasePgNats {
 									worker_instance_id IS NULL AND
 									-- Not silenced
 									silence_ts IS NULL AND
-									sub_workflow_id IS NOT NULL AND
+									wake_sub_workflow_id IS NOT NULL AND
 									-- Sub workflow completed
 									(
 										SELECT true
@@ -325,6 +334,11 @@ impl Database for DatabasePgNats {
 			})
 			.await?;
 
+		let dt = start_instant.elapsed().as_secs_f64();
+		metrics::PULL_WORKFLOWS_PARTIAL_DURATION
+			.with_label_values(&[&worker_instance_id.to_string()])
+			.set(dt);
+
 		if workflow_rows.is_empty() {
 			return Ok(Vec::new());
 		}
@@ -362,6 +376,17 @@ impl Database for DatabasePgNats {
 				NULL AS inner_event_type
 			FROM db_workflow.workflow_activity_events AS ev
 			WHERE ev.workflow_id = ANY($1) AND forgotten = FALSE
+			-- Should only require `workflow_id` and `location2` but because `location2` is nullable the
+			-- database can't determine uniqueness
+			GROUP BY
+				ev.workflow_id,
+				ev.location,
+				ev.location2,
+				ev.version,
+				ev.activity_name,
+				ev.input_hash,
+				ev.output,
+				ev.create_ts
 			UNION ALL
 			-- Signal listen events
 			SELECT
@@ -544,7 +569,7 @@ impl Database for DatabasePgNats {
 				NULL AS inner_event_type
 			FROM db_workflow.workflow_version_check_events
 			WHERE workflow_id = ANY($1) AND forgotten = FALSE
-			ORDER BY workflow_id ASC
+			ORDER BY workflow_id ASC, location2 ASC
 			",
 		))
 		.bind(&workflow_ids)
@@ -553,6 +578,11 @@ impl Database for DatabasePgNats {
 		.map_err(WorkflowError::Sqlx)?;
 
 		let workflows = build_histories(workflow_rows, events)?;
+
+		let dt = start_instant.elapsed().as_secs_f64();
+		metrics::PULL_WORKFLOWS_FULL_DURATION
+			.with_label_values(&[&worker_instance_id.to_string()])
+			.set(dt);
 
 		Ok(workflows)
 	}
@@ -776,17 +806,15 @@ impl Database for DatabasePgNats {
 								ack_ts IS NULL AND
 								silence_ts IS NULL
 							UNION ALL
-							SELECT true AS tagged, signal_id, create_ts, signal_name, body
-							FROM db_workflow.tagged_signals@tagged_signals_partial
+							SELECT true AS tagged, signal_id, s.create_ts, signal_name, body
+							FROM db_workflow.tagged_signals@tagged_signals_partial AS s
+							JOIN db_workflow.workflows AS w
+							ON s.tags <@ w.tags
 							WHERE
-								tags <@ (
-									SELECT tags
-									FROM db_workflow.workflows
-									WHERE workflow_id = $1
-								) AND
-								signal_name = ANY($2) AND
-								ack_ts IS NULL AND
-								silence_ts IS NULL
+								w.workflow_id = $1 AND
+								s.signal_name = ANY($2) AND
+								s.ack_ts IS NULL AND
+								s.silence_ts IS NULL
 							ORDER BY create_ts ASC
 							LIMIT 1
 						),
@@ -1204,7 +1232,7 @@ impl Database for DatabasePgNats {
 							RETURNING 1
 						),
 						forget_message_send_events AS (
-							UPDATE db_workflow.workflow_message_send_events@workflow_message_events_workflow_id_loop_location2_hash_idx
+							UPDATE db_workflow.workflow_message_send_events@workflow_message_send_events_workflow_id_loop_location2_hash_idx
 							SET forgotten = TRUE
 							WHERE
 								workflow_id = $1 AND
