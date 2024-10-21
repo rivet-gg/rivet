@@ -121,21 +121,6 @@ impl TestCtx {
 		common::op(&self.db, &self.conn, self.ray_id, self.ts, false, input).await
 	}
 
-	/// Waits for a workflow to be triggered with a superset of given input. Strictly for tests.
-	pub fn observe<W: Workflow>(&self, input: serde_json::Value) -> GlobalResult<ObserveHandle> {
-		// Serialize input
-		let input_val = serde_json::value::to_raw_value(&input)
-			.map_err(WorkflowError::SerializeWorkflowOutput)
-			.map_err(GlobalError::raw)?;
-
-		Ok(ObserveHandle {
-			db: self.db.clone(),
-			name: W::NAME,
-			input: input_val,
-			ts: rivet_util::timestamp::now(),
-		})
-	}
-
 	pub async fn msg<M>(&self, body: M) -> builder::message::MessageBuilder<M>
 	where
 		M: Message,
@@ -255,38 +240,5 @@ impl TestCtx {
 	// Backwards compatibility
 	pub fn op_ctx(&self) -> &rivet_operation::OperationContext<()> {
 		&self.op_ctx
-	}
-}
-
-/// Like a subscription handle for messages but for workflows. Should only be used in tests
-pub struct ObserveHandle {
-	db: DatabaseHandle,
-	name: &'static str,
-	input: Box<serde_json::value::RawValue>,
-	ts: i64,
-}
-
-impl ObserveHandle {
-	pub async fn next(&mut self) -> GlobalResult<Uuid> {
-		tracing::info!(name=%self.name, input=?self.input, "observing workflow");
-
-		let (workflow_id, create_ts) = loop {
-			if let Some((workflow_id, create_ts)) = self
-				.db
-				.poll_workflow(self.name, &self.input, self.ts)
-				.await
-				.map_err(GlobalError::raw)?
-			{
-				break (workflow_id, create_ts);
-			}
-
-			tokio::time::sleep(Duration::from_millis(200)).await;
-		};
-
-		tracing::info!(name=%self.name, id=?workflow_id, "workflow found");
-
-		self.ts = create_ts + 1;
-
-		Ok(workflow_id)
 	}
 }
