@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [24.6.0](https://github.com/rivet-gg/rivet/compare/v24.5.2...v24.6.0) (2024-10-24)
+
+
+### Features
+
+* actors api ([#1228](https://github.com/rivet-gg/rivet/issues/1228)) ([75bb7e2](https://github.com/rivet-gg/rivet/commit/75bb7e2dbbf904d4c0fb8dcf43d5ef9691f11ca2))
+* add actor api ([#1231](https://github.com/rivet-gg/rivet/issues/1231)) ([bf506f6](https://github.com/rivet-gg/rivet/commit/bf506f639084182cc8c4ff3e377bc85fe292e661))
+* add pegboard isolate pooltype ([#1223](https://github.com/rivet-gg/rivet/issues/1223)) ([3e685b3](https://github.com/rivet-gg/rivet/commit/3e685b3752ebd3b8285d2bb176bda40642b8474c))
+* **clusters:** add pegboard pool ([#1153](https://github.com/rivet-gg/rivet/issues/1153)) ([bffa76f](https://github.com/rivet-gg/rivet/commit/bffa76fa8241816911b2d8741071cd498adc0139))
+* **clusters:** add pegboard pool type ([#1152](https://github.com/rivet-gg/rivet/issues/1152)) ([b4a1d16](https://github.com/rivet-gg/rivet/commit/b4a1d1681e392865e6641e5cb1d6ca7408ba46e1))
+* **ds:** implement pegboard dynamic server ([#1158](https://github.com/rivet-gg/rivet/issues/1158)) ([149de29](https://github.com/rivet-gg/rivet/commit/149de292ca8a238e77b3c849c4b8416a940a7a68))
+* **ds:** shard server workflow in two ([#1157](https://github.com/rivet-gg/rivet/issues/1157)) ([8329433](https://github.com/rivet-gg/rivet/commit/83294332c45bb71512d3743bb4ab373b329a38e9))
+* implement topology for all pool types ([#1225](https://github.com/rivet-gg/rivet/issues/1225)) ([f659729](https://github.com/rivet-gg/rivet/commit/f6597290b1eaa4ebccda7c26e53b642465408b9c))
+* **pegboard:** add client wf ([#1143](https://github.com/rivet-gg/rivet/issues/1143)) ([1589118](https://github.com/rivet-gg/rivet/commit/1589118e578ec617b38971ad1abbf42f5d13e5c7))
+* **pegboard:** add container runner and manager ([#1144](https://github.com/rivet-gg/rivet/issues/1144)) ([799c059](https://github.com/rivet-gg/rivet/commit/799c0592e44c7568fa2cb2e9b4c7261aa8e1253c))
+* **pegboard:** add dc wf, refactor tier, move stuff around ([#1159](https://github.com/rivet-gg/rivet/issues/1159)) ([6d7416e](https://github.com/rivet-gg/rivet/commit/6d7416e3d845a4492c483d9710387b8bb953e6f6))
+* **pegboard:** add gc service ([#1160](https://github.com/rivet-gg/rivet/issues/1160)) ([34b391f](https://github.com/rivet-gg/rivet/commit/34b391fb6e385fe85eef57164034fe5f7444cbf6))
+* **pegboard:** add js builds ([#1212](https://github.com/rivet-gg/rivet/issues/1212)) ([f2d04d1](https://github.com/rivet-gg/rivet/commit/f2d04d1ef6a7f7f494b2120431d8114b07c7d28e))
+* **pegboard:** add process monitoring, wip sqlite ([#1146](https://github.com/rivet-gg/rivet/issues/1146)) ([3019a65](https://github.com/rivet-gg/rivet/commit/3019a651526ba93e695b3ed398bec286205bb59a))
+* **pegboard:** add ws tunnel ([#1145](https://github.com/rivet-gg/rivet/issues/1145)) ([5f0085d](https://github.com/rivet-gg/rivet/commit/5f0085d484b7f1f2211de015ab1d20e21ccd7cce))
+* **pegboard:** create robust testing system ([#1171](https://github.com/rivet-gg/rivet/issues/1171)) ([2b26b6a](https://github.com/rivet-gg/rivet/commit/2b26b6ab47ac7a4ea1fec099089d5b34e9c1e02d))
+* **pegboard:** get container connection e2e ([#1165](https://github.com/rivet-gg/rivet/issues/1165)) ([7b93bec](https://github.com/rivet-gg/rivet/commit/7b93bec0f6689db13cc656341f9580f0a8906f9e))
+* **pegboard:** implement v8 isolate runner ([#1213](https://github.com/rivet-gg/rivet/issues/1213)) ([dc4d97e](https://github.com/rivet-gg/rivet/commit/dc4d97e5dd17c77be2d364e4268c50f8e361b9e0))
+* **pegboard:** implement ws wf ([#1141](https://github.com/rivet-gg/rivet/issues/1141)) ([3cfbfb5](https://github.com/rivet-gg/rivet/commit/3cfbfb55505c9a06d92d8480a8de39f0cfd4a3c4))
+* **pegboard:** integrate setup scripts ([#1147](https://github.com/rivet-gg/rivet/issues/1147)) ([cd85660](https://github.com/rivet-gg/rivet/commit/cd85660e27225c1ab72126f4cd1df9de4b0964be))
+* **pegboard:** make protocol more robust, implement db sync ([#1148](https://github.com/rivet-gg/rivet/issues/1148)) ([166991e](https://github.com/rivet-gg/rivet/commit/166991e4613b0516c1fe9378d09f594e528cf449))
+* **workflows:** add workflow migrations ([#1203](https://github.com/rivet-gg/rivet/issues/1203)) ([763036a](https://github.com/rivet-gg/rivet/commit/763036a5758e68618f52f64b626d601b603d8495))
+* **workflows:** implement listen with timeout ([#1156](https://github.com/rivet-gg/rivet/issues/1156)) ([4ed45c4](https://github.com/rivet-gg/rivet/commit/4ed45c4947f8835c30a746a95558e7f0cf28d2b3))
+
+
+### Bug Fixes
+
+* artifact dockerfile, tokio versions ([#1232](https://github.com/rivet-gg/rivet/issues/1232)) ([d5e44c5](https://github.com/rivet-gg/rivet/commit/d5e44c56be9d2aa2b5c8184b6598300f5dcd4980))
+* **bolt:** fix wf commands sql connection on distributed clusters, add errors to history command ([#1197](https://github.com/rivet-gg/rivet/issues/1197)) ([0ef9611](https://github.com/rivet-gg/rivet/commit/0ef961143e6ec988db381f286e4991b418239bca))
+* **bolt:** require --all flag when not using filters for cluster commands ([#1162](https://github.com/rivet-gg/rivet/issues/1162)) ([b140971](https://github.com/rivet-gg/rivet/commit/b140971460f13185567c8a4151f9390080e57c10))
+* **bolt:** wait for service monitor crd ([#1202](https://github.com/rivet-gg/rivet/issues/1202)) ([17cfd73](https://github.com/rivet-gg/rivet/commit/17cfd7333e71860da320cb6f2147a67eae6511dc))
+* fix api url parsing, pegboard install ([#1240](https://github.com/rivet-gg/rivet/issues/1240)) ([b420f2e](https://github.com/rivet-gg/rivet/commit/b420f2e1c709673274cefff22ab77d27aaf0799f))
+* fix indexes for wf driver ([#1226](https://github.com/rivet-gg/rivet/issues/1226)) ([46389aa](https://github.com/rivet-gg/rivet/commit/46389aa6d543394477f76b49b2f7bed90bdcb730))
+* fix legacy bolt get ([#1193](https://github.com/rivet-gg/rivet/issues/1193)) ([68285cb](https://github.com/rivet-gg/rivet/commit/68285cb271b0fabd49ddb8bad9f75aa8fcd3faff))
+* fix tunnels ([#1227](https://github.com/rivet-gg/rivet/issues/1227)) ([30fda93](https://github.com/rivet-gg/rivet/commit/30fda93bac067e78bfce9832bbaf3a712d8e898d))
+* fix url version conflicts with deno ([#1234](https://github.com/rivet-gg/rivet/issues/1234)) ([002024d](https://github.com/rivet-gg/rivet/commit/002024dedabb6db33e91521e2b82e908e686a646))
+* fmt and downgrade tokio ([#1222](https://github.com/rivet-gg/rivet/issues/1222)) ([2f9ae5b](https://github.com/rivet-gg/rivet/commit/2f9ae5bc0fe756025e9c3de859ad4d7ef0e30da3))
+* move default builds to tf, bump s3 sdk ([#1237](https://github.com/rivet-gg/rivet/issues/1237)) ([0194031](https://github.com/rivet-gg/rivet/commit/01940317cc79d4aa2b566002eaf47a87595f03ca))
+* **pegboard:** add dc id to pb client ([#1163](https://github.com/rivet-gg/rivet/issues/1163)) ([6be42ba](https://github.com/rivet-gg/rivet/commit/6be42baba4c8826a020810ba625cd75c3b0684c7))
+* **pegboard:** fix migrations ([#1230](https://github.com/rivet-gg/rivet/issues/1230)) ([3f10f74](https://github.com/rivet-gg/rivet/commit/3f10f74f04c29ca6792971bb4d06e7fee0a21cfd))
+* **pegboard:** get pb running on edge ([#1154](https://github.com/rivet-gg/rivet/issues/1154)) ([f0c1a18](https://github.com/rivet-gg/rivet/commit/f0c1a189432a699ec08e0bb8c503dd9e6bdd64d1))
+* **pegboard:** implement cleanup, rebuild, fix queries ([#1150](https://github.com/rivet-gg/rivet/issues/1150)) ([2bc957b](https://github.com/rivet-gg/rivet/commit/2bc957b84dbc66cb144e7275ebf81080155ee5bb))
+* **pegboard:** implement port choosing ([#1155](https://github.com/rivet-gg/rivet/issues/1155)) ([b0825e1](https://github.com/rivet-gg/rivet/commit/b0825e1655dfd1e5591ddf5d0f3d6d467c360687))
+* restructure pegboard install ([#1221](https://github.com/rivet-gg/rivet/issues/1221)) ([a26418e](https://github.com/rivet-gg/rivet/commit/a26418e4141e9949d53d4243b8c852dfc8bd2f80))
+* **workflows:** filter messages by tags ([#1142](https://github.com/rivet-gg/rivet/issues/1142)) ([f07c270](https://github.com/rivet-gg/rivet/commit/f07c270caf61a89076e8db93444071c44dc151b1))
+* **workflows:** get workflows working again with new history management ([#1210](https://github.com/rivet-gg/rivet/issues/1210)) ([f718812](https://github.com/rivet-gg/rivet/commit/f71881288a6f45f9077817b69daec25a3e6bd450))
+
+
+### Chores
+
+* add monolith entry crate ([#1208](https://github.com/rivet-gg/rivet/issues/1208)) ([c2a4c86](https://github.com/rivet-gg/rivet/commit/c2a4c8635df696459015ac22c36b48d5cae57050))
+* add os info to telemetry beacon ([#1235](https://github.com/rivet-gg/rivet/issues/1235)) ([d00491f](https://github.com/rivet-gg/rivet/commit/d00491f5bacf6d09b68a4dc775ea2a4764f79e59))
+* add shell container & add back db commands ([#1215](https://github.com/rivet-gg/rivet/issues/1215)) ([d7df31d](https://github.com/rivet-gg/rivet/commit/d7df31dde76fdb4145c19b1899a65c69476523ba))
+* **bolt:** make cluster optional ([#1164](https://github.com/rivet-gg/rivet/issues/1164)) ([b625213](https://github.com/rivet-gg/rivet/commit/b6252134e0a98c08b9addf064aa03ea6d1629d2c))
+* fix loading config in tests ([#1238](https://github.com/rivet-gg/rivet/issues/1238)) ([de562cb](https://github.com/rivet-gg/rivet/commit/de562cb0e792faba6c97e5dbe83f9a3d27ed997f))
+* merge rivet-gg/site in to docs/ folder ([#1250](https://github.com/rivet-gg/rivet/issues/1250)) ([dc823b6](https://github.com/rivet-gg/rivet/commit/dc823b691d98eb4f993ad805efea18c3ebfed469))
+* misc ([#1200](https://github.com/rivet-gg/rivet/issues/1200)) ([bebc9bf](https://github.com/rivet-gg/rivet/commit/bebc9bf66ce3f56936b517b9d0e5458b6be9b655))
+* misc fixes ([#1224](https://github.com/rivet-gg/rivet/issues/1224)) ([0bea10f](https://github.com/rivet-gg/rivet/commit/0bea10f7638446dca91b3ee1fc2c7a1e81254aa0))
+* move bolt cli ([#1216](https://github.com/rivet-gg/rivet/issues/1216)) ([f8ba24d](https://github.com/rivet-gg/rivet/commit/f8ba24d31daa0733fa10ae45fcc2664616f45a6e))
+* move env vars to config ([#1220](https://github.com/rivet-gg/rivet/issues/1220)) ([d07e6f2](https://github.com/rivet-gg/rivet/commit/d07e6f2d544cf0f48e06d05f2df9393a05c8a46e))
+* move errors/ to lib/formatted-errors/errorsf ([#1244](https://github.com/rivet-gg/rivet/issues/1244)) ([a34e69e](https://github.com/rivet-gg/rivet/commit/a34e69ed7966d32d30b490fa8189b1d525c12aba))
+* move fern to sdks folder ([#1246](https://github.com/rivet-gg/rivet/issues/1246)) ([e74805d](https://github.com/rivet-gg/rivet/commit/e74805df46dc8e67ef85c7e0505e07d2bcf2b90b))
+* move media to subfolder ([#1245](https://github.com/rivet-gg/rivet/issues/1245)) ([43c2c79](https://github.com/rivet-gg/rivet/commit/43c2c79f66145aa8efa72ca91ba43d231c776f30))
+* move migrate to rivet binary ([#1209](https://github.com/rivet-gg/rivet/issues/1209)) ([9ba8730](https://github.com/rivet-gg/rivet/commit/9ba8730a529d1e33de167a8a5937e4031b8e80ec))
+* move proto to legacy ([#1243](https://github.com/rivet-gg/rivet/issues/1243)) ([ed62de3](https://github.com/rivet-gg/rivet/commit/ed62de3213179b305c772e6b80bae2da1913ba3c))
+* **pegboard:** get connection working e2e ([#1161](https://github.com/rivet-gg/rivet/issues/1161)) ([f4737bb](https://github.com/rivet-gg/rivet/commit/f4737bb66fd61d661547bd2cce88650e4c9c43b5))
+* remove json enums ([#1151](https://github.com/rivet-gg/rivet/issues/1151)) ([46dc2fc](https://github.com/rivet-gg/rivet/commit/46dc2fc83684d6095c8490d1689b2c3a5240d343))
+* remove remaining tf infra scripts ([#1242](https://github.com/rivet-gg/rivet/issues/1242)) ([a6ccd5e](https://github.com/rivet-gg/rivet/commit/a6ccd5e7ff14a44fb150809a75bc8795f82e6a4b))
+* remove unneeded nix configs ([#1248](https://github.com/rivet-gg/rivet/issues/1248)) ([1b0d5d7](https://github.com/rivet-gg/rivet/commit/1b0d5d7e638976a4dadec2e511956a1d610fa515))
+* remove user-presence ([#1207](https://github.com/rivet-gg/rivet/issues/1207)) ([450f1ab](https://github.com/rivet-gg/rivet/commit/450f1ab3860585b0fb3e1afa86e956239d4b69f0))
+* reorg rust packages ([#1247](https://github.com/rivet-gg/rivet/issues/1247)) ([26ce993](https://github.com/rivet-gg/rivet/commit/26ce9938d38ccd89e0db2b2f9b07ab2dc2c369d7))
+* replace nix bolt with cargo run command ([#1214](https://github.com/rivet-gg/rivet/issues/1214)) ([aaafef2](https://github.com/rivet-gg/rivet/commit/aaafef2d27efb2fb5b701456a906f9eda9240f03))
+* **servers:** increase rate limit ([#1194](https://github.com/rivet-gg/rivet/issues/1194)) ([c265a37](https://github.com/rivet-gg/rivet/commit/c265a373a0bb546c1cc462eede49af28c9e28aad))
+* update bolt with new service definition ([#1211](https://github.com/rivet-gg/rivet/issues/1211)) ([6208bc2](https://github.com/rivet-gg/rivet/commit/6208bc2d47935b7e50a8124f9f51d899ddbbb5c6))
+* **workflows:** tidy up internals ([#1199](https://github.com/rivet-gg/rivet/issues/1199)) ([3f0ff1e](https://github.com/rivet-gg/rivet/commit/3f0ff1e3fa7ce913118672dd8f4770b8d039f6b7))
+
 ## [24.5.2](https://github.com/rivet-gg/rivet/compare/v24.5.1...v24.5.2) (2024-09-30)
 
 
