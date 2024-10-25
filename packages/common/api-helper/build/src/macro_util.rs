@@ -46,7 +46,7 @@ impl __RouterConfig {
 				.server()?
 				.rivet
 				.api
-				.public_origin
+				.public_origin()
 				.to_string()
 				.trim_end_matches('/'),
 			uri,
