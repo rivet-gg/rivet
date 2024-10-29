@@ -6,26 +6,51 @@ use std::{future::Future, pin::Pin, sync::Arc, time::Duration};
 pub struct Service {
 	pub name: &'static str,
 	pub kind: ServiceKind,
-	pub run: Arc<
+	pub fut_builder_builder: Arc<
+		// Build fut builder
 		dyn Fn(
 				rivet_config::Config,
-				rivet_pools::Pools,
-			) -> Pin<Box<dyn Future<Output = GlobalResult<()>> + Send>>
-			+ Send
+			) -> GlobalResult<
+				// Fut builder
+				Box<
+					dyn Fn(
+							rivet_config::Config,
+							rivet_pools::Pools,
+						) -> Pin<Box<dyn Future<Output = GlobalResult<()>> + Send>>
+						+ Send
+						+ Sync,
+				>,
+			> + Send
 			+ Sync,
 	>,
 }
 
 impl Service {
-	pub fn new<F, Fut>(name: &'static str, kind: ServiceKind, run: F) -> Self
+	pub fn new<F, Fut>(name: &'static str, kind: ServiceKind, fut_builder: F) -> Self
 	where
-		F: Fn(rivet_config::Config, rivet_pools::Pools) -> Fut + Send + Sync + 'static,
+		F: Fn(rivet_config::Config, rivet_pools::Pools) -> Fut + Clone + Send + Sync + 'static,
+		Fut: Future<Output = GlobalResult<()>> + Send + 'static,
+	{
+		Self::try_new::<_, F, Fut>(name, kind, move |_| GlobalResult::Ok(fut_builder.clone()))
+	}
+
+	pub fn try_new<FSetup, FFut, Fut>(
+		name: &'static str,
+		kind: ServiceKind,
+		fut_builder_builder: FSetup,
+	) -> Self
+	where
+		FSetup: Fn(rivet_config::Config) -> GlobalResult<FFut> + Send + Sync + 'static,
+		FFut: Fn(rivet_config::Config, rivet_pools::Pools) -> Fut + Send + Sync + 'static,
 		Fut: Future<Output = GlobalResult<()>> + Send + 'static,
 	{
 		Self {
 			name,
 			kind,
-			run: Arc::new(move |config, pools| Box::pin(run(config, pools))),
+			fut_builder_builder: Arc::new(move |config| {
+				let fut = fut_builder_builder(config)?;
+				GlobalResult::Ok(Box::new(move |config, pools| Box::pin(fut(config, pools))))
+			}),
 		}
 	}
 }
@@ -83,6 +108,8 @@ pub async fn start(
 
 		match service.kind.behavior() {
 			ServiceBehavior::Service => {
+				let fut_builder = (service.fut_builder_builder)(config.clone())
+					.map_err(|err| anyhow!("failed to build service: {err}"))?;
 				join_set
 					.build_task()
 					.name(&format!("rivet::service::{}", service.name))
@@ -93,7 +120,7 @@ pub async fn start(
 							loop {
 								tracing::info!(service = %service.name, "starting service");
 
-								match (service.run)(config.clone(), pools.clone()).await {
+								match (fut_builder)(config.clone(), pools.clone()).await {
 									Result::Ok(_) => {
 										tracing::error!(service = %service.name, "service exited unexpectedly");
 									}
@@ -109,31 +136,31 @@ pub async fn start(
 					.context("failed to spawn service")?;
 			}
 			ServiceBehavior::Oneshot => {
-				join_set
-					.build_task()
-					.name(&format!("rivet::oneoff::{}", service.name))
-					.spawn({
-						let config = config.clone();
-						let pools = pools.clone();
-						async move {
-							loop {
-								tracing::info!(oneoff = %service.name, "starting oneoff");
-
-								match (service.run)(config.clone(), pools.clone()).await {
-									Result::Ok(_) => {
-										tracing::error!(oneoff = %service.name, "oneoff finished");
-										break;
-									}
-									Err(err) => {
-										tracing::error!(oneoff = %service.name, ?err, "oneoff crashed");
-									}
-								}
-
-								tokio::time::sleep(Duration::from_secs(1)).await;
-							}
-						}
-					})
-					.context("failed to spawn oneoff")?;
+				// join_set
+				// 	.build_task()
+				// 	.name(&format!("rivet::oneoff::{}", service.name))
+				// 	.spawn({
+				// 		let config = config.clone();
+				// 		let pools = pools.clone();
+				// 		async move {
+				// 			loop {
+				// 				tracing::info!(oneoff = %service.name, "starting oneoff");
+				//
+				// 				match (service.run)(config.clone(), pools.clone())?.await {
+				// 					Result::Ok(_) => {
+				// 						tracing::error!(oneoff = %service.name, "oneoff finished");
+				// 						break;
+				// 					}
+				// 					Err(err) => {
+				// 						tracing::error!(oneoff = %service.name, ?err, "oneoff crashed");
+				// 					}
+				// 				}
+				//
+				// 				tokio::time::sleep(Duration::from_secs(1)).await;
+				// 			}
+				// 		}
+				// 	})
+				// 	.context("failed to spawn oneoff")?;
 			}
 		}
 	}
@@ -142,8 +169,10 @@ pub async fn start(
 	rivet_health_checks::spawn_standalone(rivet_health_checks::Config {
 		config: config.clone(),
 		pools: Some(pools.clone()),
-	})?;
-	rivet_metrics::spawn_standalone(config.clone())?;
+	})
+	.map_err(|err| anyhow!("failed to spawn health checks: {err}"))?;
+	rivet_metrics::spawn_standalone(config.clone())
+		.map_err(|err| anyhow!("failed to spawn metrics: {err}"))?;
 
 	// Wait for services
 	join_set.join_all().await;
