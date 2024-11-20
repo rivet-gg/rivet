@@ -1,9 +1,9 @@
 [package]
 name = "cluster"
-version = "0.0.1"
-edition = "2018"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 acme-lib = "0.9"
@@ -33,7 +33,7 @@ linode = { path = "../linode" }
 server-spec = { path = "../server-spec" }
 pegboard = { path = "../pegboard" }
 token-create = { path = "../token/ops/create" }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
+rivet-config = { path = "../../common/config" }
 ipnet = "2.10.1"
 
 [dependencies.nomad_client]

@@ -1,9 +1,9 @@
 [package]
 name = "api-matchmaker"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 rivet-convert = { path = "../../common/convert" }
@@ -59,8 +59,8 @@ region-resolve-for-game = { path = "../../services/region/ops/resolve-for-game" 
 token-create = { path = "../../services/token/ops/create" }
 token-revoke = { path = "../../services/token/ops/revoke" }
 user-identity-get = { path = "../../services/user-identity/ops/get" }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
-rivet-env = { version = "0.1.0", path = "../../common/env" }
+rivet-config = { path = "../../common/config" }
+rivet-env = { path = "../../common/env" }
 
 [dev-dependencies]
 reqwest = "0.11"

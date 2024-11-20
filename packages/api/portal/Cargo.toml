@@ -1,9 +1,9 @@
 [package]
 name = "api-portal"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 rivet-convert = { path = "../../common/convert" }
@@ -43,8 +43,8 @@ team-member-count = { path = "../../services/team/ops/member-count" }
 token-revoke = { path = "../../services/token/ops/revoke" }
 user-get = { path = "../../services/user/ops/get" }
 user-team-list = { path = "../../services/user/ops/team-list" }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
-rivet-env = { version = "0.1.0", path = "../../common/env" }
+rivet-config = { path = "../../common/config" }
+rivet-env = { path = "../../common/env" }
 
 [dev-dependencies]
 rivet-connection = { path = "../../common/connection" }

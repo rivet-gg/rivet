@@ -1,9 +1,9 @@
 [package]
 name = "api-auth"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 rivet-convert = { path = "../../common/convert" }
@@ -41,10 +41,10 @@ user-resolve-email = { path = "../../services/user/ops/resolve-email" }
 user-token-create = { path = "../../services/user/ops/token-create" }
 user-identity-create = { path = "../../services/user-identity/ops/create" }
 token-create = { path = "../../services/token/ops/create" }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
-rivet-env = { version = "0.1.0", path = "../../common/env" }
-user = { version = "0.1.0", path = "../../services/user" }
-chirp-workflow = { version = "0.1.0", path = "../../common/chirp-workflow/core" }
+rivet-config = { path = "../../common/config" }
+rivet-env = { path = "../../common/env" }
+user = { path = "../../services/user" }
+chirp-workflow = { path = "../../common/chirp-workflow/core" }
 
 [dev-dependencies]
 rivet-auth = { path = "../../common/smithy-output/api-auth/rust" }

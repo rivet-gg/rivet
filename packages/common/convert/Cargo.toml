@@ -1,9 +1,9 @@
 [package]
 name = "rivet-convert"
-version = "0.1.0"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-client = { path = "../chirp/client" }
@@ -42,4 +42,4 @@ user-team-list = { path = "../../services/user/ops/team-list" }
 rivet-api = { path = "../../../sdks/full/rust" }
 rivet-group-server = { path = "../smithy-output/api-group/rust-server" }
 rivet-portal-server = { path = "../smithy-output/api-portal/rust-server" }
-rivet-config = { version = "0.1.0", path = "../config" }
+rivet-config = { path = "../config" }

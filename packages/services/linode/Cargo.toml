@@ -1,9 +1,9 @@
 [package]
 name = "linode"
-version = "0.0.1"
-edition = "2018"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-workflow = { path = "../../common/chirp-workflow/core" }
@@ -11,7 +11,7 @@ chrono = "0.4"
 ipnet = "2.10.1"
 rand = "0.8"
 reqwest = { version = "0.11", features = ["json"] }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
+rivet-config = { path = "../../common/config" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ssh-key = "0.6.3"

@@ -1,9 +1,9 @@
 [package]
 name = "api-job"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 api-helper = { path = "../../common/api-helper/build" }
@@ -32,8 +32,8 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
 ] }
 url = "2.2.2"
 uuid = { version = "1", features = ["v4"] }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
-rivet-env = { version = "0.1.0", path = "../../common/env" }
+rivet-config = { path = "../../common/config" }
+rivet-env = { path = "../../common/env" }
 
 [dev-dependencies]
 rivet-connection = { path = "../../common/connection" }

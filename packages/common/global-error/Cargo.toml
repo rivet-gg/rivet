@@ -1,9 +1,9 @@
 [package]
 name = "global-error"
-version = "0.1.5"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [features]
 protobuf-src = ["types-proto/protobuf-src"]

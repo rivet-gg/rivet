@@ -1,9 +1,9 @@
 [package]
 name = "nomad-monitor"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-client = { path = "../../../../common/chirp/client" }
@@ -34,7 +34,7 @@ util-job = { package = "rivet-util-job", path = "../../../job/util" }
 
 cluster = { path = "../../../cluster" }
 ds = { path = "../../../ds" }
-rivet-config = { version = "0.1.0", path = "../../../../common/config" }
+rivet-config = { path = "../../../../common/config" }
 
 [dependencies.nomad_client]
 path = "../../../../../externals/nomad-client"

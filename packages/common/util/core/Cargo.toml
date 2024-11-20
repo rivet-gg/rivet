@@ -1,9 +1,9 @@
 [package]
 name = "rivet-util"
-version = "0.1.0"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [features]
 default = ["macros"]
@@ -22,7 +22,7 @@ lazy_static = "1.4"
 rand = "0.8"
 regex = "1.4"
 reqwest = { version = "0.11", default-features = false }
-rivet-config = { version = "0.1.0", path = "../../config" }
+rivet-config = { path = "../../config" }
 rivet-util-macros = { path = "../macros" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }

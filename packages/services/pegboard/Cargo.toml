@@ -1,9 +1,9 @@
 [package]
 name = "pegboard"
-version = "0.0.1"
-edition = "2018"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [features]
 default = ["workflows", "ops"]
@@ -18,11 +18,11 @@ serde = { version = "1.0.198", features = ["derive"] }
 serde_json = "1.0.132"
 strum = { version = "0.24", features = ["derive"] }
 thiserror = "1.0"
-util = { version = "0.1.0", package = "rivet-util", path = "../../common/util/core" }
+util = { package = "rivet-util", path = "../../common/util/core" }
 uuid = "1.11.0"
 
 server-spec = { path = "../server-spec", optional = true }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
+rivet-config = { path = "../../common/config" }
 
 [dependencies.sqlx]
 optional = true

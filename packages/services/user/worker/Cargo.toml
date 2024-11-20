@@ -1,9 +1,9 @@
 [package]
 name = "user-worker"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 rivet-convert = { path = "../../../common/convert" }
@@ -24,7 +24,7 @@ user-get = { path = "../ops/get" }
 user-identity-delete = { path = "../../user-identity/ops/delete" }
 user-profile-validate = { path = "../ops/profile-validate" }
 user-team-list = { path = "../ops/team-list" }
-rivet-config = { version = "0.1.0", path = "../../../common/config" }
+rivet-config = { path = "../../../common/config" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../common/chirp/worker" }
