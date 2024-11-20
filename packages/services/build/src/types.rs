@@ -28,3 +28,38 @@ pub struct Build {
 	pub compression: BuildCompression,
 	pub tags: HashMap<String, Option<String>>,
 }
+
+// TODO: Move to upload pkg when its converted to new ops
+mod upload {
+	use chirp_workflow::prelude::*;
+	use rivet_operation::prelude::proto::backend;
+
+	#[derive(Debug)]
+	pub struct PrepareFile {
+		pub path: String,
+		pub mime: Option<String>,
+		pub content_length: u64,
+		pub multipart: bool,
+	}
+
+	#[derive(Debug)]
+	pub struct PresignedUploadRequest {
+		pub path: String,
+		pub url: String,
+		pub part_number: u32,
+		pub byte_offset: u64,
+		pub content_length: u64,
+	}
+
+	impl From<PresignedUploadRequest> for backend::upload::PresignedUploadRequest {
+		fn from(value: PresignedUploadRequest) -> Self {
+			backend::upload::PresignedUploadRequest {
+				path: value.path,
+				url: value.url,
+				part_number: value.part_number,
+				byte_offset: value.byte_offset,
+				content_length: value.content_length,
+			}
+		}
+	}
+}
