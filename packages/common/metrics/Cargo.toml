@@ -6,12 +6,12 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-global-error = { path = "../global-error" }
+global-error.workspace = true
 hyper = { version = "0.14", features = ["server", "http1", "tcp"] }
 lazy_static = "1.4"
 prometheus = "0.13"
-rivet-config = { path = "../config" }
-rivet-env = { path = "../env" }
+rivet-config.workspace = true
+rivet-env.workspace = true
 tokio = "1.36.0"
 tracing = "0.1"
 

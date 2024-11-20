@@ -6,14 +6,14 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-chirp-worker = { path = "../../../common/chirp/worker" }
-chirp-client = { path = "../../../common/chirp/client" }
+chirp-worker.workspace = true
+chirp-client.workspace = true
 reqwest = { version = "0.11" }
-rivet-health-checks = { path = "../../../common/health-checks" }
-rivet-metrics = { path = "../../../common/metrics" }
-rivet-runtime = { path = "../../../common/runtime" }
+rivet-health-checks.workspace = true
+rivet-metrics.workspace = true
+rivet-runtime.workspace = true
 chrono = "0.4"
-rivet-config = { path = "../../../common/config" }
+rivet-config.workspace = true
 
 [dev-dependencies]
-chirp-worker = { path = "../../../common/chirp/worker" }
+chirp-worker.workspace = true

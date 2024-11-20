@@ -6,10 +6,10 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-chirp-client = { path = "../chirp/client" }
-chirp-perf = { path = "../chirp/perf" }
-global-error = { path = "../global-error" }
-rivet-cache = { path = "../cache/build" }
-rivet-pools = { path = "../pools" }
-rivet-util = { path = "../util/core" }
+chirp-client.workspace = true
+chirp-perf.workspace = true
+global-error.workspace = true
+rivet-cache.workspace = true
+rivet-pools.workspace = true
+rivet-util.workspace = true
 tracing = "0.1"

@@ -6,4 +6,4 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-types-proto = { path = "../types-proto/core" }
+types-proto.workspace = true

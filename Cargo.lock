@@ -2556,6 +2556,7 @@ dependencies = [
  "cloud-game-config-create",
  "cloud-namespace-create",
  "cloud-version-publish",
+ "ds",
  "game-create",
  "game-namespace-create",
  "game-namespace-resolve-name-id",

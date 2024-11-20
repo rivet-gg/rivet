@@ -6,15 +6,15 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-rivet-operation = { path = "../../../../common/operation/core" }
-chirp-client = { path = "../../../../common/chirp/client" }
+rivet-operation.workspace = true
+chirp-client.workspace = true
 prost = "0.10"
 
-faker-job-template = { path = "../job-template" }
-faker-region = { path = "../region" }
-job-run = { path = "../../../job-run" }
-rivet-test = { path = "../../../../common/test" }
+faker-job-template.workspace = true
+faker-region.workspace = true
+job-run.workspace = true
+rivet-test.workspace = true
 
 [dev-dependencies]
-chirp-worker = { path = "../../../../common/chirp/worker" }
-rivet-test = { path = "../../../../common/test" }
+chirp-worker.workspace = true
+rivet-test.workspace = true

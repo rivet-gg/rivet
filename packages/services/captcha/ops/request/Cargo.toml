@@ -6,15 +6,15 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-rivet-operation = { path = "../../../../common/operation/core" }
-chirp-client = { path = "../../../../common/chirp/client" }
+rivet-operation.workspace = true
+chirp-client.workspace = true
 prost = "0.10"
 chrono = "0.4"
-util-captcha = { package = "rivet-util-captcha", path = "../../util" }
+util-captcha.workspace = true
 
 [dependencies.sqlx]
 path = "../../../../../externals/sqlx"
 default-features = false
 
 [dev-dependencies]
-chirp-worker = { path = "../../../../common/chirp/worker" }
+chirp-worker.workspace = true

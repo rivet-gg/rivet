@@ -6,13 +6,13 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-chirp-client = { path = "../../../../common/chirp/client" }
-chirp-workflow = { path = "../../../../common/chirp-workflow/core" }
-rivet-config = { path = "../../../../common/config" }
-rivet-connection = { path = "../../../../common/connection" }
-rivet-health-checks = { path = "../../../../common/health-checks" }
-rivet-metrics = { path = "../../../../common/metrics" }
-rivet-runtime = { path = "../../../../common/runtime" }
+chirp-client.workspace = true
+chirp-workflow.workspace = true
+rivet-config.workspace = true
+rivet-connection.workspace = true
+rivet-health-checks.workspace = true
+rivet-metrics.workspace = true
+rivet-runtime.workspace = true
 tokio = { version = "1.40", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "ansi"] }

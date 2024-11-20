@@ -6,14 +6,14 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-rivet-operation = { path = "../../../../common/operation/core" }
-chirp-client = { path = "../../../../common/chirp/client" }
+rivet-operation.workspace = true
+chirp-client.workspace = true
 prost = "0.10"
 
-cloud-namespace-create = { path = "../../../cloud/ops/namespace-create" }
-game-namespace-create = { path = "../../../game/ops/namespace-create" }
+cloud-namespace-create.workspace = true
+game-namespace-create.workspace = true
 
 [dev-dependencies]
-chirp-worker = { path = "../../../../common/chirp/worker" }
+chirp-worker.workspace = true
 
-faker-game = { path = "../game" }
+faker-game.workspace = true

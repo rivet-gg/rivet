@@ -12,17 +12,17 @@ ops = ["chirp"]
 chirp = ["chirp-workflow", "sqlx", "nix", "server-spec"]
 
 [dependencies]
-chirp-workflow = { path = "../../common/chirp-workflow/core", optional = true }
+chirp-workflow = { workspace = true, optional = true }
 nix = { version = "0.27", default-features = false, features = ["user", "signal"], optional = true }
 serde = { version = "1.0.198", features = ["derive"] }
 serde_json = "1.0.132"
 strum = { version = "0.24", features = ["derive"] }
 thiserror = "1.0"
-util = { package = "rivet-util", path = "../../common/util/core" }
+util.workspace = true
 uuid = "1.11.0"
 
-server-spec = { path = "../server-spec", optional = true }
-rivet-config = { path = "../../common/config" }
+server-spec = { workspace = true, optional = true }
+rivet-config.workspace = true
 
 [dependencies.sqlx]
 optional = true

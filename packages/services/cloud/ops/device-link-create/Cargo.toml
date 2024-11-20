@@ -6,12 +6,12 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-rivet-operation = { path = "../../../../common/operation/core" }
-chirp-client = { path = "../../../../common/chirp/client" }
+rivet-operation.workspace = true
+chirp-client.workspace = true
 prost = "0.10"
 
-token-create = { path = "../../../token/ops/create" }
+token-create.workspace = true
 
 [dev-dependencies]
-chirp-worker = { path = "../../../../common/chirp/worker" }
-rivet-claims = { path = "../../../../common/claims" }
+chirp-worker.workspace = true
+rivet-claims.workspace = true

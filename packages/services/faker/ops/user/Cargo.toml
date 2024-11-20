@@ -6,11 +6,11 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-chirp-client = { path = "../../../../common/chirp/client" }
+chirp-client.workspace = true
 prost = "0.10"
-rivet-operation = { path = "../../../../common/operation/core" }
+rivet-operation.workspace = true
 
 [dev-dependencies]
-chirp-worker = { path = "../../../../common/chirp/worker" }
+chirp-worker.workspace = true
 
-user-get = { path = "../../../user/ops/get" }
+user-get.workspace = true

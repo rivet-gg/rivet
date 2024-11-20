@@ -46,7 +46,15 @@ path = "packages/common/connection"
 [workspace.dependencies.rivet-util]
 path = "packages/common/util/core"
 
+[workspace.dependencies.util]
+package = "rivet-util"
+path = "packages/common/util/core"
+
 [workspace.dependencies.rivet-util-search]
+path = "packages/common/util/search"
+
+[workspace.dependencies.util-search]
+package = "rivet-util-search"
 path = "packages/common/util/search"
 
 [workspace.dependencies.rivet-util-macros]
@@ -484,6 +492,10 @@ path = "packages/services/team-invite/worker"
 [workspace.dependencies.rivet-util-captcha]
 path = "packages/services/captcha/util"
 
+[workspace.dependencies.util-captcha]
+package = "rivet-util-captcha"
+path = "packages/services/captcha/util"
+
 [workspace.dependencies.captcha-hcaptcha-config-get]
 path = "packages/services/captcha/ops/hcaptcha-config-get"
 
@@ -562,6 +574,10 @@ path = "packages/services/nomad/standalone/monitor"
 [workspace.dependencies.rivet-util-cdn]
 path = "packages/services/cdn/util"
 
+[workspace.dependencies.util-cdn]
+package = "rivet-util-cdn"
+path = "packages/services/cdn/util"
+
 [workspace.dependencies.cdn-site-get]
 path = "packages/services/cdn/ops/site-get"
 
@@ -611,6 +627,10 @@ path = "packages/services/cdn/ops/namespace-create"
 path = "packages/services/cdn/worker"
 
 [workspace.dependencies.rivet-util-team]
+path = "packages/services/team/util"
+
+[workspace.dependencies.util-team]
+package = "rivet-util-team"
 path = "packages/services/team/util"
 
 [workspace.dependencies.team-validate]
@@ -709,10 +729,18 @@ path = "packages/services/cloud/worker"
 [workspace.dependencies.rivet-util-job]
 path = "packages/services/job/util"
 
+[workspace.dependencies.util-job]
+package = "rivet-util-job"
+path = "packages/services/job/util"
+
 [workspace.dependencies.job-gc]
 path = "packages/services/job/standalone/gc"
 
 [workspace.dependencies.rivet-util-mm]
+path = "packages/services/mm/util"
+
+[workspace.dependencies.util-mm]
+package = "rivet-util-mm"
 path = "packages/services/mm/util"
 
 [workspace.dependencies.mm-gc]
@@ -779,6 +807,10 @@ path = "packages/services/external/worker"
 path = "packages/services/build"
 
 [workspace.dependencies.rivet-util-build]
+path = "packages/services/build/util"
+
+[workspace.dependencies.util-build]
+package = "rivet-util-build"
 path = "packages/services/build/util"
 
 [workspace.dependencies.build-default-create]

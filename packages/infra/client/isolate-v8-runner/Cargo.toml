@@ -24,7 +24,7 @@ tokio-tungstenite = "0.23.1"
 twox-hash = "1.6.3"
 uuid = { version = "1.6.1", features = ["v4"] }
 
-runner-protocol = { path = "../runner-protocol", package = "pegboard-runner-protocol" }
+runner-protocol.workspace = true
 
 [dependencies.deno_runtime]
 path = "../../../../externals/deno/runtime"
