@@ -134,13 +134,13 @@ pub async fn run_inner(
 	msg_tx: Option<smpsc::SyncSender<log_shipper::ReceivedMessage>>,
 	actor_config: config::actor::Config,
 ) -> Result<i32> {
-	tracing::info!(?actor_id, "Starting isolate");
+	tracing::info!(?actor_id, "starting isolate");
 
 	// Init KV store (create or open)
 	let mut kv = ActorKv::new(utils::fdb_handle(&config)?, actor_config.owner.clone());
 	kv.init().await?;
 
-	tracing::info!(?actor_id, "Isolate KV initialized");
+	tracing::info!(?actor_id, "isolate kv initialized");
 
 	// Should match the path from `Actor::download_image` in manager/src/actor/setup.rs. index.js might not
 	// exist but thats up to the user to bundle it correctly.
