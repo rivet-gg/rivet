@@ -6,14 +6,14 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-chirp-workflow = { path = "../../../../common/chirp-workflow/core" }
-rivet-health-checks = { path = "../../../../common/health-checks" }
-rivet-metrics = { path = "../../../../common/metrics" }
-rivet-runtime = { path = "../../../../common/runtime" }
+chirp-workflow.workspace = true
+rivet-health-checks.workspace = true
+rivet-metrics.workspace = true
+rivet-runtime.workspace = true
 
-cluster = { path = "../../../cluster" }
-ds = { path = "../../../ds" }
-job-run = { path = "../../../job-run" }
-linode = { path = "../../../linode" }
-pegboard = { path = "../../../pegboard" }
-rivet-config = { path = "../../../../common/config" }
+cluster.workspace = true
+ds.workspace = true
+job-run.workspace = true
+linode.workspace = true
+pegboard.workspace = true
+rivet-config.workspace = true

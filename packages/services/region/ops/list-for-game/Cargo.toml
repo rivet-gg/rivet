@@ -6,18 +6,18 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-chirp-client = { path = "../../../../common/chirp/client" }
-chirp-workflow = { path = "../../../../common/chirp-workflow/core" }
+chirp-client.workspace = true
+chirp-workflow.workspace = true
 prost = "0.10"
-rivet-operation = { path = "../../../../common/operation/core" }
+rivet-operation.workspace = true
 
-cluster = { path = "../../../cluster" }
+cluster.workspace = true
 
 [dependencies.sqlx]
 path = "../../../../../externals/sqlx"
 default-features = false
 
 [dev-dependencies]
-chirp-worker = { path = "../../../../common/chirp/worker" }
+chirp-worker.workspace = true
 
-faker-region = { path = "../../../faker/ops/region" }
+faker-region.workspace = true

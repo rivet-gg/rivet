@@ -6,9 +6,9 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-chirp-workflow = { path = "../../common/chirp-workflow/core" }
+chirp-workflow.workspace = true
 
-cluster = { path = "../cluster" }
-server-spec = { path = "../server-spec" }
-linode = { path = "../linode" }
-rivet-config = { path = "../../common/config" }
+cluster.workspace = true
+server-spec.workspace = true
+linode.workspace = true
+rivet-config.workspace = true

@@ -6,12 +6,11 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-chirp-client = { path = "../../../../common/chirp/client" }
-chirp-workflow = { path = "../../../../common/chirp-workflow/core" }
+chirp-client.workspace = true
+chirp-workflow.workspace = true
 reqwest = "0.11"
-rivet-config = { version = "0.1.0", path = "../../../../common/config" }
-rivet-connection = { path = "../../../../common/connection" }
-rivet-pools = { path = "../../../../common/pools" }
+rivet-connection.workspace = true
+rivet-pools.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.40", features = ["full"] }
@@ -31,6 +30,17 @@ game-resolve-name-id = { version = "0.0.1", path = "../../../game/ops/resolve-na
 rivet-operation = { version = "0.1.0", path = "../../../../common/operation/core" }
 team-resolve-display-name = { version = "0.0.1", path = "../../../team/ops/resolve-display-name" }
 user = { version = "0.1.0", path = "../../../user" }
+rivet-config.workspace = true
+user.workspace = true
+game-resolve-name-id = { version = "0.0.1", workspace = true }
+cloud-game-config-create = { version = "0.0.1", workspace = true }
+team-resolve-display-name = { version = "0.0.1", workspace = true }
+cloud-namespace-create = { version = "0.0.1", workspace = true }
+game-create = { version = "0.0.1", workspace = true }
+rivet-operation.workspace = true
+game-namespace-resolve-name-id = { version = "0.0.1", workspace = true }
+game-namespace-create = { version = "0.0.1", workspace = true }
+cloud-version-publish = { version = "0.0.1", workspace = true }
 
 [dev-dependencies]
-chirp-worker = { path = "../../../../common/chirp/worker" }
+chirp-worker.workspace = true

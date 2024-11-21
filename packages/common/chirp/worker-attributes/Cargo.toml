@@ -14,7 +14,7 @@ quote = "1.0"
 proc-macro2 = "1.0"
 
 [dev-dependencies]
-chirp-worker = { path = "../worker" }
+chirp-worker.workspace = true
 prost = "0.10"
 
 [dependencies.syn]

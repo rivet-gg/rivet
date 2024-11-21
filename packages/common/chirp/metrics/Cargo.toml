@@ -6,5 +6,5 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-rivet-metrics = { path = "../../metrics" }
+rivet-metrics.workspace = true
 lazy_static = "1.4"

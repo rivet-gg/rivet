@@ -6,12 +6,12 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-api-helper = { path = "../../common/api-helper/build" }
+api-helper.workspace = true
 async-trait = "0.1"
-chirp-client = { path = "../../common/chirp/client" }
+chirp-client.workspace = true
 http = "0.2"
 hyper = { version = "0.14", features = ["server", "http1", "tcp"] }
-rivet-operation = { path = "../../common/operation/core" }
+rivet-operation.workspace = true
 tokio = { version = "1.40" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = [
@@ -21,17 +21,17 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
 ] }
 url = "2.2.2"
 
-api-actor = { path = "../actor" }
-api-auth = { path = "../auth" }
-api-cf-verification = { path = "../cf-verification" }
-api-cloud = { path = "../cloud" }
-api-games = { path = "../games" }
-api-group = { path = "../group" }
-api-identity = { path = "../identity" }
-api-job = { path = "../job" }
-api-matchmaker = { path = "../matchmaker" }
-api-portal = { path = "../portal" }
-api-status = { path = "../status" }
-rivet-config = { path = "../../common/config" }
-rivet-env = { path = "../../common/env" }
-api-ui = { path = "../ui" }
+api-actor.workspace = true
+api-auth.workspace = true
+api-cf-verification.workspace = true
+api-cloud.workspace = true
+api-games.workspace = true
+api-group.workspace = true
+api-identity.workspace = true
+api-job.workspace = true
+api-matchmaker.workspace = true
+api-portal.workspace = true
+api-status.workspace = true
+rivet-config.workspace = true
+rivet-env.workspace = true
+api-ui.workspace = true

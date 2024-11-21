@@ -6,4 +6,4 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-rivet-operation = { path = "../../../common/operation/core" }
+rivet-operation.workspace = true

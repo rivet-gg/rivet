@@ -48,6 +48,16 @@ async function updateCargoToml() {
 
 	// Build new workspace dependencies
 	const newDependencies: Record<string, any> = {};
+	const packageAliases: Record<string, string[]> = {
+		"rivet-util": ["util"],
+		"rivet-util-mm": ["util-mm"],
+		"rivet-util-job": ["util-job"],
+		"rivet-util-search": ["util-search"],
+		"rivet-util-captcha": ["util-captcha"],
+		"rivet-util-cdn": ["util-cdn"],
+		"rivet-util-team": ["util-team"],
+		"rivet-util-build": ["util-build"],
+	};
 	for (const packagePath of members) {
 		const packageTomlPath = join(rootDir, packagePath, "Cargo.toml");
 		const packageTomlContent = await Deno.readTextFile(packageTomlPath);
@@ -57,6 +67,16 @@ async function updateCargoToml() {
 		newDependencies[packageToml.package.name] = {
 			path: packagePath,
 		};
+
+		// Register package alias names with the workspace
+		if (packageToml.package.name in packageAliases) {
+			for (const alias of packageAliases[packageToml.package.name]) {
+				newDependencies[alias] = {
+					package: packageToml.package.name,
+					path: packagePath,
+				};
+			}
+		}
 
 		// // Replace all package dependencies that refer to a workspace package to use `*.workspace = true`
 		// for (

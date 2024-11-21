@@ -10,9 +10,9 @@ anyhow = "1.0"
 futures-util = "0.3"
 include_dir = "0.7.4"
 indoc = "1.0"
-rivet-config = { path = "../config" }
-rivet-pools = { path = "../pools" }
-rivet-util = { path = "../util/core" }
+rivet-config.workspace = true
+rivet-pools.workspace = true
+rivet-util.workspace = true
 tempfile = "3.13.0"
 tokio = { version = "1.40", features = ["full"] }
 tracing = "0.1"

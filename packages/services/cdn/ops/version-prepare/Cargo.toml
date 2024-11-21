@@ -6,15 +6,15 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-rivet-operation = { path = "../../../../common/operation/core" }
-chirp-client = { path = "../../../../common/chirp/client" }
+rivet-operation.workspace = true
+chirp-client.workspace = true
 prost = "0.10"
 
-upload-get = { path = "../../../upload/ops/get" }
-cdn-site-get = { path = "../site-get" }
+upload-get.workspace = true
+cdn-site-get.workspace = true
 
 [dev-dependencies]
-chirp-worker = { path = "../../../../common/chirp/worker" }
+chirp-worker.workspace = true
 
-faker-game = { path = "../../../faker/ops/game" }
-faker-cdn-site = { path = "../../../faker/ops/cdn-site" }
+faker-game.workspace = true
+faker-cdn-site.workspace = true
