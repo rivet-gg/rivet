@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.2
 
 # MARK: Rivet Server Builder
-FROM rust:1.82.0-slim AS server-builder
+# TODO(RVT-4168): Copmile libfdb from scratch for ARM
+FROM --platform=linux/amd64 rust:1.82.0-slim AS server-builder
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -29,7 +30,8 @@ RUN \
     mv target/debug/rivet-server /usr/bin/rivet-server
 
 # MARK: Rivet Client Builder
-FROM rust:1.82.0-bullseye AS client-builder
+# TODO(RVT-4168): Switch back to ARM once
+FROM --platform=linux/amd64 rust:1.82.0-bullseye AS client-builder
 
 RUN apt-get update && apt-get install --yes protobuf-compiler pkg-config libssl-dev g++ git libpq-dev  && \
     ln -s /bin/g++ /bin/musl-g++ && \
@@ -51,7 +53,7 @@ RUN \
 #
 # Requires OpenSSL 1.1, so we pin this to Debian 11 (which uses OpenSSL 1.1)
 # instead of 12 (which uses OpenSSL 3).
-FROM debian:12-slim AS runner
+FROM --platform=linux/amd64 debian:12-slim AS runner
 
 ARG COCKROACHDB_VERSION=24.2.3
 ARG NATS_VERSION=2.9.2
