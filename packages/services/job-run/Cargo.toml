@@ -1,9 +1,9 @@
 [package]
 name = "job-run"
-version = "0.0.1"
-edition = "2018"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-client = { path = "../../common/chirp/client" }
@@ -30,7 +30,7 @@ util-job = { package = "rivet-util-job", path = "../job/util" }
 
 region-get = { path = "../region/ops/get" }
 token-create = { path = "../token/ops/create" }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
+rivet-config = { path = "../../common/config" }
 
 [dependencies.nomad_client_new]
 package = "nomad_client"
@@ -42,7 +42,7 @@ default-features = false
 features = [ "json" ]
 
 [dev-dependencies]
-rivet-test = { version = "0.1.0", path = "../../common/test" }
+rivet-test = { path = "../../common/test" }
 rustls = "0.21"
 webpki = "0.22"
 webpki-roots = "0.22"

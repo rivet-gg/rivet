@@ -1,9 +1,9 @@
 [package]
 name = "chirp-perf"
-version = "0.1.0"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 lazy_static = "1.4"
@@ -14,7 +14,7 @@ rivet-pools = { path = "../../pools" }
 thiserror = "1.0"
 tokio = { version = "1.36", features = ["full", "tracing"] }
 tracing = "0.1"
-rivet-env = { version = "0.1.0", path = "../../env" }
+rivet-env = { path = "../../env" }
 
 [dependencies.uuid]
 version = "1.1"

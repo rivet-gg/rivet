@@ -1,9 +1,9 @@
 [package]
 name = "cluster-gc"
-version = "0.0.1"
-edition = "2018"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-client = { path = "../../../../common/chirp/client" }
@@ -18,7 +18,7 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["f
 tracing-logfmt = "0.3"
 
 cluster = { path = "../.." }
-rivet-config = { version = "0.1.0", path = "../../../../common/config" }
+rivet-config = { path = "../../../../common/config" }
 
 [dependencies.sqlx]
 path = "../../../../../externals/sqlx"

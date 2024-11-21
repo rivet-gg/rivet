@@ -1,9 +1,9 @@
 [package]
 name = "load-test-mm-sustain"
-version = "0.0.1"
-edition = "2018"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-client = { path = "../../../../common/chirp/client" }
@@ -31,8 +31,8 @@ job-run = { path = "../../../job-run" }
 user-identity-create = { path = "../../../user-identity/ops/create" }
 token-create = { path = "../../../token/ops/create" }
 util-mm = { package = "rivet-util-mm", path = "../../../mm/util" }
-rivet-config = { version = "0.1.0", path = "../../../../common/config" }
-rivet-test = { version = "0.1.0", path = "../../../../common/test" }
+rivet-config = { path = "../../../../common/config" }
+rivet-test = { path = "../../../../common/test" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../common/chirp/worker" }

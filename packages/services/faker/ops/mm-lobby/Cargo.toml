@@ -1,9 +1,9 @@
 [package]
 name = "faker-mm-lobby"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-client = { path = "../../../../common/chirp/client" }
@@ -18,8 +18,8 @@ faker-region = { path = "../region" }
 game-namespace-version-set = { path = "../../../game/ops/namespace-version-set" }
 game-resolve-namespace-id = { path = "../../../game/ops/resolve-namespace-id" }
 mm-config-version-get = { path = "../../../mm-config/ops/version-get" }
-rivet-test = { version = "0.1.0", path = "../../../../common/test" }
+rivet-test = { path = "../../../../common/test" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../common/chirp/worker" }
-rivet-test = { version = "0.1.0", path = "../../../../common/test" }
+rivet-test = { path = "../../../../common/test" }

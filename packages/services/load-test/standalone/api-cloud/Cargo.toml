@@ -1,9 +1,9 @@
 [package]
 name = "load-test-api-cloud"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-client = { path = "../../../../common/chirp/client" }
@@ -25,7 +25,7 @@ faker-game = { path = "../../../faker/ops/game" }
 faker-team = { path = "../../../faker/ops/team" }
 user-identity-create = { path = "../../../user-identity/ops/create" }
 token-create = { path = "../../../token/ops/create" }
-rivet-config = { version = "0.1.0", path = "../../../../common/config" }
+rivet-config = { path = "../../../../common/config" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../common/chirp/worker" }

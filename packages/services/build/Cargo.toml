@@ -1,9 +1,9 @@
 [package]
 name = "build"
-version = "0.0.1"
-edition = "2018"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 acme-lib = "0.9"
@@ -35,7 +35,7 @@ ip-info = { path = "../ip/ops/info" }
 linode = { path = "../linode" }
 token-create = { path = "../token/ops/create" }
 upload-get = { path = "../upload/ops/get" }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
+rivet-config = { path = "../../common/config" }
 
 [dependencies.sqlx]
 path = "../../../externals/sqlx"

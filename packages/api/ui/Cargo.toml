@@ -1,9 +1,9 @@
 [package]
 name = "api-ui"
-version = "0.1.0"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 rivet-convert = { path = "../../common/convert" }
@@ -30,7 +30,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "ansi"] }
 url = "2.2.2"
 uuid = { version = "1", features = ["v4"] }
-rivet-hub-embed = { version = "0.1.0", path = "../../common/hub-embed" }
+rivet-hub-embed = { path = "../../common/hub-embed" }
 mime_guess = "2.0.5"
-rivet-config = { version = "0.1.0", path = "../../common/config" }
-global-error = { version = "0.1.5", path = "../../common/global-error" }
+rivet-config = { path = "../../common/config" }
+global-error = { path = "../../common/global-error" }

@@ -1,9 +1,9 @@
 [package]
 name = "faker-job-run"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 rivet-operation = { path = "../../../../common/operation/core" }
@@ -13,8 +13,8 @@ prost = "0.10"
 faker-job-template = { path = "../job-template" }
 faker-region = { path = "../region" }
 job-run = { path = "../../../job-run" }
-rivet-test = { version = "0.1.0", path = "../../../../common/test" }
+rivet-test = { path = "../../../../common/test" }
 
 [dev-dependencies]
 chirp-worker = { path = "../../../../common/chirp/worker" }
-rivet-test = { version = "0.1.0", path = "../../../../common/test" }
+rivet-test = { path = "../../../../common/test" }

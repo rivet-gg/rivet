@@ -1,9 +1,9 @@
 [package]
 name = "load-test-mm"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-client = { path = "../../../../common/chirp/client" }
@@ -34,7 +34,7 @@ mm-player-count-for-namespace = { path = '../../../mm/ops/player-count-for-names
 mm-lobby-player-count = { path = '../../../mm/ops/lobby-player-count' }
 region-get = { path = "../../../region/ops/get" }
 token-create = { path = "../../../token/ops/create" }
-rivet-config = { version = "0.1.0", path = "../../../../common/config" }
+rivet-config = { path = "../../../../common/config" }
 
 
 [dev-dependencies]

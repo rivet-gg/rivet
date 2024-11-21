@@ -1,9 +1,9 @@
 [package]
 name = "rivet-operation"
-version = "0.1.0"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 async-trait = "0.1"
@@ -17,7 +17,7 @@ indoc = "1.0"
 prost = "0.10"
 prost-types = "0.10"
 rivet-cache = { path = "../../cache/build" }
-rivet-config = { version = "0.1.0", path = "../../config" }
+rivet-config = { path = "../../config" }
 rivet-connection = { path = "../../connection" }
 rivet-operation-macros = { path = "../macros" }
 rivet-pools = { path = "../../pools" }

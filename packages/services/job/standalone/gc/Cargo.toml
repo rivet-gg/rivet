@@ -1,9 +1,9 @@
 [package]
 name = "job-gc"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 chirp-client = { path = "../../../../common/chirp/client" }
@@ -33,7 +33,7 @@ uuid = { version = "1", features = ["serde"] }
 
 mm-lobby-for-run-id = { path = "../../../mm/ops/lobby-for-run-id" }
 mm-lobby-get = { path = "../../../mm/ops/lobby-get" }
-rivet-config = { version = "0.1.0", path = "../../../../common/config" }
+rivet-config = { path = "../../../../common/config" }
 
 [dependencies.sqlx]
 path = "../../../../../externals/sqlx"

@@ -1,9 +1,9 @@
 [package]
 name = "api-cloud"
-version = "0.0.1"
-edition = "2021"
-authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
-license = "Apache-2.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 api-helper = { path = "../../common/api-helper/build" }
@@ -110,8 +110,8 @@ upload-prepare = { path = "../../services/upload/ops/prepare" }
 user-get = { path = "../../services/user/ops/get" }
 user-identity-get = { path = "../../services/user-identity/ops/get" }
 user-team-list = { path = "../../services/user/ops/team-list" }
-rivet-config = { version = "0.1.0", path = "../../common/config" }
-rivet-env = { version = "0.1.0", path = "../../common/env" }
+rivet-config = { path = "../../common/config" }
+rivet-env = { path = "../../common/env" }
 
 [dev-dependencies]
 rand = "0.8"
