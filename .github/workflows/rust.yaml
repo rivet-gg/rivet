@@ -54,7 +54,8 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y protobuf-compiler libpq-dev
+          apt-get install -y protobuf-compiler libpq-dev curl
+          curl -Lf -o /lib/libfdb_c.so "https://github.com/apple/foundationdb/releases/download/7.1.60/libfdb_c.x86_64.so"
       - run: cd packages/infra/client && RUSTFLAGS="--cfg tokio_unstable" cargo check --release
 
   cargo-deny:
