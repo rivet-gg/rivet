@@ -67,18 +67,19 @@ async fn main() -> Result<()> {
 	)
 	.await?;
 
-	// Set v8 flags (https://chromium.googlesource.com/v8/v8/+/refs/heads/main/src/flags/flag-definitions.h)
-	let invalid = v8_set_flags(vec![
-		// Binary name
-		"UNUSED_BUT_NECESSARY_ARG0".into(),
-		// Disable eval
-		"--disallow-code-generation-from-strings".into(),
-	]);
-	assert!(
-		invalid.len() == 1,
-		"v8 did not understand these flags: {:?}",
-		invalid.into_iter().skip(1).collect::<Vec<_>>(),
-	);
+	// TODO: Add back
+	// // Set v8 flags (https://chromium.googlesource.com/v8/v8/+/refs/heads/main/src/flags/flag-definitions.h)
+	// let invalid = v8_set_flags(vec![
+	// 	// Binary name
+	// 	"UNUSED_BUT_NECESSARY_ARG0".into(),
+	// 	// Disable eval
+	// 	"--disallow-code-generation-from-strings".into(),
+	// ]);
+	// assert!(
+	// 	invalid.len() == 1,
+	// 	"v8 did not understand these flags: {:?}",
+	// 	invalid.into_iter().skip(1).collect::<Vec<_>>(),
+	// );
 
 	// Explicitly start runtime on current thread
 	JsRuntime::init_platform(None, false);
