@@ -90,7 +90,7 @@ pub async fn get_deprecated(
 	let dc = unwrap!(dc_res.datacenters.first());
 
 	Ok(models::ServersGetServerResponse {
-		server: Box::new(legacy_convert_actor_to_server(*get_res.actor, dc)),
+		server: Box::new(legacy_convert_actor_to_server(*get_res.actor, dc)?),
 	})
 }
 
@@ -342,7 +342,7 @@ pub async fn create_deprecated(
 	.await?;
 
 	Ok(models::ServersCreateServerResponse {
-		server: Box::new(legacy_convert_actor_to_server(*create_res.actor, &dc)),
+		server: Box::new(legacy_convert_actor_to_server(*create_res.actor, &dc)?),
 	})
 }
 
@@ -555,7 +555,7 @@ pub async fn list_servers_deprecated(
 			.into_iter()
 			.map(|a| {
 				let dc = unwrap!(dc_res.datacenters.iter().find(|dc| dc.name_id == a.region));
-				GlobalResult::Ok(legacy_convert_actor_to_server(a, dc))
+				legacy_convert_actor_to_server(a, dc)
 			})
 			.collect::<Result<Vec<_>, _>>()?,
 	})
@@ -564,11 +564,22 @@ pub async fn list_servers_deprecated(
 fn legacy_convert_actor_to_server(
 	a: models::ActorActor,
 	datacenter: &cluster::types::Datacenter,
-) -> models::ServersServer {
-	models::ServersServer {
-		created_at: a.created_at,
+) -> GlobalResult<models::ServersServer> {
+	Ok(models::ServersServer {
+		created_at: a
+			.created_at
+			.parse::<chrono::DateTime<chrono::Utc>>()?
+			.timestamp_millis(),
 		datacenter: datacenter.datacenter_id,
-		destroyed_at: a.destroyed_at,
+		destroyed_at: a
+			.destroyed_at
+			.map(|ts| {
+				GlobalResult::Ok(
+					ts.parse::<chrono::DateTime<chrono::Utc>>()?
+						.timestamp_millis(),
+				)
+			})
+			.transpose()?,
 		environment: Uuid::nil(),
 		id: a.id,
 		lifecycle: Box::new(models::ServersLifecycle {
@@ -621,9 +632,17 @@ fn legacy_convert_actor_to_server(
 			build: a.runtime.build,
 			environment: a.runtime.environment,
 		}),
-		started_at: a.started_at,
+		started_at: a
+			.started_at
+			.map(|ts| {
+				GlobalResult::Ok(
+					ts.parse::<chrono::DateTime<chrono::Utc>>()?
+						.timestamp_millis(),
+				)
+			})
+			.transpose()?,
 		tags: a.tags,
-	}
+	})
 }
 
 async fn resolve_build_id(
