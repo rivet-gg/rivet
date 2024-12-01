@@ -1,18 +1,6 @@
 {
 	"builds": [
 		{
-			"tags": { "name": "manager" },
-			"runtime": "javascript",
-			"script": "../../sdks/actors/manager/src/mod.ts",
-			"deno": {
-				"config_path": "../../sdks/actors/manager/deno.jsonc",
-				"lock_path": "../../sdks/actors/deno.lock"
-			},
-			"unstable": {
-				"minify": false
-			}
-		},
-		{
 			"tags": { "name": "counter" },
 			"runtime": "javascript",
 			"script": "counter.ts",

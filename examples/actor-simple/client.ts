@@ -1,7 +1,7 @@
 import { ActorClient } from "../../sdks/actors/client/src/mod.ts"
 
 async function main() {
-	const actorClient = new ActorClient("http://127.0.0.1:20079");
+	const actorClient = new ActorClient("http://127.0.0.1:20025");
 
 	// Broadcast event
 	let broadcastActor;
