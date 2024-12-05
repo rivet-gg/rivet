@@ -110,11 +110,13 @@ pub async fn deploy(
 		};
 
 		// Issue service token
-		let service_token = apis::games_environments_tokens_api::games_environments_tokens_create_service_token(
-			&ctx.openapi_config_cloud,
-			&ctx.project.game_id.to_string(),
-			&opts.env.id.to_string()
-		).await?;
+		let service_token =
+			apis::games_environments_tokens_api::games_environments_tokens_create_service_token(
+				&ctx.openapi_config_cloud,
+				&ctx.project.game_id.to_string(),
+				&opts.env.id.to_string(),
+			)
+			.await?;
 
 		// TODO(RVT-4263): Auto-determine TCP or HTTP networking
 		// Get or create actor
@@ -124,9 +126,10 @@ pub async fn deploy(
 			build: Some(build_id),
 			build_tags: None,
 			runtime: Some(Box::new(models::ActorCreateActorRuntimeRequest {
-				environment: Some(HashMap::from([
-					("RIVET_SERVICE_TOKEN".to_string(), service_token.token),
-				]))
+				environment: Some(HashMap::from([(
+					"RIVET_SERVICE_TOKEN".to_string(),
+					service_token.token,
+				)])),
 			})),
 			network: Some(Box::new(models::ActorCreateActorNetworkRequest {
 				mode: Some(models::ActorNetworkMode::Host),
