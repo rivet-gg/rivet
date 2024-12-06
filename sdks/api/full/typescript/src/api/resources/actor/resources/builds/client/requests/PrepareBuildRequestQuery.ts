@@ -10,7 +10,6 @@ import * as RivetClient from "../../../../../../index";
  *         project: "string",
  *         environment: "string",
  *         body: {
- *             name: "string",
  *             imageTag: "string",
  *             imageFile: {
  *                 path: "string",
