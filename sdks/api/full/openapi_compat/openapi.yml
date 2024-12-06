@@ -27,6 +27,11 @@ paths:
           required: false
           schema:
             type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActorEndpointType'
       responses:
         '200':
           description: ''
@@ -168,6 +173,11 @@ paths:
           required: false
           schema:
             type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActorEndpointType'
         - name: tags_json
           in: query
           required: false
@@ -244,6 +254,11 @@ paths:
           required: false
           schema:
             type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActorEndpointType'
       responses:
         '200':
           description: ''
@@ -9790,17 +9805,17 @@ components:
         cluster_id:
           type: string
           format: uuid
-        vlan_ip:
+        lan_ip:
           type: string
-        public_ip:
+        wan_ip:
           type: string
       required:
         - name
         - server_id
         - datacenter_id
         - cluster_id
-        - vlan_ip
-        - public_ip
+        - lan_ip
+        - wan_ip
     ServersGetServerResponse:
       type: object
       properties:
@@ -10067,6 +10082,8 @@ components:
           type: string
         port:
           type: integer
+        path:
+          type: string
         routing:
           $ref: '#/components/schemas/ActorPortRouting'
       required:
@@ -10093,6 +10110,11 @@ components:
     ActorHostRouting:
       type: object
       properties: {}
+    ActorEndpointType:
+      type: string
+      enum:
+        - hostname
+        - path
     ActorBuild:
       type: object
       properties:
@@ -13242,9 +13264,9 @@ components:
           format: uuid
         pool_type:
           $ref: '#/components/schemas/ProvisionPoolType'
-        vlan_ip:
+        lan_ip:
           type: string
-        public_ip:
+        wan_ip:
           type: string
       required:
         - server_id
