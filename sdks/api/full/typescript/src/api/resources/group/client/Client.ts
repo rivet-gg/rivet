@@ -25,6 +25,8 @@ export declare namespace Group {
         maxRetries?: number;
         /** A hook to abort the request. */
         abortSignal?: AbortSignal;
+        /** Additional headers to include in the request. */
+        headers?: Record<string, string>;
     }
 }
 
@@ -70,6 +72,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             queryParameters: _queryParams,
@@ -165,7 +168,7 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError("Timeout exceeded when calling GET /group/groups.");
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -206,6 +209,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -301,7 +305,7 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError("Timeout exceeded when calling POST /group/groups.");
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -345,6 +349,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -442,7 +447,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /group/groups/avatar-upload/prepare."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -485,6 +492,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -580,7 +588,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /group/groups/profile/validate."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -623,6 +633,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -711,7 +722,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /group/groups/{group_id}/avatar-upload/{upload_id}/complete."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -770,6 +783,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             queryParameters: _queryParams,
@@ -865,7 +879,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling GET /group/groups/{group_id}/bans."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -906,6 +922,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -994,7 +1011,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /group/groups/{group_id}/bans/{identity_id}."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -1035,6 +1054,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -1123,7 +1143,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling DELETE /group/groups/{group_id}/bans/{identity_id}."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -1182,6 +1204,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             queryParameters: _queryParams,
@@ -1277,7 +1300,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling GET /group/groups/{group_id}/join-requests."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -1314,6 +1339,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -1402,7 +1428,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /group/groups/{group_id}/kick/{identity_id}."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -1438,6 +1466,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -1526,7 +1555,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /group/groups/{group_id}/leave."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -1585,6 +1616,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             queryParameters: _queryParams,
@@ -1680,7 +1712,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling GET /group/groups/{group_id}/members."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -1729,6 +1763,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             queryParameters: _queryParams,
@@ -1824,7 +1859,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling GET /group/groups/{group_id}/profile."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -1867,6 +1904,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -1956,7 +1994,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /group/groups/{group_id}/profile."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -1993,6 +2033,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -2087,7 +2128,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling GET /group/groups/{group_id}/summary."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -2130,6 +2173,7 @@ export class Group {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -2219,7 +2263,9 @@ export class Group {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /group/groups/{group_id}/transfer-owner."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
