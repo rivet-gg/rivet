@@ -23,6 +23,8 @@ export declare namespace Avatars {
         maxRetries?: number;
         /** A hook to abort the request. */
         abortSignal?: AbortSignal;
+        /** Additional headers to include in the request. */
+        headers?: Record<string, string>;
     }
 }
 
@@ -60,6 +62,7 @@ export class Avatars {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -154,7 +157,9 @@ export class Avatars {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling GET /cloud/games/{game_id}/avatars."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -200,6 +205,7 @@ export class Avatars {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -297,7 +303,9 @@ export class Avatars {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /cloud/games/{game_id}/prepare."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
@@ -338,6 +346,7 @@ export class Avatars {
                 "X-Fern-Language": "JavaScript",
                 "X-Fern-Runtime": core.RUNTIME.type,
                 "X-Fern-Runtime-Version": core.RUNTIME.version,
+                ...requestOptions?.headers,
             },
             contentType: "application/json",
             requestType: "json",
@@ -426,7 +435,9 @@ export class Avatars {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetClientTimeoutError();
+                throw new errors.RivetClientTimeoutError(
+                    "Timeout exceeded when calling POST /cloud/games/{game_id}/avatar-upload/{upload_id}/complete."
+                );
             case "unknown":
                 throw new errors.RivetClientError({
                     message: _response.error.errorMessage,
