@@ -1,10 +1,13 @@
-use rivet_api::models;
 use anyhow::*;
+use rivet_api::models;
 
 pub const HTTP_PORT: &str = "http";
 
 pub fn extract_endpoint(actor: &models::ActorActor) -> Result<String> {
-	ensure!(actor.started_at.is_some(), "actor manager not started, may be in a crash loop");
+	ensure!(
+		actor.started_at.is_some(),
+		"actor manager not started, may be in a crash loop"
+	);
 
 	// Get endpoint
 	let http_port = actor
@@ -27,7 +30,8 @@ pub fn extract_endpoint(actor: &models::ActorActor) -> Result<String> {
 		.public_port
 		.as_ref()
 		.context("missing public_port")?;
-	let endpoint = format!("{protocol}://{public_hostname}:{public_port}");
+	let public_path = http_port.public_path.clone().unwrap_or_default();
+	let endpoint = format!("{protocol}://{public_hostname}:{public_port}{public_path}");
 
 	Ok(endpoint)
 }

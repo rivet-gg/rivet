@@ -49,7 +49,8 @@ export class Actor {
      * @example
      *     await client.actor.get("d5e9c84f-c2b2-4bf4-b4b0-7ffd7a9ffc32", {
      *         project: "string",
-     *         environment: "string"
+     *         environment: "string",
+     *         endpointType: "hostname"
      *     })
      */
     public async get(
@@ -57,7 +58,7 @@ export class Actor {
         request: RivetClient.actor.ListActorsRequestQuery = {},
         requestOptions?: Actor.RequestOptions
     ): Promise<RivetClient.actor.GetActorResponse> {
-        const { project, environment } = request;
+        const { project, environment, endpointType } = request;
         const _queryParams: Record<string, string | string[] | object | object[]> = {};
         if (project != null) {
             _queryParams["project"] = project;
@@ -65,6 +66,10 @@ export class Actor {
 
         if (environment != null) {
             _queryParams["environment"] = environment;
+        }
+
+        if (endpointType != null) {
+            _queryParams["endpoint_type"] = endpointType;
         }
 
         const _response = await (this._options.fetcher ?? core.fetcher)({
@@ -198,6 +203,7 @@ export class Actor {
      *     await client.actor.list({
      *         project: "string",
      *         environment: "string",
+     *         endpointType: "hostname",
      *         tagsJson: "string",
      *         includeDestroyed: true,
      *         cursor: "d5e9c84f-c2b2-4bf4-b4b0-7ffd7a9ffc32"
@@ -207,7 +213,7 @@ export class Actor {
         request: RivetClient.actor.GetActorsRequestQuery = {},
         requestOptions?: Actor.RequestOptions
     ): Promise<RivetClient.actor.ListActorsResponse> {
-        const { project, environment, tagsJson, includeDestroyed, cursor } = request;
+        const { project, environment, endpointType, tagsJson, includeDestroyed, cursor } = request;
         const _queryParams: Record<string, string | string[] | object | object[]> = {};
         if (project != null) {
             _queryParams["project"] = project;
@@ -215,6 +221,10 @@ export class Actor {
 
         if (environment != null) {
             _queryParams["environment"] = environment;
+        }
+
+        if (endpointType != null) {
+            _queryParams["endpoint_type"] = endpointType;
         }
 
         if (tagsJson != null) {
@@ -360,6 +370,7 @@ export class Actor {
      *     await client.actor.create({
      *         project: "string",
      *         environment: "string",
+     *         endpointType: "hostname",
      *         body: {
      *             region: "string",
      *             tags: {
@@ -391,7 +402,7 @@ export class Actor {
         request: RivetClient.actor.CreateActorRequestQuery,
         requestOptions?: Actor.RequestOptions
     ): Promise<RivetClient.actor.CreateActorResponse> {
-        const { project, environment, body: _body } = request;
+        const { project, environment, endpointType, body: _body } = request;
         const _queryParams: Record<string, string | string[] | object | object[]> = {};
         if (project != null) {
             _queryParams["project"] = project;
@@ -399,6 +410,10 @@ export class Actor {
 
         if (environment != null) {
             _queryParams["environment"] = environment;
+        }
+
+        if (endpointType != null) {
+            _queryParams["endpoint_type"] = endpointType;
         }
 
         const _response = await (this._options.fetcher ?? core.fetcher)({

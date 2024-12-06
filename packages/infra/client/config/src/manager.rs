@@ -4,9 +4,9 @@ use std::{
 };
 
 use pegboard::protocol;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use url::Url;
-use schemars::JsonSchema;
 use uuid::Uuid;
 
 #[derive(Clone, Deserialize)]
@@ -25,8 +25,8 @@ impl Config {
 		pegboard::client_config::ClientConfig {
 			network: pegboard::client_config::Network {
 				bind_ip: IpAddr::V4(self.client.network.bind_ip),
-				lan_ip: self.client.network.lan_ip,
-				wan_ip: self.client.network.wan_ip,
+				lan_hostname: self.client.network.lan_hostname.clone(),
+				wan_hostname: self.client.network.wan_hostname.clone(),
 				lan_port_range_min: self.client.network.lan_port_range_min(),
 				lan_port_range_max: self.client.network.lan_port_range_max(),
 				wan_port_range_min: self.client.network.wan_port_range_min(),
@@ -125,12 +125,12 @@ pub struct Network {
 	/// Address to access this node in a LAN.
 	///
 	/// This IP is used to route traffic from Game Guard.
-	pub lan_ip: IpAddr,
+	pub lan_hostname: String,
 
 	/// Address to access this node publicly.
 	///
 	/// This IP is used when providing the actor's IP & port for host networking.
-	pub wan_ip: IpAddr,
+	pub wan_hostname: String,
 
 	pub lan_port_range_min: Option<u16>,
 	pub lan_port_range_max: Option<u16>,
