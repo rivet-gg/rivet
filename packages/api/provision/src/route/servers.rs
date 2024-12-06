@@ -53,7 +53,7 @@ pub async fn info(
 		server_id: server.server_id,
 		datacenter_id: server.datacenter_id,
 		cluster_id: datacenter.cluster_id,
-		vlan_ip: unwrap_ref!(server.vlan_ip, "server should have vlan ip by now").to_string(),
-		public_ip: unwrap_ref!(server.public_ip, "server should have public ip by now").to_string(),
+		lan_ip: unwrap_ref!(server.lan_ip, "server should have lan hostname by now").to_string(),
+		wan_ip: unwrap_ref!(server.wan_ip, "server should have public hostname by now").to_string(),
 	})
 }
