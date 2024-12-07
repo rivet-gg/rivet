@@ -582,7 +582,8 @@ async fn get_server_meta(
 	let project_id = unwrap!(env.game_id).as_uuid();
 	let projects_res = op!([ctx] game_get {
 		game_ids: vec![project_id.into()],
-	}).await?;
+	})
+	.await?;
 	let project = unwrap!(projects_res.games.first());
 
 	Ok(GetServerMetaOutput {
