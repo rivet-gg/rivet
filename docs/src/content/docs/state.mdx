@@ -19,11 +19,11 @@ Actor states can be typed in TypeScript using the first generic argument on `Act
 
 ```typescript
 interface State {
-    count: number;
+  count: number;
 }
 
 class Counter extends Actor<State> {
-    // ...
+  // ...
 }
 ```
 
@@ -35,13 +35,13 @@ For example:
 
 ```typescript
 interface State {
-    count: number;
+  count: number;
 }
 
 class Counter extends Actor<State> {
-    _onInitialize() {
-        return { count: 0 };
-    }
+  _onInitialize() {
+    return { count: 0 };
+  }
 }
 ```
 
@@ -53,21 +53,21 @@ For example:
 
 ```typescript
 interface State {
-    count: number;
+  count: number;
 }
 
 class Counter extends Actor<State> {
-    increment() {
-        this.state.count += 1;
-    }
+  increment() {
+    this.state.count += 1;
+  }
 
-    // ...
+  // ...
 }
 ```
 
 <Warning>
-    Only state stored on the `this.state` property will be persisted. Properties
-    of the `Counter` class are kept in-memory and not persisted.
+  Only state stored on the `this.state` property will be persisted. Properties of the `Counter` class are kept
+  in-memory and not persisted.
 </Warning>
 
 ### State saves
@@ -95,6 +95,7 @@ The KV state is used for storing large datasets that cannot fit in to memory.
 
     1. Create an actor that holds the shared state that actors can make RPCs to
     2. Use an external database, such as [PostgreSQL](https://www.postgresql.org/)
+
 </Info>
 
 ### Performance
@@ -105,7 +106,92 @@ TODO: Discuss in-memory cache & latencies
 
 ### Operations
 
-TODO
+Raw KV operations can be called via `this.#ctx.kv.<op>`.
+
+- **`get(key: any, options?: GetOptions): Promise<any | null>`**
+
+    Retrieves a value from the key-value store.
+
+    Options:
+
+    ```js
+    {
+        format?: "value" | "arrayBuffer";
+    }
+    ```
+
+- **`getBatch(keys: any[], options?: GetBatchOptions): Promise<Map<any, any>>`**
+
+    Retrieves a batch of key-value pairs.
+
+    Options:
+
+    ```js
+    {
+        format?: "value" | "arrayBuffer";
+    }
+    ```
+
+- **`list(options?: ListOptions): Promise<Map<any, any>>`**
+
+    Retrieves all key-value pairs in the KV store. When using any of the options, the keys lexicographic order
+    is used for filtering.
+
+    Options:
+
+    ```js
+    {
+        format?: "value" | "arrayBuffer";
+        // The key to start listing results from (inclusive). Cannot be used with startAfter or prefix.
+        start?: any;
+        // The key to start listing results after (exclusive). Cannot be used with start or prefix.
+        startAfter?: any;
+        // The key to end listing results at (exclusive).
+        end?: any;
+        // Restricts results to keys that start with the given prefix. Cannot be used with start or startAfter.
+        prefix?: any;
+        // If true, results are returned in descending order.
+        reverse?: boolean;
+        // The maximum number of key-value pairs to return.
+        limit?: number;
+    }
+    ```
+
+- **`put(key: any, value: any | ArrayBuffer, options?: PutOptions): Promise<void>`**
+
+    Stores a key-value pair in the key-value store.
+
+    Options:
+
+    ```js
+    {
+        format?: "value" | "arrayBuffer";
+    }
+    ```
+
+- **`putBatch(obj: Map<any, any | ArrayBuffer>, options?: PutBatchOptions): Promise<void>`**
+
+    Stores a batch of key-value pairs.
+
+    Options:
+
+    ```js
+    {
+        format?: "value" | "arrayBuffer";
+    }
+    ```
+
+- **`delete(key: any): Promise<void>`**
+
+    Deletes a key-value pair from the key-value store.
+
+- **`deleteBatch(keys: any[]): Promise<void>`**
+
+    Deletes a batch of key-value pairs from the key-value store.
+
+- **`deleteAll(): Promise<void>`**
+
+    Deletes all data from the key-value store. **This CANNOT be undone.**
 
 ### Sorted keys
 
@@ -127,4 +213,4 @@ TODO
 
 #### Queues
 
-TODO */}
+TODO \*/}
