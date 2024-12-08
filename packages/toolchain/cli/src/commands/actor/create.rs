@@ -3,9 +3,8 @@ use clap::{Parser, ValueEnum};
 use serde::Deserialize;
 use std::collections::HashMap;
 use toolchain::{
-	build,
+	build, errors,
 	rivet_api::{apis, models},
-	errors,
 };
 use uuid::Uuid;
 
@@ -261,6 +260,7 @@ impl Opts {
 			request,
 			Some(&ctx.project.name_id),
 			Some(&env),
+			None,
 		)
 		.await?;
 		println!("Created actor:\n{:#?}", response.actor);

@@ -19,5 +19,5 @@ types:
       server_id: uuid
       datacenter_id: uuid
       cluster_id: uuid
-      vlan_ip: string
-      public_ip: string
+      lan_ip: string
+      wan_ip: string

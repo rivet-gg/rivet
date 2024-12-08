@@ -86,11 +86,10 @@ async function createActor(
 		createRequest.network.ports = {};
 	}
 	if (!(PORT_NAME in createRequest.network.ports)) {
-		// TODO: Don't force TCP protocol
 		createRequest.network.ports[PORT_NAME] = {
-			protocol: "tcp",
-			routing: { host: {} },
-		}
+			protocol: "https",
+			routing: { guard: {} },
+		};
 	}
 
 	const req = {
