@@ -8,7 +8,7 @@ use std::{
 };
 
 use anyhow::*;
-use job_runner::{log_shipper, throttle};
+use rivet_job_runner::{log_shipper, throttle};
 use signal_hook::{consts::signal::SIGTERM, iterator::Signals};
 
 /// Maximum length of a single log line

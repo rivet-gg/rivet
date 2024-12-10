@@ -5,6 +5,7 @@
   "required": [
     "cluster",
     "foundationdb",
+    "images",
     "network",
     "runner"
   ],
@@ -21,6 +22,9 @@
     },
     "foundationdb": {
       "$ref": "#/definitions/FoundationDb"
+    },
+    "images": {
+      "$ref": "#/definitions/Images"
     },
     "logs": {
       "$ref": "#/definitions/Logs"
@@ -48,6 +52,47 @@
   },
   "additionalProperties": false,
   "definitions": {
+    "Addresses": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "dynamic"
+          ],
+          "properties": {
+            "dynamic": {
+              "type": "object",
+              "required": [
+                "fetch_endpoint"
+              ],
+              "properties": {
+                "fetch_endpoint": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "static"
+          ],
+          "properties": {
+            "static": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "ClientFlavor": {
       "type": "string",
       "enum": [
@@ -110,13 +155,13 @@
     "FoundationDb": {
       "type": "object",
       "required": [
-        "address",
+        "addresses",
         "cluster_description",
         "cluster_id"
       ],
       "properties": {
-        "address": {
-          "$ref": "#/definitions/FoundationDbAddress"
+        "addresses": {
+          "$ref": "#/definitions/Addresses"
         },
         "cluster_description": {
           "type": "string"
@@ -127,46 +172,17 @@
       },
       "additionalProperties": false
     },
-    "FoundationDbAddress": {
-      "oneOf": [
-        {
-          "type": "object",
-          "required": [
-            "dynamic"
-          ],
-          "properties": {
-            "dynamic": {
-              "type": "object",
-              "required": [
-                "fetch_endpoint"
-              ],
-              "properties": {
-                "fetch_endpoint": {
-                  "type": "string",
-                  "format": "uri"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "static"
-          ],
-          "properties": {
-            "static": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "additionalProperties": false
+    "Images": {
+      "type": "object",
+      "required": [
+        "pull_addresses"
+      ],
+      "properties": {
+        "pull_addresses": {
+          "$ref": "#/definitions/Addresses"
         }
-      ]
+      },
+      "additionalProperties": false
     },
     "Logs": {
       "type": "object",
