@@ -240,7 +240,7 @@ pub async fn init_fdb_config(config: &Config) -> Result<()> {
 
 			#[derive(Deserialize)]
 			struct Server {
-				vlan_ip: Option<Ipv4Addr>,
+				lan_ip: Option<Ipv4Addr>,
 			}
 
 			reqwest::get(fetch_endpoint.clone())
@@ -250,8 +250,8 @@ pub async fn init_fdb_config(config: &Config) -> Result<()> {
 				.await?
 				.servers
 				.into_iter()
-				.filter_map(|server| server.vlan_ip)
-				.map(|vlan_ip| format!("{vlan_ip}:4500"))
+				.filter_map(|server| server.lan_ip)
+				.map(|lan_ip| format!("{lan_ip}:4500"))
 				.collect::<Vec<_>>()
 		}
 		FoundationDbAddress::Static(addresses) => addresses.clone(),

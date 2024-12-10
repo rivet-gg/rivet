@@ -27,6 +27,11 @@ paths:
           required: false
           schema:
             type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActorEndpointType'
       responses:
         '200':
           description: ''
@@ -168,6 +173,11 @@ paths:
           required: false
           schema:
             type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActorEndpointType'
         - name: tags_json
           in: query
           required: false
@@ -244,6 +254,11 @@ paths:
           required: false
           schema:
             type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActorEndpointType'
       responses:
         '200':
           description: ''
@@ -1197,6 +1212,8 @@ components:
           type: string
         port:
           type: integer
+        path:
+          type: string
         routing:
           $ref: '#/components/schemas/ActorPortRouting'
       required:
@@ -1242,6 +1259,11 @@ components:
     ActorHostRouting:
       type: object
       properties: {}
+    ActorEndpointType:
+      type: string
+      enum:
+        - hostname
+        - path
     ActorBuild:
       type: object
       properties:

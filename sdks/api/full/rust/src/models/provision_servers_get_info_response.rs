@@ -18,10 +18,10 @@ pub struct ProvisionServersGetInfoResponse {
 	pub datacenter_id: uuid::Uuid,
 	#[serde(rename = "cluster_id")]
 	pub cluster_id: uuid::Uuid,
-	#[serde(rename = "vlan_ip")]
-	pub vlan_ip: String,
-	#[serde(rename = "public_ip")]
-	pub public_ip: String,
+	#[serde(rename = "lan_ip")]
+	pub lan_ip: String,
+	#[serde(rename = "wan_ip")]
+	pub wan_ip: String,
 }
 
 impl ProvisionServersGetInfoResponse {
@@ -30,16 +30,16 @@ impl ProvisionServersGetInfoResponse {
 		server_id: uuid::Uuid,
 		datacenter_id: uuid::Uuid,
 		cluster_id: uuid::Uuid,
-		vlan_ip: String,
-		public_ip: String,
+		lan_ip: String,
+		wan_ip: String,
 	) -> ProvisionServersGetInfoResponse {
 		ProvisionServersGetInfoResponse {
 			name,
 			server_id,
 			datacenter_id,
 			cluster_id,
-			vlan_ip,
-			public_ip,
+			lan_ip,
+			wan_ip,
 		}
 	}
 }

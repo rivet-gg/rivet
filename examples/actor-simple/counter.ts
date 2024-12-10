@@ -22,14 +22,10 @@ export default class Counter extends Actor<State, ConnParams | undefined, ConnSt
         return { count: 0 };
     }
 
-	override _onConnect(opts: OnBeforeConnectOpts<ConnParams>): ConnState {
+	override _onBeforeConnect(opts: OnBeforeConnectOpts<ConnParams>): ConnState {
 		//if (!await authenticate(opts.params.token)) throw new Error("unauthenticated");
 		console.log('parameters', opts.parameters);
 		return { mod: opts.parameters?.mod ?? 1 };
-	}
-
-	override _onConnectionReady(_conn: Connection<this>) {
-		// ...
 	}
 
 	override _onStateChange(newState: State): void | Promise<void> {
@@ -43,7 +39,6 @@ export default class Counter extends Actor<State, ConnParams | undefined, ConnSt
 			}
 		}
 	}
-
 
     increment(_rpc: Rpc<Counter>, count: number): number {
         this.state.count += count;
