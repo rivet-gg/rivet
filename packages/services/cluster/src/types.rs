@@ -218,10 +218,7 @@ impl GuardPublicHostname {
 					let hostname = format!("actor.{}.{domain_job}", datacenter_id);
 					crate::types::GuardPublicHostname::DnsParent(hostname)
 				} else {
-					tracing::warn!(?datacenter_id, "no guard public hostname specified");
-					crate::types::GuardPublicHostname::Static(
-						"no-guard-public-hostname-specified-in-config.invalid".into(),
-					)
+					bail!("no guard public hostname specified in dc {datacenter_id}")
 				}
 			}
 		};

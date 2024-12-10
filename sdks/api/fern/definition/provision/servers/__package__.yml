@@ -21,3 +21,13 @@ types:
       cluster_id: uuid
       lan_ip: string
       wan_ip: string
+      vlan_ip:
+        availability: deprecated
+        docs: >-
+          **Deprecated**: Use lan_ip
+        type: string
+      public_ip:
+        availability: deprecated
+        docs: >-
+          **Deprecated**: Use wan_ip
+        type: string
