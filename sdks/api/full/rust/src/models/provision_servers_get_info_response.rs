@@ -22,6 +22,12 @@ pub struct ProvisionServersGetInfoResponse {
 	pub lan_ip: String,
 	#[serde(rename = "wan_ip")]
 	pub wan_ip: String,
+	/// **Deprecated**: Use lan_ip
+	#[serde(rename = "vlan_ip")]
+	pub vlan_ip: String,
+	/// **Deprecated**: Use wan_ip
+	#[serde(rename = "public_ip")]
+	pub public_ip: String,
 }
 
 impl ProvisionServersGetInfoResponse {
@@ -32,6 +38,8 @@ impl ProvisionServersGetInfoResponse {
 		cluster_id: uuid::Uuid,
 		lan_ip: String,
 		wan_ip: String,
+		vlan_ip: String,
+		public_ip: String,
 	) -> ProvisionServersGetInfoResponse {
 		ProvisionServersGetInfoResponse {
 			name,
@@ -40,6 +48,8 @@ impl ProvisionServersGetInfoResponse {
 			cluster_id,
 			lan_ip,
 			wan_ip,
+			vlan_ip,
+			public_ip,
 		}
 	}
 }

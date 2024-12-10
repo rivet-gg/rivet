@@ -137,9 +137,7 @@ pub async fn deploy(
 						internal_port: None,
 						routing: Some(Box::new(models::ActorPortRouting {
 							host: None,
-							guard: Some(Box::new(models::ActorGuardRouting {
-								authorization: None,
-							})),
+							guard: Some(serde_json::json!({})),
 						})),
 					},
 				)])),

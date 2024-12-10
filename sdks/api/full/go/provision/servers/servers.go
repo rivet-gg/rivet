@@ -16,6 +16,10 @@ type GetInfoResponse struct {
 	ClusterId    uuid.UUID `json:"cluster_id"`
 	LanIp        string    `json:"lan_ip"`
 	WanIp        string    `json:"wan_ip"`
+	// **Deprecated**: Use lan_ip
+	VlanIp string `json:"vlan_ip"`
+	// **Deprecated**: Use wan_ip
+	PublicIp string `json:"public_ip"`
 
 	_rawJSON json.RawMessage
 }

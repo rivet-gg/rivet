@@ -47,14 +47,16 @@ pub(crate) async fn cluster_datacenter(ctx: &mut WorkflowCtx, input: &Input) -> 
 		};
 
 		// TODO(RVT-4340): Clean up this syntax
-		if ctx.is_new().await? {
-			ctx.activity(InsertDbInputV2 {
-				v1,
-				guard_public_hostname: input.guard_public_hostname.clone(),
-			})
-			.await?;
-		} else {
-			ctx.activity(v1).await?;
+		match ctx.check_version(2).await? {
+			1 => ctx.activity(v1).await?,
+			2 => {
+				ctx.activity(InsertDbInputV2 {
+					v1,
+					guard_public_hostname: input.guard_public_hostname.clone(),
+				})
+				.await?
+			}
+			_ => bail!("unreachable"),
 		}
 	}
 

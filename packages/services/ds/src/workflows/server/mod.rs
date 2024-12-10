@@ -49,12 +49,6 @@ pub struct Port {
 
 #[workflow]
 pub async fn ds_server(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
-	let network_ports = ctx
-		.activity(DisableTlsPortsInput {
-			network_ports: input.network_ports.as_hashable(),
-		})
-		.await?;
-
 	let validation_res = ctx
 		.activity(ValidateInput {
 			env_id: input.env_id,
@@ -66,7 +60,7 @@ pub async fn ds_server(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()>
 			args: input.args.clone(),
 			network_mode: input.network_mode,
 			environment: input.environment.as_hashable(),
-			network_ports: network_ports.clone(),
+			network_ports: input.network_ports.as_hashable(),
 		})
 		.await?;
 
@@ -81,6 +75,12 @@ pub async fn ds_server(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()>
 		// TODO(RVT-3928): return Ok(Err);
 		return Ok(());
 	}
+
+	let network_ports = ctx
+		.activity(DisableTlsPortsInput {
+			network_ports: input.network_ports.as_hashable(),
+		})
+		.await?;
 
 	match input.runtime {
 		ServerRuntime::Nomad => {

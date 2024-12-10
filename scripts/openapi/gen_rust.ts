@@ -63,7 +63,7 @@ async function generateRustSdk() {
 }
 
 async function fixOpenApiBugs() {
-	const files = {
+	const files: Record<string, [RegExp, string][]> = {
 		"cloud_games_matchmaker_api.rs": [
 			[/CloudGamesLogStream/g, "crate::models::CloudGamesLogStream"],
 		],
@@ -80,7 +80,18 @@ async function fixOpenApiBugs() {
 
 	for (const [file, replacements] of Object.entries(files)) {
 		const filePath = `${GEN_PATH_RUST}/src/apis/${file}`;
-		let content = await Deno.readTextFile(filePath);
+		let content;
+		try {
+			content = await Deno.readTextFile(filePath);
+		} catch (error) {
+			if (error instanceof Deno.errors.NotFound) {
+				console.warn(`File not found: ${filePath}`);
+				continue;
+			} else {
+				throw error;
+			}
+		}
+
 		for (const [from, to] of replacements) {
 			content = content.replace(from, to);
 		}

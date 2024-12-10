@@ -9809,6 +9809,12 @@ components:
           type: string
         wan_ip:
           type: string
+        vlan_ip:
+          type: string
+          description: '**Deprecated**: Use lan_ip'
+        public_ip:
+          type: string
+          description: '**Deprecated**: Use wan_ip'
       required:
         - name
         - server_id
@@ -9816,6 +9822,8 @@ components:
         - cluster_id
         - lan_ip
         - wan_ip
+        - vlan_ip
+        - public_ip
     ServersGetServerResponse:
       type: object
       properties:
