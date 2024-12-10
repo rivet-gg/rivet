@@ -95,7 +95,7 @@ pub enum ActorUpgradeAllError {
 
 
 /// Create a new dynamic actor.
-pub async fn actor_create(configuration: &configuration::Configuration, actor_create_actor_request: crate::models::ActorCreateActorRequest, project: Option<&str>, environment: Option<&str>, endpoint_type: Option<ActorEndpointType>) -> Result<crate::models::ActorCreateActorResponse, Error<ActorCreateError>> {
+pub async fn actor_create(configuration: &configuration::Configuration, actor_create_actor_request: crate::models::ActorCreateActorRequest, project: Option<&str>, environment: Option<&str>, endpoint_type: Option<crate::models::ActorEndpointType>) -> Result<crate::models::ActorCreateActorResponse, Error<ActorCreateError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -176,7 +176,7 @@ pub async fn actor_destroy(configuration: &configuration::Configuration, actor: 
 }
 
 /// Gets a dynamic actor.
-pub async fn actor_get(configuration: &configuration::Configuration, actor: &str, project: Option<&str>, environment: Option<&str>, endpoint_type: Option<ActorEndpointType>) -> Result<crate::models::ActorGetActorResponse, Error<ActorGetError>> {
+pub async fn actor_get(configuration: &configuration::Configuration, actor: &str, project: Option<&str>, environment: Option<&str>, endpoint_type: Option<crate::models::ActorEndpointType>) -> Result<crate::models::ActorGetActorResponse, Error<ActorGetError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;
@@ -216,7 +216,7 @@ pub async fn actor_get(configuration: &configuration::Configuration, actor: &str
 }
 
 /// Lists all actors associated with the token used. Can be filtered by tags in the query string.
-pub async fn actor_list(configuration: &configuration::Configuration, project: Option<&str>, environment: Option<&str>, endpoint_type: Option<ActorEndpointType>, tags_json: Option<&str>, include_destroyed: Option<bool>, cursor: Option<&str>) -> Result<crate::models::ActorListActorsResponse, Error<ActorListError>> {
+pub async fn actor_list(configuration: &configuration::Configuration, project: Option<&str>, environment: Option<&str>, endpoint_type: Option<crate::models::ActorEndpointType>, tags_json: Option<&str>, include_destroyed: Option<bool>, cursor: Option<&str>) -> Result<crate::models::ActorListActorsResponse, Error<ActorListError>> {
     let local_var_configuration = configuration;
 
     let local_var_client = &local_var_configuration.client;

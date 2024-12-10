@@ -76,10 +76,7 @@ If using host ports, read about differences in behavior with [actor rescheduling
 
 ### Host
 
-<Note>
-  "Host endpoint type" has no association with "host networking" or "host
-  routing" above.
-</Note>
+<Note>"Host endpoint type" has no association with "host networking" or "host routing" above.</Note>
 
 The host endpoint type uses the `Host` header to route the request to the correct actor. This is the default & recommended method to use for production Rivet clusters.
 
@@ -97,6 +94,15 @@ The path endpoint type uses the beginning of the request path to route to the co
 
 - Self hosting or developing Rivet without a wildcard DNS record (e.g. Rivet Guard running on `127.0.0.1:7080`)
 - Rare cases where explicit hostnames need to be whitelisted (e.g. Discord Activities [URL mappings](https://discord.com/developers/docs/activities/development-guides#url-mapping))
+
+<Warning>
+  Directing your users to an HTML page with path endpoint type may be a security
+  risk. The origin for path endpoint types (`route.actor.{region}.rivet.run`) is
+  shared with other actors. This means that all cookies, local/session storage,
+  web workers, etc are shared with any other actor running in the same region.
+
+  Use the host endpoint type instead if serving HTML content.
+</Warning>
 
 ## Routing Diagram
 
