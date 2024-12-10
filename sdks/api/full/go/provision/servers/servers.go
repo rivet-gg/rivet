@@ -14,8 +14,8 @@ type GetInfoResponse struct {
 	ServerId     uuid.UUID `json:"server_id"`
 	DatacenterId uuid.UUID `json:"datacenter_id"`
 	ClusterId    uuid.UUID `json:"cluster_id"`
-	VlanIp       string    `json:"vlan_ip"`
-	PublicIp     string    `json:"public_ip"`
+	LanIp        string    `json:"lan_ip"`
+	WanIp        string    `json:"wan_ip"`
 
 	_rawJSON json.RawMessage
 }

@@ -63,6 +63,9 @@ export abstract class Actor<
 	ConnParams = undefined,
 	ConnState = undefined,
 > {
+	// Store the init promise so network requests can await initialization
+	#initializedPromise?: Promise<void>;
+
 	#stateChanged: boolean = false;
 
 	/**
@@ -123,9 +126,15 @@ export abstract class Actor<
 	async #run(ctx: ActorContext) {
 		this.#ctx = ctx;
 
-		await this.#initializeState();
-
+		// Run server immediately since init might take a few ms
 		this.#runServer();
+
+		// Initialize server
+		//
+		// Store the promise so network requests can await initialization
+		this.#initializedPromise = this.#initializeState();
+		await this.#initializedPromise;
+		this.#initializedPromise = undefined;
 
 		// TODO: Exit process if this errors
 		console.log("calling start");
@@ -291,6 +300,7 @@ export abstract class Actor<
 
 	// MARK: RPC
 	//async #handleRpc(c: HonoContext): Promise<Response> {
+	//  // TODO: Wait for initialize
 	//	try {
 	//		const rpcName = c.req.param("name");
 	//		const requestBody = await c.req.json<httpRpc.Request<unknown[]>>();
@@ -348,6 +358,9 @@ export abstract class Actor<
 
 	// MARK: WebSocket
 	async #handleWebSocket(c: HonoContext): Promise<WSEvents<WebSocket>> {
+		// Wait for init to finish
+		if (this.#initializedPromise) await this.#initializedPromise;
+
 		// TODO: Handle timeouts opening socket
 
 		// Validate protocol
