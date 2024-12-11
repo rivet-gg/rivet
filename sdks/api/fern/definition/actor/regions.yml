@@ -14,6 +14,7 @@ service:
     list:
       path: ""
       method: GET
+      auth: false
       request:
         name: ListRegionsRequestQuery
         query-parameters:

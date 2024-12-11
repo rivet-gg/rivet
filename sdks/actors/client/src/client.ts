@@ -1,8 +1,7 @@
 import { ActorHandleRaw } from "./handle.ts";
-import { ActorTags } from "../../common/src/utils.ts";
-import { ActorsRequest } from "../../manager-protocol/src/mod.ts";
-import { CreateRequest } from "../../manager-protocol/src/query.ts";
-import { RivetClient, RivetClientClient } from "@rivet-gg/api";
+import type { ActorTags } from "../../common/src/utils.ts";
+import type { ActorsRequest } from "../../manager-protocol/src/mod.ts";
+import type { CreateRequest } from "../../manager-protocol/src/query.ts";
 
 export interface WithTagsOpts {
 	parameters?: unknown;
@@ -15,31 +14,46 @@ export interface WithTagsOpts {
  *
  * Private methods (e.g. those starting with `_`) are automatically excluded.
  */
-export type ActorHandle<A = unknown> = ActorHandleRaw & {
-	[K in keyof A as K extends string ? (K extends `_${string}` ? never : K) : K]: A[K] extends (
-		...args: infer Args
-	) => infer Return
-		? ActorRPCFunction<Args, Return>
-		: never;
-};
+export type ActorHandle<A = unknown> =
+	& ActorHandleRaw
+	& {
+		[
+			K in keyof A as K extends string ? K extends `_${string}` ? never : K
+				: K
+		]: A[K] extends (...args: infer Args) => infer Return
+			? ActorRPCFunction<Args, Return>
+			: never;
+	};
 
 /**
  * RPC function returned by the actor proxy. This will call `ActorHandle.rpc`
  * when triggered.
  */
-export type ActorRPCFunction<Args extends Array<unknown> = unknown[], Response = unknown> = (
+export type ActorRPCFunction<
+	Args extends Array<unknown> = unknown[],
+	Response = unknown,
+> = (
 	// Remove the first parameter, since that's `Context<...>`
 	...args: Args extends [unknown, ...infer Rest] ? Rest : Args
 ) => Promise<Response>;
 
-export class Client {
-	private readonly client = new RivetClientClient({ token: TODO });
+/** Region to connect to. */
+interface Region {
+	id: string;
+	name: string;
+}
 
-	private region: Promise<RivetClient.actor.Region> | null = this.#fetchRegion();
+export class Client {
+	#apiEndpoint = "https://api.rivet.gg";
+
+	#regionPromise = this.#fetchRegion();
 
 	constructor(private readonly managerEndpoint: string) {}
 
-	async withTags<A = unknown>(tags: ActorTags, opts?: WithTagsOpts): Promise<ActorHandle<A>> {
+	async withTags<A = unknown>(
+		tags: ActorTags,
+		opts?: WithTagsOpts,
+	): Promise<ActorHandle<A>> {
 		const handle = await this.#createHandle(tags, opts);
 		return this.#createProxy(handle) as ActorHandle<A>;
 	}
@@ -47,9 +61,8 @@ export class Client {
 	#createProxy(handle: ActorHandleRaw): ActorHandle {
 		// Stores returned RPC functions for faster calls
 		const methodCache = new Map<string, ActorRPCFunction>();
-
 		return new Proxy(handle, {
-			get(target: ActorHandleRaw, prop: string | symbol, receiver: any) {
+			get(target: ActorHandleRaw, prop: string | symbol, receiver: unknown) {
 				// Handle built-in Symbol properties
 				if (typeof prop === "symbol") {
 					return Reflect.get(target, prop, receiver);
@@ -122,42 +135,37 @@ export class Client {
 		}) as ActorHandle;
 	}
 
-	async #createHandle(tags: ActorTags, opts?: WithTagsOpts): Promise<ActorHandleRaw> {
+	async #createHandle(
+		tags: ActorTags,
+		opts?: WithTagsOpts,
+	): Promise<ActorHandleRaw> {
 		const create = opts?.create ?? {
 			tags,
 			buildTags: {
 				name: tags.name,
 				current: "true",
 			},
-			region: (await this.region).id,
+			region: (await this.#regionPromise)?.id,
 		};
-
-		//client.get("chat_room", { room: "lkjsdf" }, { noCreate: true, parameters: { token: 123 } });
-		//client.get({ name: "chat_room", room: "lkjsdf" }, { noCreate: true, parameters: { token: 123 } });
-		//client.get("chat_room", {
-		//	tags: { channel: "foo", },
-		//	parameters: { token: 123 }
-		//});
-
-		//client.withTags({ name: "chat_room", room: "lkjsdf" };
-		//client.withTags("chat_room", { room: "lkjsdf" });
-
-		// { game_mode: "tdm" } -> { game_mode: "tdm", map: "sandstorm" }
 
 		const res = await fetch(`${this.managerEndpoint}/actors`, {
 			method: "POST",
-			body: JSON.stringify({
-				query: {
-					getOrCreate: {
-						tags,
-						create,
+			body: JSON.stringify(
+				{
+					query: {
+						getOrCreate: {
+							tags,
+							create,
+						},
 					},
-				},
-			} satisfies ActorsRequest),
+				} satisfies ActorsRequest,
+			),
 		});
 
 		if (!res.ok) {
-			throw new Error(`Manager error (${res.statusText}):\n${await res.text()}`);
+			throw new Error(
+				`Manager error (${res.statusText}):\n${await res.text()}`,
+			);
 		}
 
 		const resJson: { endpoint: string } = await res.json();
@@ -166,9 +174,37 @@ export class Client {
 		return handle;
 	}
 
-	async #fetchRegion() {
-		let { region } = await this.client.actor.regions.resolve({});
+	async #fetchRegion(): Promise<Region | undefined> {
+		try {
+			// Fetch the project & env from the manager
 
-		return region;
+			// Fetch the region
+			//
+			// This is fetched from the client instead of the manager so Rivet can automatically determine the recommended region using an anycast request made from the client
+			const query = new URLSearchParams();
+			query.set("project", "FOO");
+			query.set("environment", "FOO");
+			const res = await fetch(
+				`${this.#apiEndpoint}/regions?${query.toString()}`,
+			);
+
+			if (!res.ok) {
+				throw new Error(
+					`Failed to fetch region (${res.statusText}):\n${await res.text()}`,
+				);
+			}
+
+			const resJson: { regions: Region[] } = await res.json();
+			const region = resJson.regions[0];
+
+			return region;
+		} catch (err) {
+			// Add safe fallback in case we can't fetch the region
+			console.error(
+				"Failed to fetch region, defaulting to manager region",
+				err,
+			);
+			return undefined;
+		}
 	}
 }
