@@ -1,6 +1,10 @@
 import { ActorHandleRaw } from "./handle.ts";
 import type { ActorTags } from "../../common/src/utils.ts";
-import type { ActorsRequest } from "../../manager-protocol/src/mod.ts";
+import type {
+	ActorsRequest,
+	ActorsResponse,
+	RivetConfigResponse,
+} from "../../manager-protocol/src/mod.ts";
 import type { CreateRequest } from "../../manager-protocol/src/query.ts";
 
 export interface WithTagsOpts {
@@ -44,8 +48,6 @@ interface Region {
 }
 
 export class Client {
-	#apiEndpoint = "https://api.rivet.gg";
-
 	#regionPromise = this.#fetchRegion();
 
 	constructor(private readonly managerEndpoint: string) {}
@@ -148,18 +150,39 @@ export class Client {
 			region: (await this.#regionPromise)?.id,
 		};
 
-		const res = await fetch(`${this.managerEndpoint}/actors`, {
-			method: "POST",
-			body: JSON.stringify(
-				{
-					query: {
-						getOrCreate: {
-							tags,
-							create,
-						},
+		const resJson = await this.#sendManagerRequest<
+			ActorsRequest,
+			ActorsResponse
+		>(
+			"POST",
+			"/actors",
+			{
+				query: {
+					getOrCreate: {
+						tags,
+						create,
 					},
-				} satisfies ActorsRequest,
-			),
+				},
+			},
+		);
+
+		const handle = new ActorHandleRaw(resJson.endpoint, opts?.parameters);
+		handle.connect();
+		return handle;
+	}
+
+	/** Sends an HTTP request to the manager actor. */
+	async #sendManagerRequest<Request, Response>(
+		method: string,
+		path: string,
+		body?: Request,
+	): Promise<Response> {
+		const res = await fetch(`${this.managerEndpoint}${path}`, {
+			method,
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: body ? JSON.stringify(body) : undefined,
 		});
 
 		if (!res.ok) {
@@ -168,25 +191,29 @@ export class Client {
 			);
 		}
 
-		const resJson: { endpoint: string } = await res.json();
-		const handle = new ActorHandleRaw(resJson.endpoint, opts?.parameters);
-		handle.connect();
-		return handle;
+		return res.json();
 	}
 
 	async #fetchRegion(): Promise<Region | undefined> {
 		try {
-			// Fetch the project & env from the manager
+			// Fetch the connection info from the manager
+			const { endpoint, project, environment } = await this.#sendManagerRequest<
+				undefined,
+				RivetConfigResponse
+			>(
+				"GET",
+				"/rivet/config",
+			);
 
 			// Fetch the region
 			//
-			// This is fetched from the client instead of the manager so Rivet can automatically determine the recommended region using an anycast request made from the client
-			const query = new URLSearchParams();
-			query.set("project", "FOO");
-			query.set("environment", "FOO");
-			const res = await fetch(
-				`${this.#apiEndpoint}/regions?${query.toString()}`,
-			);
+			// This is fetched from the client instead of the manager so Rivet
+			// can automatically determine the recommended region using an
+			// anycast request made from the client
+			const url = new URL("/regions/resolve", endpoint);
+			if (project) url.searchParams.set("project", project);
+			if (environment) url.searchParams.set("environment", environment);
+			const res = await fetch(url.toString());
 
 			if (!res.ok) {
 				throw new Error(
@@ -194,8 +221,7 @@ export class Client {
 				);
 			}
 
-			const resJson: { regions: Region[] } = await res.json();
-			const region = resJson.regions[0];
+			const { region }: { region: Region } = await res.json();
 
 			return region;
 		} catch (err) {

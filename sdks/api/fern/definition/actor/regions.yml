@@ -6,7 +6,7 @@ imports:
   uploadCommons: ../upload/common.yml
 
 service:
-  auth: true
+  auth: false
   base-path: /regions
   audiences:
     - runtime
@@ -14,7 +14,6 @@ service:
     list:
       path: ""
       method: GET
-      auth: false
       request:
         name: ListRegionsRequestQuery
         query-parameters:
