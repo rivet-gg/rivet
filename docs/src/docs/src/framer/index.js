@@ -3,8 +3,8 @@
 'use client';
 import { defaultEvents, getIconSelection, NullState, useIconSelection, } from './chunk-K6MKSK76.js';
 import { className, className2, css, css2, fonts, fonts2, } from './chunk-76DSJYNX.js';
-import { css as css3, html, javascript, } from './chunk-WY5XFK64.js';
-import { closeBrackets, closeBracketsKeymap, } from './chunk-RD5SFWJ7.js';
+import { css as css3, html, javascript, } from './chunk-HN3BWLVV.js';
+import { closeBrackets, closeBracketsKeymap, } from './chunk-56ZL722Y.js';
 import {
   Annotation,
   bracketMatching,
@@ -42,8 +42,8 @@ import {
   Text,
   Transaction,
   ViewPlugin,
-} from './chunk-QHDV5QG3.js';
-import './chunk-RUAN5HWR.js';
+} from './chunk-NMJ6HCGE.js';
+import './chunk-V5TDMFQ4.js';
 
 // https :https://framerusercontent.com/modules/iDDKRieYEAiI3cZj3HIf/CJJ31KbLY8DAxkRhGI5g/zLfXOCD5_.js
 import { jsx as _jsx20, jsxs as _jsxs9, } from 'react/jsx-runtime';
@@ -18033,103 +18033,103 @@ function isDarkColor2(color2,) {
 
 // https :https://framerusercontent.com/modules/DyzTKdNCsRH8nvz08sNT/dJhQ3yTSKg9tQmEoIrL8/useLanguageAsync.js
 var angular = new SuspenseValue(async () => {
-  const language = await import('./codemirror_lang_angular-PVCU2KDJ.js');
+  const language = await import('./codemirror_lang_angular-LDUXDLZC.js');
   return language.angular();
 },);
 var cpp = new SuspenseValue(async () => {
-  const language = await import('./codemirror_lang_cpp-QQKCA7YN.js');
+  const language = await import('./codemirror_lang_cpp-GIDSUF4N.js');
   return language.cpp();
 },);
 var java = new SuspenseValue(async () => {
-  const language = await import('./codemirror_lang_java-QSXN6XYI.js');
+  const language = await import('./codemirror_lang_java-RX6SVHZM.js');
   return language.java();
 },);
 var markdown = new SuspenseValue(async () => {
-  const language = await import('./codemirror_lang_markdown-LN4OODO3.js');
+  const language = await import('./codemirror_lang_markdown-OTHADU5J.js');
   return language.markdown();
 },);
 var php = new SuspenseValue(async () => {
-  const language = await import('./codemirror_lang_php-SM3TN76M.js');
+  const language = await import('./codemirror_lang_php-NRLJ766N.js');
   return language.php();
 },);
 var python = new SuspenseValue(async () => {
-  const language = await import('./codemirror_lang_python-BWLI3JUU.js');
+  const language = await import('./codemirror_lang_python-STOJFMMS.js');
   return language.python();
 },);
 var rust = new SuspenseValue(async () => {
-  const language = await import('./codemirror_lang_rust-RQDWJ7QB.js');
+  const language = await import('./codemirror_lang_rust-2ZF6SASR.js');
   return language.rust();
 },);
 var sql = new SuspenseValue(async () => {
-  const language = await import('./codemirror_lang_sql-2IP622EX.js');
+  const language = await import('./codemirror_lang_sql-YCNEZALL.js');
   return language.sql();
 },);
 var vue = new SuspenseValue(async () => {
-  const language = await import('./codemirror_lang_vue-GAOGG6Q7.js');
+  const language = await import('./codemirror_lang_vue-UQ3BJGP7.js');
   return language.vue();
 },);
 var scala = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_clike-T7ZGWEAX.js');
+  const language = await import('./codemirror_legacy_modes_mode_clike-YQJM2T6E.js');
   return new LanguageSupport(StreamLanguage.define(language.scala,),);
 },);
 var c2 = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_clike-T7ZGWEAX.js');
+  const language = await import('./codemirror_legacy_modes_mode_clike-YQJM2T6E.js');
   return new LanguageSupport(StreamLanguage.define(language.c,),);
 },);
 var csharp = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_clike-T7ZGWEAX.js');
+  const language = await import('./codemirror_legacy_modes_mode_clike-YQJM2T6E.js');
   return new LanguageSupport(StreamLanguage.define(language.csharp,),);
 },);
 var kotlin = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_clike-T7ZGWEAX.js');
+  const language = await import('./codemirror_legacy_modes_mode_clike-YQJM2T6E.js');
   return new LanguageSupport(StreamLanguage.define(language.kotlin,),);
 },);
 var objectiveC = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_clike-T7ZGWEAX.js');
+  const language = await import('./codemirror_legacy_modes_mode_clike-YQJM2T6E.js');
   return new LanguageSupport(StreamLanguage.define(language.objectiveC,),);
 },);
 var go = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_go-JFYKN3QF.js');
+  const language = await import('./codemirror_legacy_modes_mode_go-34XMPTCE.js');
   return new LanguageSupport(StreamLanguage.define(language.go,),);
 },);
 var haskell = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_haskell-SEBIMACK.js');
+  const language = await import('./codemirror_legacy_modes_mode_haskell-CWXDJJ4H.js');
   return new LanguageSupport(StreamLanguage.define(language.haskell,),);
 },);
 var julia = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_julia-TQME7C5O.js');
+  const language = await import('./codemirror_legacy_modes_mode_julia-X5IVPGUW.js');
   return new LanguageSupport(StreamLanguage.define(language.julia,),);
 },);
 var lua = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_lua-ZIVFH3WV.js');
+  const language = await import('./codemirror_legacy_modes_mode_lua-LXL2RNP7.js');
   return new LanguageSupport(StreamLanguage.define(language.lua,),);
 },);
 var nginx = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_nginx-RA5FTK5N.js');
+  const language = await import('./codemirror_legacy_modes_mode_nginx-BN4LB5GO.js');
   return new LanguageSupport(StreamLanguage.define(language.nginx,),);
 },);
 var octave = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_octave-YZAI2XOO.js');
+  const language = await import('./codemirror_legacy_modes_mode_octave-GYKAWKYX.js');
   return new LanguageSupport(StreamLanguage.define(language.octave,),);
 },);
 var perl = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_perl-OKLOKKYY.js');
+  const language = await import('./codemirror_legacy_modes_mode_perl-DJZKVC5Q.js');
   return new LanguageSupport(StreamLanguage.define(language.perl,),);
 },);
 var ruby = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_ruby-GXQJXTJC.js');
+  const language = await import('./codemirror_legacy_modes_mode_ruby-U7VDLARI.js');
   return new LanguageSupport(StreamLanguage.define(language.ruby,),);
 },);
 var shell = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_shell-7KFAENC3.js');
+  const language = await import('./codemirror_legacy_modes_mode_shell-6HNAELDX.js');
   return new LanguageSupport(StreamLanguage.define(language.shell,),);
 },);
 var swift = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_swift-Q245AT4V.js');
+  const language = await import('./codemirror_legacy_modes_mode_swift-62DL7IY4.js');
   return new LanguageSupport(StreamLanguage.define(language.swift,),);
 },);
 var yaml = new SuspenseValue(async () => {
-  const language = await import('./codemirror_legacy_modes_mode_yaml-WZVX5LHG.js');
+  const language = await import('./codemirror_legacy_modes_mode_yaml-CGM7CCJX.js');
   return new LanguageSupport(StreamLanguage.define(language.yaml,),);
 },);
 function useLanguageAsync(name,) {

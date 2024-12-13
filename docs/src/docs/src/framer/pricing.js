@@ -3,7 +3,7 @@
 'use client';
 import { defaultEvents, NullState, useIconSelection, } from './chunk-K6MKSK76.js';
 import { className, className2, css, css2, fonts, fonts2, } from './chunk-76DSJYNX.js';
-import './chunk-RUAN5HWR.js';
+import './chunk-V5TDMFQ4.js';
 
 // https :https://framerusercontent.com/modules/EQc0WVLWSNg3MefFYC3W/xSV2mWRKQq9VPpNmSevp/kTXE7wUBN.js
 import { jsx as _jsx4, jsxs as _jsxs3, } from 'react/jsx-runtime';
