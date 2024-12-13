@@ -24,8 +24,9 @@ pub async fn cluster_server_dns_create(ctx: &mut WorkflowCtx, input: &Input) -> 
 	);
 	let domain_job = unwrap_ref!(ctx.config().server()?.rivet.dns()?.domain_job);
 
-	let (primary_dns_record_id, secondary_dns_record_id) = ctx
+	let (primary_dns_record_id, secondary_dns_record_id, actor_wildcard_dns_record_id) = ctx
 		.join((
+			// Lobbies
 			activity(CreateDnsRecordInput {
 				record_name: format!("*.lobby.{}.{domain_job}", server_res.datacenter_id),
 				public_ip: server_res.public_ip,
@@ -39,15 +40,27 @@ pub async fn cluster_server_dns_create(ctx: &mut WorkflowCtx, input: &Input) -> 
 				public_ip: server_res.public_ip,
 				zone_id: zone_id.to_string(),
 			}),
+			// Actors
+			v(2).activity(CreateDnsRecordInput {
+				record_name: format!("*.actor.{}.{domain_job}", server_res.datacenter_id),
+				public_ip: server_res.public_ip,
+				zone_id: zone_id.to_string(),
+			}),
 		))
 		.await?;
 
-	ctx.activity(InsertDbInput {
-		server_id: input.server_id,
-		primary_dns_record_id,
-		secondary_dns_record_id,
-	})
-	.await?;
+	{
+		// Insert with old job certs
+		ctx.removed::<Activity<InsertDb>>().await?;
+		ctx.v(2)
+			.activity(InsertDbInput {
+				server_id: input.server_id,
+				primary_dns_record_id,
+				secondary_dns_record_id,
+				actor_wildcard_dns_record_id,
+			})
+			.await?;
+	}
 
 	Ok(())
 }
@@ -126,21 +139,24 @@ struct InsertDbInput {
 	server_id: Uuid,
 	primary_dns_record_id: String,
 	secondary_dns_record_id: String,
+	actor_wildcard_dns_record_id: String,
 }
 
 #[activity(InsertDb)]
 async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<()> {
+	// Upsert since this needs to be idempotent for wf upgrades
 	sql_execute!(
 		[ctx]
 		"
-		INSERT INTO db_cluster.servers_cloudflare (
-			server_id, dns_record_id, secondary_dns_record_id
+		UPSERT INTO db_cluster.servers_cloudflare (
+			server_id, dns_record_id, secondary_dns_record_id, actor_wildcard_dns_record_id
 		)
-		VALUES ($1, $2, $3)
+		VALUES ($1, $2, $3, $4)
 		",
 		input.server_id,
 		&input.primary_dns_record_id,
 		&input.secondary_dns_record_id,
+		&input.actor_wildcard_dns_record_id,
 	)
 	.await?;
 
