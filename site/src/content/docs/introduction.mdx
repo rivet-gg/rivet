@@ -38,12 +38,12 @@ interface State {
 
 class Counter extends Actor<State> {
   // Create the initial state when creating a new actor
-  initializeState() {
+  _onInitialize() {
     return { totalCount: 0 };
   }
 
   // Define a remote procedure call (RPC)
-  increment(count: number) {
+  increment(rpc: Rpc<this>, count: number) {
     // Update state. This is automatically persisted.
     this.state.totalCount += count;
 
@@ -58,7 +58,7 @@ class Counter extends Actor<State> {
 ```typescript {{ "title": "client.ts" }}
 // Connect to counter actor
 const client = new Client(/* Rivet endpoint */);
-const counter = await client.withTags({ name: "counter" });
+const counter = await client.get({ name: "counter" });
 
 // Listen for events
 counter.on("newCount", count => console.log("Broadcasted new count"));
