@@ -50,7 +50,7 @@ Use this code to create & connect to the actor. Replace `/* CONNECTION ADDRESS *
 import Client from "@rivet-gg/actor-client";
 const client = new Client(/* CONNECTION ADDRESS */);
 
-const counter = await client.withTags({ name: "counter" });  // Get or create a `counter` actor
+const counter = await client.get({ name: "counter" });  // Get or create a `counter` actor
 const newCount = await counter.increment(5);  // Call the method `increment` on the `counter` actor
 console.log("New count", newCount);
 ```

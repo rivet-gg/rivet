@@ -53,39 +53,44 @@ export const sitemap = [
           }
         ]
       },
-      // {
-      //   title: 'Use Cases',
-      //   pages: [
-      //     {
-      //       title: 'Multiplayer Tools',
-      //       href: '/use-cases/multiplayer',
-      //       icon: 'rotate'
-      //     },
-      //     {
-      //       title: 'Local-First Apps',
-      //       href: '/use-cases/local-first',
-      //       icon: 'mobile'
-      //     },
-      //     {
-      //       title: 'AI Agents',
-      //       href: '/use-cases/ai-agents',
-      //       icon: 'robot'
-      //     },
-      //     {
-      //       title: 'Run User Code',
-      //       href: '/use-cases/user-code',
-      //       icon: 'alien-8bit'
-      //     },
-      //     {
-      //       title: 'Dedicated Game Servers',
-      //       href: '/use-cases/game-servers',
-      //       icon: 'gamepad'
-      //     },
-      //     // { title: 'Batch Jobs', href: '/docs', icon: 'forklift' },
-      //     // { title: 'Live Events', href: '/docs', icon: 'calendar' },
-      //     { title: 'More', href: '/use-cases', icon: 'ellipsis' }
-      //   ]
-      // },
+      //{
+      //  title: 'Use Cases',
+      //  pages: [
+      //    {
+      //      title: 'Collaborative Application',
+      //      href: '/use-cases/multiplayer',
+      //      icon: 'rotate'
+      //    },
+      //    {
+      //      title: 'Local-First Sync',
+      //      href: '/use-cases/local-first',
+      //      icon: 'mobile'
+      //    },
+      //    {
+      //      title: 'AI Agents',
+      //      href: '/use-cases/ai-agents',
+      //      icon: 'robot'
+      //    },
+      //    {
+      //      title: 'Discord Activities',
+      //      href: '/use-cases/user-code',
+      //      icon: 'alien-8bit'
+      //    },
+      //    {
+      //      title: 'Dedicated Game Servers',
+      //      href: '/use-cases/game-servers',
+      //      icon: 'gamepad'
+      //    },
+      //    {
+      //      title: 'Run User Code',
+      //      href: '/use-cases/user-code',
+      //      icon: 'alien-8bit'
+      //    },
+      //    // { title: 'Batch Jobs', href: '/docs', icon: 'forklift' },
+      //    // { title: 'Live Events', href: '/docs', icon: 'calendar' },
+      //    { title: 'More', href: '/use-cases', icon: 'ellipsis' }
+      //  ]
+      //},
       {
         title: 'Build with Rivet',
         pages: [

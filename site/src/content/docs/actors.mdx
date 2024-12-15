@@ -1,34 +1,34 @@
 # What are Actors?
 
-Actors are a simple & powerful architecture. Think of actors as independent workers that:
+Actors are a simple and powerful architecture. Think of actors as independent workers that:
 
 - Run in their own isolated, lightweight process
-- Maintain their own isolated, durable state in memory (survives crashes & upgrades)
+- Maintain their own isolated, durable state in memory (survives crashes and upgrades)
 - Communicate only through remote procedure calls - no shared state
 - Scale infinitely, start instantly, and sleep when not in use
 - Deploy globally at the edge (close to users)
 
 These characteristics provide the following benefits:
 
-- Complex infrastructure (e.g. caches, queues, pubsub) can be replaced with actors, which is a simpler architecture
-- Improve performance by combining compute (i.e. "RPC") with data (i.e. "state")
-- Provide natural fault tolerance - state is durable & failures don't cascade
-- Lower latency for users by running at the edge & combining compute/data
+- Complex infrastructure (e.g., caches, queues, pub/sub) can be replaced with actors, which is a simpler architecture
+- Improve performance by combining compute (i.e., "RPC") with data (i.e., "state")
+- Provide natural fault tolerance - state is durable and failures don't cascade
+- Lower latency for users by running at the edge and combining compute/data
 
 ## Core concepts
 
-- [**Remote Procedure Call**](/docs/rpc) (RPC) are how clients communicate with actors & how actors communicate with each other.
-- [**State**](/docs/state) is the data belonging to each actor. State cannot be shared between actors. State is stored in memory (unless it's too large) for fast reads & writes. State is durable and will always survive a crash or upgrade. You can update state without having to do anything special.
-- [**Events**](/docs/events) are used for realtime communication between clients & actors. Clients can subscribe to events with `actor.on("myEvent")` and actors can publish events with `this.broadcast("myEvent")` or `connection.send("myEvent")`.
-- [**Connections**](/docs/connections) represent a client that's currently connected to the actor. Connections have have their own state, e.g. `userId`. You can use `onConnect` to authenticate connections before they can communicate with the actor.
+- [**Remote Procedure Call**](/docs/rpc) (RPC) is how clients communicate with actors and how actors communicate with each other.
+- [**State**](/docs/state) is the data belonging to each actor. State cannot be shared between actors. State is stored in memory (unless it's too large) for fast reads and writes. State is durable and will always survive a crash or upgrade. You can update state without having to do anything special.
+- [**Events**](/docs/events) are used for real-time communication between clients and actors. Clients can subscribe to events with `actor.on("myEvent")`, and actors can publish events with `this.broadcast("myEvent")` or `connection.send("myEvent")`.
+- [**Connections**](/docs/connections) represent a client that's currently connected to the actor. Connections have their own state, e.g., `userId`. You can use `onConnect` to authenticate connections before they can communicate with the actor.
 
 To read more about architecting actors for scale, see [here](/docs/scaling).
 
-## Actor architecture vs. server & container architecture
+## Actor architecture vs. server and container architecture
 
-Servers & containers and actors handle state and compute very differently:
+Servers and containers and actors handle state and compute very differently:
 
-| Feature                 | Servers/Containers                                                         | Actors                                                                                    |
+| Feature                 | Servers and Containers                                                         | Actors                                                                                    |
 | ----------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | **Compute and State**   | Separate compute (application layer) from state (databases)                | Keep state and compute together                                                           |
 | **Scaling**             | Need external services (load balancers, databases) to scale                | Cheaper & automatically distribute load                                                   |
@@ -42,19 +42,34 @@ Servers & containers and actors handle state and compute very differently:
 
 Builds contain the code required to run an actor. Builds are uploaded to Rivet when running `rivet deploy`. Each actor is associated with a single build ID.
 
-When a new build is uploaded, all actors are upgraded to use the new build. This process is usually transparent to you, since state is durable.
+When a new build is uploaded, all actors are upgraded to use the new build. This process is usually transparent to you since the state is durable.
 
-## Actor & build tags
+## Actor and build tags
 
-Tags are a powerful way of managing actors at scale. Tags can be any set of key-value pairs you choose. They allow you to easily choose which actors to communicate with, create fine-grained security rules, and enhances monitoring.
+Tags are a powerful way of managing actors at scale. Tags can be any set of key-value pairs you choose. They allow you to easily choose which actors to communicate with, create fine-grained security rules, and enhance monitoring.
 
 ### Structuring tags
 
-While you can choose anything you'd like for your actor's tags, here's a few guidelines to consider:
+While you can choose anything you'd like for your actor's tags, here are a few guidelines to consider:
 
-- Actors & builds almost always have a `name` tag defining what type of actor this is. For example, `name=user`, `name=channel`, or `name=document`. An actor's `name` tag is usually identical to the build's `name` tag.
-- Actors often have unique ID associated with them as a tag. For example, `userId=1234`, `channel=memes`, `documentId=1234`.
-- Actors & builds sometimes have an `owner` tag indicating what service created the actor. For example `owner=api` and `owner=terraform`.
-- For larger projects, actors & builds sometimes have have an `app` tag to group the product an actor belongs to together. For example, `app=social` and `app=store`.
+- Actors and builds almost always have a `name` tag defining what type of actor this is. For example, `name=user`, `name=channel`, or `name=document`. An actor's `name` tag is usually identical to the build's `name` tag.
+- Actors often have a unique ID associated with them as a tag. For example, `userId=1234`, `channel=memes`, `documentId=1234`.
+- Actors and builds sometimes have an `owner` tag indicating what service created the actor. For example, `owner=api` and `owner=terraform`.
+- For larger projects, actors and builds sometimes have an `app` tag to group the product an actor belongs to together. For example, `app=social` and `app=store`.
 
-Tags are not intended for storing large amounts of data (e.g. descriptions or long lists of items). They're intended purely for organizing & filtering actors/builds.
+<Note>
+  Tags are not intended for storing large amounts of data (e.g., descriptions or long lists of items). They're
+  intended purely for organizing and filtering actors/builds.
+</Note>
+
+## Example architectures
+
+See the [use cases](/docs/use-cases) for explanations of example actor architectures.
+
+## Next steps
+
+<CardGroup>
+  <Card title='RPC' href='/docs/rpc' />
+  <Card title='State' href='/docs/state' />
+</CardGroup>
+
