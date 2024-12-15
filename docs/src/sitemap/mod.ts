@@ -52,12 +52,12 @@ export const sitemap = [
         title: 'Use Cases',
         pages: [
           {
-            title: 'Multiplayer Tools',
+            title: 'Collaborative Application',
             href: '/use-cases/multiplayer',
             icon: 'rotate'
           },
           {
-            title: 'Local-First Apps',
+            title: 'Local-First Sync',
             href: '/use-cases/local-first',
             icon: 'mobile'
           },
@@ -67,7 +67,7 @@ export const sitemap = [
             icon: 'robot'
           },
           {
-            title: 'Run User Code',
+            title: 'Discord Activities',
             href: '/use-cases/user-code',
             icon: 'alien-8bit'
           },
@@ -75,6 +75,11 @@ export const sitemap = [
             title: 'Dedicated Game Servers',
             href: '/use-cases/game-servers',
             icon: 'gamepad'
+          },
+          {
+            title: 'Run User Code',
+            href: '/use-cases/user-code',
+            icon: 'alien-8bit'
           },
           // { title: 'Batch Jobs', href: '/docs', icon: 'forklift' },
           // { title: 'Live Events', href: '/docs', icon: 'calendar' },
@@ -283,7 +288,7 @@ export const sitemap = [
   },
   {
     title: 'Platform API',
-    href: '/docs/examples',
+    href: '/docs/api',
     sidebar: apiPages.pages
   }
 ] satisfies Sitemap;
