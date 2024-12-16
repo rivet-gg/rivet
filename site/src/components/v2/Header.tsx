@@ -56,7 +56,7 @@ export function Header({ active, subnav }: HeaderProps) {
             </Link>
           </RivetHeader.NavItem>
           <RivetHeader.NavItem asChild className='p-2'>
-            <Link href='/support'>
+            <Link href='https://github.com/rivet-gg/rivet' target='_blank'>
               <Icon icon={faGithub} />
             </Link>
           </RivetHeader.NavItem>

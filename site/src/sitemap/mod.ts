@@ -115,7 +115,7 @@ export const sitemap = [
             icon: 'globe'
           },
           {
-            title: 'Concepts',
+            title: 'More',
             collapsible: true,
             pages: [
               {

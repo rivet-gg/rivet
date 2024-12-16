@@ -1067,6 +1067,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@jspm/core@npm:^2.0.1":
+  version: 2.1.0
+  resolution: "@jspm/core@npm:2.1.0"
+  checksum: 10/0beee551f2b900b9f829b91e69c3f867c8483133b904dadec9bbe4b89e5b02b9556c782e4d282fcc0d0b0928abb4ee9131454d7acec81751610d2b78b7f56f67
+  languageName: node
+  linkType: hard
+
 "@kurkle/color@npm:^0.3.0":
   version: 0.3.4
   resolution: "@kurkle/color@npm:0.3.4"
@@ -4716,6 +4723,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"esbuild-plugin-polyfill-node@npm:^0.3.0":
+  version: 0.3.0
+  resolution: "esbuild-plugin-polyfill-node@npm:0.3.0"
+  dependencies:
+    "@jspm/core": "npm:^2.0.1"
+    import-meta-resolve: "npm:^3.0.0"
+  peerDependencies:
+    esbuild: "*"
+  checksum: 10/3a6f41b965004d225997b1bc0228ced160d94c5c917f8cb519c462aa2ec5e73e87e370d93443b8c3784e3d4501436a780ad81947e9c00a38630755e2e639c411
+  languageName: node
+  linkType: hard
+
 "esbuild-plugins-node-modules-polyfill@npm:^1.6.8":
   version: 1.6.8
   resolution: "esbuild-plugins-node-modules-polyfill@npm:1.6.8"
@@ -4729,7 +4748,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esbuild@npm:^0.21.3":
+"esbuild@npm:^0.21.3, esbuild@npm:^0.21.5":
   version: 0.21.5
   resolution: "esbuild@npm:0.21.5"
   dependencies:
@@ -5526,7 +5545,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"framer-motion@npm:unframer@^2.6.5, unframer@npm:^2.6.5":
+"framer-motion@npm:unframer@^2.6.5":
   version: 2.8.0
   resolution: "unframer@npm:2.8.0"
   dependencies:
@@ -6173,6 +6192,13 @@ __metadata:
     parent-module: "npm:^1.0.0"
     resolve-from: "npm:^4.0.0"
   checksum: 10/2cacfad06e652b1edc50be650f7ec3be08c5e5a6f6d12d035c440a42a8cc028e60a5b99ca08a77ab4d6b1346da7d971915828f33cdab730d3d42f08242d09baa
+  languageName: node
+  linkType: hard
+
+"import-meta-resolve@npm:^3.0.0":
+  version: 3.1.1
+  resolution: "import-meta-resolve@npm:3.1.1"
+  checksum: 10/ae1bd4910eba2a6e15d373a934b5200e8145d63eb7f83639dde1dc1da0c9ad9d960a17c0f09d45118df5c8f63b64492d3bf7039bc3da81544700fb2dad78b84b
   languageName: node
   linkType: hard
 
@@ -9720,7 +9746,7 @@ __metadata:
     socket.io-client: "npm:^4.7.1"
     tailwindcss: "npm:^3.3.0"
     typescript: "npm:^5.1.6"
-    unframer: "npm:^2.6.5"
+    unframer: "npm:=2.6.6"
     unified: "npm:^10.1.2"
     unist-util-filter: "npm:^4.0.1"
     unist-util-visit: "npm:^4.1.1"
@@ -10726,6 +10752,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tmp@npm:^0.2.3":
+  version: 0.2.3
+  resolution: "tmp@npm:0.2.3"
+  checksum: 10/7b13696787f159c9754793a83aa79a24f1522d47b87462ddb57c18ee93ff26c74cbb2b8d9138f571d2e0e765c728fb2739863a672b280528512c6d83d511c6fa
+  languageName: node
+  linkType: hard
+
 "to-regex-range@npm:^5.0.1":
   version: 5.0.1
   resolution: "to-regex-range@npm:5.0.1"
@@ -10928,6 +10961,34 @@ __metadata:
   version: 6.20.0
   resolution: "undici-types@npm:6.20.0"
   checksum: 10/583ac7bbf4ff69931d3985f4762cde2690bb607844c16a5e2fbb92ed312fe4fa1b365e953032d469fa28ba8b224e88a595f0b10a449332f83fa77c695e567dbe
+  languageName: node
+  linkType: hard
+
+"unframer@npm:=2.6.6":
+  version: 2.6.6
+  resolution: "unframer@npm:2.6.6"
+  dependencies:
+    async-sema: "npm:^3.1.1"
+    cac: "npm:^6.7.14"
+    chokidar: "npm:^3.6.0"
+    dedent: "npm:^1.5.3"
+    dprint-node: "npm:^1.0.8"
+    esbuild: "npm:^0.21.5"
+    esbuild-plugin-polyfill-node: "npm:^0.3.0"
+    eventemitter3: "npm:^3.1.2"
+    find-up: "npm:^5.0.0"
+    fs-extra: "npm:^11.2.0"
+    json5: "npm:^2.2.3"
+    native-fetch: "npm:^4.0.2"
+    picocolors: "npm:^1.0.1"
+    real-framer-motion: "npm:framer-motion@11.2.10"
+    tmp: "npm:^0.2.3"
+  peerDependencies:
+    react: "*"
+    react-dom: "*"
+  bin:
+    unframer: bin.js
+  checksum: 10/e3a0412f883e2b730fbf7774ef65e6d0ea690a9cab8d4e12e6b853a9b66ef299ff9e69cebfb725b21eeb982599362062d70488c6a0c039826bb462ce04baa1a1
   languageName: node
   linkType: hard
 

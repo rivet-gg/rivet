@@ -79,7 +79,7 @@ export function FancyHeader({ active, subnav }: FancyHeaderProps) {
                   </Link>
                 </RivetHeader.NavItem>
                 <RivetHeader.NavItem asChild className='p-2'>
-                  <Link href='/support' className='text-white/90'>
+                  <Link href='https://github.com/rivet-gg/rivet' target='_blank' className='text-white/90'>
                     <Icon icon={faGithub} className='drop-shadow-md' />
                   </Link>
                 </RivetHeader.NavItem>
