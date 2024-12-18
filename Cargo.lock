@@ -284,7 +284,6 @@ dependencies = [
  "user-get",
  "user-identity-create",
  "user-identity-get",
- "user-resolve-email",
  "user-token-create",
  "uuid",
 ]
@@ -11877,6 +11876,7 @@ dependencies = [
  "rivet-config",
  "serde",
  "server-spec",
+ "sqlx",
 ]
 
 [[package]]
