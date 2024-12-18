@@ -97,7 +97,7 @@ pub async fn complete(
 		return Ok(models::AuthIdentityCompleteEmailVerificationResponse { status });
 	}
 
-	let email_res = op!([ctx] user_resolve_email {
+	let email_res = (*ctx).op(::user::ops::resolve_email::Input {
 		emails: vec![res.email.clone()],
 	})
 	.await?;
@@ -106,7 +106,7 @@ pub async fn complete(
 	if let Some(new_user) = email_res.users.first() {
 		tracing::info!(email = %new_user.email, "resolved email");
 
-		let new_user_id = unwrap_ref!(new_user.user_id).as_uuid();
+		let new_user_id = new_user.user_id;
 
 		tracing::info!(old_user_id = %user_ent.user_id, %new_user_id, "identity found, switching user");
 
