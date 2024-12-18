@@ -111,7 +111,6 @@ upload-prepare.workspace = true
 user.workspace = true
 user-get.workspace = true
 user-identity-get.workspace = true
-user-team-list.workspace = true
 rivet-config.workspace = true
 rivet-env.workspace = true
 
