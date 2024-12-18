@@ -29,12 +29,15 @@ async fn worker(ctx: &OperationContext<user::msg::profile_set::Message>) -> Glob
 	ensure!(!query_components.is_empty());
 
 	// Validate profile
-	let validation_res = op!([ctx] user_profile_validate {
-		user_id: body.user_id,
-		display_name: display_name.clone(),
-		account_number: *account_number,
-		bio: bio.clone()
-	})
+	let validation_res = chirp_workflow::compat::op(
+		&ctx,
+		::user::ops::profile_validate::Input {
+			user_id: user_id.as_uuid(),
+			display_name: display_name.clone(),
+			account_number: *account_number,
+			bio: bio.clone()
+		},
+	)
 	.await?;
 	if !validation_res.errors.is_empty() {
 		tracing::warn!(errors = ?validation_res.errors, "validation errors");

@@ -217,13 +217,12 @@ pub async fn validate_profile(
 		"invalid parameter account_number`"
 	);
 
-	let res = op!([ctx] user_profile_validate {
-		user_id: Some(user_ent.user_id.into()),
+	let res =  (*ctx).op(::user::ops::profile_validate::Input {
+		user_id: user_ent.user_id,
 		display_name: body.display_name.clone(),
-		account_number:
-			body.account_number
-				.map(|n| n.api_try_into())
-				.transpose()?,
+		account_number: body.account_number
+			.map(|n| n.api_try_into())
+			.transpose()?,
 		bio: body.bio.clone(),
 	})
 	.await?;

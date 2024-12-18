@@ -23,7 +23,6 @@ upload-list-for-user.workspace = true
 user.workspace = true
 user-get.workspace = true
 user-identity-delete.workspace = true
-user-profile-validate.workspace = true
 rivet-config.workspace = true
 
 [dev-dependencies]
