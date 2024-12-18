@@ -55,11 +55,6 @@ async fn worker(ctx: &OperationContext<user::msg::delete::Message>) -> GlobalRes
 	{
 		tracing::info!(?user_id, "removing teams");
 
-		// OLD
-		// let user_teams_res = op!([ctx] user_team_list {
-		// 	user_ids: vec![user_id.into()],
-		// })
-		// .await?;
 		let user_teams_res = chirp_workflow::compat::op(
 			&ctx,
 			::user::ops::team_list::Input {
