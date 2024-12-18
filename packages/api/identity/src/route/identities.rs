@@ -306,8 +306,8 @@ pub async fn mark_deletion(
 ) -> GlobalResult<serde_json::Value> {
 	let user_ent = ctx.auth().user(ctx.op_ctx()).await?;
 
-	op!([ctx] user_pending_delete_toggle {
-		user_id: Some(user_ent.user_id.into()),
+	(*ctx).op(::user::ops::pending_delete_toggle::Input {
+		user_id: user_ent.user_id,
 		active: true,
 	})
 	.await?;
@@ -319,8 +319,8 @@ pub async fn mark_deletion(
 pub async fn unmark_deletion(ctx: Ctx<Auth>) -> GlobalResult<serde_json::Value> {
 	let user_ent = ctx.auth().user(ctx.op_ctx()).await?;
 
-	op!([ctx] user_pending_delete_toggle {
-		user_id: Some(user_ent.user_id.into()),
+	(*ctx).op(::user::ops::pending_delete_toggle::Input {
+		user_id: user_ent.user_id,
 		active: false,
 	})
 	.await?;

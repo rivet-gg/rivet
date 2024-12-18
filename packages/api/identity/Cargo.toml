@@ -55,7 +55,6 @@ user.workspace = true
 user-avatar-upload-complete.workspace = true
 user-get.workspace = true
 user-identity-get.workspace = true
-user-pending-delete-toggle.workspace = true
 rivet-config.workspace = true
 rivet-env.workspace = true
 
