@@ -9,7 +9,7 @@ use crate::convert;
 
 #[derive(Debug)]
 pub struct TeamsCtx {
-	pub user_teams: user::ops::team_list::Output,
+	pub user_teams: ::user::ops::team_list::Output,
 	pub teams: Vec<backend::team::Team>,
 }
 
