@@ -284,7 +284,6 @@ dependencies = [
  "user-get",
  "user-identity-create",
  "user-identity-get",
- "user-token-create",
  "uuid",
 ]
 
@@ -552,7 +551,6 @@ dependencies = [
  "user",
  "user-get",
  "user-identity-get",
- "user-token-create",
  "uuid",
 ]
 
@@ -872,7 +870,6 @@ dependencies = [
  "url",
  "user",
  "user-get",
- "user-token-create",
  "uuid",
 ]
 
@@ -11876,9 +11873,11 @@ dependencies = [
  "cluster",
  "linode",
  "rivet-config",
+ "rivet-operation",
  "serde",
  "server-spec",
  "sqlx",
+ "token-create",
 ]
 
 [[package]]
