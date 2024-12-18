@@ -59,13 +59,16 @@ impl Ctx {
 		let user_res = op!([ctx] faker_user {}).await.unwrap();
 		let user_id = user_res.user_id.as_ref().unwrap().as_uuid();
 
-		let token_res = op!([ctx] user_token_create {
-			user_id: user_res.user_id,
-			client: Some(backend::net::ClientInfo {
-				user_agent: Some(USER_AGENT.into()),
-				remote_address: Some(socket_addr().to_string()),
-			})
-		})
+		let token_res = chirp_workflow::compat::op(
+			&ctx,
+			user::ops::token_create::get::Input {
+				user_id: user_id,
+				client: backend::net::ClientInfo {
+					user_agent: Some(USER_AGENT.into()),
+					remote_address: Some(socket_addr().to_string()),
+				}
+			}
+		)
 		.await
 		.unwrap();
 

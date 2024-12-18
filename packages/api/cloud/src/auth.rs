@@ -94,16 +94,19 @@ impl Auth {
 			let (user, user_ent) = self.user(ctx).await?;
 			assert::user_registered(ctx, user_ent.user_id).await?;
 
-			let team_list_res = op!([ctx] user_team_list {
-				user_ids: vec![user_ent.user_id.into()],
-			})
+			let team_list_res = chirp_workflow::compat::op(
+				&ctx,
+				user::ops::team_list::Input {
+					user_ids: vec![user_ent.user_id.into()],
+				},
+			)
 			.await?;
 
 			let user_teams = unwrap!(team_list_res.users.first());
 			let user_team_ids = user_teams
 				.teams
 				.iter()
-				.map(|t| Ok(unwrap_ref!(t.team_id).as_uuid()))
+				.map(|t| Ok(t.team_id))
 				.collect::<GlobalResult<HashSet<_>>>()?;
 			let has_teams = team_ids
 				.iter()
@@ -271,24 +274,26 @@ impl Auth {
 			let (_, user_ent) = self.user(ctx).await?;
 
 			// Fetch teams associated with user
-			let teams_res = op!([ctx] user_team_list {
-				user_ids: vec![user_ent.user_id.into()],
-			})
+			let teams_res = chirp_workflow::compat::op(
+				&ctx,
+				::user::ops::team_list::Input {
+					user_ids: vec![user_ent.user_id.into()],
+				},
+			)
 			.await?;
 			let user = unwrap!(teams_res.users.first());
-			let team_ids_proto = user
+			let team_ids = user
 				.teams
 				.iter()
-				.filter_map(|t| t.team_id)
-				.collect::<Vec<common::Uuid>>();
-			let team_ids = team_ids_proto
-				.iter()
-				.map(common::Uuid::as_uuid)
+				.map(|t| t.team_id)
 				.collect::<Vec<_>>();
 
 			// Fetch games associated with teams
 			let games_res = op!([ctx] game_list_for_team {
-				team_ids: team_ids_proto,
+				team_ids: team_ids
+					.iter()
+					.map(|id| (*id).into())
+					.collect::<Vec<common::Uuid>>()
 			})
 			.await?;
 

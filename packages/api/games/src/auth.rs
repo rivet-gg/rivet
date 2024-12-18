@@ -103,9 +103,12 @@ impl Auth {
 				op!([ctx] game_get {
 					game_ids: vec![game_id.into()],
 				}),
-				op!([ctx] user_team_list {
-					user_ids: vec![user_ent.user_id.into()],
-				}),
+				chirp_workflow::compat::op(
+					&ctx,
+					::user::ops::team_list::Input {
+						user_ids: vec![user_ent.user_id.into()],
+					},
+				)
 			)?;
 			let Some(user) = user_res.users.first() else {
 				bail_with!(TOKEN_REVOKED)
@@ -126,8 +129,7 @@ impl Auth {
 			let is_part_of_team = user_teams
 				.teams
 				.iter()
-				.filter_map(|x| x.team_id)
-				.any(|x| x.as_uuid() == dev_team_id);
+				.any(|x| x.team_id == dev_team_id);
 			ensure_with!(is_part_of_team, GROUP_NOT_MEMBER);
 
 			// Get team
