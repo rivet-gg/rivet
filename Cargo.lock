@@ -617,6 +617,7 @@ dependencies = [
  "cdn-namespace-domain-create",
  "cdn-namespace-get",
  "chirp-client",
+ "chirp-workflow",
  "cloud-namespace-token-development-create",
  "faker-build",
  "faker-game",
@@ -664,11 +665,11 @@ dependencies = [
  "tracing-subscriber",
  "upload-prepare",
  "url",
+ "user",
  "user-avatar-upload-complete",
  "user-get",
  "user-identity-get",
  "user-pending-delete-toggle",
- "user-profile-validate",
  "uuid",
 ]
 
@@ -11878,6 +11879,7 @@ dependencies = [
  "server-spec",
  "sqlx",
  "token-create",
+ "user-get",
 ]
 
 [[package]]
@@ -12062,7 +12064,6 @@ dependencies = [
  "user",
  "user-get",
  "user-identity-delete",
- "user-profile-validate",
 ]
 
 [[package]]
