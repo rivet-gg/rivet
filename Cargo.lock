@@ -237,7 +237,6 @@ dependencies = [
  "user",
  "user-get",
  "user-identity-get",
- "user-team-list",
  "uuid",
 ]
 
@@ -438,7 +437,6 @@ dependencies = [
  "user-get",
  "user-identity-create",
  "user-identity-get",
- "user-team-list",
  "uuid",
 ]
 
@@ -500,7 +498,6 @@ dependencies = [
  "user",
  "user-get",
  "user-identity-get",
- "user-team-list",
  "uuid",
 ]
 
@@ -556,7 +553,6 @@ dependencies = [
  "user",
  "user-get",
  "user-identity-get",
- "user-team-list",
  "user-token-create",
  "uuid",
 ]
@@ -877,7 +873,6 @@ dependencies = [
  "url",
  "user",
  "user-get",
- "user-team-list",
  "user-token-create",
  "uuid",
 ]
@@ -8742,7 +8737,6 @@ dependencies = [
  "user",
  "user-get",
  "user-identity-get",
- "user-team-list",
 ]
 
 [[package]]
@@ -12070,7 +12064,6 @@ dependencies = [
  "user-get",
  "user-identity-delete",
  "user-profile-validate",
- "user-team-list",
 ]
 
 [[package]]
