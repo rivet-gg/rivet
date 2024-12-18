@@ -38,11 +38,10 @@ tokio = { version = "1.40" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "ansi"] }
 url = "2.2.2"
+user.workspace = true
 user-get.workspace = true
 user-identity-create.workspace = true
-user-resolve-email.workspace = true
 user-token-create.workspace = true
-user.workspace = true
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]

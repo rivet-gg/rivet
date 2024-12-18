@@ -23,7 +23,6 @@ pub struct TeamMember {
 
 #[operation]
 pub async fn team_list(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
-
 	let users = ctx
 		.cache()
 		.fetch_all_json("user_team_list", input.user_ids.clone(), {
