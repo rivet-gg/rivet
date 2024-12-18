@@ -669,7 +669,6 @@ dependencies = [
  "user-avatar-upload-complete",
  "user-get",
  "user-identity-get",
- "user-pending-delete-toggle",
  "uuid",
 ]
 
@@ -11880,6 +11879,7 @@ dependencies = [
  "sqlx",
  "token-create",
  "user-get",
+ "user-identity-get",
 ]
 
 [[package]]
