@@ -8,6 +8,7 @@ edition.workspace = true
 [dependencies]
 api-helper.workspace = true
 chirp-client.workspace = true
+chirp-workflow.workspace = true
 rivet-operation.workspace = true
 chrono = "0.4"
 http = "0.2"
@@ -45,6 +46,7 @@ token-revoke.workspace = true
 token-create.workspace = true
 upload-complete.workspace = true
 upload-get.workspace = true
+user.workspace = true
 user-get.workspace = true
 user-identity-get.workspace = true
 user-team-list.workspace = true

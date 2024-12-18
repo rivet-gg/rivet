@@ -81,11 +81,11 @@ pub fn profile(
 			.user_teams
 			.users
 			.iter()
-			.find(|u| u.user_id == user.user_id));
+			.find(|u| Some(common::Uuid::from(u.user_id)) == user.user_id));
 		let team_ids = user
 			.teams
 			.iter()
-			.map(|t| Ok(unwrap!(t.team_id)))
+			.map(|t| Ok(common::Uuid::from(t.team_id)))
 			.collect::<GlobalResult<Vec<_>>>()?;
 
 		pctx.teams_ctx

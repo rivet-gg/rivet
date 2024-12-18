@@ -17,9 +17,11 @@ pub async fn summaries(
 
 	// Fetch team metadata
 	let (user_team_list_res, teams_res, team_member_count_res) = tokio::try_join!(
-		op!([ctx] user_team_list {
-			user_ids: vec![current_user_id.into()],
-		}),
+		(*ctx).op(
+			::user::ops::team_list::Input {
+				user_ids: vec![current_user_id.into()],
+			}
+		),
 		op!([ctx] team_get {
 			team_ids: group_ids_proto.clone(),
 		}),
@@ -34,7 +36,9 @@ pub async fn summaries(
 		.teams
 		.iter()
 		.map(|team| {
-			let is_current_identity_member = user_teams.iter().any(|t| t.team_id == team.team_id);
+			let is_current_identity_member = user_teams
+				.iter()
+				.any(|t| Some(common::Uuid::from(t.team_id)) == team.team_id);
 
 			convert::group::summary(
 				ctx.config(),

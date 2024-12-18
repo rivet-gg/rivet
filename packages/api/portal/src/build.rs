@@ -13,9 +13,11 @@ pub async fn group_summaries(
 ) -> GlobalResult<Vec<models::GroupSummary>> {
 	// Fetch team metadata
 	let (user_team_list_res, teams_res, team_member_count_res) = tokio::try_join!(
-		op!([ctx] user_team_list {
-			user_ids: vec![current_user_id],
-		}),
+		(*ctx).op(
+			::user::ops::team_list::Input {
+				user_ids: vec![current_user_id.into()],
+			}
+		),
 		op!([ctx] team_get {
 			team_ids: group_ids.to_vec(),
 		}),
@@ -35,7 +37,8 @@ pub async fn group_summaries(
 			let is_current_user_member = unwrap!(user_team_list_res.users.first())
 				.teams
 				.iter()
-				.any(|team| team.team_id.as_ref() == Some(group_id));
+				// TODO(ABC): check usage
+				.any(|team| common::Uuid::from(team.team_id) == (*group_id));
 			let member_count = unwrap!(team_member_count_res
 				.teams
 				.iter()

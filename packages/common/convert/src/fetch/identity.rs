@@ -9,7 +9,7 @@ use crate::convert;
 
 #[derive(Debug)]
 pub struct TeamsCtx {
-	pub user_teams: user::team_list::Response,
+	pub user_teams: ::user::ops::team_list::Output,
 	pub teams: Vec<backend::team::Team>,
 }
 
@@ -114,9 +114,18 @@ pub async fn users(
 }
 
 async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> GlobalResult<TeamsCtx> {
-	let user_teams_res = op!([ctx] user_team_list {
-		user_ids: user_ids,
-	})
+	// let user_teams_res = op!([ctx] user_team_list {
+	// 	user_ids: user_ids,
+	// })
+	let user_teams_res = chirp_workflow::compat::op(
+		&ctx,
+		::user::ops::team_list::Input {
+			user_ids: user_ids
+				.iter()
+				.map(|x| (*x).into())
+				.collect::<Vec<Uuid>>(),
+		},
+	)
 	.await?;
 
 	let team_ids = user_teams_res
@@ -125,7 +134,7 @@ async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> Globa
 		.map(|user| {
 			user.teams
 				.iter()
-				.map(|t| Ok(unwrap!(t.team_id)))
+				.map(|t| Ok(common::Uuid::from(t.team_id)))
 				.collect::<GlobalResult<Vec<_>>>()
 		})
 		.collect::<GlobalResult<Vec<_>>>()?

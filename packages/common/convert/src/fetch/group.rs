@@ -22,9 +22,12 @@ pub async fn summaries(
 	let (user_teams, teams_res, team_member_count_res) = tokio::try_join!(
 		async {
 			if let Some(current_user_id) = current_user_id {
-				let user_team_list_res = op!([ctx] user_team_list {
-					user_ids: vec![current_user_id.into()],
-				})
+				let user_team_list_res = chirp_workflow::compat::op(
+					&ctx,
+					::user::ops::team_list::Input {
+						user_ids: vec![current_user_id.into()],
+					},
+				)
 				.await?;
 
 				Ok(unwrap!(user_team_list_res.users.first()).teams.clone())
@@ -44,7 +47,9 @@ pub async fn summaries(
 		.teams
 		.iter()
 		.map(|team| {
-			let is_current_identity_member = user_teams.iter().any(|t| t.team_id == team.team_id);
+			let is_current_identity_member = user_teams
+				.iter()
+				.any(|t| Some(common::Uuid::from(t.team_id)) == team.team_id);
 
 			convert::group::summary(
 				ctx.config(),
