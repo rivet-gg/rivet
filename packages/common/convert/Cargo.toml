@@ -39,7 +39,6 @@ tier.workspace = true
 user.workspace = true
 user-get.workspace = true
 user-identity-get.workspace = true
-user-team-list.workspace = true
 
 rivet-api.workspace = true
 rivet-group-server.workspace = true

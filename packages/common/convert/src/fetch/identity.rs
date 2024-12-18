@@ -114,9 +114,6 @@ pub async fn users(
 }
 
 async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> GlobalResult<TeamsCtx> {
-	// let user_teams_res = op!([ctx] user_team_list {
-	// 	user_ids: user_ids,
-	// })
 	let user_teams_res = chirp_workflow::compat::op(
 		&ctx,
 		::user::ops::team_list::Input {

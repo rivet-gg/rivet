@@ -24,7 +24,6 @@ user.workspace = true
 user-get.workspace = true
 user-identity-delete.workspace = true
 user-profile-validate.workspace = true
-user-team-list.workspace = true
 rivet-config.workspace = true
 
 [dev-dependencies]

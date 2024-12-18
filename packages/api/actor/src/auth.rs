@@ -189,7 +189,6 @@ impl Auth {
 			let is_part_of_team = user_teams
 				.teams
 				.iter()
-				// TODO(ABC): Check uuid
 				.any(|x| x.team_id == dev_team_id);
 			ensure_with!(is_part_of_team, GROUP_NOT_MEMBER);
 
