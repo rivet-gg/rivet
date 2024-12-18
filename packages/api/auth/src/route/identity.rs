@@ -110,9 +110,9 @@ pub async fn complete(
 
 		tracing::info!(old_user_id = %user_ent.user_id, %new_user_id, "identity found, switching user");
 
-		let token_res = op!([ctx] user_token_create {
-			user_id: Some(new_user_id.into()),
-			client: Some(ctx.client_info()),
+		let token_res = (*ctx).op(::user::ops::token_create::Input {
+			user_id: new_user_id,
+			client: ctx.client_info(),
 		})
 		.await?;
 

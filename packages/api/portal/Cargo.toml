@@ -53,4 +53,3 @@ rivet-portal.workspace = true
 regex = "1.4"
 
 faker-user.workspace = true
-user-token-create.workspace = true

@@ -63,4 +63,3 @@ rivet-group.workspace = true
 rand = "0.8"
 
 faker-user.workspace = true
-user-token-create.workspace = true
