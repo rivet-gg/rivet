@@ -8,18 +8,19 @@ edition.workspace = true
 [dependencies]
 rivet-convert.workspace = true
 chirp-client.workspace = true
+chirp-workflow.workspace = true
 chirp-worker.workspace = true
 chrono = "0.4"
 lazy_static = "1.4.0"
 rivet-health-checks.workspace = true
 rivet-metrics.workspace = true
 rivet-runtime.workspace = true
-
 game-get.workspace = true
 game-namespace-get.workspace = true
 team-get.workspace = true
 team-member-list.workspace = true
 upload-list-for-user.workspace = true
+user.workspace = true
 user-get.workspace = true
 user-identity-delete.workspace = true
 user-profile-validate.workspace = true
