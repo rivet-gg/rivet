@@ -37,7 +37,6 @@ pub async fn group_summaries(
 			let is_current_user_member = unwrap!(user_team_list_res.users.first())
 				.teams
 				.iter()
-				// TODO(ABC): check usage
 				.any(|team| common::Uuid::from(team.team_id) == (*group_id));
 			let member_count = unwrap!(team_member_count_res
 				.teams
