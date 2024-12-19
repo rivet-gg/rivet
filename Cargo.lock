@@ -235,7 +235,6 @@ dependencies = [
  "upload-get",
  "url",
  "user",
- "user-get",
  "user-identity-get",
  "uuid",
 ]
@@ -281,7 +280,6 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "user",
- "user-get",
  "user-identity-create",
  "user-identity-get",
  "uuid",
@@ -432,7 +430,6 @@ dependencies = [
  "upload-prepare",
  "url",
  "user",
- "user-get",
  "user-identity-create",
  "user-identity-get",
  "uuid",
@@ -494,7 +491,6 @@ dependencies = [
  "upload-get",
  "url",
  "user",
- "user-get",
  "user-identity-get",
  "uuid",
 ]
@@ -549,7 +545,6 @@ dependencies = [
  "upload-prepare",
  "url",
  "user",
- "user-get",
  "user-identity-get",
  "uuid",
 ]
@@ -667,7 +662,6 @@ dependencies = [
  "url",
  "user",
  "user-avatar-upload-complete",
- "user-get",
  "user-identity-get",
  "uuid",
 ]
@@ -869,7 +863,6 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "user",
- "user-get",
  "uuid",
 ]
 
@@ -4257,9 +4250,10 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "prost 0.10.4",
  "rivet-operation",
- "user-get",
+ "user",
 ]
 
 [[package]]
@@ -8731,7 +8725,6 @@ dependencies = [
  "tier",
  "types-proto",
  "user",
- "user-get",
  "user-identity-get",
 ]
 
@@ -11878,6 +11871,8 @@ dependencies = [
  "server-spec",
  "sqlx",
  "token-create",
+ "upload-file-list",
+ "upload-get",
  "user-get",
  "user-identity-get",
 ]
@@ -11995,11 +11990,12 @@ version = "0.0.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "faker-user",
  "prost 0.10.4",
  "rivet-operation",
  "sqlx",
- "user-get",
+ "user",
 ]
 
 [[package]]

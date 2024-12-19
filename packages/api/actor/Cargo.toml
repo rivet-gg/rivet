@@ -54,7 +54,6 @@ token-revoke.workspace = true
 upload-complete.workspace = true
 upload-get.workspace = true
 user.workspace = true
-user-get.workspace = true
 user-identity-get.workspace = true
 
 [dev-dependencies]

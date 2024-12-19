@@ -52,7 +52,6 @@ team-user-ban-list.workspace = true
 token-revoke.workspace = true
 upload-prepare.workspace = true
 user.workspace = true
-user-get.workspace = true
 user-identity-get.workspace = true
 rivet-config.workspace = true
 rivet-env.workspace = true
