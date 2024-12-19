@@ -1,10 +1,10 @@
 import { Lock } from "@core/asyncutil/lock";
-import type { ActorContext } from "@rivet-gg/actors-core";
+import type { ActorContext } from "../../core/src/mod.ts";
 import { assertExists, assertInstanceOf } from "@std/assert";
 import { deadline } from "@std/async/deadline";
 import { throttle } from "@std/async/unstable-throttle";
 import type { Logger } from "@std/log/get-logger";
-import { Hono, type Context as HonoContext } from "hono";
+import { type Context as HonoContext, Hono } from "hono";
 import { upgradeWebSocket } from "hono/deno";
 import type { WSEvents } from "hono/ws";
 import onChange from "on-change";
@@ -258,7 +258,9 @@ export abstract class Actor<
 			KEYS.STATE.INITIALIZED,
 			KEYS.STATE.DATA,
 		]);
-		const initialized = getStateBatch.get(KEYS.STATE.INITIALIZED) as boolean;
+		const initialized = getStateBatch.get(
+			KEYS.STATE.INITIALIZED,
+		) as boolean;
 		const stateData = getStateBatch.get(KEYS.STATE.DATA) as State;
 
 		if (!initialized) {
@@ -294,7 +296,9 @@ export abstract class Actor<
 
 		app.get("/", (c) => {
 			// TODO: Give the metadata about this actor (ie tags)
-			return c.text("This is a Rivet Actor\n\nLearn more at https://rivet.gg");
+			return c.text(
+				"This is a Rivet Actor\n\nLearn more at https://rivet.gg",
+			);
 		});
 
 		//app.post("/rpc/:name", this.#pandleRpc.bind(this));
@@ -396,8 +400,8 @@ export abstract class Actor<
 		}
 
 		const protocolFormatRaw = c.req.query("format");
-		const { data: protocolFormat, success } =
-			ProtocolFormatSchema.safeParse(protocolFormatRaw);
+		const { data: protocolFormat, success } = ProtocolFormatSchema
+			.safeParse(protocolFormatRaw);
 		if (!success) {
 			logger().warn("invalid protocol format", {
 				protocolFormat: protocolFormatRaw,
@@ -418,8 +422,9 @@ export abstract class Actor<
 		// Parse and validate params
 		let params: ConnParams;
 		try {
-			params =
-				typeof paramsStr === "string" ? JSON.parse(paramsStr) : undefined;
+			params = typeof paramsStr === "string"
+				? JSON.parse(paramsStr)
+				: undefined;
 		} catch (error) {
 			logger().warn("malformed connection parameters", { error });
 			throw new errors.MalformedConnectionParameters(error);
@@ -465,12 +470,17 @@ export abstract class Actor<
 				if (this._onConnect) {
 					const voidOrPromise = this._onConnect(conn);
 					if (voidOrPromise instanceof Promise) {
-						deadline(voidOrPromise, CONNECT_TIMEOUT).catch((error) => {
-							logger().error("error in `_onConnect`, closing socket", {
-								error,
-							});
-							conn?.disconnect("`onConnect` failed");
-						});
+						deadline(voidOrPromise, CONNECT_TIMEOUT).catch(
+							(error) => {
+								logger().error(
+									"error in `_onConnect`, closing socket",
+									{
+										error,
+									},
+								);
+								conn?.disconnect("`onConnect` failed");
+							},
+						);
 					}
 				}
 			},
@@ -482,7 +492,8 @@ export abstract class Actor<
 
 				let rpcRequestId: number | undefined;
 				try {
-					const value = evt.data.valueOf() as IncomingWebSocketMessage;
+					const value = evt.data
+						.valueOf() as IncomingWebSocketMessage;
 
 					// Validate value length
 					let length: number;
@@ -507,7 +518,9 @@ export abstract class Actor<
 						data: message,
 						success,
 						error,
-					} = wsToServer.ToServerSchema.safeParse(await conn._parse(value));
+					} = wsToServer.ToServerSchema.safeParse(
+						await conn._parse(value),
+					);
 					if (!success) {
 						throw new errors.MalformedMessage(error);
 					}
@@ -515,7 +528,8 @@ export abstract class Actor<
 					if ("rr" in message.body) {
 						// RPC request
 
-						const { i: id, n: name, a: args = [] } = message.body.rr;
+						const { i: id, n: name, a: args = [] } =
+							message.body.rr;
 
 						rpcRequestId = id;
 
@@ -523,14 +537,16 @@ export abstract class Actor<
 						const output = await this.#executeRpc(ctx, name, args);
 
 						conn._sendWebSocketMessage(
-							conn._serialize({
-								body: {
-									ro: {
-										i: id,
-										o: output,
+							conn._serialize(
+								{
+									body: {
+										ro: {
+											i: id,
+											o: output,
+										},
 									},
-								},
-							} satisfies wsToClient.ToClient),
+								} satisfies wsToClient.ToClient,
+							),
 						);
 					} else if ("sr" in message.body) {
 						// Subscription request
@@ -572,28 +588,32 @@ export abstract class Actor<
 					// Build response
 					if (rpcRequestId !== undefined) {
 						conn._sendWebSocketMessage(
-							conn._serialize({
-								body: {
-									re: {
-										i: rpcRequestId,
-										c: code,
-										m: message,
-										md: metadata,
+							conn._serialize(
+								{
+									body: {
+										re: {
+											i: rpcRequestId,
+											c: code,
+											m: message,
+											md: metadata,
+										},
 									},
-								},
-							} satisfies wsToClient.ToClient),
+								} satisfies wsToClient.ToClient,
+							),
 						);
 					} else {
 						conn._sendWebSocketMessage(
-							conn._serialize({
-								body: {
-									er: {
-										c: code,
-										m: message,
-										md: metadata,
+							conn._serialize(
+								{
+									body: {
+										er: {
+											c: code,
+											m: message,
+											md: metadata,
+										},
 									},
-								},
-							} satisfies wsToClient.ToClient),
+								} satisfies wsToClient.ToClient,
+							),
 						);
 					}
 				}
@@ -650,12 +670,17 @@ export abstract class Actor<
 		try {
 			const outputOrPromise = rpcFunction.call(this, ctx, ...args);
 			if (outputOrPromise instanceof Promise) {
-				return await deadline(outputOrPromise, this.#config.rpc.timeout);
+				return await deadline(
+					outputOrPromise,
+					this.#config.rpc.timeout,
+				);
 			} else {
 				return outputOrPromise;
 			}
 		} catch (error) {
-			if (error instanceof DOMException && error.name === "TimeoutError") {
+			if (
+				error instanceof DOMException && error.name === "TimeoutError"
+			) {
 				throw new errors.RpcTimedOut();
 			} else {
 				throw error;
@@ -678,7 +703,9 @@ export abstract class Actor<
 
 	protected _onConnect?(connection: Connection<this>): void | Promise<void>;
 
-	protected _onDisconnect?(connection: Connection<this>): void | Promise<void>;
+	protected _onDisconnect?(
+		connection: Connection<this>,
+	): void | Promise<void>;
 
 	// MARK: Exposed methods
 	protected get _log(): Logger {
@@ -727,11 +754,14 @@ export abstract class Actor<
 		for (const connection of subscriptions) {
 			// Lazily serialize the appropriate format
 			if (!(connection._protocolFormat in serialized)) {
-				serialized[connection._protocolFormat] =
-					connection._serialize(toClient);
+				serialized[connection._protocolFormat] = connection._serialize(
+					toClient,
+				);
 			}
 
-			connection._sendWebSocketMessage(serialized[connection._protocolFormat]);
+			connection._sendWebSocketMessage(
+				serialized[connection._protocolFormat],
+			);
 		}
 	}
 
