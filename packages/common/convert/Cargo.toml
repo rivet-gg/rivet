@@ -37,7 +37,6 @@ team-profile-validate.workspace = true
 team-validate.workspace = true
 tier.workspace = true
 user.workspace = true
-user-get.workspace = true
 user-identity-get.workspace = true
 
 rivet-api.workspace = true

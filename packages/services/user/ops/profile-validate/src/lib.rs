@@ -45,9 +45,12 @@ async fn handle(
 			if ctx.display_name.is_none() || ctx.account_number.is_none() {
 				let user_id = unwrap_ref!(ctx.user_id);
 
-				let users_res = op!([ctx] user_get {
-					user_ids: vec![*user_id],
-				})
+				let users_res = chirp_workflow::compat::op(
+					&ctx,
+					::user::ops::get::Input {
+						user_ids: vec![(*user_id).as_uuid()],
+					},
+				)
 				.await?;
 
 				let user = users_res.users.first();

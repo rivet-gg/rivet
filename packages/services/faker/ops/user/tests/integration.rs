@@ -4,8 +4,8 @@ use chirp_worker::prelude::*;
 async fn empty(ctx: TestCtx) {
 	let res = op!([ctx] faker_user {}).await.unwrap();
 
-	let get_res = op!([ctx] user_get {
-		user_ids: vec![res.user_id.unwrap()],
+	let get_res = (*ctx).op(::user::ops::get::Input {
+		user_ids: vec![res.user_id.unwrap().as_uuid()],
 	})
 	.await
 	.unwrap();

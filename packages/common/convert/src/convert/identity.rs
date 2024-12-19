@@ -26,7 +26,7 @@ pub fn handle(
 
 pub fn summary(
 	config: &rivet_config::Config,
-	current_user_id: Uuid,
+	_current_user_id: Uuid,
 	user: &backend::user::User,
 ) -> GlobalResult<models::IdentitySummary> {
 	let user_id_proto = unwrap!(user.user_id);

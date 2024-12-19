@@ -47,7 +47,6 @@ token-create.workspace = true
 upload-complete.workspace = true
 upload-get.workspace = true
 user.workspace = true
-user-get.workspace = true
 user-identity-get.workspace = true
 rivet-config.workspace = true
 rivet-env.workspace = true

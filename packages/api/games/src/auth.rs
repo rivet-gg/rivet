@@ -97,9 +97,12 @@ impl Auth {
 		} else if let Ok(user_ent) = claims.as_user() {
 			// Get the user
 			let (user_res, game_res, team_list_res) = tokio::try_join!(
-				op!([ctx] user_get {
-					user_ids: vec![user_ent.user_id.into()],
-				}),
+				chirp_workflow::compat::op(
+					&ctx,
+					::user::ops::get::Input {
+						user_ids: vec![user_ent.user_id],
+					},
+				),
 				op!([ctx] game_get {
 					game_ids: vec![game_id.into()],
 				}),

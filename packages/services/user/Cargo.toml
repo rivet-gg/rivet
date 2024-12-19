@@ -15,6 +15,8 @@ linode.workspace = true
 rivet-config.workspace = true
 rivet-operation.workspace = true
 token-create.workspace = true
+upload-file-list.workspace = true
+upload-get.workspace = true
 user-get.workspace = true
 user-identity-get.workspace = true
 

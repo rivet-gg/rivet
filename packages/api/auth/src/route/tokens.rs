@@ -137,8 +137,8 @@ pub async fn identity(
 
 	// Verify user is not deleted
 	if has_refresh_token {
-		let user_res = op!([ctx] user_get {
-			user_ids: vec![user_ent.user_id.into()],
+		let user_res = (*ctx).op(::user::ops::get::Input {
+			user_ids: vec![user_ent.user_id],
 		})
 		.await?;
 		let user = unwrap!(user_res.users.first());

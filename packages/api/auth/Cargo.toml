@@ -39,7 +39,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "ansi"] }
 url = "2.2.2"
 user.workspace = true
-user-get.workspace = true
 user-identity-create.workspace = true
 uuid = { version = "1", features = ["v4"] }
 
