@@ -53,9 +53,12 @@ impl Auth {
 		let claims = self.claims()?;
 		let user_ent = claims.as_user()?;
 
-		let user_res = op!([ctx] user_get {
-			user_ids: vec![user_ent.user_id.into()],
-		})
+		let user_res = chirp_workflow::compat::op(
+			&ctx,
+			::user::ops::get::Input {
+				user_ids: vec![user_ent.user_id],
+			},
+		)
 		.await?;
 		let Some(user) = user_res.users.first() else {
 			bail_with!(TOKEN_REVOKED)
@@ -80,9 +83,12 @@ impl Auth {
 		let user_ent = self.user(ctx).await?;
 
 		// Get user
-		let user_res = op!([ctx] user_get {
-			user_ids: vec![user_ent.user_id.into()]
-		})
+		let user_res = chirp_workflow::compat::op(
+			&ctx,
+			::user::ops::get::Input {
+				user_ids: vec![user_ent.user_id],
+			},
+		)
 		.await?;
 
 		let user = unwrap!(user_res.users.first(), "user not found");

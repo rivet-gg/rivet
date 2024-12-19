@@ -12,5 +12,5 @@ rivet-operation.workspace = true
 
 [dev-dependencies]
 chirp-worker.workspace = true
-
-user-get.workspace = true
+chirp-workflow.workspace = true
+user.workspace = true

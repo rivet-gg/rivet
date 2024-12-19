@@ -287,7 +287,13 @@ pub async fn members(
 
 	// NOTE: We don't use fetch::identities::handles here because the end model is `GroupMember` not `IdentityHandle`
 	// Fetch team member and join request data
-	let users = fetch::identity::users(&ctx, user_ids.clone()).await?;
+	let users = fetch::identity::users(
+		&ctx,
+		user_ids
+			.iter()
+			.map(|u| u.as_uuid())
+			.collect::<Vec<_>>()
+	).await?;
 
 	let raw_user_ent_id = Into::<common::Uuid>::into(user_ent.user_id);
 	let members = users
@@ -424,7 +430,13 @@ pub async fn join_requests(
 	// NOTE: We don't use fetch::identities::handles here because the end model is `GroupMember` not
 	// `IdentityHandle`
 	// Fetch team member and join request data
-	let users = fetch::identity::users(&ctx, user_ids.clone()).await?;
+	let users = fetch::identity::users(
+		&ctx,
+		user_ids
+			.iter()
+			.map(|u| u.as_uuid())
+			.collect::<Vec<_>>()
+	).await?;
 
 	let raw_user_ent_id = Into::<common::Uuid>::into(user_ent.user_id);
 	let join_requests = users
@@ -1248,7 +1260,13 @@ pub async fn bans(
 	// NOTE: We don't use fetch::identities::handles here because the end model is `BannedIdentity` not
 	// `IdentityHandle`
 	// Fetch team member and ban data
-	let users = fetch::identity::users(&ctx, user_ids.clone()).await?;
+	let users = fetch::identity::users(
+		&ctx,
+		user_ids
+			.iter()
+			.map(|u| u.as_uuid())
+			.collect::<Vec<_>>()
+	).await?;
 
 	let raw_user_ent_id = Into::<common::Uuid>::into(user_ent.user_id);
 	let banned_identities = users
