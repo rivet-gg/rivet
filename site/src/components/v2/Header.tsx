@@ -94,7 +94,7 @@ export function Header({ active, subnav }: HeaderProps) {
                 </TooltipContent>
               </TooltipPortal>
             </Tooltip>
-            <Tooltip delayDuration={0} key='solutions'>
+            {/* <Tooltip delayDuration={0} key='solutions'>
               <TooltipTrigger asChild>
                 <div>
                   <RivetHeader.NavItem asChild className='flex items-center gap-1 py-2'>
@@ -116,7 +116,7 @@ export function Header({ active, subnav }: HeaderProps) {
                   </div>
                 </TooltipContent>
               </TooltipPortal>
-            </Tooltip>
+            </Tooltip> */}
           </TooltipProvider>
 
           <RivetHeader.NavItem asChild className='flex items-center gap-1 py-2'>

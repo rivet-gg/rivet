@@ -22,9 +22,6 @@ export const HeaderPopupProductMenu = () => {
             <p className='opacity-80 transition-opacity group-hover:opacity-100'>
               Lightweight, isolated containers for code execution.
             </p>
-            <Button variant='secondary' size='sm' asChild className='absolute bottom-0 right-0 '>
-              <div>Read more</div>
-            </Button>
           </div>
           <video className='absolute inset-0 h-full w-full object-cover opacity-60' muted loop>
             <source
