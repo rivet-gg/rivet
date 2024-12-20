@@ -126,7 +126,7 @@ jobs:
           apt-get update
           apt-get install -y awscli
 
-          COMMIT_SHA_SHORT=$(git rev-parse --short HEAD)
+          COMMIT_SHA_SHORT="${GITHUB_SHA::7}"
           BINARY_PATH="target/${{ matrix.platform }}/release/rivet"
           BINARY_NAME="rivet-${{ matrix.suffix }}"
           if [[ "${{ matrix.platform }}" == "x86_64-pc-windows-gnu" ]]; then
