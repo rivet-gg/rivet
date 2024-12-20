@@ -1,8 +1,10 @@
 <p align="center">
-  <picture>
+  <a href="https://rivet.gg">
+    <picture>
       <source media="(prefers-color-scheme: dark)" srcset="./.github/media/icon-text-white.svg" alt="Rivet">
       <img src="./.github/media/icon-text-black.svg" alt="Rivet">
-  </picture>
+    </picture>
+  </a>
 </p>
 
 <p align="center">
