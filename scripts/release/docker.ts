@@ -13,7 +13,7 @@ export async function tagDocker(opts: { version: string; commit: string; latest:
 	for (const { name, prefix, main } of REPOS) {
 		// Check image exists
 		$.logStep("Pulling", `${name}:${prefix}-${opts.commit}`);
-		const imageExists = await $`docker pull ${name}:${prefix}-${opts.commit}`.quiet().noThrow();
+		const imageExists = await $`docker pull --platform amd64 ${name}:${prefix}-${opts.commit}`.quiet().noThrow();
 		if (imageExists.code !== 0) {
 			throw new Error(`Image ${name}:${prefix}-${opts.commit} does not exist on Docker Hub.`);
 		}

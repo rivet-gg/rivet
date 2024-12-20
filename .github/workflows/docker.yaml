@@ -14,12 +14,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - platform: linux/arm64
-            runner: [self-hosted, Linux, ARM64]
-            arch_suffix: -arm64
+          # TODO(RVT-4479): Add back ARM builder once manifest generation fixed
+          # - platform: linux/arm64
+          #   runner: [self-hosted, Linux, ARM64]
+          #   arch_suffix: -arm64
           - platform: linux/x86_64
             runner: [self-hosted, Linux, X64]
-            arch_suffix: -amd64
+            # TODO: Replace with appropriate arch_suffix when needed
+            # arch_suffix: -amd64
+            arch_suffix: ''
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Setup Docker on macOS
@@ -67,12 +70,15 @@ jobs:
       matrix:
         include:
           # TODO(RVT-4168): Compile libfdb from scratch for ARM
+          # TODO(RVT-4479): Add back ARM builder once manifest generation fixed
           # - platform: linux/arm64
           #   runner: [self-hosted, Linux, ARM64]
           #   arch_suffix: -arm64
           - platform: linux/x86_64
             runner: [self-hosted, Linux, X64]
-            arch_suffix: -amd64
+            # TODO: Replace with appropriate arch_suffix when needed
+            # arch_suffix: -amd64
+            arch_suffix: ''
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Setup Docker on macOS
@@ -132,12 +138,15 @@ jobs:
       matrix:
         include:
           # TODO(RVT-4168): Compile libfdb from scratch for ARM
+          # TODO(RVT-4479): Add back ARM builder once manifest generation fixed
           # - platform: linux/arm64
           #   runner: [self-hosted, Linux, ARM64]
           #   arch_suffix: -arm64
           - platform: linux/x86_64
             runner: [self-hosted, Linux, X64]
-            arch_suffix: -amd64
+            # TODO: Replace with appropriate arch_suffix when needed
+            # arch_suffix: -amd64
+            arch_suffix: ''
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Setup Docker on macOS
@@ -167,55 +176,55 @@ jobs:
           secret-files: |
             netrc=${{ runner.temp }}/netrc
 
-  create-manifests:
-    needs: [build-and-push-server, build-and-push-client, build-and-push-monolith]
-    runs-on: [self-hosted, Linux]
-    steps:
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_CI_USERNAME }}
-          password: ${{ secrets.DOCKER_CI_ACCESS_TOKEN }}
-      
-      - name: Create and push manifests
-        run: |
-          # Get short SHA
-          GIT_SHA_SHORT=$(git rev-parse --short HEAD)
-          echo "Using Git SHA: ${GIT_SHA_SHORT}"
-          
-          echo "Creating manifests for rivet-server:full..."
-          docker pull rivetgg/rivet-server:full-${GIT_SHA_SHORT}-amd64
-          docker pull rivetgg/rivet-server:full-${GIT_SHA_SHORT}-arm64
-          docker manifest create rivetgg/rivet-server:full-${GIT_SHA_SHORT} \
-            rivetgg/rivet-server:full-${GIT_SHA_SHORT}-amd64 \
-            rivetgg/rivet-server:full-${GIT_SHA_SHORT}-arm64
-          docker manifest push rivetgg/rivet-server:full-${GIT_SHA_SHORT}
-          echo "✓ Completed rivet-server:full manifest"
-
-          echo "Creating manifests for rivet-server:slim..."
-          docker pull rivetgg/rivet-server:slim-${GIT_SHA_SHORT}-amd64
-          docker pull rivetgg/rivet-server:slim-${GIT_SHA_SHORT}-arm64
-          docker manifest create rivetgg/rivet-server:slim-${GIT_SHA_SHORT} \
-            rivetgg/rivet-server:slim-${GIT_SHA_SHORT}-amd64 \
-            rivetgg/rivet-server:slim-${GIT_SHA_SHORT}-arm64
-          docker manifest push rivetgg/rivet-server:slim-${GIT_SHA_SHORT}
-          echo "✓ Completed rivet-server:slim manifest"
-
-          echo "Creating manifests for rivet-client variants..."
-          for variant in full-runner isolate-v8-runner container-runner; do
-            echo "Processing variant: ${variant}"
-            docker pull rivetgg/rivet-client:${variant}-${GIT_SHA_SHORT}-amd64
-            docker manifest create rivetgg/rivet-client:${variant}-${GIT_SHA_SHORT} \
-              rivetgg/rivet-client:${variant}-${GIT_SHA_SHORT}-amd64
-            docker manifest push rivetgg/rivet-client:${variant}-${GIT_SHA_SHORT}
-            echo "✓ Completed rivet-client:${variant} manifest"
-          done
-
-          echo "Creating manifest for rivet:monolith..."
-          docker pull rivetgg/rivet:monolith-${GIT_SHA_SHORT}-amd64
-          docker manifest create rivetgg/rivet:monolith-${GIT_SHA_SHORT} \
-            rivetgg/rivet:monolith-${GIT_SHA_SHORT}-amd64
-          docker manifest push rivetgg/rivet:monolith-${GIT_SHA_SHORT}
-          echo "✓ Completed rivet:monolith manifest"
-
-          echo "All manifests created and pushed successfully!"
+  # create-manifests:
+  #   needs: [build-and-push-server, build-and-push-client, build-and-push-monolith]
+  #   runs-on: [self-hosted, Linux]
+  #   steps:
+  #     - name: Login to Docker Hub
+  #       uses: docker/login-action@v3
+  #       with:
+  #         username: ${{ secrets.DOCKER_CI_USERNAME }}
+  #         password: ${{ secrets.DOCKER_CI_ACCESS_TOKEN }}
+  #
+  #     - name: Create and push manifests
+  #       run: |
+  #         # Get short SHA
+  #         GIT_SHA_SHORT=$(git rev-parse --short HEAD)
+  #         echo "Using Git SHA: ${GIT_SHA_SHORT}"
+  #
+  #         echo "Creating manifests for rivet-server:full..."
+  #         docker pull rivetgg/rivet-server:full-${GIT_SHA_SHORT}-amd64
+  #         docker pull rivetgg/rivet-server:full-${GIT_SHA_SHORT}-arm64
+  #         docker manifest create rivetgg/rivet-server:full-${GIT_SHA_SHORT} \
+  #           rivetgg/rivet-server:full-${GIT_SHA_SHORT}-amd64 \
+  #           rivetgg/rivet-server:full-${GIT_SHA_SHORT}-arm64
+  #         docker manifest push rivetgg/rivet-server:full-${GIT_SHA_SHORT}
+  #         echo "✓ Completed rivet-server:full manifest"
+  #
+  #         echo "Creating manifests for rivet-server:slim..."
+  #         docker pull rivetgg/rivet-server:slim-${GIT_SHA_SHORT}-amd64
+  #         docker pull rivetgg/rivet-server:slim-${GIT_SHA_SHORT}-arm64
+  #         docker manifest create rivetgg/rivet-server:slim-${GIT_SHA_SHORT} \
+  #           rivetgg/rivet-server:slim-${GIT_SHA_SHORT}-amd64 \
+  #           rivetgg/rivet-server:slim-${GIT_SHA_SHORT}-arm64
+  #         docker manifest push rivetgg/rivet-server:slim-${GIT_SHA_SHORT}
+  #         echo "✓ Completed rivet-server:slim manifest"
+  #
+  #         echo "Creating manifests for rivet-client variants..."
+  #         for variant in full-runner isolate-v8-runner container-runner; do
+  #           echo "Processing variant: ${variant}"
+  #           docker pull rivetgg/rivet-client:${variant}-${GIT_SHA_SHORT}-amd64
+  #           docker manifest create rivetgg/rivet-client:${variant}-${GIT_SHA_SHORT} \
+  #             rivetgg/rivet-client:${variant}-${GIT_SHA_SHORT}-amd64
+  #           docker manifest push rivetgg/rivet-client:${variant}-${GIT_SHA_SHORT}
+  #           echo "✓ Completed rivet-client:${variant} manifest"
+  #         done
+  #
+  #         echo "Creating manifest for rivet:monolith..."
+  #         docker pull rivetgg/rivet:monolith-${GIT_SHA_SHORT}-amd64
+  #         docker manifest create rivetgg/rivet:monolith-${GIT_SHA_SHORT} \
+  #           rivetgg/rivet:monolith-${GIT_SHA_SHORT}-amd64
+  #         docker manifest push rivetgg/rivet:monolith-${GIT_SHA_SHORT}
+  #         echo "✓ Completed rivet:monolith manifest"
+  #
+  #         echo "All manifests created and pushed successfully!"
