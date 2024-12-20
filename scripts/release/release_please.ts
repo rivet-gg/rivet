@@ -2,11 +2,12 @@ import type { ReleaseOpts } from "./main.ts";
 import $ from "dax";
 
 export async function configureReleasePlease(opts: ReleaseOpts) {
-	// Check if this commit already exists
-	const { code } = await $`git cat-file -e ${opts.commit}`.noThrow();
+	// Check if the Release-As commit already exists
+	const commitMessage = `chore: release ${opts.version}`;
+	const { code } = await $`git log --oneline --grep="${commitMessage}"`.noThrow();
 	if (code === 0) {
 		$.logStep("Updating Release Please", "");
-		await $`git commit --allow-empty -m "chore: release ${opts.version}" -m "Release-As: ${opts.version}"`;
+		await $`git commit --allow-empty -m "${commitMessage}" -m "Release-As: ${opts.version}"`;
 	} else {
 		$.logLight("Release please version already configured");
 	}
