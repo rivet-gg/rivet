@@ -4,10 +4,8 @@ on:
   push:
     branches:
       - main
-    tags:
-      - '*'
   # For testing:
-  pull_request:
+  # pull_request:
 
 jobs:
   build-and-push-server:

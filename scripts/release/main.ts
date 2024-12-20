@@ -98,7 +98,7 @@ async function main() {
 		});
 	}
 
-	$.log("Complete");
+	$.logStep("Complete");
 	$.logWarn("Important", "Make sure to release the Release Please PR");
 }
 
@@ -111,6 +111,7 @@ if (import.meta.main) {
 //	- Default version in initiated project
 //	- Version for docs
 //	- Install instructions in readme
+//	- Cargo.toml
 // - Docker images & docker monolith (tag with version & latest)
 // - Copy release binaries to latest tag
 // - Create rename commit for release please (release please will tag repo)
