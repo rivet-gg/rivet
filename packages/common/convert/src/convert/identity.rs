@@ -26,7 +26,7 @@ pub fn handle(
 
 pub fn summary(
 	config: &rivet_config::Config,
-	current_user_id: Uuid,
+	_current_user_id: Uuid,
 	user: &backend::user::User,
 ) -> GlobalResult<models::IdentitySummary> {
 	let user_id_proto = unwrap!(user.user_id);
@@ -81,11 +81,11 @@ pub fn profile(
 			.user_teams
 			.users
 			.iter()
-			.find(|u| u.user_id == user.user_id));
+			.find(|u| Some(common::Uuid::from(u.user_id)) == user.user_id));
 		let team_ids = user
 			.teams
 			.iter()
-			.map(|t| Ok(unwrap!(t.team_id)))
+			.map(|t| Ok(common::Uuid::from(t.team_id)))
 			.collect::<GlobalResult<Vec<_>>>()?;
 
 		pctx.teams_ctx

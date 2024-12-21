@@ -9,24 +9,18 @@ use crate::convert;
 
 #[derive(Debug)]
 pub struct TeamsCtx {
-	pub user_teams: user::team_list::Response,
+	pub user_teams: ::user::ops::team_list::Output,
 	pub teams: Vec<backend::team::Team>,
 }
 
 pub async fn handles(
 	ctx: &OperationContext<()>,
 	current_user_id: Uuid,
-	raw_user_ids: Vec<Uuid>,
+	user_ids: Vec<Uuid>,
 ) -> GlobalResult<Vec<models::IdentityHandle>> {
-	if raw_user_ids.is_empty() {
+	if user_ids.is_empty() {
 		return Ok(Vec::new());
 	}
-
-	let user_ids = raw_user_ids
-		.clone()
-		.into_iter()
-		.map(Into::into)
-		.collect::<Vec<_>>();
 
 	let users = users(ctx, user_ids.clone()).await?;
 
@@ -41,17 +35,11 @@ pub async fn handles(
 pub async fn summaries(
 	ctx: &OperationContext<()>,
 	current_user_id: Uuid,
-	raw_user_ids: Vec<Uuid>,
+	user_ids: Vec<Uuid>,
 ) -> GlobalResult<Vec<models::IdentitySummary>> {
-	if raw_user_ids.is_empty() {
+	if user_ids.is_empty() {
 		return Ok(Vec::new());
 	}
-
-	let user_ids = raw_user_ids
-		.clone()
-		.into_iter()
-		.map(Into::into)
-		.collect::<Vec<_>>();
 
 	let users = users(ctx, user_ids.clone()).await?;
 
@@ -79,7 +67,7 @@ pub async fn profiles(
 		.collect::<Vec<_>>();
 
 	let (users, teams_ctx, linked_accounts) = tokio::try_join!(
-		users(ctx, user_ids.clone()),
+		users(ctx, raw_user_ids.clone()),
 		teams(ctx, user_ids.clone()),
 		linked_accounts(ctx, user_ids.clone()),
 	)?;
@@ -105,18 +93,27 @@ pub async fn profiles(
 
 pub async fn users(
 	ctx: &OperationContext<()>,
-	user_ids: Vec<common::Uuid>,
-) -> GlobalResult<user::get::Response> {
-	op!([ctx] user_get {
-		user_ids: user_ids,
-	})
+	user_ids: Vec<Uuid>,
+) -> GlobalResult<::user::ops::get::Output> {
+	chirp_workflow::compat::op(
+		&ctx,
+		::user::ops::get::Input {
+			user_ids: user_ids,
+		},
+	)
 	.await
 }
 
 async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> GlobalResult<TeamsCtx> {
-	let user_teams_res = op!([ctx] user_team_list {
-		user_ids: user_ids,
-	})
+	let user_teams_res = chirp_workflow::compat::op(
+		&ctx,
+		::user::ops::team_list::Input {
+			user_ids: user_ids
+				.iter()
+				.map(|x| (*x).into())
+				.collect::<Vec<Uuid>>(),
+		},
+	)
 	.await?;
 
 	let team_ids = user_teams_res
@@ -125,7 +122,7 @@ async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> Globa
 		.map(|user| {
 			user.teams
 				.iter()
-				.map(|t| Ok(unwrap!(t.team_id)))
+				.map(|t| Ok(common::Uuid::from(t.team_id)))
 				.collect::<GlobalResult<Vec<_>>>()
 		})
 		.collect::<GlobalResult<Vec<_>>>()?
