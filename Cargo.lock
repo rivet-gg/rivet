@@ -741,7 +741,6 @@ dependencies = [
  "upload-prepare",
  "url",
  "user",
- "user-avatar-upload-complete",
  "user-identity-get",
  "uuid",
 ]
@@ -15890,9 +15889,9 @@ dependencies = [
  "server-spec",
  "sqlx",
  "token-create",
+ "upload-complete",
  "upload-file-list",
  "upload-get",
- "user-get",
  "user-identity-get",
 ]
 
@@ -16077,7 +16076,6 @@ dependencies = [
  "upload-list-for-user",
  "upload-prepare",
  "user",
- "user-get",
  "user-identity-delete",
 ]
 

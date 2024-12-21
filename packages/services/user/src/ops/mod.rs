@@ -1,3 +1,4 @@
+pub mod avatar_upload_complete;
 pub mod get;
 pub mod pending_delete_toggle;
 pub mod profile_validate;

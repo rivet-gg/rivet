@@ -290,9 +290,9 @@ pub async fn complete_avatar_upload(
 ) -> GlobalResult<serde_json::Value> {
 	let user_ent = ctx.auth().user(ctx.op_ctx()).await?;
 
-	op!([ctx] user_avatar_upload_complete {
-		user_id: Some(user_ent.user_id.into()),
-		upload_id: Some(upload_id.into()),
+	(*ctx).op(::user::ops::avatar_upload_complete::Input {
+		user_id: user_ent.user_id,
+		upload_id: upload_id,
 	})
 	.await?;
 
