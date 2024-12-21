@@ -17,7 +17,7 @@ rivet-operation.workspace = true
 token-create.workspace = true
 upload-file-list.workspace = true
 upload-get.workspace = true
-user-get.workspace = true
+upload-complete.workspace = true
 user-identity-get.workspace = true
 
 [dependencies.sqlx]
