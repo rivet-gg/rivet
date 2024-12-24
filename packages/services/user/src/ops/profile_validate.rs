@@ -1,14 +1,29 @@
-use proto::{backend::pkg::*, common};
-use rivet_operation::prelude::*;
+use chirp_workflow::prelude::*;
+use rivet_operation::prelude::common;
 
-#[operation(name = "user-profile-validate")]
-async fn handle(
-	ctx: OperationContext<user::profile_validate::Request>,
-) -> GlobalResult<user::profile_validate::Response> {
+#[derive(Debug)]
+pub struct Input {
+    pub user_id: Uuid,
+    pub display_name: Option<String>,
+	pub account_number: Option<u32>,
+	pub bio: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct Output {
+    pub errors: Vec<common::ValidationError>,
+}
+
+
+#[operation]
+pub async fn profile_validate(
+    ctx: &OperationCtx,
+    input: &Input
+) -> GlobalResult<Output> {
 	let mut errors = Vec::new();
 
 	// Validate display name
-	if let Some(display_name) = &ctx.display_name {
+	if let Some(display_name) = &input.display_name {
 		if display_name.is_empty() {
 			errors.push(util::err_path!["display-name", "too-short"]);
 		} else if display_name.len() > util::check::MAX_DISPLAY_NAME_LEN {
@@ -21,14 +36,14 @@ async fn handle(
 	}
 
 	// Validate account number
-	if let Some(account_number) = &ctx.account_number {
+	if let Some(account_number) = &input.account_number {
 		if *account_number < 1 || *account_number > 9999 {
 			errors.push(util::err_path!["account-number-invalid"]);
 		}
 	}
 
 	// Validate biography
-	if let Some(bio) = &ctx.bio {
+	if let Some(bio) = &input.bio {
 		if bio.len() > util::check::MAX_BIOGRAPHY_LEN {
 			errors.push(util::err_path!["bio", "too-long"]);
 		}
@@ -39,33 +54,28 @@ async fn handle(
 	}
 
 	// Only validate handle uniqueness if at least one of the two handle components is given
-	if ctx.display_name.is_some() || ctx.account_number.is_some() {
+	if input.display_name.is_some() || input.account_number.is_some() {
 		// If either the display name or account number are missing, fetch them from the given user
 		let (display_name, account_number) =
-			if ctx.display_name.is_none() || ctx.account_number.is_none() {
-				let user_id = unwrap_ref!(ctx.user_id);
-
-				let users_res = chirp_workflow::compat::op(
-					&ctx,
-					::user::ops::get::Input {
-						user_ids: vec![(*user_id).as_uuid()],
-					},
-				)
+			if input.display_name.is_none() || input.account_number.is_none() {
+				let users_res = (*ctx).op(crate::ops::get::Input {
+					user_ids: vec![input.user_id],
+				})
 				.await?;
 
 				let user = users_res.users.first();
 				let user = unwrap_ref!(user, "user not found");
 
 				(
-					ctx.display_name
+					input.display_name
 						.clone()
 						.unwrap_or(user.display_name.clone()),
-					ctx.account_number.unwrap_or(user.account_number),
+					input.account_number.unwrap_or(user.account_number),
 				)
 			} else {
 				(
-					unwrap_ref!(ctx.display_name).clone(),
-					*unwrap_ref!(ctx.account_number),
+					unwrap_ref!(input.display_name).clone(),
+					*unwrap_ref!(input.account_number),
 				)
 			};
 
@@ -90,7 +100,7 @@ async fn handle(
 		}
 	}
 
-	Ok(user::profile_validate::Response {
+	Ok(Output {
 		errors: errors
 			.into_iter()
 			.map(|path| common::ValidationError { path })
