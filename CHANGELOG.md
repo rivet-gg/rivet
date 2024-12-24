@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [24.6.1](https://github.com/rivet-gg/rivet/compare/v24.6.0...v24.6.1) (2024-12-24)
+
+
+### Bug Fixes
+
+* **site:** fix sales layout ([#1697](https://github.com/rivet-gg/rivet/issues/1697)) ([0c8003b](https://github.com/rivet-gg/rivet/commit/0c8003be9c9dcb8095e3e97a42419cc6a73a2426))
+* use inline videos for bg videos ([#1700](https://github.com/rivet-gg/rivet/issues/1700)) ([1812a22](https://github.com/rivet-gg/rivet/commit/1812a225821bcbb515bb9e42600210ee1f6f83ae))
+
+
+### Documentation
+
+* add manage & update sdk layout ([#1702](https://github.com/rivet-gg/rivet/issues/1702)) ([400ce31](https://github.com/rivet-gg/rivet/commit/400ce315fc7a31139eebb81b089219a8b8df20da))
+* fix errors in manage docs ([#1704](https://github.com/rivet-gg/rivet/issues/1704)) ([d45bf55](https://github.com/rivet-gg/rivet/commit/d45bf556e903404ab2df053c533d9806071e115d))
+* remove broken use cases link ([#1680](https://github.com/rivet-gg/rivet/issues/1680)) ([3f2eefc](https://github.com/rivet-gg/rivet/commit/3f2eefc81f272287f934906a171216d5d02efc15))
+* update bsky link ([2264539](https://github.com/rivet-gg/rivet/commit/2264539de6b022546d357428b0a2da15b181b501))
+
+
+### Chores
+
+* "copmile" typo ([#1671](https://github.com/rivet-gg/rivet/issues/1671)) ([e66e875](https://github.com/rivet-gg/rivet/commit/e66e8751ee660125e9bf3c4ac7a88867b71c3408))
+* add contributing.md ([#1691](https://github.com/rivet-gg/rivet/issues/1691)) ([fcd03c0](https://github.com/rivet-gg/rivet/commit/fcd03c065fa27d799d3259bb46c429b4a49f0023))
+* add conventions to contributing ([#1693](https://github.com/rivet-gg/rivet/issues/1693)) ([5d07b7f](https://github.com/rivet-gg/rivet/commit/5d07b7fbb8013f342a9b97bda851c94780163ec0))
+* update framer (pricing mobile & sales bug) ([#1688](https://github.com/rivet-gg/rivet/issues/1688)) ([a9204f0](https://github.com/rivet-gg/rivet/commit/a9204f0b5cca66d18ea69d7dd664eda12a5be279))
+
 ## [24.6.0](https://github.com/rivet-gg/rivet/compare/v24.5.2...v24.6.0) (2024-12-20)
 
 
