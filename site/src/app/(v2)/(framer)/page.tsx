@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 export default function IndexPage() {
   return (
     <>
+      <div />
       <FancyHeader />
       <FramerIndexPage />
     </>
