@@ -6,9 +6,9 @@ import { useIntersectionObserver } from "usehooks-ts";
 import { projectBillingQueryOptions } from "../../queries";
 
 const BILLING_PLAN_LABELS = {
-	[Rivet.ee.billing.Plan.Indie]: "Indie Plan",
-	[Rivet.ee.billing.Plan.Studio]: "Studio Plan",
-	[Rivet.ee.billing.Plan.Trial]: "Trial Plan",
+	[Rivet.ee.billing.Plan.Indie]: "Pro",
+	[Rivet.ee.billing.Plan.Studio]: "Team",
+	[Rivet.ee.billing.Plan.Trial]: "Community",
 };
 
 const BILLING_PLAN_COLORS = {
