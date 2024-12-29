@@ -81,9 +81,10 @@ interface SchemaProps {
   defs: Record<string, JSONSchema7>;
   parent?: string;
   foldable?: boolean;
+  children?: ReactNode;
 }
 
-function Schema({ schema: baseSchema, defs, parent, foldable }: SchemaProps) {
+function Schema({ schema: baseSchema, defs, parent, foldable, children }: SchemaProps) {
   let isFoldable = foldable ?? true;
   let schema = resolveSchema(baseSchema as JSONSchema7, defs);
 
@@ -125,6 +126,37 @@ function Schema({ schema: baseSchema, defs, parent, foldable }: SchemaProps) {
       </Foldable>
     ) : (
       inner
+    );
+  }
+
+  // Intersection
+  if (schema.anyOf) {
+    const { anyOf, ...common } = schema;
+    let inner = (
+      <ul>
+        {schema.anyOf.map((item: JSONSchema7, index) => {
+          return (
+            <li key={index} className='mt-4 pl-4'>
+              <TypeLabel type={`Variant #${index + 1}`} />
+              <Schema parent={parent} schema={item} defs={defs} foldable={false} />
+            </li>
+          );
+        })}
+      </ul>
+    );
+
+    return (
+      <>
+        <Schema parent={parent} schema={common} defs={defs} foldable>
+          {isFoldable ? (
+            <Foldable title='Show possible variants' closeTitle='Hide possible variants'>
+              {inner}
+            </Foldable>
+          ) : (
+            inner
+          )}
+        </Schema>
+      </>
     );
   }
 
@@ -178,9 +210,13 @@ function Schema({ schema: baseSchema, defs, parent, foldable }: SchemaProps) {
       return isFoldable ? (
         <Foldable>
           <ObjectSchema schema={schema} defs={defs} parent={parent} />
+          <div className='mt-1'>{children}</div>
         </Foldable>
       ) : (
-        <ObjectSchema schema={schema} defs={defs} parent={parent} />
+        <>
+          <ObjectSchema schema={schema} defs={defs} parent={parent} />
+          {children}
+        </>
       );
     }
     return null;
@@ -344,6 +380,17 @@ function resolveSchema(schema: JSONSchema7, defs: Record<string, JSONSchema7Defi
     }
 
     throw new Error('unsupported');
+  }
+
+  if (schema.anyOf) {
+    return {
+      ...schema,
+      anyOf: schema.anyOf.map(s => resolveSchema(s as JSONSchema7, defs))
+    };
+  }
+
+  if (schema.additionalProperties) {
+    return resolveSchema(schema.additionalProperties as JSONSchema7, defs);
   }
 
   if (schema.$ref) {
