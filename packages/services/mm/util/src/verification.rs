@@ -231,9 +231,12 @@ pub async fn verify_config(
 	// Verify identity requirement
 	match (highest_identity_requirement, opts.user_id) {
 		(backend::matchmaker::IdentityRequirement::Registered, Some(user_id)) => {
-			let user_identities_res = op!([ctx] user_identity_get {
-				user_ids: vec![user_id.into()],
-			})
+			let user_identities_res = chirp_workflow::compat::op(
+				&ctx,
+				::user::ops::identity::get::Input {
+					user_ids: vec![user_id]
+				},
+			)
 			.await?;
 			let user = unwrap!(
 				user_identities_res.users.first(),

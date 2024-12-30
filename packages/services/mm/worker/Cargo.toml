@@ -74,4 +74,4 @@ mm-config-version-get.workspace = true
 mm-lobby-get.workspace = true
 mm-lobby-player-count.workspace = true
 mm-player-count-for-namespace.workspace = true
-user-identity-create.workspace = true
+user.workspace = true

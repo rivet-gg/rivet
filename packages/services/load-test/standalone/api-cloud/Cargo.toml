@@ -7,6 +7,7 @@ edition.workspace = true
 
 [dependencies]
 chirp-client.workspace = true
+chirp-workflow.workspace = true
 rivet-operation.workspace = true
 rivet-connection.workspace = true
 rivet-runtime.workspace = true
@@ -23,7 +24,7 @@ reqwest = "0.11"
 
 faker-game.workspace = true
 faker-team.workspace = true
-user-identity-create.workspace = true
+user.workspace = true
 token-create.workspace = true
 rivet-config.workspace = true
 

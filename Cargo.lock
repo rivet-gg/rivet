@@ -360,7 +360,6 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "user",
- "user-identity-create",
  "user-identity-get",
  "uuid",
 ]
@@ -511,7 +510,6 @@ dependencies = [
  "url",
  "user",
  "user-identity-create",
- "user-identity-get",
  "uuid",
 ]
 
@@ -625,7 +623,6 @@ dependencies = [
  "upload-prepare",
  "url",
  "user",
- "user-identity-get",
  "uuid",
 ]
 
@@ -741,7 +738,6 @@ dependencies = [
  "upload-prepare",
  "url",
  "user",
- "user-identity-get",
  "uuid",
 ]
 
@@ -8359,6 +8355,7 @@ version = "24.6.2-rc.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "faker-game",
  "faker-team",
  "reqwest 0.11.27",
@@ -8372,7 +8369,7 @@ dependencies = [
  "tracing",
  "tracing-logfmt",
  "tracing-subscriber",
- "user-identity-create",
+ "user",
 ]
 
 [[package]]
@@ -8467,6 +8464,7 @@ version = "24.6.2-rc.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "faker-game",
  "faker-team",
  "reqwest 0.11.27",
@@ -8480,7 +8478,7 @@ dependencies = [
  "tracing",
  "tracing-logfmt",
  "tracing-subscriber",
- "user-identity-create",
+ "user",
 ]
 
 [[package]]
@@ -9196,7 +9194,7 @@ dependencies = [
  "upload-complete",
  "upload-get",
  "upload-prepare",
- "user-identity-create",
+ "user",
 ]
 
 [[package]]
@@ -11755,7 +11753,6 @@ dependencies = [
  "tier",
  "types-proto",
  "user",
- "user-identity-get",
 ]
 
 [[package]]
@@ -12361,6 +12358,7 @@ version = "24.6.2-rc.1"
 dependencies = [
  "bit-vec",
  "chirp-client",
+ "chirp-workflow",
  "heck 0.3.3",
  "http 0.2.12",
  "ip-info",
@@ -12371,7 +12369,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum 0.24.1",
- "user-identity-get",
+ "user",
  "uuid",
 ]
 
@@ -15906,6 +15904,7 @@ version = "24.6.2-rc.1"
 dependencies = [
  "chirp-workflow",
  "cluster",
+ "email-address-parser",
  "linode",
  "rivet-config",
  "rivet-operation",
