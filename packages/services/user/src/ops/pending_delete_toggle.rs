@@ -21,8 +21,8 @@ pub async fn pending_delete_toggle(
 	let user_id = input.user_id;
 
 	// Verify the user is registered
-	let identity = op!([ctx] user_identity_get {
-		user_ids: vec![user_id.into()],
+	let identity = ctx.op(crate::ops::identity::get::Input {
+		user_ids: vec![user_id]
 	})
 	.await?;
 	let identities = &unwrap_ref!(identity.users.first()).identities;
