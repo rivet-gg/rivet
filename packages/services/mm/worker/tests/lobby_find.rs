@@ -527,8 +527,8 @@ async fn registered_verification(ctx: TestCtx) {
 	);
 
 	let email = util::faker::email();
-	op!([ctx] user_identity_create {
-		user_id: user_res.user_id,
+	ctx.op(::user::ops::identity::create::Input {
+		user_id: user_id,
 		identity: Some(backend::user_identity::Identity {
 			kind: Some(backend::user_identity::identity::Kind::Email(
 				backend::user_identity::identity::Email {

@@ -1,5 +1,5 @@
 use proto::{
-	backend::{self, pkg::*},
+	backend::{self},
 	common,
 };
 use rivet_api::models;
@@ -147,9 +147,15 @@ async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> Globa
 async fn linked_accounts(
 	ctx: &OperationContext<()>,
 	user_ids: Vec<common::Uuid>,
-) -> GlobalResult<user_identity::get::Response> {
-	op!([ctx] user_identity_get {
-		user_ids: user_ids.clone(),
-	})
-	.await
+) -> GlobalResult<::user::ops::identity::get::Output> {
+	Ok(chirp_workflow::compat::op(
+		&ctx,
+		::user::ops::identity::get::Input {
+			user_ids: user_ids
+				.iter()
+				.map(|i| i.as_uuid())
+				.collect::<Vec<Uuid>>()
+		},
+	)
+	.await?)
 }

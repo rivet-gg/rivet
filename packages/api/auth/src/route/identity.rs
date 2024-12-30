@@ -130,15 +130,15 @@ pub async fn complete(
 	else {
 		tracing::info!(user_id = %user_ent.user_id, "creating new identity for guest");
 
-		op!([ctx] user_identity_create {
-			user_id: Some(Into::into(user_ent.user_id)),
-			identity: Some(backend::user_identity::Identity {
+		(*ctx).op(::user::ops::identity::create::Input {
+			user_id: user_ent.user_id,
+			identity: backend::user_identity::Identity {
 				kind: Some(backend::user_identity::identity::Kind::Email(
 					backend::user_identity::identity::Email {
 						email: res.email.clone(),
 					}
 				))
-			})
+			}
 		})
 		.await?;
 
