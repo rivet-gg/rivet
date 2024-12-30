@@ -13,9 +13,12 @@ async fn worker(ctx: &OperationContext<user::msg::delete::Message>) -> GlobalRes
 
 	// Delete user identities
 	{
-		op!([ctx] user_identity_delete {
-			user_ids: vec![user_id.into()],
-		})
+		chirp_workflow::compat::op(
+			&ctx,
+			::user::ops::identity::delete::Input {
+				user_ids: vec![user_id]
+			}
+		)
 		.await?;
 	}
 

@@ -10,6 +10,7 @@ serde = { version = "1.0.198", features = ["derive"] }
 chirp-workflow.workspace = true
 
 cluster.workspace = true
+email-address-parser = "1.0.1"
 server-spec.workspace = true
 linode.workspace = true
 rivet-config.workspace = true
