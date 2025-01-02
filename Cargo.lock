@@ -15905,7 +15905,10 @@ dependencies = [
  "chirp-workflow",
  "cluster",
  "email-address-parser",
+ "faker-user",
  "linode",
+ "rand",
+ "reqwest 0.11.27",
  "rivet-config",
  "rivet-operation",
  "serde",
@@ -15915,7 +15918,7 @@ dependencies = [
  "upload-complete",
  "upload-file-list",
  "upload-get",
- "user-identity-get",
+ "upload-prepare",
 ]
 
 [[package]]
@@ -16099,7 +16102,6 @@ dependencies = [
  "upload-list-for-user",
  "upload-prepare",
  "user",
- "user-identity-delete",
 ]
 
 [[package]]
