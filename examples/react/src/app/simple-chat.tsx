@@ -1,115 +1,77 @@
 "use client";
-import { ActorHandle } from "@rivet-gg/actor-client";
-import { useEffect, useState, useSyncExternalStore } from "react";
-import type { default as ChatActor } from "../../actor/simple-chat";
+import type { ActorHandle } from "@rivet-gg/actor-client";
+import { useEffect, useState } from "react";
+import { default as ChatActor } from "../../actor/simple-chat";
 import { useActor } from "./use-actor";
 
-type ChatHandle = ActorHandle<ChatActor>;
-
-class ChatStore {
-  #handle: ChatHandle;
-  #messages: string[] = [];
-
-  #listeners: (() => void)[] = [];
-
-  constructor(handle: ChatHandle) {
-    this.#handle = handle;
-
-    this.fetchMessages().then(() => {
-      this.#update();
-    });
-  }
-
-  getMessages = () => {
-    return this.#messages;
-  };
-
-  sendMessage = async (message: string) => {
-    this.#messages = await this.#handle.sendMessage(message);
-    this.#update();
-  };
-
-  fetchMessages = async () => {
-    this.#messages = await this.#handle.getMessages();
-  };
-
-  subscribe = (cb: () => void) => {
-    this.#listeners.push(cb);
-    const unsub = this.#handle.on("newMessage", (msgs: string[]) => {
-      this.#messages = msgs;
-      this.#update?.();
-    });
-
-    return () => {
-      unsub();
-      this.#listeners = this.#listeners.filter((l) => l !== cb);
-    };
-  };
-
-  #update = () => {
-    this.#listeners?.forEach((cb) => cb());
-  };
-}
-
-function useChatMessages(store: ChatStore) {
-  return useSyncExternalStore(store.subscribe, store.getMessages);
-}
-
 export function SimpleChat() {
-  const state = useActor<ChatActor>({ name: "simple-chat" });
+	const [{ isLoading, error, actor }] = useActor<ChatActor>({ name: "simple-chat" });
 
-  if (!("actor" in state) || state.isLoading) {
-    if ("error" in state) {
-      return <div>Error while loading actor, see console for more details</div>;
-    }
-    return <div>Loading...</div>;
-  }
+	if (isLoading) {
+		return <>Loading...</>;
+	}
 
-  return (
-    <>
-      <ChatContent actor={state.actor} />
-    </>
-  );
+	if (error) {
+		return <>{JSON.stringify(error)}</>;
+	}
+
+	if (!actor) {
+		return <>No actor.</>;
+	}
+
+	return (
+		<>
+			<ChatContent actor={actor} />
+		</>
+	);
 }
 
-function ChatContent({ actor }: { actor: ChatHandle }) {
-  const [store] = useState(() => new ChatStore(actor));
-  const messages = useChatMessages(store);
+function ChatContent({ actor }: { actor: ActorHandle<ChatActor> }) {
+	const sendMessage = (message: string) => {
+		actor.sendMessage(message);
+	};
 
-  return (
-    <>
-      <ChatMessageForm onSubmit={store.sendMessage} />
-      <ChatMessages messages={messages} />
-    </>
-  );
+	return (
+		<>
+			<ChatMessageForm onSubmit={sendMessage} />
+			<ChatMessages actor={actor} />
+		</>
+	);
 }
 
-function ChatMessages({ messages }: { messages: string[] }) {
-  return (
-    <div>
-      {messages.map((msg, i) => (
-        <div key={i}>{msg}</div>
-      ))}
-    </div>
-  );
+function ChatMessages({ actor }: { actor: ActorHandle<ChatActor> }) {
+	const [messages, setMessages] = useState<string[]>(() => []);
+
+	useEffect(() => {
+		actor.getMessages().then((messages) => {
+			setMessages(messages);
+		});
+		return actor.on("newMessage", (response: { messages: string[] }) => {
+			setMessages(response.messages);
+		});
+	}, [actor]);
+
+	return (
+		<div>
+			{messages.map((msg, i) => (
+				<div key={i}>{msg}</div>
+			))}
+		</div>
+	);
 }
 
-function ChatMessageForm({
-  onSubmit,
-}: {
-  onSubmit: (message: string) => void;
-}) {
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const data = new FormData(e.currentTarget);
-        onSubmit(data.get("message") as string);
-        e.currentTarget.reset();
-      }}
-    >
-      <input type="text" name="message" />
-      <button type="submit">Send</button>
-    </form>
-  );
+export function ChatMessageForm({ onSubmit }: { onSubmit: (message: string) => void }) {
+	return (
+		<form
+			onSubmit={(e) => {
+				e.preventDefault();
+				const data = new FormData(e.currentTarget);
+				onSubmit(data.get("message") as string);
+				e.currentTarget.reset();
+			}}
+		>
+			<input type="text" name="message" />
+			<button type="submit">Send</button>
+		</form>
+	);
 }
