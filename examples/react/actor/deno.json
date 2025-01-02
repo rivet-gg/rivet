@@ -1,6 +1,9 @@
 {
 	"imports": {
 		"@rivet-gg/actor": "jsr:@rivet-gg/actor",
-		"@rivet-gg/actor-client": "jsr:@rivet-gg/actor-client"
+		"@rivet-gg/actor-client": "jsr:@rivet-gg/actor-client",
+		"react": "npm:react",
+		"get-stream": "npm:get-stream",
+		"react-server": "./scripts/dist/react-server.mjs"
 	}
 }

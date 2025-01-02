@@ -3,6 +3,10 @@
 		"simple-chat": {
 			"script": "simple-chat.ts",
 			"access": "public"
+		},
+		"server-driven-ui": {
+			"script": "server-driven-ui.ts",
+			"access": "public"
 		}
 	}
 }
