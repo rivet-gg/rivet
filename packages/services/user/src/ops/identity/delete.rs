@@ -10,7 +10,7 @@ pub struct Output {}
 
 
 #[operation]
-pub async fn create(
+pub async fn delete(
     ctx: &OperationCtx,
     input: &Input
 ) -> GlobalResult<Output> {

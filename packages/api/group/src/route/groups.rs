@@ -194,7 +194,7 @@ pub async fn members(
 	let (user, user_ent) = ctx.auth().user(ctx.op_ctx()).await?;
 
 	// Check if user is a member of this team
-	let team_list_res = (*ctx).op(
+	let team_list_res = ctx.op(
 		::user::ops::team_list::Input {
 			user_ids: vec![user_ent.user_id.into()],
 		}

@@ -97,7 +97,7 @@ pub async fn complete(
 		return Ok(models::AuthIdentityCompleteEmailVerificationResponse { status });
 	}
 
-	let email_res = (*ctx).op(::user::ops::resolve_email::Input {
+	let email_res = ctx.op(::user::ops::resolve_email::Input {
 		emails: vec![res.email.clone()],
 	})
 	.await?;
@@ -110,7 +110,7 @@ pub async fn complete(
 
 		tracing::info!(old_user_id = %user_ent.user_id, %new_user_id, "identity found, switching user");
 
-		let token_res = (*ctx).op(::user::ops::token_create::Input {
+		let token_res = ctx.op(::user::ops::token_create::Input {
 			user_id: new_user_id,
 			client: ctx.client_info(),
 		})
@@ -130,7 +130,7 @@ pub async fn complete(
 	else {
 		tracing::info!(user_id = %user_ent.user_id, "creating new identity for guest");
 
-		(*ctx).op(::user::ops::identity::create::Input {
+		ctx.op(::user::ops::identity::create::Input {
 			user_id: user_ent.user_id,
 			identity: backend::user_identity::Identity {
 				kind: Some(backend::user_identity::identity::Kind::Email(

@@ -86,18 +86,8 @@ impl Auth {
 		let claims = self.claims()?;
 
 		if claims.as_user().is_ok() {
-			let (_, user_ent) = self.user(ctx).await?;
+			let (user, user_ent) = self.user(ctx).await?;
 
-			// Get user
-			let user_res = chirp_workflow::compat::op(
-				&ctx,
-				::user::ops::get::Input {
-					user_ids: vec![user_ent.user_id],
-				},
-			)
-			.await?;
-
-			let user = unwrap!(user_res.users.first(), "user not found");
 			ensure_with!(user.is_admin, IDENTITY_NOT_ADMIN);
 
 			Ok(())

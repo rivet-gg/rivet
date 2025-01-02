@@ -58,7 +58,7 @@ pub async fn profile_validate(
 		// If either the display name or account number are missing, fetch them from the given user
 		let (display_name, account_number) =
 			if input.display_name.is_none() || input.account_number.is_none() {
-				let users_res = (*ctx).op(crate::ops::get::Input {
+				let users_res = ctx.op(crate::ops::get::Input {
 					user_ids: vec![input.user_id],
 				})
 				.await?;
@@ -86,7 +86,7 @@ pub async fn profile_validate(
 			SELECT EXISTS (
 				SELECT 1
 				FROM db_user.users
-				WHERE display_name = $1 and account_number = $2
+				WHERE display_name = $1 AND account_number = $2
 			)
 			",
 			display_name,

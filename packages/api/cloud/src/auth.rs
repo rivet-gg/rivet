@@ -296,7 +296,7 @@ impl Auth {
 				team_ids: team_ids
 					.iter()
 					.map(|id| (*id).into())
-					.collect::<Vec<common::Uuid>>()
+					.collect::<Vec<_>>()
 			})
 			.await?;
 

@@ -5,7 +5,7 @@ use rivet_operation::prelude::*;
 async fn handle(
 	ctx: OperationContext<captcha::turnstile_config_get::Request>,
 ) -> GlobalResult<captcha::turnstile_config_get::Response> {
-	let config = unwrap_ref!((*ctx).config);
+	let config = unwrap_ref!(ctx.config);
 
 	// Check for "rivet.game" host
 	let site_key = if let Some(origin_host) = &ctx.origin_host {

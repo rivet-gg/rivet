@@ -98,7 +98,7 @@ pub async fn users(
 	chirp_workflow::compat::op(
 		&ctx,
 		::user::ops::get::Input {
-			user_ids: user_ids,
+			user_ids,
 		},
 	)
 	.await

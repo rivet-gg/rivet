@@ -11,8 +11,8 @@ pub async fn users(
 	ctx: &Ctx<Auth>,
 	user_ids: Vec<Uuid>,
 ) -> GlobalResult<::user::ops::get::Output> {
-	(*ctx).op(::user::ops::get::Input {
-		user_ids: user_ids,
+	ctx.op(::user::ops::get::Input {
+		user_ids,
 	})
 	.await
 }

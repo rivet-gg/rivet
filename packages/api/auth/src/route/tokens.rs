@@ -137,7 +137,7 @@ pub async fn identity(
 
 	// Verify user is not deleted
 	if has_refresh_token {
-		let user_res = (*ctx).op(::user::ops::get::Input {
+		let user_res = ctx.op(::user::ops::get::Input {
 			user_ids: vec![user_ent.user_id],
 		})
 		.await?;
@@ -208,7 +208,7 @@ async fn fallback_user(
 	let token_res = chirp_workflow::compat::op(
 		ctx,
 		::user::ops::token_create::Input {
-			user_id: user_id,
+			user_id,
 			client: client_info,
 		},
 	)

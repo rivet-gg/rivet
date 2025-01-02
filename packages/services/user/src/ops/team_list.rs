@@ -44,7 +44,7 @@ pub async fn team_list(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output
 					for user_id in user_ids {
 						// Aggregate user teams
 						let user_teams = UserTeams {
-							user_id: user_id,
+							user_id,
 							teams: team_members
 								.iter()
 								.filter(|(team_user_id, _)| *team_user_id == user_id)
@@ -54,7 +54,7 @@ pub async fn team_list(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output
 								.collect(),
 						};
 
-						cache.resolve(&user_id.clone(), user_teams);
+						cache.resolve(&user_id, user_teams);
 					}
 
 					Ok(cache)

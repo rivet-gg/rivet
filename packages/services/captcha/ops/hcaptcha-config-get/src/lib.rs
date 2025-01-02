@@ -5,7 +5,7 @@ use rivet_operation::prelude::*;
 async fn handle(
 	ctx: OperationContext<captcha::hcaptcha_config_get::Request>,
 ) -> GlobalResult<captcha::hcaptcha_config_get::Response> {
-	let config = unwrap_ref!((*ctx).config);
+	let config = unwrap_ref!(ctx.config);
 
 	let site_key = if let Some(site_key) = &config.site_key {
 		site_key.clone()

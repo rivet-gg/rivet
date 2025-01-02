@@ -6,7 +6,7 @@ use crate::auth::Auth;
 /// Validates that a given user ID is registered.
 pub async fn user_registered(ctx: &Ctx<Auth>, user_id: Uuid) -> GlobalResult<()> {
 	// If the user has at least one identity they are considered registered
-	let identity = (*ctx).op(::user::ops::identity::get::Input {
+	let identity = ctx.op(::user::ops::identity::get::Input {
 		user_ids: vec![user_id]
 	})
 	.await?;
