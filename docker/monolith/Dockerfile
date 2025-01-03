@@ -44,6 +44,7 @@ RUN \
     --mount=type=cache,target=/usr/local/cargo/registry,id=monolith-client-cargo-registry \
     --mount=type=cache,target=/app/target,id=monolith-client-target \
     RUSTFLAGS="--cfg tokio_unstable" cargo build -v --release --bin rivet-client --bin rivet-isolate-v8-runner --bin rivet-container-runner && \
+    mkdir -p /app/dist && \
     mv target/release/rivet-client target/release/rivet-isolate-v8-runner target/release/rivet-container-runner /app/dist/
 
 # MARK: Runner
