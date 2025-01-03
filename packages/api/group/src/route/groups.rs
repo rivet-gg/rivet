@@ -194,16 +194,18 @@ pub async fn members(
 	let (user, user_ent) = ctx.auth().user(ctx.op_ctx()).await?;
 
 	// Check if user is a member of this team
-	let team_list_res = op!([ctx] user_team_list {
-		user_ids: vec![user_ent.user_id.into()],
-	})
+	let team_list_res = (*ctx).op(
+		::user::ops::team_list::Input {
+			user_ids: vec![user_ent.user_id.into()],
+		}
+	)
 	.await?;
 
 	let user_team = unwrap!(team_list_res.users.first());
 	let user_team_ids = user_team
 		.teams
 		.iter()
-		.map(|t| Ok(unwrap_ref!(t.team_id).as_uuid()))
+		.map(|t| Ok(t.team_id))
 		.collect::<GlobalResult<Vec<_>>>()?;
 	let has_team = user_team_ids.iter().any(|team_id| &group_id == team_id);
 
@@ -285,7 +287,13 @@ pub async fn members(
 
 	// NOTE: We don't use fetch::identities::handles here because the end model is `GroupMember` not `IdentityHandle`
 	// Fetch team member and join request data
-	let users = fetch::identity::users(&ctx, user_ids.clone()).await?;
+	let users = fetch::identity::users(
+		&ctx,
+		user_ids
+			.iter()
+			.map(|u| u.as_uuid())
+			.collect::<Vec<_>>()
+	).await?;
 
 	let raw_user_ent_id = Into::<common::Uuid>::into(user_ent.user_id);
 	let members = users
@@ -422,7 +430,13 @@ pub async fn join_requests(
 	// NOTE: We don't use fetch::identities::handles here because the end model is `GroupMember` not
 	// `IdentityHandle`
 	// Fetch team member and join request data
-	let users = fetch::identity::users(&ctx, user_ids.clone()).await?;
+	let users = fetch::identity::users(
+		&ctx,
+		user_ids
+			.iter()
+			.map(|u| u.as_uuid())
+			.collect::<Vec<_>>()
+	).await?;
 
 	let raw_user_ent_id = Into::<common::Uuid>::into(user_ent.user_id);
 	let join_requests = users
@@ -1246,7 +1260,13 @@ pub async fn bans(
 	// NOTE: We don't use fetch::identities::handles here because the end model is `BannedIdentity` not
 	// `IdentityHandle`
 	// Fetch team member and ban data
-	let users = fetch::identity::users(&ctx, user_ids.clone()).await?;
+	let users = fetch::identity::users(
+		&ctx,
+		user_ids
+			.iter()
+			.map(|u| u.as_uuid())
+			.collect::<Vec<_>>()
+	).await?;
 
 	let raw_user_ent_id = Into::<common::Uuid>::into(user_ent.user_id);
 	let banned_identities = users

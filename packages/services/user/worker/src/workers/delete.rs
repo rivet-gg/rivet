@@ -13,9 +13,12 @@ async fn worker(ctx: &OperationContext<user::msg::delete::Message>) -> GlobalRes
 
 	// Delete user identities
 	{
-		op!([ctx] user_identity_delete {
-			user_ids: vec![user_id.into()],
-		})
+		chirp_workflow::compat::op(
+			&ctx,
+			::user::ops::identity::delete::Input {
+				user_ids: vec![user_id]
+			}
+		)
 		.await?;
 	}
 
@@ -55,16 +58,19 @@ async fn worker(ctx: &OperationContext<user::msg::delete::Message>) -> GlobalRes
 	{
 		tracing::info!(?user_id, "removing teams");
 
-		let user_teams_res = op!([ctx] user_team_list {
-			user_ids: vec![user_id.into()],
-		})
+		let user_teams_res = chirp_workflow::compat::op(
+			&ctx,
+			::user::ops::team_list::Input {
+				user_ids: vec![user_id.into()],
+			},
+		)
 		.await?;
 		let user_teams = unwrap!(user_teams_res.users.first());
 
 		let teams_res = op!([ctx] team_get {
 			team_ids: user_teams.teams
 				.iter()
-				.map(|member| Ok(unwrap!(member.team_id)))
+				.map(|member| Ok(member.team_id.into()))
 				.collect::<GlobalResult<Vec<_>>>()?
 		})
 		.await?;
