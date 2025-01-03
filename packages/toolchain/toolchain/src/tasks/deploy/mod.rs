@@ -195,6 +195,10 @@ async fn build_and_upload(
 	let mut tags = HashMap::from([
 		(build::tags::VERSION.to_string(), version_name.to_string()),
 		(build::tags::CURRENT.to_string(), "true".to_string()),
+		(
+			build::tags::ACCESS.to_string(),
+			build.access.as_ref().to_string(),
+		),
 	]);
 	if let Some(build_tags) = build.tags.clone() {
 		tags.extend(build_tags.clone());
