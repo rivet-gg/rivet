@@ -48,10 +48,12 @@ pub async fn run_from_env(
 			&ctx,
 			::user::ops::identity::create::Input {
 				user_id: primary_user_id,
-				identity: backend::user_identity::Identity {
-					kind: Some(backend::user_identity::identity::Kind::Email(backend::user_identity::identity::Email {
-						email: util::faker::email()
-					}))
+				identity: ::user::types::identity::Identity {
+					kind: ::user::types::identity::Kind::Email(
+						::user::types::identity::Email {
+							email: util::faker::email()
+						}
+					)
 				}
 			}
 		)

@@ -1,13 +1,13 @@
 use chirp_workflow::prelude::*;
 use email_address_parser::EmailAddress;
 use rivet_operation::prelude::proto;
-use proto::backend::{self,pkg::*};
+use proto::backend::pkg::*;
 use serde_json::json;
 
 #[derive(Debug)]
 pub struct Input {
     pub user_id: Uuid,
-    pub identity: backend::user_identity::Identity,
+    pub identity: crate::types::identity::Identity,
 }
 
 #[derive(Debug)]
@@ -21,10 +21,8 @@ pub async fn create(
 ) -> GlobalResult<Output> {
     let user_id = input.user_id;
 	let identity = &input.identity;
-	let identity_kind = unwrap_ref!(identity.kind);
-
-	match &identity_kind {
-		backend::user_identity::identity::Kind::Email(email) => {
+	match &identity.kind {
+		crate::types::identity::Kind::Email(email) => {
 			ensure!(EmailAddress::is_valid(&email.email, None), "invalid email");
 
 			sql_execute!(
@@ -54,7 +52,7 @@ pub async fn create(
 			})
 			.await?;
 		}
-		backend::user_identity::identity::Kind::DefaultUser(_) => {
+		crate::types::identity::Kind::DefaultUser(_) => {
 			bail!("cannot create default user identity")
 		}
 	}
@@ -65,7 +63,7 @@ pub async fn create(
 
 	msg!([ctx] user_identity::msg::create_complete(user_id) {
 		user_id: Some(user_id.into()),
-		identity: Some(identity.clone()),
+		identity: Some(identity.into()),
 	})
 	.await?;
 

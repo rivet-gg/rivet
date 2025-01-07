@@ -132,12 +132,12 @@ pub async fn complete(
 
 		ctx.op(::user::ops::identity::create::Input {
 			user_id: user_ent.user_id,
-			identity: backend::user_identity::Identity {
-				kind: Some(backend::user_identity::identity::Kind::Email(
-					backend::user_identity::identity::Email {
+			identity: ::user::types::identity::Identity {
+				kind: ::user::types::identity::Kind::Email(
+					::user::types::identity::Email {
 						email: res.email.clone(),
 					}
-				))
+				)
 			}
 		})
 		.await?;

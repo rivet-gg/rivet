@@ -1,6 +1,4 @@
 use chirp_workflow::prelude::*;
-use proto::backend::{self};
-use rivet_operation::prelude::{proto};
 
 
 #[derive(Debug, Default, Serialize, Deserialize, sqlx::FromRow)]
@@ -22,7 +20,7 @@ pub struct Output {
 #[derive(Debug)]
 pub struct User {
     pub user_id: Uuid,
-    pub identities: Vec<backend::user_identity::Identity>
+    pub identities: Vec<crate::types::identity::Identity>
 }
 
 
@@ -80,7 +78,7 @@ pub async fn get(
             let Some(user) = users
                 .users
                 .iter()
-                .find(|x| x.user_id.map(|x| x.as_uuid()) == Some(*user_id))
+                .find(|x| x.user_id == *user_id)
             else {
                 return None;
             };
@@ -91,12 +89,12 @@ pub async fn get(
                 .filter(|x| x.user_id == *user_id)
                 .flat_map(|x| {
                     IntoIterator::into_iter([x.email.as_ref().map(|email| {
-                        backend::user_identity::Identity {
-                            kind: Some(backend::user_identity::identity::Kind::Email(
-                                backend::user_identity::identity::Email {
+                        crate::types::identity::Identity {
+                            kind: crate::types::identity::Kind::Email(
+                                crate::types::identity::Email {
                                     email: email.clone(),
                                 },
-                            )),
+                            ),
                         }
                     })])
                     .flatten()
@@ -105,10 +103,10 @@ pub async fn get(
 
             // Inject identity for development users since they should behave like registered users.
             if is_development && user.display_name == util::dev_defaults::USER_NAME {
-                identities.push(backend::user_identity::Identity {
-                    kind: Some(backend::user_identity::identity::Kind::DefaultUser(
-                        backend::user_identity::identity::DefaultUser {},
-                    )),
+                identities.push(crate::types::identity::Identity {
+                    kind: crate::types::identity::Kind::DefaultUser(
+                        crate::types::identity::DefaultUser {},
+                    ),
                 })
             }
 

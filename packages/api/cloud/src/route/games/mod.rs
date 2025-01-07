@@ -29,9 +29,9 @@ pub async fn list(
 ) -> GlobalResult<models::CloudGamesGetGamesResponse> {
 	let accessible_games = ctx.auth().accessible_games(ctx.op_ctx()).await?;
 
-	let games = fetch::game::summaries(ctx.op_ctx(), accessible_games.game_ids).await?;
+	let games = fetch::game::summaries(&*ctx, accessible_games.game_ids).await?;
 	let groups = fetch::group::summaries(
-		ctx.op_ctx(),
+		&*ctx,
 		accessible_games.user_id,
 		accessible_games.team_ids,
 	)
@@ -323,7 +323,7 @@ pub async fn get(
 	let update_ts = update_ts.unwrap_or_else(util::timestamp::now);
 
 	let ((games, dev_teams), ns_list_res, version_list_res) = tokio::try_join!(
-		fetch::game::games_and_dev_teams(ctx.op_ctx(), vec![game_id.into()]),
+		fetch::game::games_and_dev_teams(&*ctx, vec![game_id.into()]),
 		op!([ctx] game_namespace_list {
 			game_ids: vec![game_id.into()],
 		}),
@@ -392,7 +392,7 @@ pub async fn get(
 		.map(ApiTryInto::api_try_into)
 		.collect::<GlobalResult<Vec<_>>>()?;
 
-	let regions = fetch::game::region_summaries(ctx.op_ctx(), game_id).await?;
+	let regions = fetch::game::region_summaries(&*ctx, game_id).await?;
 
 	Ok(models::CloudGamesGetGameByIdResponse {
 		game: Box::new(models::CloudGameFull {

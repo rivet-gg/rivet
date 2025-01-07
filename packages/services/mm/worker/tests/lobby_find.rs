@@ -531,13 +531,13 @@ async fn registered_verification(ctx: TestCtx) {
 	let email = util::faker::email();
 	ctx.op(user::ops::identity::create::Input {
 		user_id,
-		identity: Some(backend::user_identity::Identity {
-			kind: Some(backend::user_identity::identity::Kind::Email(
-				backend::user_identity::identity::Email {
+		identity: user::types::identity::Identity {
+			kind: user::types::identity::Kind::Email(
+				user::types::identity::Email {
 					email: email.clone(),
 				}
-			)),
-		}),
+			)
+		},
 	})
 	.await
 	.unwrap();

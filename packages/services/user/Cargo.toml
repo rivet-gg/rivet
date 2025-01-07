@@ -17,12 +17,14 @@ server-spec.workspace = true
 linode.workspace = true
 rivet-config.workspace = true
 rivet-operation.workspace = true
+util.workspace = true
 token-create.workspace = true
 upload-file-list.workspace = true
 upload-get.workspace = true
 upload-complete.workspace = true
 upload-list-for-user.workspace = true
 team-get.workspace = true
+types-proto.workspace = true
 
 [dependencies.sqlx]
 workspace = true
