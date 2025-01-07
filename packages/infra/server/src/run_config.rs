@@ -112,6 +112,15 @@ pub fn config(rivet_config: rivet_config::Config) -> Result<RunConfigData> {
 			ServiceKind::Singleton,
 			|config, pools| Box::pin(cluster_datacenter_tls_renew::start(config, pools)),
 		));
+
+		services.push(Service::new(
+			"cluster_tunnel_tls_renew",
+			ServiceKind::Cron(CronConfig {
+				run_immediately: true,
+				schedule: "0 0 0 1 * *".into(),
+			}),
+			|config, pools| Box::pin(cluster_tunnel_tls_renew::start(config, pools)),
+		));
 	}
 
 	if server_config.rivet.auth.access_kind == rivet_config::config::rivet::AccessKind::Development
