@@ -1,8 +1,8 @@
 "use client";
 import type { ActorHandle } from "@rivet-gg/actor-client";
+import { useActor } from "@rivet-gg/actor-client/unstable-react";
 import { useEffect, useState } from "react";
-import { default as ChatActor } from "../../actor/simple-chat";
-import { useActor } from "./use-actor";
+import type ChatActor from "../../actor/simple-chat";
 
 export function SimpleChat() {
 	const [{ isLoading, error, actor }] = useActor<ChatActor>({ name: "simple-chat" });

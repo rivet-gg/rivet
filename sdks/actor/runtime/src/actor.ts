@@ -1,4 +1,10 @@
 import { Lock } from "@core/asyncutil/lock";
+import { setupLogging } from "@rivet-gg/actor-common/log";
+import { assertUnreachable } from "@rivet-gg/actor-common/utils";
+import type { ActorContext, Metadata } from "@rivet-gg/actor-core";
+import { ProtocolFormatSchema } from "@rivet-gg/actor-protocol/ws";
+import type * as wsToClient from "@rivet-gg/actor-protocol/ws/to_client";
+import * as wsToServer from "@rivet-gg/actor-protocol/ws/to_server";
 import { assertExists } from "@std/assert/exists";
 import { deadline } from "@std/async/deadline";
 import type { Logger } from "@std/log/get-logger";
@@ -6,12 +12,6 @@ import { Hono, type Context as HonoContext } from "hono";
 import { upgradeWebSocket } from "hono/deno";
 import type { WSEvents } from "hono/ws";
 import onChange from "on-change";
-import { setupLogging } from "../common/log.ts";
-import { assertUnreachable } from "../common/utils.ts";
-import type { ActorContext, Metadata } from "../core/mod.ts";
-import { ProtocolFormatSchema } from "../protocol/ws/mod.ts";
-import type * as wsToClient from "../protocol/ws/to_client.ts";
-import * as wsToServer from "../protocol/ws/to_server.ts";
 import { type ActorConfig, mergeActorConfig } from "./config.ts";
 import {
 	Connection,
@@ -746,9 +746,13 @@ export abstract class Actor<
 		try {
 			const outputOrPromise = rpcFunction.call(this, ctx, ...args);
 			if (outputOrPromise instanceof Promise) {
-				return await deadline(outputOrPromise, this.#config.rpc.timeout);
+				return await this._onBeforeRpcResponse(
+					rpcName,
+					args,
+					await deadline(outputOrPromise, this.#config.rpc.timeout),
+				);
 			} else {
-				return outputOrPromise;
+				return await this._onBeforeRpcResponse(rpcName, args, outputOrPromise);
 			}
 		} catch (error) {
 			if (error instanceof DOMException && error.name === "TimeoutError") {
@@ -786,6 +790,27 @@ export abstract class Actor<
 	 * @see {@link https://rivet.gg/docs/lifecycle|Lifecycle Documentation}
 	 */
 	protected _onStateChange?(newState: State): void | Promise<void>;
+
+	/**
+	 * Hook called after the RPC method is executed, but before the response is sent.
+	 *
+	 * This is useful for logging or auditing RPC calls.
+	 *
+	 * @internal
+	 * @private
+	 * @param _name - The name of the called RPC method.
+	 * @param _args - The arguments passed to the RPC method.
+	 * @param output - The output of the RPC method.
+	 *
+	 * @returns The output of the RPC method.
+	 */
+	protected _onBeforeRpcResponse<Out>(
+		_name: string,
+		_args: unknown[],
+		output: Out,
+	): Out {
+		return output;
+	}
 
 	/**
 	 * Called whenever a new client connects to the actor. Clients can pass parameters when connecting, accessible via `opts.parameters`.

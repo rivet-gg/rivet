@@ -1,0 +1,14 @@
+{
+	"name": "@rivet-gg/actor-common",
+	"exports": {
+		"./log": "./src/log.ts",
+		"./logfmt": "./src/logfmt.ts",
+		"./network": "./src/network.ts",
+		"./utils": "./src/utils.ts"
+	},
+	"imports": {
+		"@std/log": "jsr:@std/log@^0.224.11",
+		"zod": "npm:zod@^3.24.1"
+	},
+	"exclude": ["dist/"]
+}
