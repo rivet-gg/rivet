@@ -12,6 +12,7 @@
 		".": "./src/mod.ts",
 		"./test": "./src/test.ts"
 	},
+	"exclude": ["dist/", "src/unstable-react.tsx"],
 	"lint": {
 		"rules": {
 			"exclude": ["no-explicit-any"]

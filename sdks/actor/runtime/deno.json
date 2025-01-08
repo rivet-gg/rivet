@@ -14,8 +14,10 @@
 	},
 	"exports": {
 		".": "./src/mod.ts",
-		"./kv": "./src/kv.ts"
+		"./kv": "./src/kv.ts",
+		"./unstable-react": "./src/unstable-react.ts"
 	},
+	"exclude": ["dist/"],
 	"fmt": {
 		"useTabs": true
 	},
@@ -23,8 +25,5 @@
 		"rules": {
 			"exclude": ["no-explicit-any", "no-slow-types"]
 		}
-	},
-	"publish": {
-		"exclude": ["!common", "!core", "!protocol"]
 	}
 }

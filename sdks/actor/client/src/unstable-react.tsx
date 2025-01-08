@@ -1,8 +1,11 @@
 "use client";
-import { Client as ActorClient, ActorHandle } from "@rivet-gg/actor-client";
+// @ts-ignore: This is a temporary workaround until the React Server Components will be fully released.
+import { createFromFetch } from "@kentcdodds/tmp-react-server-dom-esm/client.browser";
+// deno-lint-ignore verbatim-module-syntax
+import type * as React from "react";
 import {
+	type ElementType,
 	createContext,
-	ElementType,
 	use,
 	useCallback,
 	useEffect,
@@ -11,8 +14,7 @@ import {
 	useState,
 	useSyncExternalStore,
 } from "react";
-// @ts-ignore
-import { createFromFetch } from "@kentcdodds/tmp-react-server-dom-esm/client.browser";
+import type { Client as ActorClient, ActorHandle } from "./client.ts";
 
 export const ActorClientContext = createContext<ActorClient | null>(null);
 
@@ -23,13 +25,19 @@ export function ActorClientProvider({
 	children: React.ReactNode;
 	client: ActorClient;
 }) {
-	return <ActorClientContext.Provider value={client}>{children}</ActorClientContext.Provider>;
+	return (
+		<ActorClientContext.Provider value={client}>
+			{children}
+		</ActorClientContext.Provider>
+	);
 }
 
 export function useActorClient() {
 	const manager = use(ActorClientContext);
 	if (!manager) {
-		throw new Error("useActorClient must be used within an ActorClientProvider");
+		throw new Error(
+			"useActorClient must be used within an ActorClientProvider",
+		);
 	}
 	return manager;
 }
@@ -42,10 +50,10 @@ const noop = () => {
  * Shallow compare objects.
  * Copied from https://github.com/TanStack/query/blob/3c5d8e348cc53e46aea6c74767f3181fc77c2308/packages/query-core/src/utils.ts#L298-L299
  */
-export function shallowEqualObjects<T extends Record<string, any>>(
-	a: T | undefined,
-	b: T | undefined
-): boolean {
+export function shallowEqualObjects<
+	// biome-ignore lint/suspicious/noExplicitAny: we do not care about the shape
+	T extends Record<string, any>,
+>(a: T | undefined, b: T | undefined): boolean {
 	if (a === undefined && b === undefined) {
 		return true;
 	}
@@ -65,8 +73,16 @@ export function shallowEqualObjects<T extends Record<string, any>>(
 	return true;
 }
 
-const ACTOR_HANDLE_STATE_INIT = { isLoading: false, error: null, actor: null } as const;
-const ACTOR_HANDLE_STATE_CREATING = { isLoading: true, error: null, actor: null } as const;
+const ACTOR_HANDLE_STATE_INIT = {
+	isLoading: false,
+	error: null,
+	actor: null,
+} as const;
+const ACTOR_HANDLE_STATE_CREATING = {
+	isLoading: true,
+	error: null,
+	actor: null,
+} as const;
 function ACTOR_HANDLE_STATE_CREATED<A = unknown>(actor: ActorHandle<A>) {
 	return { isLoading: false, error: null, actor } as const;
 }
@@ -141,7 +157,9 @@ class ActorManager<A = unknown> {
 	}
 
 	#update() {
-		this.#listeners.forEach((cb) => cb());
+		for (const cb of this.#listeners) {
+			cb();
+		}
 	}
 }
 
@@ -151,11 +169,14 @@ function useActorHook<A = unknown>(...options: Parameters<ActorClient["get"]>) {
 	const [manager] = useState(() => new ActorManager<A>(client, options));
 
 	const state = useSyncExternalStore(
-		useCallback((onUpdate) => {
-			return manager.subscribe(onUpdate);
-		}, []),
+		useCallback(
+			(onUpdate) => {
+				return manager.subscribe(onUpdate);
+			},
+			[manager],
+		),
 		() => manager.getState(),
-		() => manager.getState()
+		() => manager.getState(),
 	);
 
 	useEffect(() => {
@@ -165,9 +186,13 @@ function useActorHook<A = unknown>(...options: Parameters<ActorClient["get"]>) {
 	return [state] as const;
 }
 
-function useActorEventHook<A = unknown, Args extends any[] = unknown[]>(
+function useActorEventHook<
+	A = unknown,
+	// biome-ignore lint/suspicious/noExplicitAny: we do not care about the shape of the args, for now
+	Args extends any[] = unknown[],
+>(
 	opts: { actor: ActorHandle<A> | null; event: string },
-	cb: (...args: Args) => void
+	cb: (...args: Args) => void,
 ) {
 	const ref = useRef(cb);
 
@@ -187,11 +212,19 @@ function useActorEventHook<A = unknown, Args extends any[] = unknown[]>(
 	}, [opts.actor, opts.event]);
 }
 
-function useRscHook<A = unknown>(opts: { actor: ActorHandle<A> | null; fn: keyof ActorHandle<A> }) {
-	const [lastResponse, setLastResponse] = useState<ElementType>(() => () => null);
+function useRscHook<A = unknown>(opts: {
+	actor: ActorHandle<A> | null;
+	fn: keyof ActorHandle<A>;
+}) {
+	const [lastResponse, setLastResponse] = useState<ElementType>(
+		() => () => null,
+	);
 
 	const rsc = useCallback(
-		async (...args: any[]) => {
+		async (
+			// biome-ignore lint/suspicious/noExplicitAny: we do not care about the shape of the args, for now
+			...args: any[]
+		) => {
 			if (opts.actor === null) {
 				return () => null;
 			}
@@ -202,14 +235,17 @@ function useRscHook<A = unknown>(opts: { actor: ActorHandle<A> | null; fn: keyof
 
 			return jsx;
 		},
-		[opts.actor, opts.fn]
+		[opts.actor, opts.fn],
 	);
 
 	return [lastResponse, rsc] as const;
 }
 
 type UseActorParameters =
-	| [Omit<Parameters<ActorClient["get"]>[0], "name">, Parameters<ActorClient["get"]>[1]]
+	| [
+			Omit<Parameters<ActorClient["get"]>[0], "name">,
+			Parameters<ActorClient["get"]>[1],
+	  ]
 	| [Omit<Parameters<ActorClient["get"]>[0], "name">]
 	| [];
 
@@ -219,13 +255,20 @@ export function unstable_createActorHooks<A = unknown>(opts: { name: string }) {
 			const [req, ...rest] = options;
 			return useActorHook<A>({ ...opts, ...req }, ...rest);
 		},
-		useActorEventCallback<E extends string, Args extends any[] = unknown[]>(
+		useActorEventCallback<
+			E extends string,
+			// biome-ignore lint/suspicious/noExplicitAny: we do not care about the shape of the args, for now
+			Args extends any[] = unknown[],
+		>(
 			opts: { actor: ActorHandle<A> | null; event: E },
-			cb: (...args: Args) => void
+			cb: (...args: Args) => void,
 		) {
 			return useActorEventHook<A, Args>(opts, cb);
 		},
-		useActorRsc<A = unknown>(opts: { actor: ActorHandle<A> | null; fn: keyof ActorHandle<A> }) {
+		useActorRsc<A = unknown>(opts: {
+			actor: ActorHandle<A> | null;
+			fn: keyof ActorHandle<A>;
+		}) {
 			return useRscHook(opts);
 		},
 	};
@@ -243,6 +286,7 @@ function ServerComponent<A>({
 	useActorEventHook<A>({ actor, event: "__rsc" }, () => {
 		refetch(props);
 	});
+	// biome-ignore lint/correctness/useExhaustiveDependencies: We don't want to refetch on every render, only on mount
 	useEffect(() => {
 		refetch(props);
 	}, []);
@@ -250,14 +294,21 @@ function ServerComponent<A>({
 	return <Comp />;
 }
 
-export function useActor<A = unknown>(...options: Parameters<ActorClient["get"]>) {
+export function useActor<A = unknown>(
+	...options: Parameters<ActorClient["get"]>
+) {
 	const [{ actor, ...rest }] = useActorHook<A>(...options);
 
 	const rsc = useMemo(() => {
 		return new Proxy({} as ActorHandle<A>, {
 			get(_target, prop) {
+				// biome-ignore lint/suspicious/noExplicitAny: we do not care about the shape of the args, for now
 				return (props: Record<string, any>) => (
-					<ServerComponent<A> actor={actor} fn={prop as keyof ActorHandle<A>} {...props} />
+					<ServerComponent<A>
+						actor={actor}
+						fn={prop as keyof ActorHandle<A>}
+						{...props}
+					/>
 				);
 			},
 		});

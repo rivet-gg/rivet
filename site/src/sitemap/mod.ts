@@ -1,5 +1,5 @@
 import { Sitemap } from "@/lib/sitemap";
-import { faActorsBorderless, faTs } from "@rivet-gg/icons";
+import { faActorsBorderless, faReact, faTs } from "@rivet-gg/icons";
 import apiPages from "@/generated/apiPages.json" assert { type: "json" };
 
 // Goals:
@@ -78,6 +78,11 @@ export const sitemap = [
             href: "https://jsr.io/@rivet-gg/actor-client",
             icon: faTs,
             external: true,
+          },
+          {
+            title: "React",
+            href: "/docs/client/react",
+            icon: faReact,
           },
         ],
       },

@@ -1,10 +1,10 @@
+import { MAX_CONN_PARAMS_SIZE } from "@rivet-gg/actor-common/network";
+import { assertUnreachable } from "@rivet-gg/actor-common/utils";
+import type { ProtocolFormat } from "@rivet-gg/actor-protocol/ws";
+import type * as wsToClient from "@rivet-gg/actor-protocol/ws/to_client";
+import type * as wsToServer from "@rivet-gg/actor-protocol/ws/to_server";
 import { assertEquals } from "@std/assert";
 import * as cbor from "@std/cbor";
-import { MAX_CONN_PARAMS_SIZE } from "../common/network.ts";
-import { assertUnreachable } from "../common/utils.ts";
-import type { ProtocolFormat } from "../protocol/ws/mod.ts";
-import type * as wsToClient from "../protocol/ws/to_client.ts";
-import type * as wsToServer from "../protocol/ws/to_server.ts";
 import * as errors from "./errors.ts";
 import { logger } from "./log.ts";
 import { type WebSocketMessage, messageLength } from "./utils.ts";
@@ -154,7 +154,7 @@ export class ActorHandleRaw {
 		}
 
 		const ws = new WebSocket(url);
-		ws.binaryType = this.protocolFormat === "cbor" ?  "arraybuffer" : "blob"
+		ws.binaryType = this.protocolFormat === "cbor" ? "arraybuffer" : "blob";
 		this.#websocket = ws;
 		ws.onopen = () => {
 			logger().debug("socket open");
@@ -376,7 +376,9 @@ export class ActorHandleRaw {
 					len: messageLength(message),
 				});
 			} catch (error) {
-				logger().warn("failed to send message, added to queue", { error });
+				logger().warn("failed to send message, added to queue", {
+					error,
+				});
 
 				// Assuming the socket is disconnected and will be reconnected soon
 				//

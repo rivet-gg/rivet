@@ -1,0 +1,65 @@
+{
+	"name": "@rivet-gg/actor",
+	"private": true,
+	"version": "24.6.2-rc.1",
+	"files": ["dist", "src", "deno.json", "package.json"],
+	"type": "module",
+	"exports": {
+		".": {
+			"deno": "./src/mod.ts",
+			"import": {
+				"types": "./dist/mod.d.ts",
+				"default": "./dist/mod.js"
+			},
+			"require": {
+				"types": "./dist/mod.d.cts",
+				"default": "./dist/mod.cjs"
+			}
+		},
+		"./kv": {
+			"deno": "./src/mod.ts",
+			"import": {
+				"types": "./dist/kv.d.ts",
+				"default": "./dist/kv.js"
+			},
+			"require": {
+				"types": "./dist/kv.d.cts",
+				"default": "./dist/kv.cjs"
+			}
+		},
+		"./unstable-react": {
+			"deno": "./src/unstable-react.ts",
+			"import": {
+				"types": "./dist/unstable-react.d.ts",
+				"default": "./dist/unstable-react.js"
+			},
+			"require": {
+				"types": "./dist/unstable-react.d.cts",
+				"default": "./dist/unstable-react.cjs"
+			}
+		}
+	},
+	"sideEffects": false,
+	"scripts": {
+		"build": "tsup src/kv.ts src/mod.ts",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@core/asyncutil": "npm:@jsr/core__asyncutil@^1.2.0",
+		"@rivet-gg/actor-common": "^24.6.2-rc.1",
+		"@rivet-gg/actor-core": "^24.6.2-rc.1",
+		"@rivet-gg/actor-protocol": "^24.6.2-rc.1",
+		"@std/assert": "npm:@jsr/std__assert@^1.0.10",
+		"@std/async": "npm:@jsr/std__async@^1.0.9",
+		"@std/cbor": "npm:@jsr/std__cbor@^0.1.4",
+		"@std/log": "npm:@jsr/std__log@^0.224.12",
+		"hono": "^4.6.16",
+		"on-change": "^5.0.1",
+		"zod": "^3.24.1"
+	},
+	"devDependencies": {
+		"@types/deno": "^2.0.0",
+		"tsup": "^8.3.5",
+		"typescript": "^5.7.3"
+	}
+}

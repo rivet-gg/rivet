@@ -1,5 +1,13 @@
 {
+	"name": "@rivet-gg/actor-protocol",
+	"exports": {
+		"./ws/to_server": "./src/ws/to_server.ts",
+		"./ws/to_client": "./src/ws/to_client.ts",
+		"./ws": "./src/ws/mod.ts",
+		"./http/rpc": "./src/http/rpc.ts"
+	},
 	"imports": {
 		"zod": "npm:zod@^3.24.1"
-	}
+	},
+	"exclude": ["dist/"]
 }

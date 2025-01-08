@@ -3,7 +3,7 @@
 import { ServerDrivenUi } from "./server-driven-ui";
 import styles from "./page.module.css";
 import { SimpleChat } from "./simple-chat";
-import { ActorClientProvider } from "./use-actor";
+import { ActorClientProvider } from "@rivet-gg/actor-client/unstable-react";
 import { Client } from "@rivet-gg/actor-client";
 import { Suspense } from "react";
 

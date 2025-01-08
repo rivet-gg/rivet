@@ -1,11 +1,11 @@
-import type { ActorTags } from "../common/utils.ts";
+import type { ActorTags } from "@rivet-gg/actor-common/utils";
+import type { ProtocolFormat } from "@rivet-gg/actor-protocol/ws";
 import type {
 	ActorsRequest,
 	ActorsResponse,
 	RivetConfigResponse,
-} from "../manager-protocol/mod.ts";
-import type { CreateRequest } from "../manager-protocol/query.ts";
-import type { ProtocolFormat } from "../protocol/ws/mod.ts";
+} from "@rivet-gg/manager-protocol";
+import type { CreateRequest } from "@rivet-gg/manager-protocol/query";
 import * as errors from "./errors.ts";
 import { ActorHandleRaw } from "./handle.ts";
 import { logger } from "./log.ts";
@@ -223,7 +223,11 @@ export class Client {
 			};
 		}
 
-		logger().debug("get actor", { tags, parameters: opts?.parameters, create });
+		logger().debug("get actor", {
+			tags,
+			parameters: opts?.parameters,
+			create,
+		});
 
 		const resJson = await this.#sendManagerRequest<
 			ActorsRequest,
@@ -271,7 +275,10 @@ export class Client {
 		// Default to the chosen region
 		if (!create.region) create.region = (await this.#regionPromise)?.id;
 
-		logger().debug("create actor", { parameters: opts?.parameters, create });
+		logger().debug("create actor", {
+			parameters: opts?.parameters,
+			create,
+		});
 
 		const resJson = await this.#sendManagerRequest<
 			ActorsRequest,
