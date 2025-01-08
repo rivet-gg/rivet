@@ -3,5 +3,8 @@
 	// Use biome instead
 	"deno.lint": false,
 	"editor.defaultFormatter": "biomejs.biome",
-	"cSpell.words": ["networkable"]
+	"cSpell.words": ["networkable"],
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	}
 }

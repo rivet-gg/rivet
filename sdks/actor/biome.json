@@ -8,6 +8,6 @@
 		}
 	},
 	"files": {
-		"ignore": ["*/lib/fast-equals"]
+		"ignore": ["*/lib/fast-equals", "*/dist"]
 	}
 }

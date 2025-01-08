@@ -1,8 +1,8 @@
+import type { ProtocolFormat } from "@rivet-gg/actor-protocol/ws";
+import type * as wsToClient from "@rivet-gg/actor-protocol/ws/to_client";
 import { assertExists } from "@std/assert/exists";
 import * as cbor from "@std/cbor";
 import type { WSContext } from "hono/ws";
-import type { ProtocolFormat } from "../protocol/ws/mod.ts";
-import type * as wsToClient from "../protocol/ws/to_client.ts";
 import type { Actor, AnyActor, ExtractActorConnState } from "./actor.ts";
 import * as errors from "./errors.ts";
 import { logger } from "./log.ts";

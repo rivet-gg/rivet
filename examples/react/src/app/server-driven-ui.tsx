@@ -1,17 +1,17 @@
 "use client";
-import { useActor } from "./use-actor";
+import { useActor } from "@rivet-gg/actor-client/unstable-react";
 import { default as ChatActor } from "../../actor/server-driven-ui";
 import { Suspense } from "react";
 
 export function ServerDrivenUi() {
-	const [{ actor }, { messages: Messages }] = useActor<ChatActor>({
+	const [, { messages: Messages }] = useActor<ChatActor>({
 		name: "server-driven-ui",
 	});
 
 	return (
 		<>
 			<Suspense>
-				<Messages hello="hello" />
+				<Messages limit={10} />
 			</Suspense>
 		</>
 	);

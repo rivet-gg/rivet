@@ -6,5 +6,6 @@
 		"@rivet-gg/actor-core": "../core/src/mod.ts",
 		"@std/assert": "jsr:@std/assert@^1.0.8",
 		"zod": "npm:zod@^3.24.1"
-	}
+	},
+	"exclude": ["dist/"]
 }

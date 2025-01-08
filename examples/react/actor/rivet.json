@@ -5,7 +5,7 @@
 			"access": "public"
 		},
 		"server-driven-ui": {
-			"script": "server-driven-ui.ts",
+			"script": "server-driven-ui.tsx",
 			"access": "public"
 		}
 	}
