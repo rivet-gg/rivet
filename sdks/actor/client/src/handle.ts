@@ -156,7 +156,7 @@ export class ActorHandleRaw {
 		const ws = new WebSocket(url);
 		this.#websocket = ws;
 		ws.onopen = () => {
-			logger().debug("socket open");
+			logger().debug("socket open", { url });
 
 			// Resubscribe to all active events
 			for (const eventName of this.#eventSubscriptions.keys()) {
