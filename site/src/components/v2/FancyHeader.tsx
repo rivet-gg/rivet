@@ -10,6 +10,7 @@ import { faDiscord, faGithub, Icon } from '@rivet-gg/icons';
 import { AnimatePresence, motion } from 'unframer';
 import { HeaderPopupProductMenu } from '../HeaderPopupProductMenu';
 import { HeaderPopupSolutionsMenu } from '../HeaderPopupSolutionsMenu';
+import { GitHubStars } from '@/components/GitHubStars';
 
 type Subnav = false | 'product' | 'solutions';
 
@@ -79,9 +80,7 @@ export function FancyHeader({ active, subnav }: FancyHeaderProps) {
                   </Link>
                 </RivetHeader.NavItem>
                 <RivetHeader.NavItem asChild className='p-2'>
-                  <Link href='https://github.com/rivet-gg/rivet' target='_blank' className='text-white/90'>
-                    <Icon icon={faGithub} className='drop-shadow-md' />
-                  </Link>
+                  <GitHubStars className='text-white/90 hover:text-white transition-colors' />
                 </RivetHeader.NavItem>
                 <Button
                   variant='secondary'
