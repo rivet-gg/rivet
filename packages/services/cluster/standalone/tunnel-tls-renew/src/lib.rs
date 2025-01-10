@@ -66,55 +66,25 @@ pub async fn run_from_env(
 
 		let tls_config = &ctx.config().server()?.tls()?;
 		let ca_cert_pem = tls_config.root_ca_cert_pem.read();
-		let ca_private_key_pem = tls_config.root_ca_key_pem.read();
+		let ca_key_pem = tls_config.root_ca_key_pem.read();
+		
+		let ca_key = PKey::private_key_from_pem(ca_cert_pem.as_bytes())?;
+		let ca_cert = X509::from_pem(ca_key_pem.as_bytes())?;
+
+		let key = rivet_tls::generate_key(2048)?;
+		let cert = generate_signed_cert(
+			&key,
+			"Tunnel Client",
+			&ca_key,
+			&ca_cert,
+			VALIDITY_PERIOD,
+			false,
+			Some(&["*.tunnel.rivet.gg"]),
+		)?;
+
+		let cert_pem = String::from_utf8(cert.to_pem()?)?;
+		let private_key_pem = String::from_utf8(key.private_key_to_pem_pkcs8()?)?;
 		let expire_ts = util::timestamp::now() + util::duration::days(VALIDITY_PERIOD as i64);
-
-		// Generate private key
-		let rsa_key = Rsa::generate(2048)?;
-		let private_key = PKey::from_rsa(rsa_key)?;
-
-		// Create X.509 certificate request
-		let mut name_builder = X509NameBuilder::new()?;
-		name_builder.append_entry_by_text("CN", "Tunnel Client")?;
-		name_builder.append_entry_by_text("O", "Rivet Gaming, Inc.")?;
-		let name = name_builder.build();
-
-		let mut req = X509Req::builder()?;
-		req.set_subject_name(&name)?;
-		req.set_pubkey(&private_key)?;
-		req.sign(&private_key, openssl::hash::MessageDigest::sha256())?;
-		let cert_req = req.build();
-
-		// Load CA private key and certificate
-		let ca_cert = X509::from_pem(ca_cert_pem.as_bytes())?;
-		let ca_key = PKey::private_key_from_pem(ca_private_key_pem.as_bytes())?;
-
-		// Create certificate from the certificate request
-		let mut cert_builder = X509::builder()?;
-		cert_builder.set_version(2)?;
-		cert_builder.set_subject_name(cert_req.subject_name())?;
-		cert_builder.set_issuer_name(ca_cert.subject_name())?;
-		cert_builder.set_pubkey(&private_key)?;
-		cert_builder.set_not_before(Asn1Time::days_from_now(0)?.as_ref())?;
-		cert_builder.set_not_after(Asn1Time::days_from_now(VALIDITY_PERIOD)?.as_ref())?; // 1 year validity
-
-		// Add extensions
-		let key_usage = ExtendedKeyUsage::new().client_auth().build()?;
-		cert_builder.append_extension(key_usage)?;
-
-		let san = SubjectAlternativeName::new()
-			.dns("*.tunnel.rivet.gg")
-			.build(&cert_builder.x509v3_context(Some(&ca_cert), None))?;
-		cert_builder.append_extension(san)?;
-
-		// Sign the certificate
-		cert_builder.sign(&ca_key, openssl::hash::MessageDigest::sha256())?;
-		let cert = cert_builder.build();
-
-		let cert_pem = cert.to_pem()?;
-		let cert_pem = std::str::from_utf8(&cert_pem)?;
-		let private_key_pem = private_key.private_key_to_pem_pkcs8()?;
-		let private_key_pem = std::str::from_utf8(&private_key_pem)?;
 
 		sql_execute!(
 			[ctx]
