@@ -56,6 +56,13 @@ Group=root
 Type=oneshot
 ExecStart=/usr/bin/rivet_fetch_gg_tls.sh
 
+# Real time service
+CPUSchedulingPolicy=fifo
+# High CPU priority
+CPUSchedulingPriority=90
+# Prevent killing from system OOM
+OOMScoreAdjust=-800
+
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -75,13 +82,6 @@ OnCalendar=*:0
 # Prevent stampeding herd
 RandomizedDelaySec=60
 Unit=rivet_fetch_gg_tls.service
-
-# Real time service
-CPUSchedulingPolicy=fifo
-# High CPU priority
-CPUSchedulingPriority=90
-# Prevent killing from system OOM
-OOMScoreAdjust=-800
 
 [Install]
 WantedBy=timers.target

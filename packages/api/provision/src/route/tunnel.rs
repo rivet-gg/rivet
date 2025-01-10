@@ -13,12 +13,9 @@ pub async fn tls(
 
 	let tunnel_tls_res = ctx.op(cluster::ops::tunnel::tls_get::Input {}).await?;
 
-	let tls_config = &ctx.config().server()?.tls()?;
-	let ca_cert_pem = tls_config.root_ca_cert_pem.read();
-
 	Ok(models::ProvisionTunnelGetTlsResponse {
-		cert_pem: tunnel_tls_res.cert_pem.clone(),
-		root_ca_cert_pem: ca_cert_pem.clone(),
-		private_key_pem: tunnel_tls_res.private_key_pem.clone(),
+		cert_pem: tunnel_tls_res.cert_pem,
+		root_ca_cert_pem: tunnel_tls_res.root_ca_cert_pem,
+		private_key_pem: tunnel_tls_res.private_key_pem,
 	})
 }

@@ -59,7 +59,6 @@ workflow-gc.workspace = true
 workflow-metrics-publish.workspace = true
 
 # Cron
-cluster-tunnel-tls-renew.workspace = true
 telemetry-beacon.workspace = true
 user-delete-pending.workspace = true
 

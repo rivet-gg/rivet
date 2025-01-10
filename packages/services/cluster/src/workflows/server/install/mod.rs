@@ -53,6 +53,7 @@ pub(crate) async fn cluster_server_install(
 				server_token,
 				tunnel_cert_cert_pem: tunnel_cert_res.cert_pem,
 				tunnel_cert_private_key_pem: tunnel_cert_res.private_key_pem,
+				root_ca_cert_pem: tunnel_cert_res.root_ca_cert_pem,
 			})
 			.await?;
 		}
@@ -111,6 +112,7 @@ struct ReadTunnelCertInput {}
 struct ReadTunnelCertOutput {
 	cert_pem: String,
 	private_key_pem: String,
+	root_ca_cert_pem: String,
 }
 
 #[activity(ReadTunnelCert)]
@@ -123,6 +125,7 @@ async fn read_tunnel_cert(
 	Ok(ReadTunnelCertOutput {
 		cert_pem: tunnel_tls_res.cert_pem,
 		private_key_pem: tunnel_tls_res.private_key_pem,
+		root_ca_cert_pem: tunnel_tls_res.root_ca_cert_pem,
 	})
 }
 
@@ -150,6 +153,7 @@ struct InstallOverSshInputV2 {
 	server_token: String,
 	tunnel_cert_cert_pem: String,
 	tunnel_cert_private_key_pem: String,
+	root_ca_cert_pem: String,
 }
 
 #[activity(InstallOverSshV2)]
@@ -171,6 +175,7 @@ async fn install_over_ssh_v2(ctx: &ActivityCtx, input: &InstallOverSshInputV2) -
 		input.initialize_immediately,
 		&input.server_token,
 		input.datacenter_id,
+		&input.root_ca_cert_pem,
 		&install_scripts::components::traefik::TlsCert {
 			cert_pem: input.tunnel_cert_cert_pem.clone(),
 			key_pem: input.tunnel_cert_private_key_pem.clone(),

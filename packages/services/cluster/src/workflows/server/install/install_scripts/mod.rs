@@ -17,6 +17,7 @@ pub async fn gen_install(
 	initialize_immediately: bool,
 	server_token: &str,
 	datacenter_id: Uuid,
+	tunnel_root_ca: &str,
 	tunnel_cert: &components::traefik::TlsCert,
 ) -> GlobalResult<String> {
 	// MARK: Common (pre)
@@ -26,7 +27,7 @@ pub async fn gen_install(
 		components::sysctl::install(),
 		components::traefik::install(),
 		// NOTE: TLS certs expire in a year, prebakes expire in 6 months
-		components::traefik::tunnel(config, TUNNEL_NAME, tunnel_cert)?,
+		components::traefik::tunnel(config, TUNNEL_NAME, tunnel_root_ca, tunnel_cert)?,
 		components::rivet::fetch_tunnel_tls(initialize_immediately, server_token, TUNNEL_NAME)?,
 		components::vector::install(),
 	];

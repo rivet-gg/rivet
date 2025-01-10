@@ -158,18 +158,18 @@ pub fn instance(config: Instance) -> GlobalResult<String> {
 pub fn tunnel(
 	config: &rivet_config::Config,
 	name: &str,
-	tunnel_cert: &TlsCert,
+	root_ca: &str,
+	cert: &TlsCert,
 ) -> GlobalResult<String> {
 	// Build transports for each service
-	let tls_config = &config.server()?.tls()?;
 	let mut tcp_server_transports = HashMap::new();
 	for TunnelService { name, .. } in TUNNEL_SERVICES {
 		tcp_server_transports.insert(
 			name.to_string(),
 			ServerTransport {
 				server_name: format!("{name}.tunnel.rivet.gg"),
-				root_cas: vec![tls_config.root_ca_cert_pem.read().clone()],
-				certs: vec![tunnel_cert.clone()],
+				root_cas: vec![root_ca.to_string()],
+				certs: vec![cert.clone()],
 			},
 		);
 	}
