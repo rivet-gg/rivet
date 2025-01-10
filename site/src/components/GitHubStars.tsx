@@ -12,24 +12,12 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
-export function GitHubStars({ repo = 'rivet-gg/rivet', ...props }: GitHubStarsProps) {
-  const [stars, setStars] = useState(0);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`https://api.github.com/repos/${repo}`);
-        const data = await response.json();
-        setStars(data.stargazers_count);
-      } catch (err) {
-        console.error('Failed to fetch stars', err);
-      }
-    };
-
-    fetchData();
-  }, [repo]);
-
-  return (
+export async function GitHubStars({ repo = 'rivet-gg/rivet', ...props }: GitHubStarsProps) {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${repo}`);
+    const data = await response.json();
+    const { stargazers_count: stars } = data;
+      return (
     <a
       href={`https://github.com/${repo}`}
       target='_blank'
@@ -38,4 +26,8 @@ export function GitHubStars({ repo = 'rivet-gg/rivet', ...props }: GitHubStarsPr
       <Icon icon={faGithub} /> <span className="hidden md:inline">{stars ? `${formatNumber(stars)} Stars` : 'GitHub'}</span>
     </a>
   );
+  } catch (err) {
+    console.error('Failed to fetch stars', err);
+    return null;
+  }
 } 
