@@ -22,10 +22,11 @@ import {
 	actorQueryOptions,
 	useDestroyActorMutation,
 } from "../../queries";
+import { ActorConfigTab } from "./actor-config-tab";
 import { ActorLogsTab } from "./actor-logs-tab";
-import { ActorNetworkTab } from "./actor-network-tab";
 import { ActorRegion } from "./actor-region";
-import { ActorRuntimeTab } from "./actor-runtime-tab";
+import { ActorRpcTab } from "./actor-rpc-tab";
+import { ActorStateTab } from "./actor-state-tab";
 import { ActorStatus } from "./actor-status";
 import { ActorTags } from "./actor-tags";
 
@@ -125,7 +126,7 @@ export function ActorsActorDetails({
 								type="button"
 								className="shrink-0 flex gap-2 items-center justify-center"
 							>
-								<p className="">ID </p>
+								<p>ID </p>
 								<SmallText className="font-mono  text-muted-foreground text-xs">
 									{data.id.split("-")[0]}
 								</SmallText>
@@ -136,7 +137,7 @@ export function ActorsActorDetails({
 								type="button"
 								className="shrink-0 flex gap-2 items-center justify-center"
 							>
-								<p className=" ">Created </p>
+								<p>Created </p>
 								<SmallText className=" text-xs  text-muted-foreground">
 									{formatISO(data.createdAt)}
 								</SmallText>
@@ -152,7 +153,7 @@ export function ActorsActorDetails({
 								type="button"
 								className="shrink-0 flex gap-2 items-center"
 							>
-								<p className="">Destroyed </p>
+								<p>Destroyed </p>
 								<SmallText className="text-xs  text-muted-foreground ">
 									{data.destroyTs
 										? formatISO(data.destroyTs)
@@ -167,8 +168,9 @@ export function ActorsActorDetails({
 					value={currentTab}
 					onValueChange={(tab) => {
 						navigate({
+							from: "/projects/$projectNameId/environments/$environmentNameId/actors",
 							to: ".",
-							search: (old) => ({
+							search: (old: Record<string, unknown>) => ({
 								...old,
 								tab,
 							}),
@@ -187,8 +189,9 @@ export function ActorsActorDetails({
 								) : null}
 							</span>
 						</TabsTrigger>
-						<TabsTrigger value="runtime">Runtime</TabsTrigger>
-						<TabsTrigger value="network">Network</TabsTrigger>
+						<TabsTrigger value="rpc">RPC</TabsTrigger>
+						<TabsTrigger value="state">State</TabsTrigger>
+						<TabsTrigger value="config">Config</TabsTrigger>
 					</TabsList>
 					<TabsContent
 						value="output"
@@ -248,21 +251,26 @@ export function ActorsActorDetails({
 							</Suspense>
 						</ErrorBoundary>
 					</TabsContent>
-					<TabsContent
-						value="runtime"
-						className="min-h-0 flex-1 mt-0"
-					>
-						<ActorRuntimeTab
+					<TabsContent value="config" className="min-h-0 flex-1 mt-0">
+						<ActorConfigTab
 							projectNameId={projectNameId}
 							environmentNameId={environmentNameId}
 							{...data}
 						/>
 					</TabsContent>
-					<TabsContent
-						value="network"
-						className="min-h-0 flex-1 mt-0"
-					>
-						<ActorNetworkTab {...data} />
+					<TabsContent value="rpc" className="min-h-0 flex-1 mt-0">
+						<ActorRpcTab
+							projectNameId={projectNameId}
+							environmentNameId={environmentNameId}
+							{...data}
+						/>
+					</TabsContent>
+					<TabsContent value="state" className="min-h-0 flex-1 mt-0">
+						<ActorStateTab
+							projectNameId={projectNameId}
+							environmentNameId={environmentNameId}
+							{...data}
+						/>
 					</TabsContent>
 				</Tabs>
 			</Flex>

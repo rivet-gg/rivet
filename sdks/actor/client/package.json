@@ -38,12 +38,13 @@
 	"sideEffects": false,
 	"scripts": {
 		"build": "tsup src/mod.ts src/test.ts src/unstable-react.tsx",
+		"dev": "yarn build --watch",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@rivet-gg/actor-common": "^24.6.2-rc.1",
-		"@rivet-gg/actor-protocol": "^24.6.2-rc.1",
-		"@rivet-gg/manager-protocol": "^24.6.2-rc.1",
+		"@rivet-gg/actor-common": "workspace:*",
+		"@rivet-gg/actor-protocol": "workspace:*",
+		"@rivet-gg/manager-protocol": "workspace:*",
 		"@std/assert": "npm:@jsr/std__assert@^1.0.10",
 		"@std/cbor": "npm:@jsr/std__cbor@^0.1.4",
 		"zod": "^3.24.1"

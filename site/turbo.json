@@ -1,0 +1,18 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"outputs": ["dist/**"],
+			"dependsOn": ["@rivet-gg/components#build"]
+		},
+		"start": {
+			"outputs": ["dist/**"],
+			"dependsOn": ["@rivet-gg/components#build"]
+		},
+		"dev": {
+			"persistent": true,
+			"dependsOn": ["@rivet-gg/components#build"]
+		}
+	}
+}

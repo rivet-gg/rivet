@@ -65,7 +65,9 @@ async function run() {
 		const response = await fetch(`${actorOrigin}/health`);
 		if (!response.ok) {
 			//throw new Error(`Health check failed with status: ${response.status}`);
-			console.error(`Health check failed with status: ${response.status}`);
+			console.error(
+				`Health check failed with status: ${response.status}`,
+			);
 			Deno.exit(1);
 		}
 		console.log("Health check passed");
@@ -116,8 +118,10 @@ async function run() {
 
 async function runLoop() {
 	while (true) {
-		await run()
-		await new Promise((resolve) => setTimeout(resolve, Math.random() * 250));
+		await run();
+		await new Promise((resolve) =>
+			setTimeout(resolve, Math.random() * 250),
+		);
 	}
 }
 
@@ -125,4 +129,3 @@ for (let i = 0; i < 2; i++) {
 	await new Promise((resolve) => setTimeout(resolve, 100));
 	runLoop();
 }
-
