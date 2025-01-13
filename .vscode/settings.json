@@ -44,5 +44,4 @@
 		"CARGO_TARGET_DIR": "${workspaceFolder}/target/analyzer"
 	},
 	"rust-analyzer.cargo.targetDir": "${workspaceFolder}/target/analyzer",
-	"deno.disablePaths": ["examples/react/src"]
 }

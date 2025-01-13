@@ -15,6 +15,8 @@
     "npm:@jogit/tmp-react-server-dom-nodeless@*": "19.0.1",
     "npm:@types/node@*": "22.5.4",
     "npm:@types/react@*": "19.0.4",
+    "npm:@types/react@19": "19.0.4",
+    "npm:@types/react@^18.3.12": "18.3.18",
     "npm:get-stream@*": "9.0.1",
     "npm:on-change@^5.0.1": "5.0.1",
     "npm:react@*": "19.0.0",
@@ -75,6 +77,16 @@
       "integrity": "sha512-FDuKUJQm/ju9fT/SeX/6+gBzoPzlVCzfzmGkwKvRHQVxi4BntVbyIwf6a4Xn62mrvndLiml6z/UBXIdEVjQLXg==",
       "dependencies": [
         "undici-types"
+      ]
+    },
+    "@types/prop-types@15.7.14": {
+      "integrity": "sha512-gNMvNH49DJ7OJYv+KAKn0Xp45p8PLl6zo2YnvDIbTd4J6MER2BmWN49TG7n9LvkyihINxeKW8+3bfS2yDC9dzQ=="
+    },
+    "@types/react@18.3.18": {
+      "integrity": "sha512-t4yC+vtgnkYjNSKlFx1jkAhH8LgTo2N/7Qvi83kdEaUtMDiwpbLAktKDaAMlRcJ5eSxZkH74eEGt1ky31d7kfQ==",
+      "dependencies": [
+        "@types/prop-types",
+        "csstype"
       ]
     },
     "@types/react@19.0.4": {

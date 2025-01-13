@@ -197,7 +197,9 @@ export class ActorHandleRaw {
 			logger().debug("socket error", { event });
 		};
 		ws.onmessage = async (ev) => {
-			const response = (await this.#parse(ev.data)) as wsToClient.ToClient;
+			const response = (await this.#parse(
+				ev.data,
+			)) as wsToClient.ToClient;
 
 			if ("ro" in response.body) {
 				// RPC response OK
@@ -345,27 +347,29 @@ export class ActorHandleRaw {
 				throw new Error("received non-string for json parse");
 			}
 			return JSON.parse(data);
-		} else if (this.protocolFormat === "cbor") {
-			if (data instanceof Blob) {
-				return cbor.decodeCbor(new Uint8Array(await data.arrayBuffer()));
-			} else if (data instanceof ArrayBuffer) {
-				return cbor.decodeCbor(new Uint8Array(data));
-			} else {
-				throw new Error("received non-binary type for cbor parse");
-			}
-		} else {
-			assertUnreachable(this.protocolFormat);
 		}
+		if (this.protocolFormat === "cbor") {
+			if (data instanceof Blob) {
+				return cbor.decodeCbor(
+					new Uint8Array(await data.arrayBuffer()),
+				);
+			}
+			if (data instanceof ArrayBuffer) {
+				return cbor.decodeCbor(new Uint8Array(data));
+			}
+			throw new Error("received non-binary type for cbor parse");
+		}
+		assertUnreachable(this.protocolFormat);
 	}
 
 	#serialize(value: unknown): WebSocketMessage {
 		if (this.protocolFormat === "json") {
 			return JSON.stringify(value);
-		} else if (this.protocolFormat === "cbor") {
-			return cbor.encodeCbor(value as cbor.CborType);
-		} else {
-			assertUnreachable(this.protocolFormat);
 		}
+		if (this.protocolFormat === "cbor") {
+			return cbor.encodeCbor(value as cbor.CborType);
+		}
+		assertUnreachable(this.protocolFormat);
 	}
 
 	#webSocketSendRaw(message: WebSocketMessage, opts?: SendOpts) {

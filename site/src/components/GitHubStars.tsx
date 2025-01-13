@@ -3,15 +3,16 @@ import { useState, useEffect } from 'react';
 import { Icon, faGithub } from '@rivet-gg/icons';
 import { cn } from '@rivet-gg/components';
 
-interface GitHubStarsProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
-  repo?: string;
+interface GitHubStarsProps
+	extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+	repo?: string;
 }
 
 function formatNumber(num: number): string {
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}k`;
-  }
-  return num.toString();
+	if (num >= 1000) {
+		return `${(num / 1000).toFixed(1)}k`;
+	}
+	return num.toString();
 }
 
 export function GitHubStars({ repo = 'rivet-gg/rivet', className, ...props }: GitHubStarsProps) {

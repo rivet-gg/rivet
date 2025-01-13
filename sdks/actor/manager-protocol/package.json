@@ -34,7 +34,7 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@rivet-gg/actor-common": "^24.6.2-rc.1",
+		"@rivet-gg/actor-common": "workspace:*",
 		"zod": "^3.24.1"
 	},
 	"devDependencies": {

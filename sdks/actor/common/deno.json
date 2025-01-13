@@ -4,7 +4,8 @@
 		"./log": "./src/log.ts",
 		"./logfmt": "./src/logfmt.ts",
 		"./network": "./src/network.ts",
-		"./utils": "./src/utils.ts"
+		"./utils": "./src/utils.ts",
+		"./reflect": "./src/reflect.ts"
 	},
 	"imports": {
 		"@std/log": "jsr:@std/log@^0.224.11",

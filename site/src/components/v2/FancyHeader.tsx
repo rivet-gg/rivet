@@ -1,32 +1,35 @@
-'use client';
-import Link from 'next/link';
-import Image from 'next/image';
-import logoUrl from '@/images/rivet-logos/icon-text-white.svg';
-import { Header as RivetHeader } from '@rivet-gg/components/header';
-import { Button, cn } from '@rivet-gg/components';
-import { ReactNode, useEffect, useRef, useState } from 'react';
-import { DocsMobileNavigation } from '@/components/DocsMobileNavigation';
-import { faDiscord, faGithub, Icon } from '@rivet-gg/icons';
-import { AnimatePresence, motion } from 'unframer';
-import { HeaderPopupProductMenu } from '../HeaderPopupProductMenu';
-import { HeaderPopupSolutionsMenu } from '../HeaderPopupSolutionsMenu';
-import { GitHubStars } from '@/components/GitHubStars';
+"use client";
+import { DocsMobileNavigation } from "@/components/DocsMobileNavigation";
+import { GitHubStars } from "@/components/GitHubStars";
+import logoUrl from "@/images/rivet-logos/icon-text-white.svg";
+import { Button, cn } from "@rivet-gg/components";
+import { Header as RivetHeader } from "@rivet-gg/components/header";
+import { Icon, faDiscord } from "@rivet-gg/icons";
+import Image from "next/image";
+import Link from "next/link";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "unframer";
+import { HeaderPopupProductMenu } from "../HeaderPopupProductMenu";
 
-type Subnav = false | 'product' | 'solutions';
+type Subnav = false | "product" | "solutions";
 
 interface FancyHeaderProps {
-  active?: 'product' | 'docs' | 'blog' | 'pricing';
-  subnav?: ReactNode;
-  mobileBreadcrumbs?: ReactNode;
+	active?: "product" | "docs" | "blog" | "pricing";
+	subnav?: ReactNode;
+	mobileBreadcrumbs?: ReactNode;
 }
 
-export function FancyHeader({ active, subnav, mobileBreadcrumbs }: FancyHeaderProps) {
-  const [isSubnavOpen, setIsSubnavOpen] = useState<Subnav>(false);
-  const prev = useRef<Subnav>(false);
+export function FancyHeader({
+	active,
+	subnav,
+	mobileBreadcrumbs,
+}: FancyHeaderProps) {
+	const [isSubnavOpen, setIsSubnavOpen] = useState<Subnav>(false);
+	const prev = useRef<Subnav>(false);
 
-  useEffect(() => {
-    prev.current = isSubnavOpen;
-  }, [isSubnavOpen]);
+	useEffect(() => {
+		prev.current = isSubnavOpen;
+	}, [isSubnavOpen]);
 
   const headerStyles = cn(
     'md:border-transparent md:static md:bg-transparent md:rounded-2xl md:max-w-[1200px] md:border-transparent md:backdrop-none [&>div:first-child]:px-3 md:backdrop-blur-none'
@@ -114,67 +117,101 @@ export function FancyHeader({ active, subnav, mobileBreadcrumbs }: FancyHeaderPr
                   onMouseEnter={() => setIsSubnavOpen('solutions')}>
                   <div className='text-white/90'>Solutions</div>
                 </RivetHeader.NavItem> */}
-                <RivetHeader.NavItem
-                  onMouseEnter={() => setIsSubnavOpen(false)}
-                  asChild
-                  className='flex items-center gap-1 px-2.5 py-2'>
-                  <Link
-                    href='/docs'
-                    className='text-white/90'
-                    aria-current={active === 'docs' ? 'page' : undefined}>
-                    Docs
-                  </Link>
-                </RivetHeader.NavItem>
-                <RivetHeader.NavItem
-                  asChild
-                  onMouseEnter={() => setIsSubnavOpen(false)}
-                  className='flex items-center gap-1 px-2.5'>
-                  <Link
-                    href='/changelog'
-                    className='text-white/90'
-                    aria-current={active === 'blog' ? 'page' : undefined}>
-                    Changelog
-                  </Link>
-                </RivetHeader.NavItem>
-                <RivetHeader.NavItem
-                  asChild
-                  onMouseEnter={() => setIsSubnavOpen(false)}
-                  className='flex items-center gap-1 px-2.5'>
-                  <Link
-                    href='/pricing'
-                    className='text-white/90'
-                    aria-current={active === 'pricing' ? 'page' : undefined}>
-                    Pricing
-                  </Link>
-                </RivetHeader.NavItem>
-              </div>
-            }
-          />
-          <AnimatePresence>
-            {isSubnavOpen ? (
-              <motion.div
-                className='relative overflow-hidden'
-                initial={{ height: 0, opacity: 1 }}
-                animate={{ height: 200, opacity: 1, transition: { ease: ['easeIn', 'easeOut'] } }}
-                exit={{ height: 0, opacity: 0 }}>
-                <AnimatePresence>
-                  {isSubnavOpen === 'product' ? (
-                    <motion.div
-                      key='product'
-                      onMouseLeave={() => setIsSubnavOpen(false)}
-                      className=' absolute inset-0'>
-                      <motion.div
-                        initial={{ opacity: 0, y: prev.current === 'solutions' ? -10 : 0 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 0 }}
-                        className='overflow-hidden'>
-                        <div className='h-[200px] w-full overflow-hidden pb-4 pl-4 pr-4 pt-2'>
-                          <HeaderPopupProductMenu />
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  ) : null}
-                  {/* {isSubnavOpen === 'solutions' ? (
+								<RivetHeader.NavItem
+									onMouseEnter={() => setIsSubnavOpen(false)}
+									asChild
+									className="flex items-center gap-1 px-2.5 py-2"
+								>
+									<Link
+										href="/docs"
+										className="text-white/90"
+										aria-current={
+											active === "docs"
+												? "page"
+												: undefined
+										}
+									>
+										Docs
+									</Link>
+								</RivetHeader.NavItem>
+								<RivetHeader.NavItem
+									asChild
+									onMouseEnter={() => setIsSubnavOpen(false)}
+									className="flex items-center gap-1 px-2.5"
+								>
+									<Link
+										href="/changelog"
+										className="text-white/90"
+										aria-current={
+											active === "blog"
+												? "page"
+												: undefined
+										}
+									>
+										Changelog
+									</Link>
+								</RivetHeader.NavItem>
+								<RivetHeader.NavItem
+									asChild
+									onMouseEnter={() => setIsSubnavOpen(false)}
+									className="flex items-center gap-1 px-2.5"
+								>
+									<Link
+										href="/pricing"
+										className="text-white/90"
+										aria-current={
+											active === "pricing"
+												? "page"
+												: undefined
+										}
+									>
+										Pricing
+									</Link>
+								</RivetHeader.NavItem>
+							</div>
+						}
+					/>
+					<AnimatePresence>
+						{isSubnavOpen ? (
+							<motion.div
+								className="relative overflow-hidden"
+								initial={{ height: 0, opacity: 1 }}
+								animate={{
+									height: 200,
+									opacity: 1,
+									transition: { ease: ["easeIn", "easeOut"] },
+								}}
+								exit={{ height: 0, opacity: 0 }}
+							>
+								<AnimatePresence>
+									{isSubnavOpen === "product" ? (
+										<motion.div
+											key="product"
+											onMouseLeave={() =>
+												setIsSubnavOpen(false)
+											}
+											className=" absolute inset-0"
+										>
+											<motion.div
+												initial={{
+													opacity: 0,
+													y:
+														prev.current ===
+														"solutions"
+															? -10
+															: 0,
+												}}
+												animate={{ opacity: 1, y: 0 }}
+												exit={{ opacity: 0, y: 0 }}
+												className="overflow-hidden"
+											>
+												<div className="h-[200px] w-full overflow-hidden pb-4 pl-4 pr-4 pt-2">
+													<HeaderPopupProductMenu />
+												</div>
+											</motion.div>
+										</motion.div>
+									) : null}
+									{/* {isSubnavOpen === 'solutions' ? (
                     <motion.div
                       key='solutions'
                       onMouseLeave={() => setIsSubnavOpen(false)}
@@ -190,12 +227,12 @@ export function FancyHeader({ active, subnav, mobileBreadcrumbs }: FancyHeaderPr
                       </motion.div>
                     </motion.div>
                   ) : null} */}
-                </AnimatePresence>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </motion.div>
-      </motion.div>
-    </>
-  );
+								</AnimatePresence>
+							</motion.div>
+						) : null}
+					</AnimatePresence>
+				</motion.div>
+			</motion.div>
+		</>
+	);
 }

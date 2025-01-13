@@ -4,7 +4,8 @@
 		"./ws/to_server": "./src/ws/to_server.ts",
 		"./ws/to_client": "./src/ws/to_client.ts",
 		"./ws": "./src/ws/mod.ts",
-		"./http/rpc": "./src/http/rpc.ts"
+		"./http/rpc": "./src/http/rpc.ts",
+		"./http/inspect": "./src/http/inspect.ts"
 	},
 	"imports": {
 		"zod": "npm:zod@^3.24.1"

@@ -15,6 +15,16 @@
 				"default": "./dist/http/rpc.cjs"
 			}
 		},
+		"./http/inspect": {
+			"import": {
+				"types": "./dist/http/inspect.d.ts",
+				"default": "./dist/http/inspect.js"
+			},
+			"require": {
+				"types": "./dist/http/inspect.d.cts",
+				"default": "./dist/http/inspect.cjs"
+			}
+		},
 		"./ws": {
 			"import": {
 				"types": "./dist/ws/mod.d.ts",
@@ -48,7 +58,7 @@
 	},
 	"sideEffects": false,
 	"scripts": {
-		"build": "tsup src/http/rpc.ts src/ws/mod.ts src/ws/to_client.ts src/ws/to_server.ts",
+		"build": "tsup src/http/rpc.ts src/http/inspect.ts src/ws/mod.ts src/ws/to_client.ts src/ws/to_server.ts",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
