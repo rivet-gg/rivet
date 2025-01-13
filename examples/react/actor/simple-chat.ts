@@ -1,4 +1,4 @@
-import { Actor, Rpc } from "@rivet-gg/actor";
+import { Actor, type Rpc } from "@rivet-gg/actor";
 
 interface State {
 	messages: string[];

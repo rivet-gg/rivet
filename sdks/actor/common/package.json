@@ -45,11 +45,21 @@
 				"types": "./dist/utils.d.cts",
 				"default": "./dist/utils.cjs"
 			}
+		},
+		"./reflect": {
+			"import": {
+				"types": "./dist/reflect.d.ts",
+				"default": "./dist/reflect.js"
+			},
+			"require": {
+				"types": "./dist/reflect.d.cts",
+				"default": "./dist/reflect.cjs"
+			}
 		}
 	},
 	"sideEffects": false,
 	"scripts": {
-		"build": "tsup src/log.ts src/logfmt.ts src/network.ts src/utils.ts",
+		"build": "tsup src/log.ts src/logfmt.ts src/network.ts src/utils.ts src/reflect.ts",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {

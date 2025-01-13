@@ -42,13 +42,14 @@
 	"sideEffects": false,
 	"scripts": {
 		"build": "tsup src/kv.ts src/mod.ts",
+		"dev": "yarn build --watch",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@core/asyncutil": "npm:@jsr/core__asyncutil@^1.2.0",
-		"@rivet-gg/actor-common": "^24.6.2-rc.1",
-		"@rivet-gg/actor-core": "^24.6.2-rc.1",
-		"@rivet-gg/actor-protocol": "^24.6.2-rc.1",
+		"@rivet-gg/actor-common": "workspace:*",
+		"@rivet-gg/actor-core": "workspace:*",
+		"@rivet-gg/actor-protocol": "workspace:*",
 		"@std/assert": "npm:@jsr/std__assert@^1.0.10",
 		"@std/async": "npm:@jsr/std__async@^1.0.9",
 		"@std/cbor": "npm:@jsr/std__cbor@^0.1.4",

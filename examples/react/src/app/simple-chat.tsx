@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import type ChatActor from "../../actor/simple-chat";
 
 export function SimpleChat() {
-	const [{ isLoading, error, actor }] = useActor<ChatActor>({ name: "simple-chat" });
+	const [{ isLoading, error, actor }] = useActor<ChatActor>({
+		name: "simple-chat",
+	});
 
 	if (isLoading) {
 		return <>Loading...</>;
@@ -54,13 +56,20 @@ function ChatMessages({ actor }: { actor: ActorHandle<ChatActor> }) {
 	return (
 		<div>
 			{messages.map((msg, i) => (
-				<div key={i}>{msg}</div>
+				<div
+					// biome-ignore lint/suspicious/noArrayIndexKey: it's fine
+					key={i}
+				>
+					{msg}
+				</div>
 			))}
 		</div>
 	);
 }
 
-export function ChatMessageForm({ onSubmit }: { onSubmit: (message: string) => void }) {
+export function ChatMessageForm({
+	onSubmit,
+}: { onSubmit: (message: string) => void }) {
 	return (
 		<form
 			onSubmit={(e) => {
