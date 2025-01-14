@@ -101,7 +101,7 @@ pub async fn get_workflows(pool: CrdbPool, workflow_ids: Vec<Uuid>) -> Result<Ve
 		SELECT
 			workflow_id,
 			workflow_name,
-			tags,
+			COALESCE(tags, '{}'::JSONB) AS tags,
 			create_ts,
 			input,
 			output,
@@ -138,7 +138,7 @@ pub async fn find_workflows(
 		SELECT
 			workflow_id,
 			workflow_name,
-			tags,
+			COALESCE(tags, '{}'::JSONB) AS tags,
 			create_ts,
 			input,
 			output,
@@ -334,7 +334,7 @@ pub async fn print_history(
 				"
 				SELECT
 					workflow_name,
-					tags,
+					COALESCE(tags, '{}'::JSONB) AS tags,
 					input,
 					output,
 					error,
