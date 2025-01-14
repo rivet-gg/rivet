@@ -25,6 +25,8 @@ import {
 import { ActorConfigTab } from "./actor-config-tab";
 import { ActorLogsTab } from "./actor-logs-tab";
 import { ActorRegion } from "./actor-region";
+import { ActorRpcTab } from "./actor-rpc-tab";
+import { ActorStateTab } from "./actor-state-tab";
 import { ActorStatus } from "./actor-status";
 import { ActorTags } from "./actor-tags";
 
@@ -187,6 +189,8 @@ export function ActorsActorDetails({
 								) : null}
 							</span>
 						</TabsTrigger>
+						<TabsTrigger value="console">Console</TabsTrigger>
+						<TabsTrigger value="state">State</TabsTrigger>
 						<TabsTrigger value="config">Config</TabsTrigger>
 					</TabsList>
 					<TabsContent
@@ -249,6 +253,27 @@ export function ActorsActorDetails({
 					</TabsContent>
 					<TabsContent value="config" className="min-h-0 flex-1 mt-0">
 						<ActorConfigTab
+							projectNameId={projectNameId}
+							environmentNameId={environmentNameId}
+							{...data}
+						/>
+					</TabsContent>
+					<TabsContent
+						value="console"
+						className="min-h-0 flex-1 mt-0"
+					>
+						<Suspense
+							fallback={<Skeleton className="w-full h-96" />}
+						>
+							<ActorRpcTab
+								projectNameId={projectNameId}
+								environmentNameId={environmentNameId}
+								{...data}
+							/>
+						</Suspense>
+					</TabsContent>
+					<TabsContent value="state" className="min-h-0 flex-1 mt-0">
+						<ActorStateTab
 							projectNameId={projectNameId}
 							environmentNameId={environmentNameId}
 							{...data}

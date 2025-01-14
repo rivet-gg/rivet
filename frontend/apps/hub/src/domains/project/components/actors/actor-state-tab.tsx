@@ -1,13 +1,7 @@
 import type { Rivet } from "@rivet-gg/api";
-import {
-	Code,
-	JsonCode,
-	Link,
-	ScrollArea,
-	Skeleton,
-} from "@rivet-gg/components";
+import { Code, Link, ScrollArea, Skeleton } from "@rivet-gg/components";
+import { JsonCode } from "@rivet-gg/components/code-mirror";
 import { useQuery } from "@tanstack/react-query";
-
 import { actorStateQueryOptions } from "../../queries";
 
 interface ActorStateTabProps extends Rivet.actor.Actor {
