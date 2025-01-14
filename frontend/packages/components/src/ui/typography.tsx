@@ -3,17 +3,14 @@ import { type PropsWithChildren, forwardRef } from "react";
 // This file is based on the typography components from https://ui.shadcn.com/docs/components/typography
 // with some modifications to fit the project's design system.
 import { cn } from "../lib/utils";
-import {
-	type CommonHelperProps,
-	getCommonHelperClass,
-	omitCommonHelperProps,
-} from "./helpers";
+import { type CommonHelperProps, getCommonHelperClass, omitCommonHelperProps } from "./helpers";
 
-type TypographyElementProps<T extends keyof JSX.IntrinsicElements> =
-	PropsWithChildren<JSX.IntrinsicElements[T]> &
-		Partial<CommonHelperProps> & {
-			asChild?: boolean;
-		};
+type TypographyElementProps<T extends keyof JSX.IntrinsicElements> = PropsWithChildren<
+	JSX.IntrinsicElements[T]
+> &
+	Partial<CommonHelperProps> & {
+		asChild?: boolean;
+	};
 
 const H1 = ({ className, asChild, ...props }: TypographyElementProps<"h1">) => {
 	const Comp = asChild ? Slot : "h1";
@@ -71,37 +68,21 @@ const H4 = ({ className, asChild, ...props }: TypographyElementProps<"h4">) => {
 	);
 };
 
-const Paragraph = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"p">) => {
+const Paragraph = ({ className, asChild, ...props }: TypographyElementProps<"p">) => {
 	const Comp = asChild ? Slot : "p";
 	return (
 		<Comp
-			className={cn(
-				className,
-				"leading-7 [&:not(:first-child)]:mt-6",
-				getCommonHelperClass(props),
-			)}
+			className={cn(className, "leading-7 [&:not(:first-child)]:mt-6", getCommonHelperClass(props))}
 			{...omitCommonHelperProps(props)}
 		/>
 	);
 };
 
-const Quote = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"blockquote">) => {
+const Quote = ({ className, asChild, ...props }: TypographyElementProps<"blockquote">) => {
 	const Comp = asChild ? Slot : "blockquote";
 	return (
 		<Comp
-			className={cn(
-				className,
-				"mt-6 border-l-2 pl-6 italic",
-				getCommonHelperClass(props),
-			)}
+			className={cn(className, "mt-6 border-l-2 pl-6 italic", getCommonHelperClass(props))}
 			{...omitCommonHelperProps(props)}
 		/>
 	);
@@ -111,11 +92,7 @@ const Ul = ({ className, asChild, ...props }: TypographyElementProps<"ul">) => {
 	const Comp = asChild ? Slot : "ul";
 	return (
 		<Comp
-			className={cn(
-				className,
-				"my-6 ml-6 list-disc [&>li]:mt-2",
-				getCommonHelperClass(props),
-			)}
+			className={cn(className, "my-6 ml-6 list-disc [&>li]:mt-2", getCommonHelperClass(props))}
 			{...omitCommonHelperProps(props)}
 		/>
 	);
@@ -125,65 +102,44 @@ const Ol = ({ className, asChild, ...props }: TypographyElementProps<"ol">) => {
 	const Comp = asChild ? Slot : "ol";
 	return (
 		<Comp
-			className={cn(
-				className,
-				"my-6 ml-6 list-disc [&>li]:mt-2",
-				getCommonHelperClass(props),
-			)}
+			className={cn(className, "my-6 ml-6 list-disc [&>li]:mt-2", getCommonHelperClass(props))}
 			{...omitCommonHelperProps(props)}
 		/>
 	);
 };
 
-const Code = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"code">) => {
-	const Comp = asChild ? Slot : "code";
-	return (
-		<Comp
-			className={cn(
-				"relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold",
-				className,
-				getCommonHelperClass(props),
-			)}
-			{...omitCommonHelperProps(props)}
-		/>
-	);
-};
+const Code = forwardRef<HTMLElement, TypographyElementProps<"code">>(
+	({ className, asChild, ...props }, ref) => {
+		const Comp = asChild ? Slot : "code";
+		return (
+			<Comp
+				ref={ref}
+				className={cn(
+					"relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold",
+					className,
+					getCommonHelperClass(props),
+				)}
+				{...omitCommonHelperProps(props)}
+			/>
+		);
+	},
+);
 
-const Lead = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"span">) => {
+const Lead = ({ className, asChild, ...props }: TypographyElementProps<"span">) => {
 	const Comp = asChild ? Slot : "span";
 	return (
 		<Comp
-			className={cn(
-				className,
-				"text-xl text-muted-foreground",
-				getCommonHelperClass(props),
-			)}
+			className={cn(className, "text-xl text-muted-foreground", getCommonHelperClass(props))}
 			{...omitCommonHelperProps(props)}
 		/>
 	);
 };
 
-const LargeText = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"span">) => {
+const LargeText = ({ className, asChild, ...props }: TypographyElementProps<"span">) => {
 	const Comp = asChild ? Slot : "span";
 	return (
 		<Comp
-			className={cn(
-				className,
-				"text-lg font-semibold",
-				getCommonHelperClass(props),
-			)}
+			className={cn(className, "text-lg font-semibold", getCommonHelperClass(props))}
 			{...omitCommonHelperProps(props)}
 		/>
 	);
@@ -195,40 +151,24 @@ const SmallText = forwardRef<HTMLSpanElement, TypographyElementProps<"span">>(
 		return (
 			<Comp
 				ref={ref}
-				className={cn(
-					"text-sm font-medium leading-none",
-					className,
-					getCommonHelperClass(props),
-				)}
+				className={cn("text-sm font-medium leading-none", className, getCommonHelperClass(props))}
 				{...omitCommonHelperProps(props)}
 			/>
 		);
 	},
 );
 
-const MutedText = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"span">) => {
+const MutedText = ({ className, asChild, ...props }: TypographyElementProps<"span">) => {
 	const Comp = asChild ? Slot : "span";
 	return (
 		<Comp
-			className={cn(
-				className,
-				"text-sm text-muted-foreground",
-				getCommonHelperClass(props),
-			)}
+			className={cn(className, "text-sm text-muted-foreground", getCommonHelperClass(props))}
 			{...omitCommonHelperProps(props)}
 		/>
 	);
 };
 
-const Strong = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"span">) => {
+const Strong = ({ className, asChild, ...props }: TypographyElementProps<"span">) => {
 	const Comp = asChild ? Slot : "span";
 	return (
 		<Comp
@@ -238,29 +178,17 @@ const Strong = ({
 	);
 };
 
-const Link = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"a">) => {
+const Link = ({ className, asChild, ...props }: TypographyElementProps<"a">) => {
 	const Comp = asChild ? Slot : "a";
 	return (
 		<Comp
-			className={cn(
-				"font-medium underline underline-offset-4",
-				className,
-				getCommonHelperClass(props),
-			)}
+			className={cn("font-medium underline underline-offset-4", className, getCommonHelperClass(props))}
 			{...omitCommonHelperProps(props)}
 		/>
 	);
 };
 
-const DescriptionList = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"dl">) => {
+const DescriptionList = ({ className, asChild, ...props }: TypographyElementProps<"dl">) => {
 	const Comp = asChild ? Slot : "dl";
 	return (
 		<Comp
@@ -274,33 +202,16 @@ const DescriptionList = ({
 	);
 };
 
-const DescriptionTerm = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"dt">) => {
+const DescriptionTerm = ({ className, asChild, ...props }: TypographyElementProps<"dt">) => {
 	const Comp = asChild ? Slot : "dt";
-	return (
-		<Comp
-			className={cn(className, getCommonHelperClass(props))}
-			{...omitCommonHelperProps(props)}
-		/>
-	);
+	return <Comp className={cn(className, getCommonHelperClass(props))} {...omitCommonHelperProps(props)} />;
 };
 
-const DescriptionDetails = ({
-	className,
-	asChild,
-	...props
-}: TypographyElementProps<"dd">) => {
+const DescriptionDetails = ({ className, asChild, ...props }: TypographyElementProps<"dd">) => {
 	const Comp = asChild ? Slot : "dd";
 	return (
 		<Comp
-			className={cn(
-				className,
-				"mb-4 md:mb-0",
-				getCommonHelperClass(props),
-			)}
+			className={cn(className, "mb-4 md:mb-0", getCommonHelperClass(props))}
 			{...omitCommonHelperProps(props)}
 		/>
 	);

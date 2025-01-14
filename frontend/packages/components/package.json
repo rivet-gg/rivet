@@ -15,7 +15,8 @@
 		"./auto-form": "./src/auto-form/index.tsx",
 		"./theme.css": "./public/theme.css",
 		"./tailwind-base": "./src/tailwind-base.ts",
-		"./layout": "./src/layout/index.ts"
+		"./layout": "./src/layout/index.ts",
+		"./code-mirror": "./src/code-mirror/index.tsx"
 	},
 	"types": "./dist/index.d.ts",
 	"dependencies": {

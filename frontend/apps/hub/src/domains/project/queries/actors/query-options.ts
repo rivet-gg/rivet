@@ -399,6 +399,18 @@ export const actorRegionQueryOptions = ({
 	});
 };
 
+const createActorEndpoint = (network: Rivet.actor.Network) => {
+	const http = Object.values(network.ports).find(
+		(port) => port.protocol === "http",
+	);
+	if (!http) {
+		return undefined;
+	}
+	const url = new URL(`${http.protocol}://${http.hostname}:${http.port}`);
+	url.pathname = http.path || "/";
+	return url.href;
+};
+
 export const actorInspectQueryOptions = ({
 	projectNameId,
 	environmentNameId,
@@ -410,9 +422,6 @@ export const actorInspectQueryOptions = ({
 	actorId: string;
 	network: Rivet.actor.Network;
 }) => {
-	const http = Object.values(network.ports).find(
-		(port) => port.protocol === "http",
-	);
 	return queryOptions({
 		queryKey: [
 			"project",
@@ -424,11 +433,8 @@ export const actorInspectQueryOptions = ({
 			"inspect",
 		],
 		queryFn: async ({ signal }) => {
-			const url = new URL(
-				`${http?.protocol}://${http?.hostname}:${http?.port}`,
-			);
-			url.pathname = `${http?.path}/inspect`;
-			const response = await fetch(url.href, { signal });
+			const href = createActorEndpoint(network);
+			const response = await fetch(`${href}/inspect`, { signal });
 			if (!response.ok) {
 				throw response;
 			}
@@ -444,7 +450,6 @@ export const actorInspectQueryOptions = ({
 
 			return parsed;
 		},
-		enabled: http !== undefined,
 	});
 };
 
@@ -490,5 +495,47 @@ export const actorsRpcsQueryOptions = ({
 			network,
 		}),
 		select: (data) => data.rpcs,
+	});
+};
+
+export const actorManagerUrlQueryOptions = ({
+	projectNameId,
+	environmentNameId,
+}: {
+	projectNameId: string;
+	environmentNameId: string;
+}) => {
+	return queryOptions({
+		queryKey: [
+			"project",
+			projectNameId,
+			"environment",
+			environmentNameId,
+			"actor-manager",
+		],
+		queryFn: async ({
+			signal: abortSignal,
+			queryKey: [_, project, __, environment],
+		}) => {
+			const response = await rivetClient.actor.list(
+				{
+					project,
+					environment,
+					tagsJson: JSON.stringify({ name: "manager" }),
+				},
+				{ abortSignal },
+			);
+
+			if (response.actors.length === 0) {
+				throw new Error("No actor manager found");
+			}
+			const href = createActorEndpoint(response.actors[0].network);
+
+			if (!href) {
+				throw new Error("No actor manager found");
+			}
+
+			return href;
+		},
 	});
 };

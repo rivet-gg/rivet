@@ -1,8 +1,11 @@
+import { ActorRepl } from "@/components/repl/repl";
 import type { Rivet } from "@rivet-gg/api";
-import { Accordion, ScrollArea } from "@rivet-gg/components";
-import { useQuery } from "@tanstack/react-query";
-import { actorsRpcsQueryOptions } from "../../queries";
-import { ActorRpc } from "./actor-rpc";
+import { ScrollArea } from "@rivet-gg/components";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+	actorManagerUrlQueryOptions,
+	actorsRpcsQueryOptions,
+} from "../../queries";
 
 interface ActorRpcTabProps extends Rivet.actor.Actor {
 	projectNameId: string;
@@ -15,7 +18,7 @@ export function ActorRpcTab({
 	environmentNameId,
 	id: actorId,
 }: ActorRpcTabProps) {
-	const { data } = useQuery(
+	const { data } = useSuspenseQuery(
 		actorsRpcsQueryOptions({
 			actorId,
 			network,
@@ -23,20 +26,17 @@ export function ActorRpcTab({
 			environmentNameId,
 		}),
 	);
+	const { data: actorManagerUrl } = useSuspenseQuery(
+		actorManagerUrlQueryOptions({ projectNameId, environmentNameId }),
+	);
 
 	return (
 		<ScrollArea className="overflow-auto h-full px-4 my-2">
-			{data?.length === 0 ? (
-				<p className="my-8 text-center text-sm text-muted-foreground">
-					No RPCs found.
-				</p>
-			) : (
-				<Accordion type="multiple">
-					{data?.map((rpc) => (
-						<ActorRpc key={rpc} rpc={rpc} />
-					))}
-				</Accordion>
-			)}
+			<ActorRepl
+				rpcs={data || []}
+				actorId={actorId}
+				managerUrl={actorManagerUrl}
+			/>
 		</ScrollArea>
 	);
 }
