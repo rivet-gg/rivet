@@ -1,7 +1,7 @@
-import { renderToPipeableStream } from "npm:@jogit/tmp-react-server-dom-nodeless";
-import getStream from "npm:get-stream";
-// Do not put this import in the top level, this acts as a lazy import to avoid polluting all other actors with react imports
-import { isValidElement } from "npm:react";
+// @ts-ignore we do not have types for this lib
+import { renderToPipeableStream } from "@jogit/tmp-react-server-dom-nodeless";
+import getStream from "get-stream";
+import { isValidElement } from "react";
 import { Actor } from "./actor.ts";
 
 /**

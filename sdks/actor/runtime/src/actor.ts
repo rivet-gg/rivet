@@ -1106,7 +1106,9 @@ export abstract class Actor<
 		// Await all `close` event listeners with 1.5 second timeout
 		const res = Promise.race([
 			Promise.all(promises).then(() => false),
-			new Promise<boolean>((res) => setTimeout(() => res(true), 1500)),
+			new Promise<boolean>((res) =>
+				globalThis.setTimeout(() => res(true), 1500),
+			),
 		]);
 
 		if (await res) {

@@ -6,6 +6,7 @@
 	"type": "module",
 	"exports": {
 		"./http/rpc": {
+			"deno": "./src/http/rpc.ts",
 			"import": {
 				"types": "./dist/http/rpc.d.ts",
 				"default": "./dist/http/rpc.js"
@@ -16,6 +17,7 @@
 			}
 		},
 		"./http/inspect": {
+			"deno": "./src/http/inspect.ts",
 			"import": {
 				"types": "./dist/http/inspect.d.ts",
 				"default": "./dist/http/inspect.js"
@@ -26,6 +28,7 @@
 			}
 		},
 		"./ws": {
+			"deno": "./src/ws/mod.ts",
 			"import": {
 				"types": "./dist/ws/mod.d.ts",
 				"default": "./dist/ws/mod.js"
@@ -36,6 +39,7 @@
 			}
 		},
 		"./ws/to_client": {
+			"deno": "./src/ws/to_client.ts",
 			"import": {
 				"types": "./dist/ws/to_client.d.ts",
 				"default": "./dist/ws/to_client.js"
@@ -46,6 +50,7 @@
 			}
 		},
 		"./ws/to_server": {
+			"deno": "./src/ws/to_server.ts",
 			"import": {
 				"types": "./dist/ws/to_server.d.ts",
 				"default": "./dist/ws/to_server.js"

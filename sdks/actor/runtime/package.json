@@ -1,7 +1,7 @@
 {
 	"name": "@rivet-gg/actor",
-	"private": true,
 	"version": "24.6.2-rc.1",
+	"license": "Apache-2.0",
 	"files": ["dist", "src", "deno.json", "package.json"],
 	"type": "module",
 	"exports": {
@@ -41,26 +41,37 @@
 	},
 	"sideEffects": false,
 	"scripts": {
-		"build": "tsup src/kv.ts src/mod.ts",
+		"build": "tsup src/kv.ts src/mod.ts src/unstable-react.ts",
 		"dev": "yarn build --watch",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@core/asyncutil": "npm:@jsr/core__asyncutil@^1.2.0",
-		"@rivet-gg/actor-common": "workspace:*",
-		"@rivet-gg/actor-core": "workspace:*",
-		"@rivet-gg/actor-protocol": "workspace:*",
+		"@jogit/tmp-react-server-dom-nodeless": "^19.0.1",
 		"@std/assert": "npm:@jsr/std__assert@^1.0.10",
 		"@std/async": "npm:@jsr/std__async@^1.0.9",
 		"@std/cbor": "npm:@jsr/std__cbor@^0.1.4",
 		"@std/log": "npm:@jsr/std__log@^0.224.12",
+		"get-stream": "^9.0.1",
 		"hono": "^4.6.16",
 		"on-change": "^5.0.1",
+		"react": "^19.0.0",
 		"zod": "^3.24.1"
 	},
 	"devDependencies": {
+		"@rivet-gg/actor-common": "workspace:*",
+		"@rivet-gg/actor-core": "workspace:*",
+		"@rivet-gg/actor-protocol": "workspace:*",
 		"@types/deno": "^2.0.0",
 		"tsup": "^8.3.5",
 		"typescript": "^5.7.3"
+	},
+	"deno": {
+		"compilerOptions": {
+			"lib": ["dom"],
+			"jsx": "react-jsx",
+			"jsxImportSource": "react",
+			"jsxImportSourceTypes": "npm:@types/react@^19"
+		}
 	}
 }

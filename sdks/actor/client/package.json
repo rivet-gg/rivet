@@ -1,10 +1,11 @@
 {
 	"name": "@rivet-gg/actor-client",
-	"version": "24.6.2-rc.1",
+	"version": "24.6.2-rc.5",
 	"files": ["src", "dist", "package.json"],
 	"type": "module",
 	"exports": {
 		".": {
+			"deno": "./src/mod.ts",
 			"import": {
 				"types": "./dist/mod.d.ts",
 				"default": "./dist/mod.js"
@@ -15,6 +16,7 @@
 			}
 		},
 		"./test": {
+			"deno": "./src/test.ts",
 			"import": {
 				"types": "./dist/test.d.ts",
 				"default": "./dist/test.js"
@@ -25,6 +27,7 @@
 			}
 		},
 		"./unstable-react": {
+			"deno": "./src/unstable-react.tsx",
 			"import": {
 				"types": "./dist/unstable-react.d.ts",
 				"default": "./dist/unstable-react.js"
@@ -42,9 +45,6 @@
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@rivet-gg/actor-common": "workspace:*",
-		"@rivet-gg/actor-protocol": "workspace:*",
-		"@rivet-gg/manager-protocol": "workspace:*",
 		"@std/assert": "npm:@jsr/std__assert@^1.0.10",
 		"@std/cbor": "npm:@jsr/std__cbor@^0.1.4",
 		"zod": "^3.24.1"
@@ -54,6 +54,9 @@
 	},
 	"devDependencies": {
 		"@kentcdodds/tmp-react-server-dom-esm": "^19.0.1",
+		"@rivet-gg/actor-common": "workspace:*",
+		"@rivet-gg/actor-protocol": "workspace:*",
+		"@rivet-gg/manager-protocol": "workspace:*",
 		"@types/react": "^19.0.4",
 		"tsup": "^8.3.5",
 		"typescript": "^5.7.3"
