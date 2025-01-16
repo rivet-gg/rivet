@@ -24,7 +24,8 @@
 			"*.lock",
 			"resources/**",
 			"packages/**",
-			"site/framer/**"
+			"site/framer/**",
+			"**/out/**"
 		],
 		"ignoreUnknown": true
 	},

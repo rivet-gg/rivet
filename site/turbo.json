@@ -3,16 +3,13 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"outputs": ["dist/**"],
-			"dependsOn": ["@rivet-gg/components#build"]
+			"outputs": ["out/**"]
 		},
 		"start": {
-			"outputs": ["dist/**"],
-			"dependsOn": ["@rivet-gg/components#build"]
+			"outputs": ["out/**"]
 		},
 		"dev": {
-			"persistent": true,
-			"dependsOn": ["@rivet-gg/components#build"]
+			"persistent": true
 		}
 	}
 }
