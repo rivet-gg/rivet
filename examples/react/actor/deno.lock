@@ -3,23 +3,22 @@
   "specifiers": {
     "jsr:@core/asyncutil@^1.2.0": "1.2.0",
     "jsr:@hono/hono@^4.6.12": "4.6.16",
+    "jsr:@rivet-gg/actor@24.6.2-rc.2": "24.6.2-rc.2",
     "jsr:@std/assert@^1.0.8": "1.0.10",
     "jsr:@std/async@^1.0.9": "1.0.9",
     "jsr:@std/bytes@^1.0.4": "1.0.4",
-    "jsr:@std/cbor@~0.1.3": "0.1.4",
-    "jsr:@std/fmt@^1.0.3": "1.0.3",
-    "jsr:@std/fs@^1.0.7": "1.0.8",
+    "jsr:@std/cbor@~0.1.3": "0.1.5",
+    "jsr:@std/fmt@^1.0.4": "1.0.4",
+    "jsr:@std/fs@^1.0.9": "1.0.9",
     "jsr:@std/io@0.225": "0.225.0",
-    "jsr:@std/log@~0.224.11": "0.224.12",
+    "jsr:@std/log@~0.224.11": "0.224.13",
     "jsr:@std/streams@^1.0.8": "1.0.8",
-    "npm:@jogit/tmp-react-server-dom-nodeless@*": "19.0.1",
-    "npm:@types/node@*": "22.5.4",
-    "npm:@types/react@*": "19.0.4",
-    "npm:@types/react@19": "19.0.4",
-    "npm:@types/react@^18.3.12": "18.3.18",
-    "npm:get-stream@*": "9.0.1",
+    "npm:@types/react@19": "19.0.7",
+    "npm:@types/react@^18.3.0": "18.3.18",
     "npm:on-change@^5.0.1": "5.0.1",
+    "npm:react-dom@19": "19.0.0_react@19.0.0",
     "npm:react@*": "19.0.0",
+    "npm:react@19": "19.0.0",
     "npm:zod@^3.24.1": "3.24.1"
   },
   "jsr": {
@@ -28,6 +27,19 @@
     },
     "@hono/hono@4.6.16": {
       "integrity": "b540c6b1352d73142895f7bb6bfd0b6cc514ede61c12940338c4ae5dd06cb326"
+    },
+    "@rivet-gg/actor@24.6.2-rc.2": {
+      "integrity": "6593add76b1f9624974b2e0aa471198bbd596622c3953349178328c68c551a81",
+      "dependencies": [
+        "jsr:@core/asyncutil",
+        "jsr:@hono/hono",
+        "jsr:@std/assert",
+        "jsr:@std/async",
+        "jsr:@std/cbor",
+        "jsr:@std/log",
+        "npm:on-change",
+        "npm:zod"
+      ]
     },
     "@std/assert@1.0.10": {
       "integrity": "59b5cbac5bd55459a19045d95cc7c2ff787b4f8527c0dd195078ff6f9481fbb3"
@@ -38,24 +50,24 @@
     "@std/bytes@1.0.4": {
       "integrity": "11a0debe522707c95c7b7ef89b478c13fb1583a7cfb9a85674cd2cc2e3a28abc"
     },
-    "@std/cbor@0.1.4": {
-      "integrity": "996e661977a9b0cc54b16503abfa62572ea56068d29e72af27fe0e7b6eb93baa",
+    "@std/cbor@0.1.5": {
+      "integrity": "abb9155998bfebfe625199e3235ae9c7357d20d19718bd81e2df883f7c06b0ce",
       "dependencies": [
         "jsr:@std/bytes",
         "jsr:@std/streams"
       ]
     },
-    "@std/fmt@1.0.3": {
-      "integrity": "97765c16aa32245ff4e2204ecf7d8562496a3cb8592340a80e7e554e0bb9149f"
+    "@std/fmt@1.0.4": {
+      "integrity": "e14fe5bedee26f80877e6705a97a79c7eed599e81bb1669127ef9e8bc1e29a74"
     },
-    "@std/fs@1.0.8": {
-      "integrity": "161c721b6f9400b8100a851b6f4061431c538b204bb76c501d02c508995cffe0"
+    "@std/fs@1.0.9": {
+      "integrity": "3eef7e3ed3d317b29432c7dcb3b20122820dbc574263f721cb0248ad91bad890"
     },
     "@std/io@0.225.0": {
       "integrity": "c1db7c5e5a231629b32d64b9a53139445b2ca640d828c26bf23e1c55f8c079b3"
     },
-    "@std/log@0.224.12": {
-      "integrity": "d0f002f1340a11f28d482a7a9e1c904c26b8ff2c7dd4fe32175b3ece3e0b18c5",
+    "@std/log@0.224.13": {
+      "integrity": "f04d82f676c9eb4306194ca166d296d9f1456fe4b7edf2a404a0d55c94d31df7",
       "dependencies": [
         "jsr:@std/fmt",
         "jsr:@std/fs",
@@ -67,18 +79,6 @@
     }
   },
   "npm": {
-    "@jogit/tmp-react-server-dom-nodeless@19.0.1": {
-      "integrity": "sha512-SDQycDpayxNV/gOpbAgqNnGZDPT/5qA5EGpD68i/HTK2GZssPuoM3bp1nxJ/Ik3bYlUbQwMgnUuJS4bj+Tk0Sg=="
-    },
-    "@sec-ant/readable-stream@0.4.1": {
-      "integrity": "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="
-    },
-    "@types/node@22.5.4": {
-      "integrity": "sha512-FDuKUJQm/ju9fT/SeX/6+gBzoPzlVCzfzmGkwKvRHQVxi4BntVbyIwf6a4Xn62mrvndLiml6z/UBXIdEVjQLXg==",
-      "dependencies": [
-        "undici-types"
-      ]
-    },
     "@types/prop-types@15.7.14": {
       "integrity": "sha512-gNMvNH49DJ7OJYv+KAKn0Xp45p8PLl6zo2YnvDIbTd4J6MER2BmWN49TG7n9LvkyihINxeKW8+3bfS2yDC9dzQ=="
     },
@@ -89,8 +89,8 @@
         "csstype"
       ]
     },
-    "@types/react@19.0.4": {
-      "integrity": "sha512-3O4QisJDYr1uTUMZHA2YswiQZRq+Pd8D+GdVFYikTutYsTz+QZgWkAPnP7rx9txoI6EXKcPiluMqWPFV3tT9Wg==",
+    "@types/react@19.0.7": {
+      "integrity": "sha512-MoFsEJKkAtZCrC1r6CM8U22GzhG7u2Wir8ons/aCKH6MBdD1ibV24zOSSkdZVUKqN5i396zG5VKLYZ3yaUZdLA==",
       "dependencies": [
         "csstype"
       ]
@@ -98,24 +98,21 @@
     "csstype@3.1.3": {
       "integrity": "sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw=="
     },
-    "get-stream@9.0.1": {
-      "integrity": "sha512-kVCxPF3vQM/N0B1PmoqVUqgHP+EeVjmZSQn+1oCRPxd2P21P2F19lIgbR3HBosbB1PUhOAoctJnfEn2GbN2eZA==",
-      "dependencies": [
-        "@sec-ant/readable-stream",
-        "is-stream"
-      ]
-    },
-    "is-stream@4.0.1": {
-      "integrity": "sha512-Dnz92NInDqYckGEUJv689RbRiTSEHCQ7wOVeALbkOz999YpqT46yMRIGtSNl2iCL1waAZSx40+h59NV/EwzV/A=="
-    },
     "on-change@5.0.1": {
       "integrity": "sha512-n7THCP7RkyReRSLkJb8kUWoNsxUIBxTkIp3JKno+sEz6o/9AJ3w3P9fzQkITEkMwyTKJjZciF3v/pVoouxZZMg=="
+    },
+    "react-dom@19.0.0_react@19.0.0": {
+      "integrity": "sha512-4GV5sHFG0e/0AD4X+ySy6UJd3jVl1iNsNHdpad0qhABJ11twS3TTBnseqsKurKcsNqCEFeGL3uLpVChpIO3QfQ==",
+      "dependencies": [
+        "react",
+        "scheduler"
+      ]
     },
     "react@19.0.0": {
       "integrity": "sha512-V8AVnmPIICiWpGfm6GLzCR/W5FXLchHop40W4nXBmdlEceh16rCN8O8LNWm5bh5XUX91fh7KpA+W0TgMKmgTpQ=="
     },
-    "undici-types@6.19.8": {
-      "integrity": "sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw=="
+    "scheduler@0.25.0": {
+      "integrity": "sha512-xFVuu11jh+xcO7JOAGJNOXld8/TcEHK/4CituBUeUb5hqxJLj9YuemAEuvm9gQ/+pgXYfbQuqAkiYu+u7YEsNA=="
     },
     "zod@3.24.1": {
       "integrity": "sha512-muH7gBL9sI1nciMZV67X5fTKKBLtwpZ5VBp1vsOQzj1MhrBZ4wlVCm3gedKZWLp0Oyel8sIGfeiz54Su+OVT+A=="
@@ -123,15 +120,9 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@core/asyncutil@^1.2.0",
-      "jsr:@hono/hono@^4.6.12",
-      "jsr:@std/assert@^1.0.8",
-      "jsr:@std/async@^1.0.9",
-      "jsr:@std/cbor@~0.1.3",
-      "jsr:@std/log@~0.224.11",
-      "npm:on-change@^5.0.1",
-      "npm:react@*",
-      "npm:zod@^3.24.1"
+      "jsr:@rivet-gg/actor@24.6.2-rc.2",
+      "npm:react-dom@19",
+      "npm:react@19"
     ]
   }
 }

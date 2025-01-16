@@ -7,4 +7,8 @@ export default defineConfig({
 	clean: true,
 	dts: true,
 	external: ["react", "react-dom", "@kentcdodds/tmp-react-server-dom-esm"],
+	// Bundle only the local dependencies
+	noExternal: [/@rivet-gg\/.*?/],
+	minify: true,
+	platform: "neutral",
 });
