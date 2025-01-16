@@ -1,5 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use foundationdb as fdb;
 use global_error::GlobalError;
 use tokio::time::Instant;
 use uuid::Uuid;
@@ -78,6 +79,12 @@ pub enum WorkflowError {
 	#[error("deserialize message: {0}")]
 	DeserializeMessage(serde_json::Error),
 
+	#[error("serialize loop state: {0}")]
+	SerializeLoopState(serde_json::Error),
+
+	#[error("deserialize loop state: {0}")]
+	DeserializeLoopState(serde_json::Error),
+
 	#[error("failed to serialize cjson tags: {0:?}")]
 	CjsonSerializeTags(cjson::Error),
 
@@ -87,8 +94,8 @@ pub enum WorkflowError {
 	#[error("failed to deserialize tags: {0}")]
 	DeserializeTags(serde_json::Error),
 
-	#[error("tags must be a json object")]
-	InvalidTags,
+	#[error("invalid tags: {0}")]
+	InvalidTags(String),
 
 	#[error("failed to serialize loop state: {0}")]
 	SerializeLoopState(serde_json::Error),
@@ -144,6 +151,9 @@ pub enum WorkflowError {
 	#[error("sql error: {0}")]
 	Sqlx(#[from] sqlx::Error),
 
+	#[error("fdb error: {0}")]
+	Fdb(#[from] fdb::FdbBindingError),
+
 	#[error("max sql retries, last error: {0}")]
 	MaxSqlRetries(sqlx::Error),
 
@@ -179,6 +189,15 @@ pub enum WorkflowError {
 
 	#[error("invalid version: {0}")]
 	InvalidVersion(String),
+
+	#[error("tagged signals are disabled for this workflow engine's database driver. use workflow directed signals instead")]
+	TaggedSignalsDisabled,
+
+	#[error("failed to acquire migration lock (workflow id {0}): {1}")]
+	MigrationLock(Uuid, String),
+
+	#[error("migration failed: {0}")]
+	Migration(sqlx::Error),
 }
 
 impl WorkflowError {
@@ -246,6 +265,13 @@ impl WorkflowError {
 			Some(*sub_workflow_id)
 		} else {
 			None
+		}
+	}
+
+	pub(crate) fn into_migration_err(self) -> Self {
+		match self {
+			WorkflowError::Sqlx(err) => WorkflowError::Migration(err),
+			_ => self,
 		}
 	}
 }
