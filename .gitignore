@@ -63,3 +63,4 @@ tests/basic-game/.env
 /target
 .env*
 .yarn/cache
+.yarn/install-state.gz

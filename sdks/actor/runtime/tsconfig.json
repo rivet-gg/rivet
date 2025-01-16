@@ -8,7 +8,9 @@
 		"allowSyntheticDefaultImports": false,
 		"stripInternal": true,
 		"allowImportingTsExtensions": true,
-		"moduleResolution": "bundler"
+		"moduleResolution": "bundler",
+		"types": ["deno"],
+		"lib": ["ESNext", "DOM"]
 	},
 	"include": ["src/**/*"]
 }
