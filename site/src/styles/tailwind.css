@@ -1,25 +1,25 @@
 @config "../../tailwind.config.js";
 
 @layer base {
-  ::selection {
-    background-color: #FF4F00 !important;
-    color: black !important;
-  }
-  ::-moz-selection {
-    background-color: #FF4F00 !important;
-    color: black !important;
-  }
+	::selection {
+		background-color: #ff4f00 !important;
+		color: black !important;
+	}
+	::-moz-selection {
+		background-color: #ff4f00 !important;
+		color: black !important;
+	}
 
-  :root {
-    --shiki-color-text: theme('colors.white');
-    --shiki-token-constant: theme('colors.violet.300');
-    --shiki-token-string: theme('colors.violet.300');
-    --shiki-token-comment: theme('colors.zinc.500');
-    --shiki-token-keyword: theme('colors.sky.300');
-    --shiki-token-parameter: theme('colors.pink.300');
-    --shiki-token-function: theme('colors.violet.300');
-    --shiki-token-string-expression: theme('colors.violet.300');
-    --shiki-token-punctuation: theme('colors.zinc.200');
+	:root {
+		--shiki-color-text: theme("colors.white");
+		--shiki-token-constant: theme("colors.violet.300");
+		--shiki-token-string: theme("colors.violet.300");
+		--shiki-token-comment: theme("colors.zinc.500");
+		--shiki-token-keyword: theme("colors.sky.300");
+		--shiki-token-parameter: theme("colors.pink.300");
+		--shiki-token-function: theme("colors.violet.300");
+		--shiki-token-string-expression: theme("colors.violet.300");
+		--shiki-token-punctuation: theme("colors.zinc.200");
 
 		--bg-dark-grain: url("../images/effects/grain-dark.png");
 		--bg-light-grain: url("../images/effects/grain-light.png");
@@ -151,13 +151,15 @@
 }
 
 /* Ensure it works in all contexts */
-*, *::before, *::after {
-  ::selection {
-    background-color: #FF4F00 !important;
-    color: black !important;
-  }
-  ::-moz-selection {
-    background-color: #FF4F00 !important;
-    color: black !important;
-  }
+*,
+*::before,
+*::after {
+	::selection {
+		background-color: #ff4f00 !important;
+		color: black !important;
+	}
+	::-moz-selection {
+		background-color: #ff4f00 !important;
+		color: black !important;
+	}
 }

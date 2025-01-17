@@ -31,87 +31,115 @@ export function FancyHeader({
 		prev.current = isSubnavOpen;
 	}, [isSubnavOpen]);
 
-  const headerStyles = cn(
-    'md:border-transparent md:static md:bg-transparent md:rounded-2xl md:max-w-[1200px] md:border-transparent md:backdrop-none [&>div:first-child]:px-3 md:backdrop-blur-none'
-  );
-  return (
-    <>
-      <div
-        className={cn(
-          'pointer-events-none fixed inset-0 z-10 hidden backdrop-blur-sm transition-opacity md:block',
-          isSubnavOpen ? 'opacity-100' : 'opacity-0'
-        )}
-      />
-      <motion.div
-        className='fixed top-0 z-10  w-full max-w-[1200px] md:left-1/2 md:top-4 md:-translate-x-1/2 md:px-8'
-        onMouseLeave={() => setIsSubnavOpen(false)}>
-        <motion.div className='relative before:pointer-events-none before:absolute  before:inset-[-1px] before:z-20  before:hidden before:rounded-2xl before:border before:border-white/10 before:content-[""] md:before:block'>
-          <motion.div
-            className={cn(
-              'absolute inset-0 -z-[1] hidden overflow-hidden rounded-2xl backdrop-blur-md backdrop-saturate-[140%] transition-all md:block',
-              isSubnavOpen
-                ? 'bg-background backdrop-blur-0 backdrop-saturate-0'
-                : 'bg-white/5 bg-gradient-to-r from-white/5 to-black/10'
-            )}
-          />
-          <RivetHeader
-            className={headerStyles}
-            logo={
-              <Link href='/'>
-                <Image 
-                  src={logoUrl.src || logoUrl}
-                  width={80}
-                  height={24}
-                  className='ml-1 w-20' 
-                  alt='Rivet logo'
-                  unoptimized
-                />
-              </Link>
-            }
-            subnav={subnav}
-            support={
-              <div className='flex flex-col gap-4 font-v2 subpixel-antialiased'>
-                <RivetHeader.NavItem asChild>
-                  <Link href='https://hub.rivet.gg'>Sign In</Link>
-                </RivetHeader.NavItem>
-                <RivetHeader.NavItem asChild>
-                  <Link href='/discord'>Discord</Link>
-                </RivetHeader.NavItem>
-                <RivetHeader.NavItem asChild>
-                  <Link href='/support'>Support</Link>
-                </RivetHeader.NavItem>
-              </div>
-            }
-            links={
-              <div className="flex flex-row items-center">
-                <RivetHeader.NavItem asChild className='p-2 mr-4'>
-                  <Link href='/discord' className='text-white/90'>
-                    <Icon icon={faDiscord} className='drop-shadow-md' />
-                  </Link>
-                </RivetHeader.NavItem>
-                <RivetHeader.NavItem asChild className='flex mr-2'>
-                  <GitHubStars className='text-white/90 hover:text-white transition-colors w-full' />
-                </RivetHeader.NavItem>
-                <Button
-                  variant='secondary'
-                  asChild
-                  className='font-v2 subpixel-antialiased hover:border-white/20'>
-                  <Link href='https://hub.rivet.gg'>Sign In</Link>
-                </Button>
-              </div>
-            }
-            mobileBreadcrumbs={<DocsMobileNavigation />}
-            breadcrumbs={
-              <div className='flex items-center font-v2 subpixel-antialiased'>
-                <RivetHeader.NavItem
-                  asChild
-                  className='flex cursor-pointer items-center gap-1 px-2.5 py-2 first:pl-0 '
-                  onMouseEnter={() => setIsSubnavOpen('product')}>
-                  <div className='text-white/90' aria-current={active === 'product' ? 'page' : undefined}>
-                    Product
-                  </div>
-                </RivetHeader.NavItem>
-                {/* <RivetHeader.NavItem
+	const headerStyles = cn(
+		"md:border-transparent md:static md:bg-transparent md:rounded-2xl md:max-w-[1200px] md:border-transparent md:backdrop-none [&>div:first-child]:px-3 md:backdrop-blur-none",
+	);
+	return (
+		<>
+			<div
+				className={cn(
+					"pointer-events-none fixed inset-0 z-10 hidden backdrop-blur-sm transition-opacity md:block",
+					isSubnavOpen ? "opacity-100" : "opacity-0",
+				)}
+			/>
+			<motion.div
+				className="fixed top-0 z-10  w-full max-w-[1200px] md:left-1/2 md:top-4 md:-translate-x-1/2 md:px-8"
+				onMouseLeave={() => setIsSubnavOpen(false)}
+			>
+				<motion.div className='relative before:pointer-events-none before:absolute  before:inset-[-1px] before:z-20  before:hidden before:rounded-2xl before:border before:border-white/10 before:content-[""] md:before:block'>
+					<motion.div
+						className={cn(
+							"absolute inset-0 -z-[1] hidden overflow-hidden rounded-2xl backdrop-blur-md backdrop-saturate-[140%] transition-all md:block",
+							isSubnavOpen
+								? "bg-background backdrop-blur-0 backdrop-saturate-0"
+								: "bg-white/5 bg-gradient-to-r from-white/5 to-black/10",
+						)}
+					/>
+					<RivetHeader
+						className={headerStyles}
+						logo={
+							<Link href="/">
+								<Image
+									src={logoUrl.src || logoUrl}
+									width={80}
+									height={24}
+									className="ml-1 w-20"
+									alt="Rivet logo"
+									unoptimized
+								/>
+							</Link>
+						}
+						subnav={subnav}
+						support={
+							<div className="flex flex-col gap-4 font-v2 subpixel-antialiased">
+								<RivetHeader.NavItem asChild>
+									<Link href="https://hub.rivet.gg">
+										Sign In
+									</Link>
+								</RivetHeader.NavItem>
+								<RivetHeader.NavItem asChild>
+									<Link href="/discord">Discord</Link>
+								</RivetHeader.NavItem>
+								<RivetHeader.NavItem asChild>
+									<Link href="/support">Support</Link>
+								</RivetHeader.NavItem>
+							</div>
+						}
+						links={
+							<div className="flex flex-row items-center">
+								<RivetHeader.NavItem
+									asChild
+									className="p-2 mr-4"
+								>
+									<Link
+										href="/discord"
+										className="text-white/90"
+									>
+										<Icon
+											icon={faDiscord}
+											className="drop-shadow-md"
+										/>
+									</Link>
+								</RivetHeader.NavItem>
+								<RivetHeader.NavItem
+									asChild
+									className="flex mr-2"
+								>
+									<GitHubStars className="text-white/90 hover:text-white transition-colors w-full" />
+								</RivetHeader.NavItem>
+								<Button
+									variant="secondary"
+									asChild
+									className="font-v2 subpixel-antialiased hover:border-white/20"
+								>
+									<Link href="https://hub.rivet.gg">
+										Sign In
+									</Link>
+								</Button>
+							</div>
+						}
+						mobileBreadcrumbs={<DocsMobileNavigation />}
+						breadcrumbs={
+							<div className="flex items-center font-v2 subpixel-antialiased">
+								<RivetHeader.NavItem
+									asChild
+									className="flex cursor-pointer items-center gap-1 px-2.5 py-2 first:pl-0 "
+									onMouseEnter={() =>
+										setIsSubnavOpen("product")
+									}
+								>
+									<div
+										className="text-white/90"
+										aria-current={
+											active === "product"
+												? "page"
+												: undefined
+										}
+									>
+										Product
+									</div>
+								</RivetHeader.NavItem>
+								{/* <RivetHeader.NavItem
                   asChild
                   className='flex cursor-pointer items-center gap-1 px-2.5 py-2'
                   onMouseEnter={() => setIsSubnavOpen('solutions')}>

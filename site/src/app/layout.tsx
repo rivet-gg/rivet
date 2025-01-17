@@ -11,27 +11,28 @@ else if (process.env.CF_PAGES_URL)
 	metadataBase = new URL(process.env.CF_PAGES_URL);
 
 export const metadata: Metadata = {
-  metadataBase,
-  title: 'Rivet - Scalable. Stateful. Serverless.',
-  description: 'Rivet is the platform to build realtime, edge, or agent applications.No limitations of Redis or timeouts of Lambda. Open-source & self-hostable.',
-  twitter: {
-    site: '@rivetgg',
-    card: 'summary_large_image'
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://rivet.gg',
-    siteName: 'Rivet',
-    images: [
-      {
-        url: 'https://rivet.gg/promo/og.png',
-        width: 1200,
-        height: 630,
-        alt: 'Rivet'
-      }
-    ]
-  }
+	metadataBase,
+	title: "Rivet - Scalable. Stateful. Serverless.",
+	description:
+		"Rivet is the platform to build realtime, edge, or agent applications.No limitations of Redis or timeouts of Lambda. Open-source & self-hostable.",
+	twitter: {
+		site: "@rivetgg",
+		card: "summary_large_image",
+	},
+	openGraph: {
+		type: "website",
+		locale: "en_US",
+		url: "https://rivet.gg",
+		siteName: "Rivet",
+		images: [
+			{
+				url: "https://rivet.gg/promo/og.png",
+				width: 1200,
+				height: 630,
+				alt: "Rivet",
+			},
+		],
+	},
 };
 
 export default function Layout({ children }) {
