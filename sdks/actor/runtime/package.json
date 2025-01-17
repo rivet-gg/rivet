@@ -1,6 +1,6 @@
 {
 	"name": "@rivet-gg/actor",
-	"version": "24.6.3-rc.1",
+	"version": "24.6.2-rc.1",
 	"license": "Apache-2.0",
 	"files": ["dist", "src", "deno.json", "package.json"],
 	"type": "module",
