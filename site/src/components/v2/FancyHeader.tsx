@@ -71,18 +71,25 @@ export function FancyHeader({
 						}
 						subnav={subnav}
 						support={
-							<div className="flex flex-col gap-4 font-v2 subpixel-antialiased">
-								<RivetHeader.NavItem asChild>
+							<div className="flex flex-row items-center gap-4">
+								<Button
+									asChild
+									variant="outline"
+									className="hidden md:flex"
+								>
 									<Link href="https://hub.rivet.gg">
 										Sign In
 									</Link>
-								</RivetHeader.NavItem>
-								<RivetHeader.NavItem asChild>
-									<Link href="/discord">Discord</Link>
-								</RivetHeader.NavItem>
-								<RivetHeader.NavItem asChild>
-									<Link href="/support">Support</Link>
-								</RivetHeader.NavItem>
+								</Button>
+								<Button
+									asChild
+									variant="primary"
+									className="hidden md:flex"
+								>
+									<Link href="https://hub.rivet.gg/register">
+										Get Started
+									</Link>
+								</Button>
 							</div>
 						}
 						links={
