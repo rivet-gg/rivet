@@ -611,13 +611,15 @@ pub async fn upgrade_all(
 		count += list_res.server_ids.len();
 		cursor = list_res.server_ids.last().cloned();
 
-		let subs = futures_util::stream::iter(list_res.server_ids.clone())
+        // TODO: Add back once we figure out how to cleanly handle if a wf is already complete when
+        // upgrading
+		/*let subs = futures_util::stream::iter(list_res.server_ids.clone())
 			.map(|server_id| {
 				ctx.subscribe::<ds::workflows::server::UpgradeStarted>(("server_id", server_id))
 			})
 			.buffer_unordered(32)
 			.try_collect::<Vec<_>>()
-			.await?;
+			.await?;*/
 
 		futures_util::stream::iter(list_res.server_ids)
 			.map(|server_id| {
@@ -631,11 +633,11 @@ pub async fn upgrade_all(
 			.try_collect::<Vec<_>>()
 			.await?;
 
-		futures_util::stream::iter(subs)
+		/*futures_util::stream::iter(subs)
 			.map(|mut sub| async move { sub.next().await })
 			.buffer_unordered(32)
 			.try_collect::<Vec<_>>()
-			.await?;
+			.await?;*/
 
 		if count < 10_000 {
 			break;
