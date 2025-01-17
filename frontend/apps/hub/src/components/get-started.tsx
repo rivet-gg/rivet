@@ -13,17 +13,12 @@ import {
 import {
 	Icon,
 	faActors,
-	faArrowPointer,
 	faArrowProgress,
 	faChevronDoubleDown,
 	faChevronRight,
 	faCircleNodes,
-	faCode,
 	faDiagramNext,
-	faGamepadAlt,
-	faSparkles,
 	faUpRightAndDownLeftFromCenter,
-	faWifiSlash,
 } from "@rivet-gg/icons";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { type ComponentProps, useState } from "react";
