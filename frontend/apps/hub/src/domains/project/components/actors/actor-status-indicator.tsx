@@ -25,7 +25,11 @@ export function getActorStatus(
 	return "unknown";
 }
 
-interface ActorStatusIndicatorProps extends Rivet.actor.Actor {}
+interface ActorStatusIndicatorProps
+	extends Pick<
+		Rivet.actor.Actor,
+		"createdAt" | "startedAt" | "destroyedAt"
+	> {}
 
 export const ActorStatusIndicator = ({
 	createdAt,

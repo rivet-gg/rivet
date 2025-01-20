@@ -53,7 +53,10 @@ export function ActorBuild({
 					<Dt>Tags</Dt>
 					<Dd>
 						{Object.keys(data.tags).length > 0 ? (
-							<ActorTags tags={data.tags} />
+							<ActorTags
+								className="text-foreground"
+								tags={data.tags}
+							/>
 						) : (
 							"None"
 						)}

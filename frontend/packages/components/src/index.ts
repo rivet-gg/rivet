@@ -67,6 +67,8 @@ export * from "./ui/multi-select";
 export * from "./ui/chart";
 export * from "./ui/combobox";
 export * from "./ui/picture";
+export * from "./ui/toggle-group";
+export * from "./ui/kbd";
 export * from "./lib/utils";
 export * from "./lib/filesize";
 export * from "./lib/timing";

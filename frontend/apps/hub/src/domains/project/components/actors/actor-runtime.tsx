@@ -31,7 +31,7 @@ export function ActorRuntime({
 	resources,
 }: ActorRuntimeProps) {
 	return (
-		<div className="border mt-4 px-4 py-4 rounded-md relative">
+		<div className="border mt-4 mb-4 px-4 py-4 rounded-md relative">
 			<p className="inline-block bg-card w-auto absolute -top-0 left-3 font-semibold px-0.5 -translate-y-1/2">
 				Runtime
 			</p>
@@ -63,10 +63,12 @@ export function ActorRuntime({
 										<Fragment key={name}>
 											<CopyArea
 												variant="discrete"
+												size="xs"
 												value={name}
 											/>
 											<CopyArea
 												variant="discrete"
+												size="xs"
 												value={value}
 											/>
 										</Fragment>

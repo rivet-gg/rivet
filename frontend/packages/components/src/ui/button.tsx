@@ -36,6 +36,7 @@ const buttonVariants = cva(
 				lg: "h-11 rounded-md px-8",
 				icon: "h-10 w-10",
 				"icon-sm": "h-7 w-7 text-xs [&_svg]:size-3",
+				"icon-xs": "h-5 w-5 text-xs [&_svg]:size-2",
 			},
 		},
 		defaultVariants: {
@@ -93,7 +94,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 						)}
 					/>
 				) : startIcon ? (
-					React.cloneElement(startIcon, { className: "mr-2" })
+					React.cloneElement(startIcon, { className: cn("mr-2", startIcon.props.className) })
 				) : null}
 				{size === "icon" && isLoading ? null : (
 					<Slottable>{children}</Slottable>

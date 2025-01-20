@@ -1,4 +1,5 @@
 import { Flex, Text } from "@rivet-gg/components";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ActorsActorDetails } from "./actors-actor-details";
 
 interface ActorsActorDetailsPanelProps {
@@ -12,6 +13,13 @@ export function ActorsActorDetailsPanel({
 	environmentNameId,
 	actorId,
 }: ActorsActorDetailsPanelProps) {
+	const currentTab = useSearch({
+		from: "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors",
+		select: (state) => state.tab,
+	});
+
+	const navigate = useNavigate();
+
 	if (!actorId) {
 		return (
 			<Flex items="center" justify="center" className="h-full">
@@ -24,9 +32,17 @@ export function ActorsActorDetailsPanel({
 
 	return (
 		<ActorsActorDetails
+			tab={currentTab}
 			projectNameId={projectNameId}
 			environmentNameId={environmentNameId}
 			actorId={actorId}
+			onTabChange={(tab) => {
+				navigate({
+					from: "/projects/$projectNameId/environments/$environmentNameId/actors",
+					to: ".",
+					search: (old) => ({ ...old, tab }),
+				});
+			}}
 		/>
 	);
 }

@@ -3,7 +3,6 @@ import { setupLogging } from "@rivet-gg/actor-common/log";
 import { listObjectMethods } from "@rivet-gg/actor-common/reflect";
 import { assertUnreachable, safeStringify } from "@rivet-gg/actor-common/utils";
 import type { ActorContext, Metadata } from "@rivet-gg/actor-core";
-import type { InspectResponse } from "@rivet-gg/actor-protocol/http/inspect";
 import { ProtocolFormatSchema } from "@rivet-gg/actor-protocol/ws";
 import type * as wsToClient from "@rivet-gg/actor-protocol/ws/to_client";
 import * as wsToServer from "@rivet-gg/actor-protocol/ws/to_server";
@@ -11,7 +10,6 @@ import { assertExists } from "@std/assert/exists";
 import { deadline } from "@std/async/deadline";
 import type { Logger } from "@std/log/get-logger";
 import { Hono, type Context as HonoContext } from "hono";
-import { cors } from "hono/cors";
 import { upgradeWebSocket } from "hono/deno";
 import type { WSEvents } from "hono/ws";
 import onChange from "on-change";
@@ -26,6 +24,7 @@ import * as errors from "./errors.ts";
 import type { Kv } from "./kv.ts";
 import { instanceLogger, logger } from "./log.ts";
 import { Rpc } from "./rpc.ts";
+import { throttle } from "./utils.ts";
 
 const KEYS = {
 	SCHEDULE: {
@@ -170,6 +169,18 @@ export abstract class Actor<
 
 	#lastSaveTime = 0;
 	#pendingSaveTimeout?: number;
+
+	#notifyStateInspectThrottle = throttle(async () => {
+		const inspectionResult = this.internal_inspect();
+		// TODO: Notify only inspector, not all clients
+		this._broadcast("_state-changed", inspectionResult.state);
+	}, 500);
+
+	#notifyConnectionsInspectThrottle = throttle(async () => {
+		const inspectionResult = this.internal_inspect();
+		// TODO: Notify only inspector, not all clients
+		this._broadcast("_connections-changed", inspectionResult.connections);
+	}, 500);
 
 	/**
 	 * This constructor should never be used directly.
@@ -319,6 +330,7 @@ export abstract class Actor<
 					throw new errors.InvalidStateType({ path });
 				}
 				this.#stateChanged = true;
+				this.#notifyStateInspectThrottle();
 
 				// Call onStateChange if it exists
 				if (this._onStateChange && this.#ready) {
@@ -392,31 +404,6 @@ export abstract class Actor<
 			);
 		});
 
-		app.use(
-			"/inspect",
-			cors({
-				origin: (origin) => {
-					// Allow localhost:5080 for development, production domain (hub.rivet.gg), and dynamic preview domains (*.rivet-hub-7jb.pages.dev)
-					// TODO: make this configurable, (ask manager for configured origins?)
-					return origin.includes("localhost:5080") ||
-						origin.includes("hub.rivet.gg") ||
-						origin.includes(".rivet-hub-7jb.pages.dev")
-						? origin
-						: undefined;
-				},
-			}),
-		).get((c) => {
-			const response = {
-				rpcs: this.#rpcNames,
-				state: {
-					enabled: this.#stateEnabled,
-					native: this._inspectState(),
-				},
-				connections: this.#connections.size,
-			} satisfies InspectResponse;
-			return c.json(response);
-		});
-
 		//app.post("/rpc/:name", this.#pandleRpc.bind(this));
 
 		app.get("/connect", upgradeWebSocket(this.#handleWebSocket.bind(this)));
@@ -488,6 +475,7 @@ export abstract class Actor<
 	// MARK: Events
 	#addSubscription(eventName: string, connection: Connection<this>) {
 		connection.subscriptions.add(eventName);
+		this.#notifyConnectionsInspectThrottle();
 
 		let subscribers = this.#eventSubscriptions.get(eventName);
 		if (!subscribers) {
@@ -499,6 +487,7 @@ export abstract class Actor<
 
 	#removeSubscription(eventName: string, connection: Connection<this>) {
 		connection.subscriptions.delete(eventName);
+		this.#notifyConnectionsInspectThrottle();
 
 		const subscribers = this.#eventSubscriptions.get(eventName);
 		if (subscribers) {
@@ -823,6 +812,17 @@ export abstract class Actor<
 		);
 	}
 
+	/**
+	 * Safely transforms the actor state into a string for debugging purposes.
+	 */
+	#inspectState(): string {
+		try {
+			return safeStringify(this.#stateRaw, 128 * 1024 * 1024);
+		} catch (error) {
+			return JSON.stringify({ _error: new errors.StateTooLarge() });
+		}
+	}
+
 	// MARK: Lifecycle hooks
 	/**
 	 * Hook called when the actor is first created. This method should return the initial state of the actor. The state can be access with `this._state`.
@@ -895,7 +895,9 @@ export abstract class Actor<
 	 * @param connection - The connection object.
 	 * @see {@link https://rivet.gg/docs/lifecycle|Lifecycle Documentation}
 	 */
-	protected _onConnect?(connection: Connection<this>): void | Promise<void>;
+	protected _onConnect?(connection: Connection<this>): void | Promise<void> {
+		this.#notifyConnectionsInspectThrottle();
+	}
 
 	/**
 	 * Called when a client disconnects from the actor. Use this to clean up any connection-specific resources.
@@ -905,17 +907,8 @@ export abstract class Actor<
 	 */
 	protected _onDisconnect?(
 		connection: Connection<this>,
-	): void | Promise<void>;
-
-	/**
-	 * Safely transforms the actor state into a string for debugging purposes.
-	 */
-	protected _inspectState(): string {
-		try {
-			return safeStringify(this.#stateRaw, 128_000_000 /* 128 MB */);
-		} catch (error) {
-			return `Error inspecting state: ${error}`;
-		}
+	): void | Promise<void> {
+		this.#notifyConnectionsInspectThrottle();
 	}
 
 	// MARK: Exposed methods
@@ -1073,6 +1066,37 @@ export abstract class Actor<
 				await this.#onStateSavedPromise.promise;
 			}
 		}
+	}
+
+	/**
+	 * Public RPC method that inspects the actor's state and connections.
+	 * @internal
+	 * @returns The actor's state and connections.
+	 */
+	internal_inspect(): wsToClient.InspectRpcResponse {
+		return {
+			// Filter out internal 'inspect' RPC
+			rpcs: this.#rpcNames.filter(
+				(name) => !name.startsWith("internal_"),
+			),
+			state: {
+				enabled: this.#stateEnabled,
+				native: this.#inspectState(),
+			},
+			connections: [...this.#connections.values()].map((con) =>
+				con._inspect(),
+			),
+		};
+	}
+
+	/**
+	 * Very insecure, but useful for debugging. This method allows you to set the actor's state directly.
+	 * @internal
+	 */
+	internal_setState(_: Rpc<this>, value: State) {
+		// FIXME: This should be only available to selected clients
+		this.#validateStateEnabled();
+		this.#setStateWithoutChange(value);
 	}
 
 	/**

@@ -20,11 +20,11 @@ export const CodeMirror = forwardRef<ReactCodeMirrorRef, ReactCodeMirrorProps>((
 
 interface JsonCodeProps extends ReactCodeMirrorProps {}
 
-export const JsonCode = forwardRef<HTMLDivElement, JsonCodeProps>(
+export const JsonCode = forwardRef<ReactCodeMirrorRef, JsonCodeProps>(
 	({ value, extensions = [], className, ...props }, ref) => {
 		return (
-			<CodeMirrorContainer ref={ref} tabIndex={0} className={className}>
-				<ReactCodeMirror
+			<CodeMirrorContainer tabIndex={0} className={className}>
+				<ReactCodeMirror ref={ref}
 					{...props}
 					extensions={[json(), linter(jsonParseLinter()), ...extensions]}
 					theme={githubDark}

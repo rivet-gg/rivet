@@ -28,7 +28,7 @@ import {
 import { Icon, faCheckCircle, faInfoCircle, faRefresh } from "@rivet-gg/icons";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodSearchValidator } from "@tanstack/router-zod-adapter";
+import { zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
 
 function ProjectBuildsRoute() {
@@ -213,7 +213,7 @@ const f = z.object({
 export const Route = createFileRoute(
 	"/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/builds",
 )({
-	validateSearch: zodSearchValidator(f),
+	validateSearch: zodValidator(f),
 	component: ProjectBuildsRoute,
 	pendingComponent: Layout.Content.Skeleton,
 });

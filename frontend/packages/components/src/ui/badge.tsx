@@ -7,6 +7,7 @@ import {
 	getCommonHelperClass,
 	omitCommonHelperProps,
 } from "./helpers";
+import { Slot } from "@radix-ui/react-slot";
 
 const badgeVariants = cva(
 	"inline-flex items-center tracking-normal rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 whitespace-nowrap max-w-full overflow-hidden truncate",
@@ -34,12 +35,15 @@ const badgeVariants = cva(
 export interface BadgeProps
 	extends React.HTMLAttributes<HTMLDivElement>,
 		VariantProps<typeof badgeVariants>,
-		Partial<CommonHelperProps> {}
+		Partial<CommonHelperProps> {
+			asChild?: boolean;
+		}
 
 const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
-	({ className, variant, ...props }, ref) => {
+	({ className, variant, asChild, ...props }, ref) => {
+		const Comp = asChild ? Slot : "div";
 		return (
-			<div
+			<Comp
 				ref={ref}
 				className={cn(
 					badgeVariants({ variant }),

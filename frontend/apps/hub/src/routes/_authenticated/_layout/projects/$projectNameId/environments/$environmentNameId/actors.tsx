@@ -1,20 +1,11 @@
 import { GetStarted } from "@/components/get-started";
 import { ActorsListPreview } from "@/domains/project/components/actors/actors-list-preview";
 import * as Layout from "@/domains/project/layouts/servers-layout";
-import { projectActorsQueryOptions } from "@/domains/project/queries";
-import {
-	Button,
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-	Flex,
-	WithTooltip,
-} from "@rivet-gg/components";
-import { Icon, faActors, faRefresh } from "@rivet-gg/icons";
+import { actorsCountQueryOptions } from "@/domains/project/queries";
+import { Icon, faActors } from "@rivet-gg/icons";
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { zodSearchValidator } from "@tanstack/router-zod-adapter";
+import { zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
 
 function ProjectActorsRoute() {
@@ -22,12 +13,12 @@ function ProjectActorsRoute() {
 		environment: { nameId: environmentNameId },
 		project: { nameId: projectNameId },
 	} = Route.useRouteContext();
-	const { data, refetch, isRefetching } = useSuspenseInfiniteQuery(
-		projectActorsQueryOptions({ projectNameId, environmentNameId }),
+	const { data } = useSuspenseInfiniteQuery(
+		actorsCountQueryOptions({ projectNameId, environmentNameId }),
 	);
 	const { actorId } = Route.useSearch();
 
-	if (data.length === 0) {
+	if (data === 0) {
 		return (
 			<div className="w-full h-full flex flex-col justify-center">
 				<div className="flex flex-col justify-center my-8">
@@ -46,39 +37,13 @@ function ProjectActorsRoute() {
 	}
 
 	return (
-		<Card
-			w="full"
-			// 100vh - header - page padding
-			className="flex flex-col h-[calc(100vh-6.5rem-2rem)]"
-		>
-			<CardHeader className="border-b ">
-				<CardTitle className="flex flex-row justify-between items-center">
-					Actors
-					<Flex gap="2">
-						<WithTooltip
-							content="Refresh"
-							trigger={
-								<Button
-									size="icon"
-									isLoading={isRefetching}
-									variant="outline"
-									onClick={() => refetch()}
-								>
-									<Icon icon={faRefresh} />
-								</Button>
-							}
-						/>
-					</Flex>
-				</CardTitle>
-			</CardHeader>
-			<CardContent className="flex-1 min-h-0 w-full p-0">
-				<ActorsListPreview
-					projectNameId={projectNameId}
-					environmentNameId={environmentNameId}
-					actorId={actorId}
-				/>
-			</CardContent>
-		</Card>
+		<div className="flex flex-col h-[calc(100vh-6.5rem)] bg-card -mx-4 -my-4">
+			<ActorsListPreview
+				projectNameId={projectNameId}
+				environmentNameId={environmentNameId}
+				actorId={actorId}
+			/>
+		</div>
 	);
 }
 
@@ -90,7 +55,7 @@ const searchSchema = z.object({
 export const Route = createFileRoute(
 	"/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors",
 )({
-	validateSearch: zodSearchValidator(searchSchema),
+	validateSearch: zodValidator(searchSchema),
 	staticData: {
 		layout: "full",
 	},
