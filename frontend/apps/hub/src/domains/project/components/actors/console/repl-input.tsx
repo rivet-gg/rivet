@@ -11,20 +11,36 @@ import {
 } from "@rivet-gg/components/code-mirror";
 import { forwardRef } from "react";
 
+export const replaceCode = (editor: EditorView, code: string) => {
+	return editor.dispatch({
+		changes: {
+			from: 0,
+			to: editor.state.doc.length,
+			insert: code,
+		},
+		selection: { anchor: code.length },
+		scrollIntoView: true,
+		annotations: [External.of(true)],
+	});
+};
+
 const deleteBgTheme = EditorView.theme({
 	".cm-content": { padding: 0 },
 });
 
+export type ReplInputRef = CodeMirrorRef;
+
 interface ReplInputProps {
+	className: string;
 	rpcs: string[];
 	onRun: (code: string) => void;
 }
 
-export const ReplInput = forwardRef<CodeMirrorRef, ReplInputProps>(
-	({ rpcs, onRun }, ref) => {
+export const ReplInput = forwardRef<ReplInputRef, ReplInputProps>(
+	({ rpcs, onRun, className }, ref) => {
 		const rivetKeymap = keymap.of([
 			{
-				key: "Shift-Enter",
+				key: "Enter",
 				run: (editor) => {
 					onRun(editor?.state.doc.toString());
 					editor.dispatch({
@@ -43,33 +59,27 @@ export const ReplInput = forwardRef<CodeMirrorRef, ReplInputProps>(
 
 		const replAutocomplete = javascriptLanguage.data.of({
 			autocomplete: (context: CompletionContext) => {
-				const word = context.matchBefore(/^\w*/);
+				const word = context.matchBefore(/^actor\.\w*/);
 				if (!word || (word?.from === word?.to && !context.explicit))
 					return null;
 				return {
 					from: word.from,
 					to: word.to,
 					boost: 99,
-					options: [
-						{
-							label: "wait",
-							apply: "wait",
-							validFor: /^(@\w*)?$/,
-							info: "Helper function to wait for a number of milliseconds",
-						},
-						...rpcs.map((rpc) => ({
-							label: rpc,
-							apply: rpc,
-							validFor: /^(@\w*)?$/,
-							info: `Call "${rpc}" RPC on Actor`,
-						})),
-					],
+					options: rpcs.map((rpc) => ({
+						label: `actor.${rpc}(/* args */)`,
+						apply: `actor.${rpc}(`,
+						validFor: /^actor\.\w*$/,
+						info: `Call "${rpc}" RPC on Actor`,
+					})),
 				};
 			},
 		});
 
 		return (
 			<CodeMirror
+				ref={ref}
+				className={className}
 				autoFocus
 				basicSetup={{
 					lineNumbers: false,

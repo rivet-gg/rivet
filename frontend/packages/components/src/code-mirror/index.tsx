@@ -1,10 +1,12 @@
-import { forwardRef } from "react";
-import ReactCodeMirror, { type ReactCodeMirrorRef, type ReactCodeMirrorProps } from "@uiw/react-codemirror";
-import { githubDark, githubDarkInit } from "@uiw/codemirror-theme-github";
-import { Annotation } from "@codemirror/state";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { linter } from "@codemirror/lint";
-import { CodeMirrorContainer } from "../code-mirror-container";
+import { Annotation } from "@codemirror/state";
+import { githubDark, githubDarkInit } from "@uiw/codemirror-theme-github";
+import ReactCodeMirror, {
+	type ReactCodeMirrorRef,
+	type ReactCodeMirrorProps,
+} from "@uiw/react-codemirror";
+import { forwardRef } from "react";
 
 const theme = githubDarkInit({
 	settings: {
@@ -14,23 +16,24 @@ const theme = githubDarkInit({
 	},
 });
 
-export const CodeMirror = forwardRef<ReactCodeMirrorRef, ReactCodeMirrorProps>((props, ref) => {
-	return <ReactCodeMirror ref={ref} theme={theme} {...props} />;
-});
+export const CodeMirror = forwardRef<ReactCodeMirrorRef, ReactCodeMirrorProps>(
+	(props, ref) => {
+		return <ReactCodeMirror ref={ref} theme={theme} {...props} />;
+	},
+);
 
 interface JsonCodeProps extends ReactCodeMirrorProps {}
 
-export const JsonCode = forwardRef<HTMLDivElement, JsonCodeProps>(
-	({ value, extensions = [], className, ...props }, ref) => {
+export const JsonCode = forwardRef<ReactCodeMirrorRef, JsonCodeProps>(
+	({ value, extensions = [], ...props }, ref) => {
 		return (
-			<CodeMirrorContainer ref={ref} tabIndex={0} className={className}>
-				<ReactCodeMirror
-					{...props}
-					extensions={[json(), linter(jsonParseLinter()), ...extensions]}
-					theme={githubDark}
-					value={value}
-				/>
-			</CodeMirrorContainer>
+			<ReactCodeMirror
+				ref={ref}
+				{...props}
+				extensions={[json(), linter(jsonParseLinter()), ...extensions]}
+				theme={githubDark}
+				value={value}
+			/>
 		);
 	},
 );
@@ -39,9 +42,9 @@ export const External = Annotation.define<boolean>();
 export { defaultKeymap } from "@codemirror/commands";
 export { keymap, type KeyBinding, EditorView } from "@codemirror/view";
 export { javascript, javascriptLanguage } from "@codemirror/lang-javascript";
-export { type CompletionContext } from "@codemirror/autocomplete";
+export type { CompletionContext } from "@codemirror/autocomplete";
 export { json, jsonParseLinter } from "@codemirror/lang-json";
-export {
-	type ReactCodeMirrorProps as CodeMirrorProps,
-	type ReactCodeMirrorRef as CodeMirrorRef,
+export type {
+	ReactCodeMirrorProps as CodeMirrorProps,
+	ReactCodeMirrorRef as CodeMirrorRef,
 } from "@uiw/react-codemirror";

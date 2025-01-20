@@ -41,7 +41,6 @@ import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmen
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdVersionsImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/versions'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/tokens'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/servers'
-import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/modules'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/matchmaker'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/lobbies'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/cdn'
@@ -269,16 +268,6 @@ const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServe
     {
       id: '/servers',
       path: '/servers',
-      getParentRoute: () =>
-        AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdRoute,
-    } as any,
-  )
-
-const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesRoute =
-  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesImport.update(
-    {
-      id: '/modules',
-      path: '/modules',
       getParentRoute: () =>
         AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdRoute,
     } as any,
@@ -642,13 +631,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerImport
       parentRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdImport
     }
-    '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/modules': {
-      id: '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/modules'
-      path: '/modules'
-      fullPath: '/projects/$projectNameId/environments/$environmentNameId/modules'
-      preLoaderRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesImport
-      parentRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdImport
-    }
     '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/servers': {
       id: '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/servers'
       path: '/servers'
@@ -828,7 +810,6 @@ interface AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdR
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesRouteWithChildren
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerRoute
-  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesRoute
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersRouteWithChildren
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensRoute
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdVersionsRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdVersionsRoute
@@ -849,8 +830,6 @@ const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdRoute
       AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesRouteWithChildren,
     AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerRoute:
       AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerRoute,
-    AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesRoute:
-      AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesRoute,
     AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersRoute:
       AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersRouteWithChildren,
     AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensRoute:
@@ -1009,7 +988,6 @@ export interface FileRoutesByFullPath {
   '/projects/$projectNameId/environments/$environmentNameId/cdn': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute
   '/projects/$projectNameId/environments/$environmentNameId/lobbies': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesRouteWithChildren
   '/projects/$projectNameId/environments/$environmentNameId/matchmaker': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerRoute
-  '/projects/$projectNameId/environments/$environmentNameId/modules': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesRoute
   '/projects/$projectNameId/environments/$environmentNameId/servers': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersRouteWithChildren
   '/projects/$projectNameId/environments/$environmentNameId/tokens': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensRoute
   '/projects/$projectNameId/environments/$environmentNameId/versions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdVersionsRoute
@@ -1047,7 +1025,6 @@ export interface FileRoutesByTo {
   '/projects/$projectNameId/environments/$environmentNameId/builds': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBuildsRoute
   '/projects/$projectNameId/environments/$environmentNameId/cdn': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute
   '/projects/$projectNameId/environments/$environmentNameId/matchmaker': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerRoute
-  '/projects/$projectNameId/environments/$environmentNameId/modules': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesRoute
   '/projects/$projectNameId/environments/$environmentNameId/servers': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersRouteWithChildren
   '/projects/$projectNameId/environments/$environmentNameId/tokens': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensRoute
   '/projects/$projectNameId/environments/$environmentNameId/versions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdVersionsRoute
@@ -1095,7 +1072,6 @@ export interface FileRoutesById {
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/cdn': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/lobbies': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesRouteWithChildren
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/matchmaker': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerRoute
-  '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/modules': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdModulesRoute
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/servers': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersRouteWithChildren
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/tokens': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensRoute
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/versions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdVersionsRoute
@@ -1143,7 +1119,6 @@ export interface FileRouteTypes {
     | '/projects/$projectNameId/environments/$environmentNameId/cdn'
     | '/projects/$projectNameId/environments/$environmentNameId/lobbies'
     | '/projects/$projectNameId/environments/$environmentNameId/matchmaker'
-    | '/projects/$projectNameId/environments/$environmentNameId/modules'
     | '/projects/$projectNameId/environments/$environmentNameId/servers'
     | '/projects/$projectNameId/environments/$environmentNameId/tokens'
     | '/projects/$projectNameId/environments/$environmentNameId/versions'
@@ -1180,7 +1155,6 @@ export interface FileRouteTypes {
     | '/projects/$projectNameId/environments/$environmentNameId/builds'
     | '/projects/$projectNameId/environments/$environmentNameId/cdn'
     | '/projects/$projectNameId/environments/$environmentNameId/matchmaker'
-    | '/projects/$projectNameId/environments/$environmentNameId/modules'
     | '/projects/$projectNameId/environments/$environmentNameId/servers'
     | '/projects/$projectNameId/environments/$environmentNameId/tokens'
     | '/projects/$projectNameId/environments/$environmentNameId/versions'
@@ -1226,7 +1200,6 @@ export interface FileRouteTypes {
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/cdn'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/lobbies'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/matchmaker'
-    | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/modules'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/servers'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/tokens'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/versions'
@@ -1399,7 +1372,6 @@ export const routeTree = rootRoute
         "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/cdn",
         "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/lobbies",
         "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/matchmaker",
-        "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/modules",
         "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/servers",
         "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/tokens",
         "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/versions",
@@ -1450,10 +1422,6 @@ export const routeTree = rootRoute
     },
     "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/matchmaker": {
       "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/matchmaker.tsx",
-      "parent": "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId"
-    },
-    "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/modules": {
-      "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/modules.tsx",
       "parent": "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId"
     },
     "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/servers": {
