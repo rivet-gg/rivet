@@ -55,6 +55,30 @@ pub async fn user(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
 						.send()
 						.await?;
 				},
+				Main::ProfileSet(sig) => {
+					let res = ctx.activity(ProfileSetInput {
+						user_id,
+						display_name: sig.display_name,
+						account_number: sig.account_number,
+						bio: sig.bio
+					}).await?;
+
+					ctx.msg(ProfileSetStatus { res: res.clone() })
+							.tag("user_id", user_id)
+							.send()
+							.await?;
+					
+					if res.is_ok() {
+						ctx.activity(PublishProfileSetAnalyticsInput {
+							user_id
+						}).await?;
+
+						ctx.msg(Update {})
+							.tag("user_id", user_id)
+							.send()
+							.await?;
+					}
+				},
 				Main::Delete(_) => {
 					return Ok(Loop::Break(()));
 				},
@@ -116,6 +140,121 @@ async fn admin_set(ctx: &ActivityCtx, input: &AdminSetInput) -> GlobalResult<()>
 
 	Ok(())
 }
+
+// ProfileSet
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+struct ProfileSetInput {
+	user_id: Uuid,
+	display_name: Option<String>,
+	account_number: Option<u32>,
+	bio: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+pub enum ProfileSetError {
+	ValidationFailure,
+	MissingParameters,
+}
+
+#[activity(ProfileSetActivity)]
+async fn profile_set(ctx: &ActivityCtx, input: &ProfileSetInput) -> GlobalResult<Result<(), ProfileSetError>> {
+	let mut query_components = Vec::new();
+
+	// Check if each component exists
+	if input.display_name.is_some() {
+		query_components.push(format!("display_name = ${}", query_components.len() + 2));
+	}
+	if input.account_number.is_some() {
+		query_components.push(format!("account_number = ${}", query_components.len() + 2));
+	}
+	if input.bio.is_some() {
+		query_components.push(format!("bio = ${}", query_components.len() + 2));
+	}
+
+	let val = !query_components.is_empty();
+	if !val {
+		return Ok(Err(ProfileSetError::MissingParameters));
+	}
+
+	let validation_res = ctx.op(crate::ops::profile_validate::Input {
+		user_id: input.user_id,
+		display_name: input.display_name.clone(),
+		account_number: input.account_number,
+		bio: input.bio.clone()
+	})
+	.await?;
+
+	if !validation_res.errors.is_empty() {
+		tracing::warn!(errors = ?validation_res.errors, "validation errors");
+
+		return Ok(Err(ProfileSetError::ValidationFailure));
+	}
+
+	ctx.cache().purge("user", [input.user_id]).await?;
+
+	// Build query
+	let built_query = query_components.join(",");
+	let query_string = format!(
+		"UPDATE db_user.users SET {} WHERE user_id = $1",
+		built_query
+	);
+
+	// TODO: Convert this to sql_execute! macro
+	let query = sqlx::query(&query_string).bind(input.user_id);
+
+	// Bind display name
+	let query = if let Some(display_name) = &input.display_name {
+		query.bind(display_name)
+	} else {
+		query
+	};
+
+	// Bind account number
+	let query = if let Some(account_number) = input.account_number {
+		query.bind(account_number as i64)
+	} else {
+		query
+	};
+
+	// Bind bio
+	let query = if let Some(bio) = &input.bio {
+		query.bind(util::format::biography(bio))
+	} else {
+		query
+	};
+
+	query.execute(&ctx.crdb().await?).await?;
+	
+	Ok(Ok(()))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+struct PublishProfileSetAnalyticsInput {
+	user_id: Uuid
+}
+
+#[activity(PublishProfileSetAnalytics)]
+async fn publish_profile_set_analytics(
+	ctx: &ActivityCtx,
+	input: &PublishProfileSetAnalyticsInput
+) -> GlobalResult<()> {
+	msg!([ctx] analytics::msg::event_create() {
+		events: vec![
+			analytics::msg::event_create::Event {
+				event_id: Some(Uuid::new_v4().into()),
+				name: "user.profile_set".into(),
+				properties_json: Some(serde_json::to_string(&json!({
+					"user_id": input.user_id.to_string()
+				}))?),
+				..Default::default()
+			},
+		],
+	})
+	.await?;
+
+	Ok(())
+}
+
 
 // Creation
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
@@ -362,14 +501,30 @@ pub struct Update {}
 #[message("user_delete_complete")]
 pub struct DeleteComplete {}
 
+#[message("user_event")]
+pub struct Event {}
+
+#[message("user_profile_set_status")]
+pub struct ProfileSetStatus {
+	pub res: Result<(), ProfileSetError>,
+}
+
 #[signal("user_admin_set")]
 pub struct AdminSet {}
+
+#[signal("user_profile_set")]
+pub struct ProfileSet {
+	pub display_name: Option<String>,
+	pub account_number: Option<u32>,
+	pub bio: Option<String>,
+}
 
 #[signal("user_delete")]
 pub struct Delete {}
 
 join_signal!(Main {
 	AdminSet,
+	ProfileSet,
 	Delete,
 });
 
