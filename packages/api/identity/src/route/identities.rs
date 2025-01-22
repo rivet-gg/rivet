@@ -217,13 +217,12 @@ pub async fn validate_profile(
 		"invalid parameter account_number`"
 	);
 
-	let res = op!([ctx] user_profile_validate {
-		user_id: Some(user_ent.user_id.into()),
+	let res =  (*ctx).op(::user::ops::profile_validate::Input {
+		user_id: user_ent.user_id,
 		display_name: body.display_name.clone(),
-		account_number:
-			body.account_number
-				.map(|n| n.api_try_into())
-				.transpose()?,
+		account_number: body.account_number
+			.map(|n| n.api_try_into())
+			.transpose()?,
 		bio: body.bio.clone(),
 	})
 	.await?;
@@ -291,9 +290,9 @@ pub async fn complete_avatar_upload(
 ) -> GlobalResult<serde_json::Value> {
 	let user_ent = ctx.auth().user(ctx.op_ctx()).await?;
 
-	op!([ctx] user_avatar_upload_complete {
-		user_id: Some(user_ent.user_id.into()),
-		upload_id: Some(upload_id.into()),
+	(*ctx).op(::user::ops::avatar_upload_complete::Input {
+		user_id: user_ent.user_id,
+		upload_id: upload_id,
 	})
 	.await?;
 
@@ -307,8 +306,8 @@ pub async fn mark_deletion(
 ) -> GlobalResult<serde_json::Value> {
 	let user_ent = ctx.auth().user(ctx.op_ctx()).await?;
 
-	op!([ctx] user_pending_delete_toggle {
-		user_id: Some(user_ent.user_id.into()),
+	(*ctx).op(::user::ops::pending_delete_toggle::Input {
+		user_id: user_ent.user_id,
 		active: true,
 	})
 	.await?;
@@ -320,8 +319,8 @@ pub async fn mark_deletion(
 pub async fn unmark_deletion(ctx: Ctx<Auth>) -> GlobalResult<serde_json::Value> {
 	let user_ent = ctx.auth().user(ctx.op_ctx()).await?;
 
-	op!([ctx] user_pending_delete_toggle {
-		user_id: Some(user_ent.user_id.into()),
+	(*ctx).op(::user::ops::pending_delete_toggle::Input {
+		user_id: user_ent.user_id,
 		active: false,
 	})
 	.await?;

@@ -157,15 +157,21 @@ impl Auth {
 		} else if let Ok(user_ent) = claims.as_user() {
 			// Get the user
 			let (user_res, game_res, team_list_res) = tokio::try_join!(
-				op!([ctx] user_get {
-					user_ids: vec![user_ent.user_id.into()],
-				}),
+				chirp_workflow::compat::op(
+					&ctx,
+					::user::ops::get::Input {
+						user_ids: vec![user_ent.user_id],
+					},
+				),
 				op!([ctx] game_get {
 					game_ids: vec![game_id.into()],
 				}),
-				op!([ctx] user_team_list {
-					user_ids: vec![user_ent.user_id.into()],
-				}),
+				chirp_workflow::compat::op(
+					&ctx,
+					user::ops::team_list::Input {
+						user_ids: vec![user_ent.user_id],
+					},
+				),
 			)?;
 			let Some(user) = user_res.users.first() else {
 				bail_with!(TOKEN_REVOKED)
@@ -186,8 +192,7 @@ impl Auth {
 			let is_part_of_team = user_teams
 				.teams
 				.iter()
-				.filter_map(|x| x.team_id)
-				.any(|x| x.as_uuid() == dev_team_id);
+				.any(|x| x.team_id == dev_team_id);
 			ensure_with!(is_part_of_team, GROUP_NOT_MEMBER);
 
 			// Get team

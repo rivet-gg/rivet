@@ -1,6 +1,6 @@
 use rivet_api::models;
 use rivet_operation::prelude::*;
-use types_proto::rivet::backend::{self, pkg::*};
+use types_proto::rivet::backend::{self};
 
 use crate::{convert, fetch, ApiTryInto};
 
@@ -26,7 +26,7 @@ pub fn handle(
 
 pub fn summary(
 	config: &rivet_config::Config,
-	current_user_id: Uuid,
+	_current_user_id: Uuid,
 	user: &backend::user::User,
 ) -> GlobalResult<models::IdentitySummary> {
 	let user_id_proto = unwrap!(user.user_id);
@@ -51,7 +51,7 @@ pub fn summary(
 #[derive(Debug)]
 pub struct ProfileCtx<'a> {
 	pub teams_ctx: &'a fetch::identity::TeamsCtx,
-	pub linked_accounts: &'a [user_identity::get::response::User],
+	pub linked_accounts: &'a [::user::ops::identity::get::User],
 	pub self_is_game_linked: bool,
 }
 
@@ -69,7 +69,7 @@ pub fn profile(
 	let identities = unwrap!(pctx
 		.linked_accounts
 		.iter()
-		.find(|identity| identity.user_id == user.user_id));
+		.find(|identity| identity.user_id == user_id));
 	let identities = &identities.identities;
 	// If the user has at least one identity they are considered registered
 	let is_registered = !identities.is_empty();
@@ -81,11 +81,11 @@ pub fn profile(
 			.user_teams
 			.users
 			.iter()
-			.find(|u| u.user_id == user.user_id));
+			.find(|u| Some(common::Uuid::from(u.user_id)) == user.user_id));
 		let team_ids = user
 			.teams
 			.iter()
-			.map(|t| Ok(unwrap!(t.team_id)))
+			.map(|t| Ok(common::Uuid::from(t.team_id)))
 			.collect::<GlobalResult<Vec<_>>>()?;
 
 		pctx.teams_ctx
