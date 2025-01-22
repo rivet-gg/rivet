@@ -5,6 +5,83 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [24.7.0](https://github.com/rivet-gg/rivet/compare/v24.6.2...v24.7.0) (2025-01-22)
+
+
+### Features
+
+* add ats prewarm to pegboard ([#1816](https://github.com/rivet-gg/rivet/issues/1816)) ([691421e](https://github.com/rivet-gg/rivet/commit/691421e59cc9522b06b9b52407691acd8f679146))
+* add build script for direct esbuild testing ([#1880](https://github.com/rivet-gg/rivet/issues/1880)) ([a8d1c76](https://github.com/rivet-gg/rivet/commit/a8d1c762d145395054f6fab39a711a69dd4601bc))
+* add error screen for network issues ([#1871](https://github.com/rivet-gg/rivet/issues/1871)) ([3c331a7](https://github.com/rivet-gg/rivet/commit/3c331a7e35505757396f87da2863707b13e0cb9c))
+* add project and environment view commands ([#1888](https://github.com/rivet-gg/rivet/issues/1888)) ([df70e3f](https://github.com/rivet-gg/rivet/commit/df70e3f1e9ae3155f1c82b0b22d06fc3a23a7def))
+* add tunnel cert rotation ([#1804](https://github.com/rivet-gg/rivet/issues/1804)) ([66f5c63](https://github.com/rivet-gg/rivet/commit/66f5c632be1f30dd9362267196c1cb9395367eb1))
+* **cli:** add `rivet view` command as alias of `rivet environment view` ([#1911](https://github.com/rivet-gg/rivet/issues/1911)) ([d4c4824](https://github.com/rivet-gg/rivet/commit/d4c4824138fe2c918dc500daae5c17447f8c0aea))
+* **cli:** automatically prompt to login for commands that require auth ([#1913](https://github.com/rivet-gg/rivet/issues/1913)) ([9c7c793](https://github.com/rivet-gg/rivet/commit/9c7c793d02656a6387479482b392cbfc21aa5873))
+* github star button ([#1851](https://github.com/rivet-gg/rivet/issues/1851)) ([65a9b2e](https://github.com/rivet-gg/rivet/commit/65a9b2e3e5775a1e85f15c4dd91a6345d95555cd))
+* **hub:** actor repl ([#1841](https://github.com/rivet-gg/rivet/issues/1841)) ([80b7b39](https://github.com/rivet-gg/rivet/commit/80b7b39b765cfd6d196762ddc12e5469d93ea62d))
+* **hub:** actors and builds filters ([#1884](https://github.com/rivet-gg/rivet/issues/1884)) ([bad6906](https://github.com/rivet-gg/rivet/commit/bad6906b9bda56eef2509229f18af61a56e5dcbc))
+* **site:** add "edit this page" button ([#1885](https://github.com/rivet-gg/rivet/issues/1885)) ([ae145ce](https://github.com/rivet-gg/rivet/commit/ae145ce8eb12104742517098512a5f0044811587))
+* use new onboarding flow when linking a device ([#1869](https://github.com/rivet-gg/rivet/issues/1869)) ([5e63965](https://github.com/rivet-gg/rivet/commit/5e63965e82e86790372923f8db3a95b726680ee6))
+
+
+### Bug Fixes
+
+* **actors-sdk:** use proper binary fromat when receiving cbor data ([#1743](https://github.com/rivet-gg/rivet/issues/1743)) ([acd927e](https://github.com/rivet-gg/rivet/commit/acd927e4c913d2a8290eea54dcd6b1d2d2dc8095))
+* add website image to header ([#1900](https://github.com/rivet-gg/rivet/issues/1900)) ([cb2ce1e](https://github.com/rivet-gg/rivet/commit/cb2ce1e541736e50b7fc5122ccfe4388c24cca21))
+* adjust release scripts to new workflow ([#1863](https://github.com/rivet-gg/rivet/issues/1863)) ([cf7f7b6](https://github.com/rivet-gg/rivet/commit/cf7f7b6f3160e4983d6565b8c3d3db260f06c65c))
+* **cli:** make esbuild portable ([#1917](https://github.com/rivet-gg/rivet/issues/1917)) ([e674c16](https://github.com/rivet-gg/rivet/commit/e674c162577550a295e02920d4fce3bc83abda75))
+* **docker:** update base-runner deiban to 12.1 to fix ca-certificates install error ([#1903](https://github.com/rivet-gg/rivet/issues/1903)) ([c5adb1e](https://github.com/rivet-gg/rivet/commit/c5adb1ef0a9b83dddf5e60ef952df6e328d86f35))
+* docs button ([#1858](https://github.com/rivet-gg/rivet/issues/1858)) ([2b20094](https://github.com/rivet-gg/rivet/commit/2b2009404b1acc9b1cdb2e8562e7fa3340d48169))
+* **hub:** build with rivet gives 404s ([#1855](https://github.com/rivet-gg/rivet/issues/1855)) ([62fde8e](https://github.com/rivet-gg/rivet/commit/62fde8e6cc54393a81dde8186272e9be84d49892))
+* **hub:** use https to create manager url ([#1907](https://github.com/rivet-gg/rivet/issues/1907)) ([5ea3608](https://github.com/rivet-gg/rivet/commit/5ea360868d4d8680b157ce105542fb6cc4e6185f))
+* improve default export error message ([#1895](https://github.com/rivet-gg/rivet/issues/1895)) ([8dc418b](https://github.com/rivet-gg/rivet/commit/8dc418b38b5722a0e140e4ccdd4da3cd2b4642b5))
+* links for pricing and sales ([#1845](https://github.com/rivet-gg/rivet/issues/1845)) ([010d367](https://github.com/rivet-gg/rivet/commit/010d367a9b3871c5dedd558012fb8f0e2739c835))
+* **pegboard:** fix query in get_client_from_dc ([#1897](https://github.com/rivet-gg/rivet/issues/1897)) ([ba82622](https://github.com/rivet-gg/rivet/commit/ba8262219d4d7b0096c08308d0fbee5b36390052))
+* periodically pull ats addr ([#1814](https://github.com/rivet-gg/rivet/issues/1814)) ([dd65e86](https://github.com/rivet-gg/rivet/commit/dd65e86b0e6dab62e49fb838cfddc9387ab460cc))
+* promo image ([#1847](https://github.com/rivet-gg/rivet/issues/1847)) ([55e7b20](https://github.com/rivet-gg/rivet/commit/55e7b20d3b2efdac03578d345f852a514b428dc6))
+* release scripts ([#1932](https://github.com/rivet-gg/rivet/issues/1932)) ([057e98b](https://github.com/rivet-gg/rivet/commit/057e98b64864b9f9ceb9a77111552865b247fbb8))
+* remove react scan ([#1862](https://github.com/rivet-gg/rivet/issues/1862)) ([2871f2b](https://github.com/rivet-gg/rivet/commit/2871f2b244cb0582c4836172fdfc0d27c8ad1376))
+* remove source hash from cache ([#1843](https://github.com/rivet-gg/rivet/issues/1843)) ([86e5238](https://github.com/rivet-gg/rivet/commit/86e5238f1366ca14dddfbbe7682767a3d4d803d9))
+* reset recent team redirection when leaving a group ([#1873](https://github.com/rivet-gg/rivet/issues/1873)) ([1a80f92](https://github.com/rivet-gg/rivet/commit/1a80f92cfa7d9be2f07d226dbaa2bcebda63cd72))
+* revert upsert query in pegboard ws ([#1831](https://github.com/rivet-gg/rivet/issues/1831)) ([e4256d9](https://github.com/rivet-gg/rivet/commit/e4256d91fab8fbfbb5f62a4087854575b00f7e52))
+* **sdks/actor/client:** enable @rivet-gg/actor-client/test to run in node env ([#1912](https://github.com/rivet-gg/rivet/issues/1912)) ([d1176c9](https://github.com/rivet-gg/rivet/commit/d1176c941e5e366a8ef24cb13b12090aa4adb4c6))
+* **sdks/actor/manager:** fix cors to allow more origins ([#1910](https://github.com/rivet-gg/rivet/issues/1910)) ([9a7d71b](https://github.com/rivet-gg/rivet/commit/9a7d71b623967626b6299c6078df251a55978530))
+* **sdks/actor/manager:** fix manager builds with new workspaces ([#1890](https://github.com/rivet-gg/rivet/issues/1890)) ([0d41cc8](https://github.com/rivet-gg/rivet/commit/0d41cc8a57a3d1e4df857dbf4dfa30dbce46716d))
+* select styles and build base url ([#1867](https://github.com/rivet-gg/rivet/issues/1867)) ([2dbead7](https://github.com/rivet-gg/rivet/commit/2dbead7603bf5c17e4dcd693565021b09089e50a))
+
+
+### Documentation
+
+* add Deno and Node.js compatibility tips ([#1878](https://github.com/rivet-gg/rivet/issues/1878)) ([868a233](https://github.com/rivet-gg/rivet/commit/868a23353161e77f8e66f8e40862512ac8b3c704))
+* add lifecycle hooks implementation note ([#1875](https://github.com/rivet-gg/rivet/issues/1875)) ([edcf200](https://github.com/rivet-gg/rivet/commit/edcf2008e9683ff1823d57ff1586cc08b616af1e))
+* clarify actor lifecycle method behaviors ([#1877](https://github.com/rivet-gg/rivet/issues/1877)) ([bc746c8](https://github.com/rivet-gg/rivet/commit/bc746c8ed30e2c9134872f074cea6fe881a28691))
+* improve monorepo development documentation ([#1889](https://github.com/rivet-gg/rivet/issues/1889)) ([3f83b73](https://github.com/rivet-gg/rivet/commit/3f83b738fb158746ccc692567552ab9decbc7b19))
+* reorganize self-hosting documentation ([#1876](https://github.com/rivet-gg/rivet/issues/1876)) ([0d2b412](https://github.com/rivet-gg/rivet/commit/0d2b41206378c5ae2ed928c202b58e40e6c07569))
+
+
+### Chores
+
+* **actors:** disable waiting for upgrade complete signal in api ([#1898](https://github.com/rivet-gg/rivet/issues/1898)) ([960390e](https://github.com/rivet-gg/rivet/commit/960390eda2ef007e37e1fde8008723ba03d77bf6))
+* add deno.json warning in deploy task ([#1919](https://github.com/rivet-gg/rivet/issues/1919)) ([b533f6b](https://github.com/rivet-gg/rivet/commit/b533f6bcf09b4cce1cfe7031b722b3ce5da0cdbb))
+* add openhands support ([#1887](https://github.com/rivet-gg/rivet/issues/1887)) ([a829b16](https://github.com/rivet-gg/rivet/commit/a829b168748e41cb082bdf0a44c94c9a8282f542))
+* add pkg.pr.new ([#1870](https://github.com/rivet-gg/rivet/issues/1870)) ([52b8aad](https://github.com/rivet-gg/rivet/commit/52b8aad971bd5dfe5398f6010a9f57deeee42e4c))
+* enable corepack in release workflow ([#1924](https://github.com/rivet-gg/rivet/issues/1924)) ([6373c30](https://github.com/rivet-gg/rivet/commit/6373c306a611c0c01f2d1f98696085ec40d9b9ea))
+* **examples:** add  registry ([#1734](https://github.com/rivet-gg/rivet/issues/1734)) ([bf01b9a](https://github.com/rivet-gg/rivet/commit/bf01b9a24ad9e28471e894ceb3df5c3006d0e658))
+* format package.json files arrays ([#1923](https://github.com/rivet-gg/rivet/issues/1923)) ([b46efac](https://github.com/rivet-gg/rivet/commit/b46efacf966d355ab37e9eebdbc0175aac1a17f5))
+* improve frontend apps workflow ([#1756](https://github.com/rivet-gg/rivet/issues/1756)) ([b66b5f0](https://github.com/rivet-gg/rivet/commit/b66b5f03568e2809db44f89bd68cd0c7d01fe425))
+* migrate to @luca/esbuild-deno-loader ([#1881](https://github.com/rivet-gg/rivet/issues/1881)) ([58521da](https://github.com/rivet-gg/rivet/commit/58521da754d54638a5f44556f087348a4e1ba611))
+* remove jsr packages from js-utils-embed ([#1916](https://github.com/rivet-gg/rivet/issues/1916)) ([ebef9f2](https://github.com/rivet-gg/rivet/commit/ebef9f2598c928bed63ae700ddd61ad2ffa6871c))
+* **sdks/actor:** remove all jsr libraries ([#1915](https://github.com/rivet-gg/rivet/issues/1915)) ([fcceb8d](https://github.com/rivet-gg/rivet/commit/fcceb8d6daa84a51c80fa8bad907424e7d0545ba))
+* **toolchain:** include node polyfill for unsupported standard libraries ([#1894](https://github.com/rivet-gg/rivet/issues/1894)) ([9912720](https://github.com/rivet-gg/rivet/commit/99127204f23bb777a89a81676e8f2ac8aa18c2c1))
+* **toolchain:** update default templates for npm compat ([#1914](https://github.com/rivet-gg/rivet/issues/1914)) ([4266f46](https://github.com/rivet-gg/rivet/commit/4266f4658465eba24cbae9e99bcd916401394efc))
+* update apis ([#1922](https://github.com/rivet-gg/rivet/issues/1922)) ([d83ab10](https://github.com/rivet-gg/rivet/commit/d83ab10dc3daf138733b5dd5cf29adfe842724c6))
+* update quickstart ([#1905](https://github.com/rivet-gg/rivet/issues/1905)) ([6856eda](https://github.com/rivet-gg/rivet/commit/6856edadaf1ac1d5419ba88a00b0de33e16b775a))
+* update readme ([#1886](https://github.com/rivet-gg/rivet/issues/1886)) ([9351758](https://github.com/rivet-gg/rivet/commit/9351758a5401e092e530717f472f3a4673a9bab5))
+* update site ([#1840](https://github.com/rivet-gg/rivet/issues/1840)) ([dd1781b](https://github.com/rivet-gg/rivet/commit/dd1781b77f9db418a27c6f361a3a11be3513569d))
+* update site ([#1893](https://github.com/rivet-gg/rivet/issues/1893)) ([fda6ecb](https://github.com/rivet-gg/rivet/commit/fda6ecbbce08233a1bb4e268c5c4b4dbc569abce))
+* update website ([#1856](https://github.com/rivet-gg/rivet/issues/1856)) ([2a21415](https://github.com/rivet-gg/rivet/commit/2a2141572225097a12f78e78d0b7caf3d88202c1))
+* upgrade system-test to npm ([#1918](https://github.com/rivet-gg/rivet/issues/1918)) ([4e9cde8](https://github.com/rivet-gg/rivet/commit/4e9cde839f1e6fc0f715ad2bc65a0059f5f56b9f))
+
 ## [24.6.2](https://github.com/rivet-gg/rivet/compare/v24.6.2-rc.1...v24.6.2) (2025-01-13)
 
 
