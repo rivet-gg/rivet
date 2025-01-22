@@ -17,3 +17,4 @@ job-run.workspace = true
 linode.workspace = true
 pegboard.workspace = true
 rivet-config.workspace = true
+user.workspace = true
