@@ -3,6 +3,8 @@ use proto::backend::{pkg::*};
 use rivet_operation::prelude::proto;
 use rand::Rng;
 
+mod common;
+
 #[workflow_test]
 async fn empty(ctx: TestCtx) {
 	let res = ctx.op(::user::ops::get::Input {
