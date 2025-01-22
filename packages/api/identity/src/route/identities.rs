@@ -194,14 +194,22 @@ pub async fn update_profile(
 		"invalid parameter account_number`"
 	);
 
-	msg!([ctx] user::msg::profile_set(user_ent.user_id) -> user::msg::update {
-		user_id: Some(user_ent.user_id.into()),
+	let mut sub = ctx
+		.subscribe::<::user::workflows::user::ProfileSetStatus>(("user_id", user_ent.user_id))
+		.await?;
+
+	ctx.signal(::user::workflows::user::ProfileSet {
 		display_name: body.display_name.clone(),
 		account_number: body.account_number.map(|n| n.api_try_into()).transpose()?,
 		bio: body.bio.clone(),
 	})
+	.tag("user_id", user_ent.user_id)
+	.send()
 	.await?;
-
+	
+	let status_msg = sub.next().await?;
+	ensure!(status_msg.res.is_ok(), "bad profile set request");
+	
 	Ok(serde_json::json!({}))
 }
 
