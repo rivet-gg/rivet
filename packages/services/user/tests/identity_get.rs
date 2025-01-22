@@ -3,12 +3,8 @@ use rivet_operation::prelude::proto::backend;
 
 #[workflow_test]
 async fn empty(ctx: TestCtx) {
-	let user_res = op!([ctx] faker_user {
-		..Default::default()
-	})
-	.await
-	.unwrap();
-    let user_id = user_res.user_id.unwrap().as_uuid();
+	let user_res = ctx.op(faker::ops::user::Input {}).await.unwrap();
+	let user_id = user_res.user_id;
 
 	let email = util::faker::email();
     ctx.op(::user::ops::identity::create::Input {

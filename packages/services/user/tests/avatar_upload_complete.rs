@@ -5,8 +5,8 @@ const TEST_BODY: &[u8] = b"test file";
 
 #[workflow_test]
 async fn empty(ctx: TestCtx) {
-	let user_res = op!([ctx] faker_user {}).await.unwrap();
-	let user_id = user_res.user_id.unwrap().as_uuid();
+	let user_res = ctx.op(faker::ops::user::Input {}).await.unwrap();
+	let user_id = user_res.user_id;
 
 	// Create the upload
 	let upload_prepare_res = op!([ctx] upload_prepare {
