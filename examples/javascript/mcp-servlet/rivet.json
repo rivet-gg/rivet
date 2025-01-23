@@ -1,0 +1,13 @@
+{
+	"builds": {
+		"simple_http": {
+			"script": "simple_http.ts",
+			"access": "private"
+		}
+	},
+	"unstable": {
+		"manager": {
+			"enable": false
+		}
+	}
+}

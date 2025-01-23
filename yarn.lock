@@ -3138,6 +3138,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rivet-gg/api@npm:^24.6.2":
+  version: 24.6.2
+  resolution: "@rivet-gg/api@npm:24.6.2"
+  dependencies:
+    "@types/readable-stream": "npm:^4.0.18"
+    form-data: "npm:^4.0.0"
+    js-base64: "npm:^3.7.5"
+    node-fetch: "npm:2"
+    qs: "npm:^6.11.2"
+    readable-stream: "npm:^4.5.2"
+    url-join: "npm:^5.0.0"
+  checksum: 10c0/5c3355516f69daf3e46550d5e7ba0774a7ab8943a828f60e03b9a5c534000df61e68f9450b47aa739ce28600b5b5d40045ab86df6f3ca0c49f30929382cc667c
+  languageName: node
+  linkType: hard
+
 "@rivet-gg/components@workspace:*, @rivet-gg/components@workspace:frontend/packages/components":
   version: 0.0.0-use.local
   resolution: "@rivet-gg/components@workspace:frontend/packages/components"
@@ -4512,6 +4527,16 @@ __metadata:
     "@types/prop-types": "npm:*"
     csstype: "npm:^3.0.2"
   checksum: 10c0/8fb2b00672072135d0858dc9db07873ea107cc238b6228aaa2a9afd1ef7a64a7074078250db38afbeb19064be8ea6af5eac32d404efdd5f45e093cc4829d87f8
+  languageName: node
+  linkType: hard
+
+"@types/readable-stream@npm:^4.0.18":
+  version: 4.0.18
+  resolution: "@types/readable-stream@npm:4.0.18"
+  dependencies:
+    "@types/node": "npm:*"
+    safe-buffer: "npm:~5.1.1"
+  checksum: 10c0/641e0e91b9ecfeed72f7509089f25923e06e19e79ed36f962785c41c07b0c9ecb2ecfdf6d290a101b9b5a669a3b89ee3aff0cad57b66a05e2a30cd199052e3e1
   languageName: node
   linkType: hard
 
@@ -9480,6 +9505,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mcp-servlet@workspace:examples/javascript/mcp-servlet":
+  version: 0.0.0-use.local
+  resolution: "mcp-servlet@workspace:examples/javascript/mcp-servlet"
+  dependencies:
+    "@rivet-gg/actor": "workspace:*"
+    "@rivet-gg/actor-client": "workspace:*"
+    "@rivet-gg/api": "npm:^24.6.2"
+    hono: "npm:^4.6.17"
+  languageName: unknown
+  linkType: soft
+
 "mdast-util-definitions@npm:^5.0.0":
   version: 5.1.2
   resolution: "mdast-util-definitions@npm:5.1.2"
@@ -12688,7 +12724,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"safe-buffer@npm:5.1.2":
+"safe-buffer@npm:5.1.2, safe-buffer@npm:~5.1.1":
   version: 5.1.2
   resolution: "safe-buffer@npm:5.1.2"
   checksum: 10c0/780ba6b5d99cc9a40f7b951d47152297d0e260f0df01472a1b99d4889679a4b94a13d644f7dbc4f022572f09ae9005fa2fbb93bbbd83643316f365a3e9a45b21
