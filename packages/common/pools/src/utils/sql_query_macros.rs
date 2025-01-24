@@ -139,8 +139,8 @@ macro_rules! __sql_query {
 
 			// Acquire connection
 			$crate::__sql_query_metrics_acquire!(_acquire);
-			let crdb = $driver;
-			let mut conn = $crate::__sql_acquire!($ctx, crdb);
+			let driver = $driver;
+			let mut conn = $crate::__sql_acquire!($ctx, driver);
 
 			// Execute query
 			$crate::__sql_query_metrics_start!($ctx, execute, _acquire, _start);
@@ -184,8 +184,8 @@ macro_rules! __sql_query_as {
 
 			// Acquire connection
 			$crate::__sql_query_metrics_acquire!(_acquire);
-			let crdb = $driver;
-			let mut conn = $crate::__sql_acquire!($ctx, crdb);
+			let driver = $driver;
+			let mut conn = $crate::__sql_acquire!($ctx, driver);
 
 			// Execute query
 			$crate::__sql_query_metrics_start!($ctx, $action, _acquire, _start);

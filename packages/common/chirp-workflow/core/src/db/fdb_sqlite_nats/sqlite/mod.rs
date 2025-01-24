@@ -25,7 +25,7 @@ const MIGRATIONS_DIR: Dir =
 	include_dir!("$CARGO_MANIFEST_DIR/src/db/fdb_sqlite_nats/sqlite/migrations");
 
 lazy_static::lazy_static! {
-	// We use a lazy static because this nly needs to be processed once
+	// We use a lazy static because this only needs to be processed once
 	static ref MIGRATIONS: Migrations = Migrations::new();
 }
 

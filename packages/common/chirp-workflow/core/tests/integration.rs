@@ -107,7 +107,7 @@ mod def {
 		ctx.signal(MySignal {
 			test: Uuid::new_v4(),
 		})
-		.to_workflow(workflow_id)
+		.to_workflow_id(workflow_id)
 		.send()
 		.await?;
 
