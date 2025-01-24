@@ -364,6 +364,9 @@ impl Database for DatabaseFdbSqliteNats {
 		}
 	}
 
+	/// Returns the first workflow with the given name and tags, first meaning the one with the lowest uuid
+	/// value (interpreted as u128) because its in a KV store. There is no way to get any other workflow
+	/// besides the first.
 	async fn find_workflow(
 		&self,
 		workflow_name: &str,

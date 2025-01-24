@@ -79,12 +79,6 @@ pub enum WorkflowError {
 	#[error("deserialize message: {0}")]
 	DeserializeMessage(serde_json::Error),
 
-	#[error("serialize loop state: {0}")]
-	SerializeLoopState(serde_json::Error),
-
-	#[error("deserialize loop state: {0}")]
-	DeserializeLoopState(serde_json::Error),
-
 	#[error("failed to serialize cjson tags: {0:?}")]
 	CjsonSerializeTags(cjson::Error),
 
