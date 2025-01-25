@@ -119,6 +119,10 @@ pub struct Rivet {
 
 	#[serde(default)]
 	pub cdn: Option<Cdn>,
+
+	/// Configuration for edge clusters. Should be null on the core cluster.
+	#[serde(default)]
+	pub edge: Option<Edge>,
 }
 
 impl Default for Rivet {
@@ -145,6 +149,7 @@ impl Default for Rivet {
 			billing: None,
 			backend: None,
 			test_builds: Default::default(),
+			edge: None,
 		}
 	}
 }
@@ -227,6 +232,10 @@ impl Rivet {
 
 	pub fn status(&self) -> GlobalResult<&Status> {
 		Ok(unwrap_ref!(self.status, "status api disabled"))
+	}
+
+	pub fn edge(&self) -> GlobalResult<&Edge> {
+		Ok(unwrap_ref!(self.edge, "edge disabled"))
 	}
 }
 
@@ -686,4 +695,14 @@ impl Default for Telemetry {
 	fn default() -> Self {
 		Telemetry { enable: true }
 	}
+}
+
+/// Configuration for edge clusters.
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub struct Edge {
+	pub cluster_id: Uuid,
+	pub datacenter_id: Uuid,
+	pub server_token: Option<Secret<String>>,
+	pub intercom_endpoint: String,
 }

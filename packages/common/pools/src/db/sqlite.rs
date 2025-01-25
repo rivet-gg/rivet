@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use futures_util::{StreamExt, TryStreamExt};
+use sqlite_util::SqlitePoolExt;
 use sqlx::{
 	migrate::MigrateDatabase,
 	sqlite::{SqliteConnectOptions, SqlitePoolOptions},
@@ -12,10 +13,16 @@ use crate::Error;
 
 pub type SqlitePool = sqlx::SqlitePool;
 
+#[derive(Debug, Hash, Eq, PartialEq)]
+struct Key {
+	key: String,
+	read_only: bool,
+}
+
 #[derive(Clone)]
 pub struct SqlitePoolManager {
 	// TODO: Somehow remove old pools
-	pools: Arc<Mutex<HashMap<String, SqlitePool>>>,
+	pools: Arc<Mutex<HashMap<Key, SqlitePool>>>,
 }
 
 impl SqlitePoolManager {
@@ -26,14 +33,19 @@ impl SqlitePoolManager {
 	}
 
 	/// Get or creates an sqlite pool for the given key
-	pub async fn get(&self, key: &str) -> Result<SqlitePool, Error> {
+	pub async fn get(&self, key: &str, read_only: bool) -> Result<SqlitePool, Error> {
 		let mut pools_guard = self.pools.lock().await;
 
-		let pool = if let Some(pool) = pools_guard.get(key) {
+		let key = Key {
+			key: key.to_string(),
+			read_only,
+		};
+
+		let pool = if let Some(pool) = pools_guard.get(&key) {
 			pool.clone()
 		} else {
 			// TODO: Hardcoded for testing
-			let db_url = format!("sqlite:///home/rivet/rivet-ee/oss/packages/common/chirp-workflow/core/tests/db/{key}.db");
+			let db_url = format!("sqlite:///var/lib/rivet-sqlite/{}.db", key.key);
 
 			tracing::debug!(?key, "sqlite connecting");
 
@@ -47,7 +59,10 @@ impl SqlitePoolManager {
 					.map_err(Error::BuildSqlx)?;
 			}
 
-			let opts: SqliteConnectOptions = db_url.parse().map_err(Error::BuildSqlx)?;
+			let opts = db_url
+				.parse::<SqliteConnectOptions>()
+				.map_err(Error::BuildSqlx)?
+				.read_only(read_only);
 
 			let pool = SqlitePoolOptions::new()
 				.max_lifetime_jitter(Duration::from_secs(90))
@@ -60,9 +75,9 @@ impl SqlitePoolManager {
 			// Run at the start of every connection
 			setup_pragma(&pool).await.map_err(Error::BuildSqlx)?;
 
-			pools_guard.insert(key.to_string(), pool.clone());
-
 			tracing::debug!(?key, "sqlite connected");
+
+			pools_guard.insert(key, pool.clone());
 
 			pool
 		};
@@ -91,15 +106,7 @@ async fn setup_pragma(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 		.map(|setting| {
 			let pool = pool.clone();
 			async move {
-				// Attempt to use an existing connection
-				let mut conn = if let Some(conn) = pool.try_acquire() {
-					conn
-				} else {
-					// Create a new connection
-					pool.acquire().await?
-				};
-				// Result::<_, sqlx::Error>::Ok(())
-
+				let mut conn = pool.conn().await?;
 				sqlx::query(&setting).execute(&mut *conn).await
 			}
 		})
