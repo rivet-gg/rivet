@@ -223,6 +223,11 @@ impl ActivityCtx {
 		self.conn.clickhouse().await
 	}
 
+	/// Access the SQLite database for this workflow. This cannot access any other database.
+	pub async fn sqlite(&self) -> Result<SqlitePool, rivet_pools::Error> {
+		self.conn.sqlite(format!("{}-data", self.workflow_id)).await
+	}
+
 	// Backwards compatibility
 	pub fn op_ctx(&self) -> &rivet_operation::OperationContext<()> {
 		&self.op_ctx
