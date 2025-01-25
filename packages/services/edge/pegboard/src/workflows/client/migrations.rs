@@ -1,8 +1,6 @@
 use chirp_workflow::prelude::*;
 
-use super::Input;
-
-pub fn run(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
+pub async fn run(ctx: &mut WorkflowCtx) -> GlobalResult<()> {
 	ctx.activity(MigrateInitInput {}).await?;
 
 	Ok(())
@@ -12,15 +10,18 @@ pub fn run(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
 struct MigrateInitInput {}
 
 #[activity(MigrateInit)]
-async fn migrate_init(ctx: &ActivityCtx, &MigrateInitInput) -> GlobalResult<()> {
+async fn migrate_init(ctx: &ActivityCtx, _input: &MigrateInitInput) -> GlobalResult<()> {
+	let pool = ctx.sqlite().await?;
+
 	sql_execute!(
-		[ctx]
+		[ctx, pool]
 		"
 		CREATE TABLE test (
 		
 		)
 		",
 	)
-	.await
-	.map_err(Into::into)
+	.await?;
+
+	Ok(())
 }

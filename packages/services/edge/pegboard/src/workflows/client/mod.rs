@@ -14,7 +14,13 @@ pub struct Input {
 
 #[workflow]
 pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
-	migrations::run(ctx, input).await?;
+	migrations::run(ctx).await?;
+
+	// Whatever started this client should be listening for this
+	ctx.signal(Registered {})
+		.tag("client_id", input.client_id)
+		.send()
+		.await?;
 
 	ctx.repeat(|ctx| {
 		let client_id = input.client_id;
@@ -84,6 +90,17 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 				}
 				Main::Command(command) => {
 					handle_commands(ctx, client_id, vec![command]).await?;
+				}
+				Main::PrewarmImage(sig) => {
+					ctx.msg(ToWs {
+						client_id,
+						inner: protocol::ToClient::PrewarmImage {
+							image_id: sig.image_id,
+							image_artifact_url_stub: sig.image_artifact_url_stub,
+						},
+					})
+					.send()
+					.await?;
 				}
 				Main::Drain(_) => {
 					ctx.activity(SetDrainInput {
@@ -577,12 +594,20 @@ async fn fetch_all_actors(
 	Ok(actor_ids)
 }
 
+#[signal("pegboard_client_registered")]
+pub struct Registered {}
+
 #[message("pegboard_client_to_ws")]
 pub struct ToWs {
 	pub client_id: Uuid,
 	pub inner: protocol::ToClient,
 }
 
+#[signal("pegboard_prewarm_image")]
+pub struct PrewarmImage {
+	pub image_id: Uuid,
+	pub image_artifact_url_stub: String,
+}
 #[message("pegboard_client_close_ws")]
 pub struct CloseWs {
 	pub client_id: Uuid,
@@ -606,6 +631,7 @@ join_signal!(Main {
 	Command(protocol::Command),
 	// Forwarded from the ws to this workflow
 	Forward(protocol::ToServer),
+	PrewarmImage,
 	Drain,
 	Undrain,
 	Destroy,
