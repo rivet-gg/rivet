@@ -34,12 +34,21 @@ pub async fn start(config: rivet_config::Config, pools: rivet_pools::Pools) -> G
 		user_id
 	} else {
 		let user_id = Uuid::new_v4();
-		msg!([ctx] user::msg::create(user_id) -> user::msg::create_complete {
-			user_id: Some(user_id.into()),
-			namespace_id: None,
-			display_name: Some(dev_defaults::USER_NAME.into()),
-		})
+		let mut creation_sub = ctx.subscribe::<
+			::user::workflows::user::CreateComplete
+		>(("user_id", user_id)).await?;
+
+		ctx.workflow(
+			::user::workflows::user::Input {
+				user_id,
+				display_name: Some(dev_defaults::USER_NAME.into()),
+			}
+		)
+		.tag("user_id", user_id)
+		.dispatch()
 		.await?;
+
+		creation_sub.next().await?;
 
 		user_id
 	};

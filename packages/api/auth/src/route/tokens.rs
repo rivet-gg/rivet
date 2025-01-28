@@ -180,12 +180,23 @@ async fn fallback_user(
 		AccessKind::Public | AccessKind::Private => {
 			// Register new user
 			let user_id = Uuid::new_v4();
-			msg!([ctx] user::msg::create(user_id) -> user::msg::create_complete {
-				user_id: Some(user_id.into()),
-				namespace_id: None,
-				display_name: None,
-			})
+			let mut creation_sub = chirp_workflow::compat::subscribe::<
+				::user::workflows::user::CreateComplete, _
+			>(&ctx, ("user_id", user_id)).await?;
+		
+			chirp_workflow::compat::workflow(
+				&ctx,
+				::user::workflows::user::Input {
+					user_id,
+					display_name: None,
+				}
+			)
+			.await?
+			.tag("user_id", user_id)
+			.dispatch()
 			.await?;
+		
+			creation_sub.next().await?;
 
 			user_id
 		}

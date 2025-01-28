@@ -72,5 +72,5 @@ cluster.workspace = true
 faker-build.workspace = true
 faker-game.workspace = true
 faker-region.workspace = true
-faker-user.workspace = true
+faker.workspace = true
 game-get.workspace = true

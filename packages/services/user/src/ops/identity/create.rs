@@ -63,16 +63,17 @@ pub async fn create(
 		.purge("user_identity.identity", [user_id])
 		.await?;
 
-	msg!([ctx] user_identity::msg::create_complete(user_id) {
-		user_id: Some(user_id.into()),
-		identity: Some(identity.clone()),
-	})
-	.await?;
+	// msg!([ctx] user_identity::msg::create_complete(user_id) {
+	// 	user_id: Some(user_id.into()),
+	// 	identity: Some(identity.clone()),
+	// })
+	// .await?;
 
-	msg!([ctx] user::msg::update(user_id) {
-		user_id: Some(user_id.into()),
-	})
-	.await?;
+	// TODO: Dispatch directly from ctx
+	chirp_workflow::compat::signal(
+		ctx.op_ctx(),
+		crate::workflows::user::UserUpdateMsgDispatch {}
+	).await?.tag("user_id", user_id).send().await?;
 
 	Ok(Output {})
 }
