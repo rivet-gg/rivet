@@ -45,6 +45,30 @@ pub async fn user(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
 
 		async move {
 			match ctx.listen::<Main>().await? {
+				Main::ChangedTeam(_) => {
+					ctx.msg(Update {})
+						.tag("user_id", user_id)
+						.send()
+						.await?;
+				},
+				Main::CreatedIdentity(_) => {
+					ctx.msg(Update {})
+						.tag("user_id", user_id)
+						.send()
+						.await?;
+				},
+				Main::CompletedAvatarUpload(_) => {
+					ctx.msg(Update {})
+						.tag("user_id", user_id)
+						.send()
+						.await?;
+				},
+				Main::ToggledPendingDeletion(_) => {
+					ctx.msg(Update {})
+						.tag("user_id", user_id)
+						.send()
+						.await?;
+				},
 				Main::AdminSet(_) => {
 					ctx.activity(AdminSetInput {
 						user_id
@@ -487,6 +511,18 @@ pub struct ProfileSetStatus {
 #[signal("user_admin_set")]
 pub struct AdminSet {}
 
+#[signal("user_changed_team")]
+pub struct ChangedTeam {}
+
+#[signal("user_created_identity")]
+pub struct CreatedIdentity {}
+
+#[signal("user_completed_avatar_upload")]
+pub struct CompletedAvatarUpload {}
+
+#[signal("user_toggled_pending_deletion")]
+pub struct ToggledPendingDeletion {}
+
 #[signal("user_profile_set")]
 pub struct ProfileSet {
 	pub display_name: Option<String>,
@@ -498,6 +534,10 @@ pub struct ProfileSet {
 pub struct Delete {}
 
 join_signal!(Main {
+	ChangedTeam,
+	CreatedIdentity,
+	CompletedAvatarUpload,
+	ToggledPendingDeletion,
 	AdminSet,
 	ProfileSet,
 	Delete,

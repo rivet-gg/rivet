@@ -9,8 +9,9 @@ edition.workspace = true
 rivet-operation.workspace = true
 chirp-client.workspace = true
 prost = "0.10"
+chirp-workflow.workspace = true
 
-faker-user.workspace = true
+faker.workspace = true
 
 [dev-dependencies]
 chirp-worker.workspace = true

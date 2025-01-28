@@ -8,6 +8,7 @@ edition.workspace = true
 [dependencies]
 lazy_static = "1.4"
 chirp-client.workspace = true
+chirp-workflow.workspace = true
 rivet-operation.workspace = true
 futures-util = "0.3"
 indoc = "1.0"
@@ -24,6 +25,7 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
 ] }
 tracing-logfmt = "0.3"
 rivet-config.workspace = true
+user.workspace = true
 
 [dev-dependencies]
 chirp-worker.workspace = true

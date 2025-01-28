@@ -28,10 +28,12 @@ async fn worker(ctx: &OperationContext<team::msg::member_remove::Message>) -> Gl
 			)
 		},
 		async {
-			Ok(msg!([ctx] user::msg::update(user_id) {
-				user_id: Some(user_id.into()),
-			})
-			.await?)
+			Ok(
+				chirp_workflow::compat::signal(
+					ctx,
+					::user::workflows::user::ChangedTeam {}
+				).await?.tag("user_id", user_id).send().await?
+			)
 		},
 	)?;
 

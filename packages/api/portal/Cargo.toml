@@ -51,4 +51,4 @@ rivet-connection.workspace = true
 rivet-portal.workspace = true
 regex = "1.4"
 
-faker-user.workspace = true
+faker.workspace = true

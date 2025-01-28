@@ -1,7 +1,7 @@
 use futures_util::{StreamExt, TryStreamExt};
 use indoc::indoc;
-use proto::backend::pkg::*;
-use rivet_operation::prelude::*;
+use chirp_workflow::prelude::*;
+
 
 pub async fn start(config: rivet_config::Config, pools: rivet_pools::Pools) -> GlobalResult<()> {
 	run_from_env(config, pools, util::timestamp::now()).await
@@ -13,20 +13,16 @@ pub async fn run_from_env(
 	pools: rivet_pools::Pools,
 	ts: i64,
 ) -> GlobalResult<()> {
-	let client =
-		chirp_client::SharedClient::from_env(pools.clone())?.wrap_new("user-delete-pending");
+	let client = chirp_client::SharedClient::from_env(pools.clone())?
+		.wrap_new("user-delete-pending");
 	let cache = rivet_cache::CacheInner::from_env(pools.clone())?;
-	let ctx = OperationContext::new(
-		"user-delete-pending".into(),
-		std::time::Duration::from_secs(60),
+	let ctx = StandaloneCtx::new(
+		chirp_workflow::compat::db_from_pools(&pools).await?,
 		config,
 		rivet_connection::Connection::new(client, pools, cache),
-		Uuid::new_v4(),
-		Uuid::new_v4(),
-		util::timestamp::now(),
-		util::timestamp::now(),
-		(),
-	);
+		"user-delete-pending",
+	)
+	.await?;
 
 	let user_ids = sql_fetch_all!(
 		[ctx, (Uuid,)]
@@ -46,9 +42,21 @@ pub async fn run_from_env(
 
 	futures_util::stream::iter(user_ids.into_iter())
 		.map(|user_id| {
-			msg!([ctx] user::msg::delete(user_id) -> user::msg::delete_complete {
-				user_id: Some(user_id.into()),
-			})
+			let ctx = ctx.clone();
+			async move {
+				let mut sub = ctx.subscribe::<
+					::user::workflows::user::DeleteComplete
+				>(("user_id", user_id)).await?;
+
+				ctx.signal(::user::workflows::user::Delete {})
+					.tag("user_id", user_id)
+					.send();
+				
+				// Await deletion completion
+				sub.next().await?;
+
+				Ok::<_, GlobalError>(())
+			}
 		})
 		.buffer_unordered(32)
 		.try_collect::<Vec<_>>()

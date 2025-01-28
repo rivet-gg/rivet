@@ -1,6 +1,4 @@
 use chirp_workflow::prelude::*;
-use proto::backend::{pkg::*};
-use rivet_operation::prelude::proto;
 
 #[derive(Debug)]
 pub struct Input {
@@ -38,10 +36,10 @@ pub async fn pending_delete_toggle(
 
 	ctx.cache().purge("user", [user_id]).await?;
 
-	msg!([ctx] user::msg::update(user_id) {
-		user_id: Some(user_id.into()),
-	})
-	.await?;
+	chirp_workflow::compat::signal(
+		ctx.op_ctx(),
+		crate::workflows::user::ToggledPendingDeletion {}
+	).await?.tag("user_id", user_id).send().await?;
 
 	Ok(Output {})
 }

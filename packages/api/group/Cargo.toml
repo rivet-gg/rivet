@@ -60,4 +60,4 @@ rivet-connection.workspace = true
 rivet-group.workspace = true
 rand = "0.8"
 
-faker-user.workspace = true
+faker.workspace = true

@@ -55,8 +55,11 @@ impl Ctx {
 	}
 
 	async fn issue_user_token(ctx: &OperationContext<()>) -> (Uuid, String) {
-		let user_res = op!([ctx] faker_user {}).await.unwrap();
-		let user_id = user_res.user_id.as_ref().unwrap().as_uuid();
+		let user_res = chirp_workflow::compat::op(
+			&ctx,
+			faker::ops::user::Input {}
+		).await.unwrap();
+		let user_id = user_res.user_id;
 
 		let token_res = chirp_workflow::compat::op(
 			&ctx,

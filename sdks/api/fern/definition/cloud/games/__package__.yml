@@ -21,6 +21,7 @@ service:
         name: GetGamesRequest
         query-parameters:
           watch_index:
+            availability: deprecated
             docs: A query parameter denoting the requests watch index.
             type: optional<string>
       response: GetGamesResponse
@@ -109,7 +110,9 @@ types:
       groups:
         docs: A list of group summaries.
         type: list<groupCommons.GroupSummary>
-      watch: commons.WatchResponse
+      watch:
+        availability: deprecated
+        type: commons.WatchResponse
 
   CreateGameRequest:
     properties:

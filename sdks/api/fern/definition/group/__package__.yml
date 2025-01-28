@@ -17,6 +17,7 @@ service:
         name: ListSuggestedRequest
         query-parameters:
           watch_index:
+            availability: deprecated
             docs: A query parameter denoting the requests watch index.
             type: optional<string>
       response: ListSuggestedResponse
@@ -82,6 +83,7 @@ service:
             docs: Amount of bans to return.
             type: optional<double>
           watch_index:
+            availability: deprecated
             docs: A query parameter denoting the requests watch index.
             type: optional<string>
       response: GetBansResponse
@@ -130,6 +132,7 @@ service:
             docs: Amount of join requests to return.
             type: optional<double>
           watch_index:
+            availability: deprecated
             docs: A query parameter denoting the requests watch index.
             type: optional<string>
       response: GetJoinRequestsResponse
@@ -173,6 +176,7 @@ service:
             docs: Amount of members to return.
             type: optional<double>
           watch_index:
+            availability: deprecated
             docs: A query parameter denoting the requests watch index.
             type: optional<string>
       response: GetMembersResponse
@@ -188,6 +192,7 @@ service:
         name: GetProfileRequest
         query-parameters:
           watch_index:
+            availability: deprecated
             docs: A query parameter denoting the requests watch index.
             type: optional<string>
       response: GetProfileResponse
@@ -294,12 +299,16 @@ types:
       anchor:
         docs: The pagination anchor.
         type: optional<string>
-      watch: commons.WatchResponse
+      watch:
+        availability: deprecated
+        type: commons.WatchResponse
 
   GetProfileResponse:
     properties:
       group: groupCommons.Profile
-      watch: commons.WatchResponse
+      watch:
+        availability: deprecated
+        type: commons.WatchResponse
 
   UpdateProfileRequest:
     properties:

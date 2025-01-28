@@ -1,6 +1,4 @@
 use chirp_workflow::prelude::*;
-use proto::backend::{pkg::*};
-use rivet_operation::prelude::proto;
 use rand::Rng;
 
 #[workflow_test]
@@ -34,17 +32,23 @@ async fn fetch(ctx: TestCtx) {
 
 	// Insert test users
 	for user in &mut users {
-		let user_res = op!([ctx] faker_user { }).await.unwrap();
-		let user_id = user_res.user_id.unwrap().as_uuid();
+		let user_res = ctx.op(faker::ops::user::Input {}).await.unwrap();
+		let user_id = user_res.user_id;
 
-		msg!([ctx] user::msg::profile_set(user_id) -> user::msg::update {
-			user_id: Some(user_id.into()),
+		let mut update_sub = ctx.subscribe::<::user::workflows::user::Update>(
+			("user_id", user_id)
+		).await.unwrap();
+
+		ctx.signal(::user::workflows::user::ProfileSet {
 			display_name: Some(user.display_name.clone()),
 			account_number: Some(user.account_number as u32),
 			bio: Some(user.bio.clone()),
 		})
-		.await
-		.unwrap();
+		.tag("user_id", user_id)
+		.send()
+		.await.unwrap();
+
+		update_sub.next().await.unwrap();
 
 		user.user_id = Some(user_id);
 	}

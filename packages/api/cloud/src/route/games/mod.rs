@@ -25,31 +25,9 @@ const MAX_BANNER_UPLOAD_SIZE: i64 = util::file_size::megabytes(10) as i64;
 // MARK: GET /games
 pub async fn list(
 	ctx: Ctx<Auth>,
-	watch_index: WatchIndexQuery,
+	_watch_index: WatchIndexQuery,
 ) -> GlobalResult<models::CloudGamesGetGamesResponse> {
 	let accessible_games = ctx.auth().accessible_games(ctx.op_ctx()).await?;
-
-	// Wait for an update if needed
-	let update_ts = if let Some(anchor) = watch_index.to_consumer()? {
-		// Error if a cloud token tries to watch this endpoint, game update
-		// messages for teams aren't implemented
-		if let Some(user_id) = accessible_games.user_id {
-			let game_update_sub = tail_anchor!([ctx, anchor] user::msg::game_update(user_id));
-
-			util::macros::select_with_timeout!({
-				event = game_update_sub => {
-					let event = event?;
-
-					event.msg_ts()
-				}
-			})
-		} else {
-			bail_with!(API_FORBIDDEN, reason = "Cloud token cannot watch `/games`");
-		}
-	} else {
-		Default::default()
-	};
-	let update_ts = update_ts.unwrap_or_else(util::timestamp::now);
 
 	let games = fetch::game::summaries(ctx.op_ctx(), accessible_games.game_ids).await?;
 	let groups = fetch::group::summaries(
@@ -62,7 +40,7 @@ pub async fn list(
 	Ok(models::CloudGamesGetGamesResponse {
 		games,
 		groups,
-		watch: WatchResponse::new_as_model(update_ts),
+		watch: WatchResponse::new_as_model(util::timestamp::now()),
 	})
 }
 

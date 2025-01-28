@@ -332,7 +332,6 @@ dependencies = [
  "debug-email-res",
  "email-verification-complete",
  "email-verification-create",
- "faker-user",
  "headers",
  "http 0.2.12",
  "hyper 0.14.31",
@@ -582,7 +581,7 @@ dependencies = [
  "chirp-client",
  "chirp-workflow",
  "chrono",
- "faker-user",
+ "faker",
  "futures-util",
  "game-get",
  "game-resolve-namespace-id",
@@ -906,7 +905,7 @@ dependencies = [
  "chirp-client",
  "chirp-workflow",
  "chrono",
- "faker-user",
+ "faker",
  "futures-util",
  "game-get",
  "game-resolve-name-id",
@@ -5247,10 +5246,10 @@ dependencies = [
  "chrono",
  "cjson",
  "cluster",
+ "faker",
  "faker-build",
  "faker-game",
  "faker-region",
- "faker-user",
  "game-get",
  "game-namespace-get",
  "game-resolve-namespace-id",
@@ -5715,7 +5714,7 @@ dependencies = [
 
 [[package]]
 name = "faker"
-version = "25.1.0-rc.1"
+version = "25.1.1"
 dependencies = [
  "chirp-workflow",
  "user",
@@ -5884,7 +5883,8 @@ version = "25.1.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
- "faker-user",
+ "chirp-workflow",
+ "faker",
  "prost 0.10.4",
  "rivet-operation",
  "team-get",
@@ -9125,13 +9125,13 @@ dependencies = [
  "chrono",
  "cluster",
  "csv",
+ "faker",
  "faker-build",
  "faker-game",
  "faker-game-namespace",
  "faker-game-version",
  "faker-mm-lobby",
  "faker-region",
- "faker-user",
  "game-get",
  "game-namespace-get",
  "game-namespace-version-set",
@@ -14630,6 +14630,7 @@ version = "25.1.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "faker-team",
  "game-namespace-list",
  "mm-lobby-list-for-namespace",
@@ -14643,6 +14644,7 @@ dependencies = [
  "team-profile-validate",
  "team-user-ban-get",
  "team-validate",
+ "user",
  "user-identity-get",
 ]
 
@@ -15932,6 +15934,7 @@ version = "25.1.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "chrono",
  "futures-util",
  "indoc 1.0.9",
@@ -15946,6 +15949,7 @@ dependencies = [
  "tracing",
  "tracing-logfmt",
  "tracing-subscriber",
+ "user",
 ]
 
 [[package]]

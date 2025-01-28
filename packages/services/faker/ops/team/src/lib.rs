@@ -8,10 +8,12 @@ async fn handle(
 	let mut member_user_ids = Vec::<common::Uuid>::new();
 
 	for _ in 0..2usize {
-		let user_create_res = op!([ctx] faker_user {}).await?;
-		let user_id = unwrap_ref!(user_create_res.user_id);
+		let user_create_res = chirp_workflow::compat::op(
+			&ctx,
+			::faker::ops::user::Input {}
+		).await?;
 
-		member_user_ids.push(*user_id);
+		member_user_ids.push(user_create_res.user_id.into());
 	}
 
 	let owner_user_id = unwrap!(member_user_ids.first());

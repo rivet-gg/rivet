@@ -40,10 +40,10 @@ pub async fn avatar_upload_complete(
 
 	ctx.cache().purge("user", [user_id]).await?;
 
-	msg!([ctx] user::msg::update(user_id) {
-		user_id: Some(user_id.into()),
-	})
-	.await?;
+	chirp_workflow::compat::signal(
+		ctx.op_ctx(),
+		crate::workflows::user::CompletedAvatarUpload {}
+	).await?.tag("user_id", user_id).send().await?;
 
 	msg!([ctx] analytics::msg::event_create() {
 		events: vec![

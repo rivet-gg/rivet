@@ -15,12 +15,10 @@ async fn print_test_data(ctx: TestCtx) {
 	.unwrap();
 	let env_id = game_res.prod_env_id.unwrap();
 
-	let user_res = op!([ctx] faker_user {
-		..Default::default()
-	})
+	let user_res = ctx.op(::faker::ops::user::Input {})
 	.await
 	.unwrap();
-	let user_id = user_res.user_id.unwrap();
+	let user_id = user_res.user_id;
 
 	// Pick an existing cluster
 	let cluster_id = ctx
@@ -91,7 +89,7 @@ async fn print_test_data(ctx: TestCtx) {
 			},proto::claims::Entitlement {
 				kind: Some(proto::claims::entitlement::Kind::User(
 					proto::claims::entitlement::User {
-						user_id: Some(user_id),
+						user_id: Some(user_id.into()),
 					}
 				)),
 			}]},
@@ -112,7 +110,7 @@ async fn print_test_data(ctx: TestCtx) {
 			token::create::request::KindNew { entitlements: vec![proto::claims::Entitlement {
 				kind: Some(proto::claims::entitlement::Kind::User(
 					proto::claims::entitlement::User {
-						user_id: Some(user_id),
+						user_id: Some(user_id.into()),
 					}
 				)),
 			}]},
