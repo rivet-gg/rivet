@@ -15,7 +15,8 @@ pub async fn run_from_env(
 		.merge(linode::registry()?)?
 		.merge(ds::registry()?)?
 		.merge(job_run::registry()?)?
-		.merge(pegboard::registry()?)?;
+		.merge(pegboard::registry()?)?
+		.merge(user::registry()?)?;
 
 	let db = db::DatabaseCrdbNats::from_pools(pools.crdb()?, pools.nats()?);
 	let worker = Worker::new(reg.handle(), db);

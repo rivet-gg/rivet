@@ -33,3 +33,5 @@ faker-user.workspace = true
 reqwest = "0.11"
 upload-get.workspace = true
 upload-prepare.workspace = true
+
+faker.workspace = true

@@ -5714,6 +5714,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "faker"
+version = "25.1.0-rc.1"
+dependencies = [
+ "chirp-workflow",
+ "user",
+]
+
+[[package]]
 name = "faker-build"
 version = "25.1.0-rc.1"
 dependencies = [
@@ -9245,6 +9253,7 @@ dependencies = [
  "rivet-health-checks",
  "rivet-metrics",
  "rivet-runtime",
+ "user",
 ]
 
 [[package]]
@@ -15905,6 +15914,7 @@ dependencies = [
  "chirp-workflow",
  "cluster",
  "email-address-parser",
+ "faker",
  "faker-user",
  "lazy_static",
  "linode",
