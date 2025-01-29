@@ -26,6 +26,5 @@ rivet-config.workspace = true
 [dev-dependencies]
 chirp-worker.workspace = true
 
-faker-user.workspace = true
 upload-get.workspace = true
 upload-prepare.workspace = true
