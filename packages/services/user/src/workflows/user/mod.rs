@@ -55,6 +55,12 @@ pub async fn user(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
 						.send()
 						.await?;
 				},
+				Main::UserUpdateMsgDispatch(_) => {
+					ctx.msg(Update {})
+						.tag("user_id", user_id)
+						.send()
+						.await?;
+				},
 				Main::ProfileSet(sig) => {
 					let res = ctx.activity(ProfileSetInput {
 						user_id,
@@ -512,6 +518,9 @@ pub struct ProfileSetStatus {
 #[signal("user_admin_set")]
 pub struct AdminSet {}
 
+#[signal("user_update_msg_dispatch")]
+pub struct UserUpdateMsgDispatch {}
+
 #[signal("user_profile_set")]
 pub struct ProfileSet {
 	pub display_name: Option<String>,
@@ -524,6 +533,7 @@ pub struct Delete {}
 
 join_signal!(Main {
 	AdminSet,
+	UserUpdateMsgDispatch,
 	ProfileSet,
 	Delete,
 });

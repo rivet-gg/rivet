@@ -2,8 +2,7 @@ use api_helper::{
 	anchor::{WatchIndexQuery, WatchResponse},
 	ctx::Ctx,
 };
-use futures_util::FutureExt;
-use proto::backend::{self, pkg::*};
+use proto::backend;
 use rivet_api::models;
 use rivet_convert::{fetch, ApiInto, ApiTryInto};
 use rivet_operation::prelude::*;
@@ -51,28 +50,14 @@ async fn get_profile(
 	ctx: &Ctx<Auth>,
 	current_user_id: Uuid,
 	identity_id: Uuid,
-	watch_index: WatchIndexQuery,
+	_watch_index: WatchIndexQuery,
 ) -> GlobalResult<(models::IdentityProfile, i64)> {
-	// Wait for an update if needed
-	let update_ts = if let Some(anchor) = watch_index.to_consumer()? {
-		let user_updated_sub = tail_anchor!([ctx, anchor] user::msg::updated(identity_id));
-
-		util::macros::select_with_timeout!({
-			event = user_updated_sub => {
-				event?.msg_ts()
-			}
-		})
-	} else {
-		Default::default()
-	};
-	let update_ts = update_ts.unwrap_or_else(util::timestamp::now);
-
 	let identities =
 		fetch::identity::profiles(ctx.op_ctx(), current_user_id, vec![identity_id]).await?;
 
 	Ok((
 		unwrap_with!(identities.into_iter().next(), IDENTITY_NOT_FOUND),
-		update_ts,
+		util::timestamp::now(),
 	))
 }
 
@@ -83,7 +68,7 @@ pub struct IdentityIdsQuery {
 }
 pub async fn handles(
 	ctx: Ctx<Auth>,
-	watch_index: WatchIndexQuery,
+	_watch_index: WatchIndexQuery,
 	query: IdentityIdsQuery,
 ) -> GlobalResult<models::IdentityGetHandlesResponse> {
 	let current_user_id = ctx.auth().user(ctx.op_ctx()).await?.user_id;
@@ -101,32 +86,12 @@ pub async fn handles(
 		error = "too many ids (max 64)",
 	);
 
-	// Wait for an update if needed
-	let update_ts =
-		if let Some(anchor) = watch_index.to_consumer()? {
-			// User update subs
-			let user_updated_subs_select =
-				util::future::select_all_or_wait(query.identity_ids.iter().cloned().map(
-					|user_id| tail_anchor!([ctx, anchor] user::msg::updated(user_id)).boxed(),
-				));
-
-			util::macros::select_with_timeout!({
-				event = user_updated_subs_select => {
-					let event = event?;
-					event.msg_ts()
-				}
-			})
-		} else {
-			Default::default()
-		};
-	let update_ts = update_ts.unwrap_or_else(util::timestamp::now);
-
 	let identities =
 		fetch::identity::handles(ctx.op_ctx(), current_user_id, query.identity_ids).await?;
 
 	Ok(models::IdentityGetHandlesResponse {
 		identities,
-		watch: WatchResponse::new_as_model(update_ts),
+		watch: WatchResponse::new_as_model(util::timestamp::now()),
 	})
 }
 
@@ -134,7 +99,7 @@ pub async fn handles(
 // MARK: GET /identities/batch/summary
 pub async fn summaries(
 	ctx: Ctx<Auth>,
-	watch_index: WatchIndexQuery,
+	_watch_index: WatchIndexQuery,
 	query: IdentityIdsQuery,
 ) -> GlobalResult<models::IdentityGetSummariesResponse> {
 	let current_user_id = ctx.auth().user(ctx.op_ctx()).await?.user_id;
@@ -153,31 +118,13 @@ pub async fn summaries(
 	);
 
 	// Wait for an update if needed
-	let update_ts =
-		if let Some(anchor) = watch_index.to_consumer()? {
-			// User update subs
-			let user_updated_subs_select =
-				util::future::select_all_or_wait(query.identity_ids.iter().cloned().map(
-					|user_id| tail_anchor!([ctx, anchor] user::msg::updated(user_id)).boxed(),
-				));
-
-			util::macros::select_with_timeout!({
-				event = user_updated_subs_select => {
-					let event = event?;
-					event.msg_ts()
-				}
-			})
-		} else {
-			Default::default()
-		};
-	let update_ts = update_ts.unwrap_or_else(util::timestamp::now);
 
 	let identities =
 		fetch::identity::summaries(ctx.op_ctx(), current_user_id, query.identity_ids).await?;
 
 	Ok(models::IdentityGetSummariesResponse {
 		identities,
-		watch: WatchResponse::new_as_model(update_ts),
+		watch: WatchResponse::new_as_model(util::timestamp::now()),
 	})
 }
 

@@ -45,7 +45,6 @@ uuid = { version = "1", features = ["v4"] }
 rivet-auth.workspace = true
 rivet-connection.workspace = true
 
-faker-user.workspace = true
 debug-email-res.workspace = true
 user-identity-get.workspace = true
 
