@@ -3,7 +3,7 @@ use rand::Rng;
 
 #[workflow_test]
 async fn empty(ctx: TestCtx) {
-	let res = ctx.op(::user::ops::get::Input {
+	let res = ctx.op(user::ops::get::Input {
 		user_ids: Vec::new(),
 	})
 	.await
@@ -35,11 +35,11 @@ async fn fetch(ctx: TestCtx) {
 		let user_res = ctx.op(faker::ops::user::Input {}).await.unwrap();
 		let user_id = user_res.user_id;
 
-		let mut update_sub = ctx.subscribe::<::user::workflows::user::Update>(
+		let mut update_sub = ctx.subscribe::<user::workflows::user::Update>(
 			("user_id", user_id)
 		).await.unwrap();
 
-		ctx.signal(::user::workflows::user::ProfileSet {
+		ctx.signal(user::workflows::user::ProfileSet {
 			display_name: Some(user.display_name.clone()),
 			account_number: Some(user.account_number as u32),
 			bio: Some(user.bio.clone()),
@@ -54,7 +54,7 @@ async fn fetch(ctx: TestCtx) {
 	}
 
 	// Fetch the users
-	let res = ctx.op(::user::ops::get::Input {
+	let res = ctx.op(user::ops::get::Input {
 		user_ids: users.iter().map(|u| u.user_id.unwrap()).collect(),
 	})
 	.await

@@ -45,10 +45,10 @@ pub async fn run_from_env(
 			let ctx = ctx.clone();
 			async move {
 				let mut sub = ctx.subscribe::<
-					::user::workflows::user::DeleteComplete
+					user::workflows::user::DeleteComplete
 				>(("user_id", user_id)).await?;
 
-				ctx.signal(::user::workflows::user::Delete {})
+				let _ = ctx.signal(user::workflows::user::Delete {})
 					.tag("user_id", user_id)
 					.send();
 				

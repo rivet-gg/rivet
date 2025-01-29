@@ -159,7 +159,7 @@ impl Auth {
 			let (user_res, game_res, team_list_res) = tokio::try_join!(
 				chirp_workflow::compat::op(
 					&ctx,
-					::user::ops::get::Input {
+					user::ops::get::Input {
 						user_ids: vec![user_ent.user_id],
 					},
 				),

@@ -9,7 +9,7 @@ use crate::convert;
 
 #[derive(Debug)]
 pub struct TeamsCtx {
-	pub user_teams: ::user::ops::team_list::Output,
+	pub user_teams: user::ops::team_list::Output,
 	pub teams: Vec<backend::team::Team>,
 }
 
@@ -94,10 +94,10 @@ pub async fn profiles(
 pub async fn users(
 	ctx: &OperationContext<()>,
 	user_ids: Vec<Uuid>,
-) -> GlobalResult<::user::ops::get::Output> {
+) -> GlobalResult<user::ops::get::Output> {
 	chirp_workflow::compat::op(
 		&ctx,
-		::user::ops::get::Input {
+		user::ops::get::Input {
 			user_ids,
 		},
 	)
@@ -107,7 +107,7 @@ pub async fn users(
 async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> GlobalResult<TeamsCtx> {
 	let user_teams_res = chirp_workflow::compat::op(
 		&ctx,
-		::user::ops::team_list::Input {
+		user::ops::team_list::Input {
 			user_ids: user_ids
 				.iter()
 				.map(|x| (*x).into())
@@ -147,10 +147,10 @@ async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> Globa
 async fn linked_accounts(
 	ctx: &OperationContext<()>,
 	user_ids: Vec<common::Uuid>,
-) -> GlobalResult<::user::ops::identity::get::Output> {
+) -> GlobalResult<user::ops::identity::get::Output> {
 	Ok(chirp_workflow::compat::op(
 		&ctx,
-		::user::ops::identity::get::Input {
+		user::ops::identity::get::Input {
 			user_ids: user_ids
 				.iter()
 				.map(|i| i.as_uuid())

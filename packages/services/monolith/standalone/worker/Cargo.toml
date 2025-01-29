@@ -31,5 +31,4 @@ mm-worker.workspace = true
 team-invite-worker.workspace = true
 team-worker.workspace = true
 upload-worker.workspace = true
-user-worker.workspace = true
 rivet-config.workspace = true

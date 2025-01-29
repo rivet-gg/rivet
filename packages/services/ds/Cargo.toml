@@ -57,7 +57,6 @@ region-get.workspace = true
 tier.workspace = true
 token-create.workspace = true
 upload-get.workspace = true
-user-identity-get.workspace = true
 game-namespace-get.workspace = true
 game-get.workspace = true
 

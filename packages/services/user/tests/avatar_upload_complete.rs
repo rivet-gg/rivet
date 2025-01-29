@@ -43,7 +43,7 @@ async fn empty(ctx: TestCtx) {
 		);
 	}
 
-	ctx.op(::user::ops::avatar_upload_complete::Input {
+	ctx.op(user::ops::avatar_upload_complete::Input {
 		user_id,
 		upload_id: upload_id.as_uuid()
 	})

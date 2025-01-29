@@ -118,7 +118,7 @@ impl Auth {
 
 		let user_res = chirp_workflow::compat::op(
 			&ctx,
-			::user::ops::get::Input {
+			user::ops::get::Input {
 				user_ids: vec![user_ent.user_id],
 			},
 		)
@@ -148,7 +148,7 @@ impl Auth {
 		// Get user
 		let user_res = chirp_workflow::compat::op(
 			&ctx,
-			::user::ops::get::Input {
+			user::ops::get::Input {
 				user_ids: vec![user_ent.user_id],
 			},
 		)

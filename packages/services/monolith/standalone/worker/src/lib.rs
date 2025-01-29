@@ -34,7 +34,6 @@ pub async fn start(config: rivet_config::Config, pools: rivet_pools::Pools) -> G
 		team_invite_worker,
 		team_worker,
 		upload_worker,
-		user_worker,
 	];
 
 	// Wait for task to exit

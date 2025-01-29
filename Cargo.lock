@@ -315,7 +315,6 @@ dependencies = [
  "upload-get",
  "url",
  "user",
- "user-identity-get",
  "uuid",
 ]
 
@@ -359,7 +358,6 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "user",
- "user-identity-get",
  "uuid",
 ]
 
@@ -508,7 +506,6 @@ dependencies = [
  "upload-prepare",
  "url",
  "user",
- "user-identity-create",
  "uuid",
 ]
 
@@ -568,7 +565,6 @@ dependencies = [
  "upload-get",
  "url",
  "user",
- "user-identity-get",
  "uuid",
 ]
 
@@ -695,7 +691,6 @@ dependencies = [
  "faker-game-namespace",
  "faker-game-version",
  "faker-region",
- "faker-user",
  "futures-util",
  "game-get",
  "game-namespace-get",
@@ -842,7 +837,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
- "user-identity-get",
  "uuid",
 ]
 
@@ -2172,7 +2166,6 @@ dependencies = [
  "chirp-worker",
  "faker-build",
  "faker-game",
- "faker-user",
  "game-get",
  "game-namespace-get",
  "prost 0.10.4",
@@ -5290,7 +5283,6 @@ dependencies = [
  "token-create",
  "tracing-subscriber",
  "upload-get",
- "user-identity-get",
  "uuid",
 ]
 
@@ -5888,18 +5880,6 @@ dependencies = [
  "prost 0.10.4",
  "rivet-operation",
  "team-get",
-]
-
-[[package]]
-name = "faker-user"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "chirp-workflow",
- "prost 0.10.4",
- "rivet-operation",
- "user",
 ]
 
 [[package]]
@@ -8416,7 +8396,6 @@ dependencies = [
  "tracing",
  "tracing-logfmt",
  "tracing-subscriber",
- "user-identity-create",
 ]
 
 [[package]]
@@ -9211,7 +9190,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "upload-worker",
- "user-worker",
 ]
 
 [[package]]
@@ -14645,7 +14623,6 @@ dependencies = [
  "team-user-ban-get",
  "team-validate",
  "user",
- "user-identity-get",
 ]
 
 [[package]]
@@ -15893,7 +15870,6 @@ dependencies = [
  "cluster",
  "email-address-parser",
  "faker",
- "faker-user",
  "lazy_static",
  "linode",
  "rand",
@@ -15909,22 +15885,6 @@ dependencies = [
  "upload-file-list",
  "upload-get",
  "upload-list-for-user",
- "upload-prepare",
-]
-
-[[package]]
-name = "user-avatar-upload-complete"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "faker-user",
- "prost 0.10.4",
- "reqwest 0.11.27",
- "rivet-operation",
- "sqlx",
- "upload-complete",
- "upload-get",
  "upload-prepare",
 ]
 
@@ -15949,151 +15909,6 @@ dependencies = [
  "tracing",
  "tracing-logfmt",
  "tracing-subscriber",
- "user",
-]
-
-[[package]]
-name = "user-get"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "faker-user",
- "prost 0.10.4",
- "rand",
- "rivet-operation",
- "sqlx",
- "upload-file-list",
- "upload-get",
-]
-
-[[package]]
-name = "user-identity-create"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "email-address-parser",
- "faker-user",
- "prost 0.10.4",
- "rivet-operation",
-]
-
-[[package]]
-name = "user-identity-delete"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "faker-user",
- "prost 0.10.4",
- "rivet-operation",
- "sqlx",
- "user-identity-create",
-]
-
-[[package]]
-name = "user-identity-get"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "faker-user",
- "prost 0.10.4",
- "rivet-config",
- "rivet-operation",
- "sqlx",
- "user-get",
- "user-identity-create",
-]
-
-[[package]]
-name = "user-pending-delete-toggle"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "faker-user",
- "prost 0.10.4",
- "rivet-operation",
- "sqlx",
- "user-identity-create",
- "user-identity-get",
-]
-
-[[package]]
-name = "user-profile-validate"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "chirp-workflow",
- "faker-user",
- "prost 0.10.4",
- "rivet-operation",
- "sqlx",
- "user",
-]
-
-[[package]]
-name = "user-resolve-email"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "faker-user",
- "prost 0.10.4",
- "rivet-operation",
- "sqlx",
- "user-identity-create",
-]
-
-[[package]]
-name = "user-team-list"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "prost 0.10.4",
- "rivet-operation",
- "sqlx",
-]
-
-[[package]]
-name = "user-token-create"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "faker-user",
- "prost 0.10.4",
- "rivet-operation",
- "sqlx",
- "token-create",
-]
-
-[[package]]
-name = "user-worker"
-version = "25.1.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "chirp-workflow",
- "chrono",
- "faker-user",
- "game-get",
- "game-namespace-get",
- "lazy_static",
- "rivet-config",
- "rivet-convert",
- "rivet-health-checks",
- "rivet-metrics",
- "rivet-runtime",
- "team-get",
- "team-member-list",
- "upload-get",
- "upload-list-for-user",
- "upload-prepare",
  "user",
 ]
 

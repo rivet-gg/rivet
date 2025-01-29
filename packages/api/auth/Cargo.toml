@@ -46,5 +46,4 @@ rivet-auth.workspace = true
 rivet-connection.workspace = true
 
 debug-email-res.workspace = true
-user-identity-get.workspace = true
 

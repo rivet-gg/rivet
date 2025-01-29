@@ -51,7 +51,7 @@ pub fn summary(
 #[derive(Debug)]
 pub struct ProfileCtx<'a> {
 	pub teams_ctx: &'a fetch::identity::TeamsCtx,
-	pub linked_accounts: &'a [::user::ops::identity::get::User],
+	pub linked_accounts: &'a [user::ops::identity::get::User],
 	pub self_is_game_linked: bool,
 }
 

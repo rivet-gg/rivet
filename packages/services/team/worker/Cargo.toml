@@ -18,7 +18,6 @@ rivet-runtime.workspace = true
 team-join-request-list.workspace = true
 team-profile-validate.workspace = true
 team-validate.workspace = true
-user-identity-get.workspace = true
 game-namespace-list.workspace = true
 mm-lobby-list-for-namespace.workspace = true
 rivet-config.workspace = true

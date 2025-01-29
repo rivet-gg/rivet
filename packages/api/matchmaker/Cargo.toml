@@ -58,7 +58,6 @@ region-recommend.workspace = true
 region-resolve-for-game.workspace = true
 token-create.workspace = true
 token-revoke.workspace = true
-user-identity-get.workspace = true
 rivet-config.workspace = true
 rivet-env.workspace = true
 

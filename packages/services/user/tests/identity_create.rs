@@ -7,7 +7,7 @@ async fn email(ctx: TestCtx) {
 	let user_id = user_res.user_id;
 
 	let email = util::faker::email();
-	ctx.op(::user::ops::identity::create::Input {
+	ctx.op(user::ops::identity::create::Input {
 		user_id,
 		identity: backend::user_identity::Identity {
 			kind: Some(backend::user_identity::identity::Kind::Email(
