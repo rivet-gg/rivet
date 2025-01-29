@@ -315,7 +315,6 @@ dependencies = [
  "upload-get",
  "url",
  "user",
- "user-identity-get",
  "uuid",
 ]
 
@@ -359,7 +358,6 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "user",
- "user-identity-get",
  "uuid",
 ]
 
@@ -508,7 +506,6 @@ dependencies = [
  "upload-prepare",
  "url",
  "user",
- "user-identity-create",
  "uuid",
 ]
 
@@ -568,7 +565,6 @@ dependencies = [
  "upload-get",
  "url",
  "user",
- "user-identity-get",
  "uuid",
 ]
 
@@ -842,7 +838,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
- "user-identity-get",
  "uuid",
 ]
 
@@ -5290,7 +5285,6 @@ dependencies = [
  "token-create",
  "tracing-subscriber",
  "upload-get",
- "user-identity-get",
  "uuid",
 ]
 
@@ -8441,7 +8435,6 @@ dependencies = [
  "tracing",
  "tracing-logfmt",
  "tracing-subscriber",
- "user-identity-create",
 ]
 
 [[package]]
@@ -14669,7 +14662,6 @@ dependencies = [
  "team-user-ban-get",
  "team-validate",
  "user",
- "user-identity-get",
 ]
 
 [[package]]
@@ -15992,46 +15984,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "user-identity-create"
-version = "25.1.0-rc.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "email-address-parser",
- "faker-user",
- "prost 0.10.4",
- "rivet-operation",
-]
-
-[[package]]
-name = "user-identity-delete"
-version = "25.1.0-rc.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "faker-user",
- "prost 0.10.4",
- "rivet-operation",
- "sqlx",
- "user-identity-create",
-]
-
-[[package]]
-name = "user-identity-get"
-version = "25.1.0-rc.1"
-dependencies = [
- "chirp-client",
- "chirp-worker",
- "faker-user",
- "prost 0.10.4",
- "rivet-config",
- "rivet-operation",
- "sqlx",
- "user-get",
- "user-identity-create",
-]
-
-[[package]]
 name = "user-pending-delete-toggle"
 version = "25.1.0-rc.1"
 dependencies = [
@@ -16041,8 +15993,6 @@ dependencies = [
  "prost 0.10.4",
  "rivet-operation",
  "sqlx",
- "user-identity-create",
- "user-identity-get",
 ]
 
 [[package]]
@@ -16069,7 +16019,6 @@ dependencies = [
  "prost 0.10.4",
  "rivet-operation",
  "sqlx",
- "user-identity-create",
 ]
 
 [[package]]
