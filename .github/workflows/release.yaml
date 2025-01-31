@@ -33,6 +33,10 @@ jobs:
       # Allows JSR to authenticate with GitHub
       id-token: write
     steps:
+      - name: Install git-lfs
+        run: |
+          apt-get update
+          apt-get install -y git-lfs
       - uses: actions/checkout@v4
         with:
           lfs: 'true'
@@ -91,7 +95,14 @@ jobs:
     container:
       image: rust:1.82.0
     steps:
+      - name: Install git-lfs
+        run: |
+          apt-get update
+          apt-get install -y git-lfs
+
       - uses: actions/checkout@v4
+        with:
+          lfs: 'true'
 
       - name: Build
         env:
@@ -213,7 +224,14 @@ jobs:
         if: runner.os == 'macOS'
         uses: douglascamata/setup-docker-macos-action@v1-alpha
 
+      - name: Install git-lfs
+        run: |
+          apt-get update
+          apt-get install -y git-lfs
+
       - uses: actions/checkout@v4
+        with:
+          lfs: 'true'
 
       - name: Set outputs
         id: vars
@@ -326,7 +344,14 @@ jobs:
     needs: [binaries, docker]
     runs-on: ubuntu-24.04
     steps:
+      - name: Install git-lfs
+        run: |
+          apt-get update
+          apt-get install -y git-lfs
+
       - uses: actions/checkout@v4
+        with:
+          lfs: 'true'
 
       - uses: ./.github/actions/docker-setup
         with:
