@@ -44,14 +44,17 @@ pub async fn run_from_env(
 		let primary_user_id = create_res.member_user_ids[0].as_uuid();
 
 		// Register user
-		op!([ctx] user_identity_create {
-			user_id: Some(primary_user_id.into()),
-			identity: Some(backend::user_identity::Identity {
-				kind: Some(backend::user_identity::identity::Kind::Email(backend::user_identity::identity::Email {
-					email: util::faker::email()
-				}))
-			})
-		})
+		chirp_workflow::compat::op(
+			&ctx,
+			::user::ops::identity::create::Input {
+				user_id: primary_user_id,
+				identity: backend::user_identity::Identity {
+					kind: Some(backend::user_identity::identity::Kind::Email(backend::user_identity::identity::Email {
+						email: util::faker::email()
+					}))
+				}
+			}
+		)
 		.await?;
 
 		(team_id, primary_user_id)

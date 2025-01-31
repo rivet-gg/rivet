@@ -8,6 +8,7 @@ edition.workspace = true
 [dependencies]
 bit-vec = "0.6"
 chirp-client.workspace = true
+chirp-workflow.workspace = true
 heck = "0.3"
 http = "0.2"
 rivet-operation.workspace = true
@@ -20,4 +21,4 @@ uuid = { version = "1", features = ["v4", "serde"] }
 ip-info.workspace = true
 mm-lobby-list-for-user-id.workspace = true
 region-get.workspace = true
-user-identity-get.workspace = true
+user.workspace = true

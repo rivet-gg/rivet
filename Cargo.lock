@@ -265,6 +265,7 @@ dependencies = [
  "build-list-for-env",
  "cdn-namespace-domain-create",
  "chirp-client",
+ "chirp-workflow",
  "chrono",
  "cloud-namespace-token-development-create",
  "cloud-namespace-token-public-create",
@@ -313,9 +314,8 @@ dependencies = [
  "upload-complete",
  "upload-get",
  "url",
- "user-get",
+ "user",
  "user-identity-get",
- "user-team-list",
  "uuid",
 ]
 
@@ -360,11 +360,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "user",
- "user-get",
- "user-identity-create",
  "user-identity-get",
- "user-resolve-email",
- "user-token-create",
  "uuid",
 ]
 
@@ -425,6 +421,7 @@ dependencies = [
  "cdn-site-list-for-game",
  "cf-custom-hostname-list-for-namespace-id",
  "chirp-client",
+ "chirp-workflow",
  "chrono",
  "cloud-device-link-create",
  "cloud-game-config-create",
@@ -511,10 +508,8 @@ dependencies = [
  "upload-get",
  "upload-prepare",
  "url",
- "user-get",
+ "user",
  "user-identity-create",
- "user-identity-get",
- "user-team-list",
  "uuid",
 ]
 
@@ -530,6 +525,7 @@ dependencies = [
  "build-list-for-env",
  "cdn-namespace-domain-create",
  "chirp-client",
+ "chirp-workflow",
  "chrono",
  "cloud-namespace-token-development-create",
  "cloud-namespace-token-public-create",
@@ -572,9 +568,8 @@ dependencies = [
  "upload-complete",
  "upload-get",
  "url",
- "user-get",
+ "user",
  "user-identity-get",
- "user-team-list",
  "uuid",
 ]
 
@@ -585,6 +580,7 @@ dependencies = [
  "api-helper",
  "async-trait",
  "chirp-client",
+ "chirp-workflow",
  "chrono",
  "faker-user",
  "futures-util",
@@ -626,10 +622,7 @@ dependencies = [
  "tracing-subscriber",
  "upload-prepare",
  "url",
- "user-get",
- "user-identity-get",
- "user-team-list",
- "user-token-create",
+ "user",
  "uuid",
 ]
 
@@ -696,6 +689,7 @@ dependencies = [
  "cdn-namespace-domain-create",
  "cdn-namespace-get",
  "chirp-client",
+ "chirp-workflow",
  "cloud-namespace-token-development-create",
  "faker-build",
  "faker-game",
@@ -743,11 +737,7 @@ dependencies = [
  "tracing-subscriber",
  "upload-prepare",
  "url",
- "user-avatar-upload-complete",
- "user-get",
- "user-identity-get",
- "user-pending-delete-toggle",
- "user-profile-validate",
+ "user",
  "uuid",
 ]
 
@@ -914,6 +904,7 @@ dependencies = [
  "api-helper",
  "async-trait",
  "chirp-client",
+ "chirp-workflow",
  "chrono",
  "faker-user",
  "futures-util",
@@ -946,9 +937,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
- "user-get",
- "user-team-list",
- "user-token-create",
+ "user",
  "uuid",
 ]
 
@@ -5899,9 +5888,10 @@ version = "25.1.0-rc.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "prost 0.10.4",
  "rivet-operation",
- "user-get",
+ "user",
 ]
 
 [[package]]
@@ -8340,6 +8330,7 @@ version = "25.1.0-rc.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "faker-game",
  "faker-team",
  "reqwest 0.11.27",
@@ -8353,7 +8344,7 @@ dependencies = [
  "tracing",
  "tracing-logfmt",
  "tracing-subscriber",
- "user-identity-create",
+ "user",
 ]
 
 [[package]]
@@ -8448,6 +8439,7 @@ version = "25.1.0-rc.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "faker-game",
  "faker-team",
  "reqwest 0.11.27",
@@ -8461,7 +8453,7 @@ dependencies = [
  "tracing",
  "tracing-logfmt",
  "tracing-subscriber",
- "user-identity-create",
+ "user",
 ]
 
 [[package]]
@@ -9177,7 +9169,7 @@ dependencies = [
  "upload-complete",
  "upload-get",
  "upload-prepare",
- "user-identity-create",
+ "user",
 ]
 
 [[package]]
@@ -11704,6 +11696,7 @@ version = "25.1.0-rc.1"
 dependencies = [
  "cdn-namespace-get",
  "chirp-client",
+ "chirp-workflow",
  "chrono",
  "cluster",
  "game-get",
@@ -11734,9 +11727,7 @@ dependencies = [
  "team-validate",
  "tier",
  "types-proto",
- "user-get",
- "user-identity-get",
- "user-team-list",
+ "user",
 ]
 
 [[package]]
@@ -12343,6 +12334,7 @@ version = "25.1.0-rc.1"
 dependencies = [
  "bit-vec",
  "chirp-client",
+ "chirp-workflow",
  "heck 0.3.3",
  "http 0.2.12",
  "ip-info",
@@ -12353,7 +12345,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum 0.24.1",
- "user-identity-get",
+ "user",
  "uuid",
 ]
 
@@ -15888,9 +15880,21 @@ version = "25.1.0-rc.1"
 dependencies = [
  "chirp-workflow",
  "cluster",
+ "email-address-parser",
+ "faker-user",
  "linode",
+ "rand",
+ "reqwest 0.11.27",
  "rivet-config",
+ "rivet-operation",
+ "serde",
  "server-spec",
+ "sqlx",
+ "token-create",
+ "upload-complete",
+ "upload-file-list",
+ "upload-get",
+ "upload-prepare",
 ]
 
 [[package]]
@@ -16006,11 +16010,12 @@ version = "25.1.0-rc.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "faker-user",
  "prost 0.10.4",
  "rivet-operation",
  "sqlx",
- "user-get",
+ "user",
 ]
 
 [[package]]
@@ -16056,6 +16061,7 @@ version = "25.1.0-rc.1"
 dependencies = [
  "chirp-client",
  "chirp-worker",
+ "chirp-workflow",
  "chrono",
  "faker-user",
  "game-get",
@@ -16071,10 +16077,7 @@ dependencies = [
  "upload-get",
  "upload-list-for-user",
  "upload-prepare",
- "user-get",
- "user-identity-delete",
- "user-profile-validate",
- "user-team-list",
+ "user",
 ]
 
 [[package]]

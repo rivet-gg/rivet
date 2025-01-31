@@ -38,10 +38,6 @@ tokio = { version = "1.40" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "json", "ansi"] }
 url = "2.2.2"
-user-get.workspace = true
-user-identity-create.workspace = true
-user-resolve-email.workspace = true
-user-token-create.workspace = true
 user.workspace = true
 uuid = { version = "1", features = ["v4"] }
 
@@ -50,7 +46,6 @@ rivet-auth.workspace = true
 rivet-connection.workspace = true
 
 faker-user.workspace = true
-user-token-create.workspace = true
 debug-email-res.workspace = true
 user-identity-get.workspace = true
 
