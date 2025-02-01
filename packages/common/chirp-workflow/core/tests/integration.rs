@@ -81,7 +81,7 @@ async fn fdb_sqlite_nats_driver() {
 
 	// Start worker
 	tokio::select! {
-		res = worker.poll_start(config, pools) => res.unwrap(),
+		res = worker.start(config, pools) => res.unwrap(),
 		res = tokio::signal::ctrl_c() => res.unwrap(),
 	}
 }

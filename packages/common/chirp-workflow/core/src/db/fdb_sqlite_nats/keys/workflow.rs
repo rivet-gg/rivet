@@ -1,14 +1,8 @@
-use std::{borrow::Cow, result::Result::Ok};
+use std::result::Result::Ok;
 
-// TODO: Use concrete error types
 use anyhow::*;
-use foundationdb::{
-	future::FdbValue,
-	tuple::{PackResult, TupleDepth, TuplePack, TupleUnpack, VersionstampOffset},
-};
+use fdb_util::prelude::*;
 use uuid::Uuid;
-
-use super::{FormalChunkedKey, FormalKey};
 
 pub struct LeaseKey {
 	pub workflow_id: Uuid,
@@ -191,9 +185,9 @@ impl FormalChunkedKey for InputKey {
 		.map_err(Into::into)
 	}
 
-	// fn split(&self, value: Self::Value) -> Result<Vec<Vec<u8>>> {
-	// 	self.split_ref(value.as_ref())
-	// }
+	fn split(&self, value: Self::Value) -> Result<Vec<Vec<u8>>> {
+		self.split_ref(value.as_ref())
+	}
 }
 
 impl TuplePack for InputKey {
@@ -270,9 +264,9 @@ impl FormalChunkedKey for OutputKey {
 		.map_err(Into::into)
 	}
 
-	// fn split(&self, value: Self::Value) -> Result<Vec<Vec<u8>>> {
-	// 	self.split_ref(value.as_ref())
-	// }
+	fn split(&self, value: Self::Value) -> Result<Vec<Vec<u8>>> {
+		self.split_ref(value.as_ref())
+	}
 }
 
 impl TuplePack for OutputKey {
