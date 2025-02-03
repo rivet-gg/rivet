@@ -44,8 +44,9 @@ async function main() {
 			"mergeRelease",
 
 			// Batch steps
-			"setup",
-			"complete",
+			"setupLocal",
+			"setupCi",
+			"completeCi",
 		],
 		negatable: ["latest"],
 		string: ["version", "commit"],
@@ -89,28 +90,21 @@ async function main() {
 		await validateGit(opts);
 	}
 
-	if (args.updateVersion || args.setup) {
+	if (args.updateVersion || args.setupLocal) {
 		$.logStep("Updating Version", "");
 		await $.logGroup(async () => {
 			await updateVersion(opts);
 		});
 	}
 
-	if (args.generateFern || args.setup) {
+	if (args.generateFern || args.setupLocal) {
 		$.logStep("Generating Fern", "");
 		await $.logGroup(async () => {
 			await $`./scripts/fern/gen.sh`;
 		});
 	}
 
-	if (args.publishSdk || args.setup) {
-		$.logStep("Publishing SDKs", "");
-		await $.logGroup(async () => {
-			await publishSdk(opts);
-		});
-	}
-
-	if (args.gitCommit || args.setup) {
+	if (args.gitCommit || args.setupLocal) {
 		assert(!args.noValidateGit, "cannot commit without git validation");
 		$.logStep("Committing Changes", "");
 		await $.logGroup(async () => {
@@ -118,7 +112,14 @@ async function main() {
 		});
 	}
 
-	if (args.configureReleasePlease || args.setup) {
+	if (args.publishSdk || args.setupCi) {
+		$.logStep("Publishing SDKs", "");
+		await $.logGroup(async () => {
+			await publishSdk(opts);
+		});
+	}
+
+	if (args.configureReleasePlease || args.setupCi) {
 		assert(!args.noValidateGit, "cannot configure release please without git validation");
 		$.logStep("Configuring Release Please", "");
 		await $.logGroup(async () => {
@@ -126,7 +127,7 @@ async function main() {
 		});
 	}
 
-	if (args.gitPush || args.setup) {
+	if (args.gitPush || args.setupCi) {
 		assert(!args.noValidateGit, "cannot push without git validation");
 		$.logStep("Pushing Commits", "");
 		await $.logGroup(async () => {
@@ -134,24 +135,17 @@ async function main() {
 		});
 	}
 
-	if (args.tagDocker || args.complete) {
+	if (args.tagDocker || args.completeCi) {
 		$.logStep("Tagging Docker", "");
 		await $.logGroup(async () => {
 			await tagDocker(opts);
 		});
 	}
 
-	if (args.updateArtifacts || args.complete) {
+	if (args.updateArtifacts || args.completeCi) {
 		$.logStep("Updating Artifacts", "");
 		await $.logGroup(async () => {
 			await updateArtifacts(opts);
-		});
-	}
-
-	if (args.mergeRelease || args.complete) {
-		$.logStep("Merging Release", "");
-		await $.logGroup(async () => {
-			await $`gh pr merge release-please--branches--main --auto`;
 		});
 	}
 

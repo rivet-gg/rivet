@@ -56,3 +56,12 @@ Once installed, run `nix-shell` to build your development environment.
    - Once approved, it's up to you to merge your commit. If deploying the frontend, make sure to monitor the
      changes from Sentry before going offline.
    - Manually mark your issue as _Complete_ once finished.
+
+### Release
+
+TODO: Update justfile
+
+1. `./scripts/release/main.ts --setupLocal --version VERSION --noLatest`
+2. Run workflow (TODO)
+3. `gh pr merge release-please--branches--main --auto`
+
