@@ -131,7 +131,7 @@ async function main() {
 				await $`git push`;
 			} else {
 				// Modify current branch
-				await $`gt submit --no-edit --publish`;
+				await $`gt submit --force --no-edit --publish`;
 			}
 		});
 	}
