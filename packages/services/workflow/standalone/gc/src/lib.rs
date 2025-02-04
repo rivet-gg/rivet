@@ -2,10 +2,11 @@ use std::{collections::HashSet, time::Duration};
 
 use rivet_operation::prelude::*;
 
-const WORKER_INSTANCE_LOST_THRESHOLD: i64 = util::duration::seconds(30);
+// TODO: temp fix, must be higher than worker tick interval
+const WORKER_INSTANCE_LOST_THRESHOLD: i64 = util::duration::seconds(125);
 
 pub async fn start(config: rivet_config::Config, pools: rivet_pools::Pools) -> GlobalResult<()> {
-	let mut interval = tokio::time::interval(Duration::from_secs(15));
+	let mut interval = tokio::time::interval(Duration::from_secs(30));
 	loop {
 		interval.tick().await;
 
