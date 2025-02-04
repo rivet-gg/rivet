@@ -59,9 +59,11 @@ Once installed, run `nix-shell` to build your development environment.
 
 ### Release
 
-TODO: Update justfile
+```sh
+# Release latest
+just release-latest VERSION
 
-1. `./scripts/release/main.ts --setupLocal --version VERSION --noLatest`
-2. Run workflow (TODO)
-3. `gh pr merge release-please--branches--main --auto`
+# Release no latest (including rc)
+just release-nolatest VERSION
+```
 

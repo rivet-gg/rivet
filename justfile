@@ -102,9 +102,13 @@ graphite-modify:
 
 [group('github')]
 release-latest VERSION:
-	gh workflow run .github/workflows/release.yaml -f version={{ VERSION }} -f latest=true
+	./scripts/release/main.ts --setupLocal --version {{ VERSION }}
+	gh workflow run .github/workflows/release.yaml -f version={{ VERSION }} -f latest=true --ref $(git rev-parse HEAD)
+	echo 'Once workflow is complete, manually merge Release Please'
 
 [group('github')]
 release-nolatest VERSION:
-	gh workflow run .github/workflows/release.yaml -f version={{ VERSION }} -f latest=false
+	./scripts/release/main.ts --setupLocal --version {{ VERSION }} --noLatest
+	gh workflow run .github/workflows/release.yaml -f version={{ VERSION }} -f latest=false --ref $(git rev-parse HEAD)
+	echo 'Once workflow is complete, manually merge Release Please'
 

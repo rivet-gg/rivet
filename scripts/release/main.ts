@@ -44,9 +44,9 @@ async function main() {
 			"mergeRelease",
 
 			// Batch steps
-			"setupLocal",
-			"setupCi",
-			"completeCi",
+			"setupLocal",  // Makes changes to repo & pushes it (we can't push commits from CI that can trigger Release Please & other CI actions)
+			"setupCi",  // Publishes packages (has access to NPM creds)
+			"completeCi",  // Tags binaries & Docker as latest (has access to Docker & S3 creds)
 		],
 		negatable: ["latest"],
 		string: ["version", "commit"],
@@ -112,14 +112,7 @@ async function main() {
 		});
 	}
 
-	if (args.publishSdk || args.setupCi) {
-		$.logStep("Publishing SDKs", "");
-		await $.logGroup(async () => {
-			await publishSdk(opts);
-		});
-	}
-
-	if (args.configureReleasePlease || args.setupCi) {
+	if (args.configureReleasePlease || args.setupLocal) {
 		assert(!args.noValidateGit, "cannot configure release please without git validation");
 		$.logStep("Configuring Release Please", "");
 		await $.logGroup(async () => {
@@ -127,11 +120,18 @@ async function main() {
 		});
 	}
 
-	if (args.gitPush || args.setupCi) {
+	if (args.gitPush || args.setupLocal) {
 		assert(!args.noValidateGit, "cannot push without git validation");
 		$.logStep("Pushing Commits", "");
 		await $.logGroup(async () => {
 			await $`git push`;
+		});
+	}
+
+	if (args.publishSdk || args.setupCi) {
+		$.logStep("Publishing SDKs", "");
+		await $.logGroup(async () => {
+			await publishSdk(opts);
 		});
 	}
 
