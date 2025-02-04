@@ -125,7 +125,14 @@ async function main() {
 		assert(!args.noValidateGit, "cannot push without git validation");
 		$.logStep("Pushing Commits", "");
 		await $.logGroup(async () => {
-			await $`git push`;
+			const branch = (await $`git rev-parse --abbrev-ref HEAD`).stdout.trim();
+			if (branch === "main") {
+				// Push on main
+				await $`git push`;
+			} else {
+				// Modify current branch
+				await $`gt submit`;
+			}
 		});
 	}
 
