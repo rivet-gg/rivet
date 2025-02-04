@@ -56,12 +56,13 @@ jobs:
           curl -fsSL https://deno.land/x/install/install.sh | sh
           export PATH=$HOME/.deno/bin:$PATH
 
-          # Authenticate NPM
-          yarn config set 'npmRegistries["//registry.npmjs.org"].npmAuthToken' ${{ secrets.NPM_TOKEN }}
-          yarn config set 'npmScopes["@rivet-gg"].npmPublishRegistry' https://registry.npmjs.org/
+          # Authenticate with NPM
+          cat << EOF > ~/.yarnrc.yml
+          npmAuthToken: "${{ secrets.NPM_TOKEN }}"
+          EOF
 
           # Install dependencies
-          yarn install
+          yarn install --immutable
 
           if [ "${{ inputs.latest }}" = "true" ]; then
               ./scripts/release/main.ts --version "${{ github.event.inputs.version }}" --setupCi
