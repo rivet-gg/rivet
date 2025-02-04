@@ -41,7 +41,7 @@ pub async fn run_from_env(
 			AS OF SYSTEM TIME '-1s'
 			WHERE last_ping_ts > $1
 			",
-			util::timestamp::now() - util::duration::seconds(30),
+			util::timestamp::now() - util::duration::seconds(125),
 		),
 		sql_fetch_all!(
 			[ctx, (String, i64)]
