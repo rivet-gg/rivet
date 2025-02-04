@@ -108,6 +108,7 @@ async function main() {
 		assert(!args.noValidateGit, "cannot commit without git validation");
 		$.logStep("Committing Changes", "");
 		await $.logGroup(async () => {
+			await $`git add .`;
 			await $`git commit --allow-empty -m ${`chore(release): update version to ${opts.version}`}`;
 		});
 	}
