@@ -15,6 +15,7 @@ cluster.workspace = true
 email-address-parser = "1.0.1"
 server-spec.workspace = true
 linode.workspace = true
+loops.workspace = true
 rivet-config.workspace = true
 rivet-operation.workspace = true
 util.workspace = true

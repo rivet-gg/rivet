@@ -1,20 +1,21 @@
 use rivet_operation::prelude::proto::backend;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 pub struct Email {
     pub email: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 pub struct DefaultUser {}
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 pub enum Kind {
     Email(Email),
     DefaultUser(DefaultUser),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Hash)]
 pub struct Identity {
     pub kind: Kind
 }

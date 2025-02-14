@@ -69,7 +69,9 @@ pub async fn create(
 
 	chirp_workflow::compat::signal(
 		ctx.op_ctx(),
-		crate::workflows::user::CreatedIdentity {}
+		crate::workflows::user::CreatedIdentity {
+			identity: identity.clone()
+		}
 	).await?.tag("user_id", user_id).send().await?;
 
 	Ok(Output {})
