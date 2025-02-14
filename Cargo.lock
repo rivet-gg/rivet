@@ -15882,6 +15882,7 @@ dependencies = [
  "cluster",
  "email-address-parser",
  "faker-user",
+ "lazy_static",
  "linode",
  "rand",
  "reqwest 0.11.27",
@@ -15890,10 +15891,12 @@ dependencies = [
  "serde",
  "server-spec",
  "sqlx",
+ "team-get",
  "token-create",
  "upload-complete",
  "upload-file-list",
  "upload-get",
+ "upload-list-for-user",
  "upload-prepare",
 ]
 
