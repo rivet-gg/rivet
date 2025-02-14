@@ -297,6 +297,11 @@ pub fn config(rivet_config: rivet_config::Config) -> Result<RunConfigData> {
 			db_name: "db_workflow",
 		},
 		SqlService {
+			kind: SqlServiceKind::CockroachDB,
+			migrations: include_dir!("$CARGO_MANIFEST_DIR/../../services/loops/db/loops"),
+			db_name: "db_loops",
+		},
+		SqlService {
 			kind: SqlServiceKind::ClickHouse,
 			migrations: include_dir!("$CARGO_MANIFEST_DIR/../../services/ds-log/db/log"),
 			db_name: "db_ds_log",

@@ -1,5 +1,5 @@
 use chirp_workflow::prelude::*;
-use rivet_operation::prelude::proto::backend::pkg::*;
+use rivet_operation::prelude::proto::backend::pkg::{*};
 
 use lazy_static::lazy_static;
 use futures_util::{FutureExt, StreamExt, TryStreamExt};
@@ -51,7 +51,11 @@ pub async fn user(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
 						.send()
 						.await?;
 				},
-				Main::CreatedIdentity(_) => {
+				Main::CreatedIdentity(sig) => {
+					ctx.activity(LoopsContactCreateInput {
+						user_id,
+						identity: sig.identity
+					}).await?;
 					ctx.msg(Update {})
 						.tag("user_id", user_id)
 						.send()
@@ -223,7 +227,7 @@ async fn profile_set(ctx: &ActivityCtx, input: &ProfileSetInput) -> GlobalResult
 		input.bio.as_ref().map(|x| util::format::biography(x))
 	)
 	.await?;
-	
+
 	Ok(Ok(()))
 }
 
@@ -274,7 +278,7 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<(St
 	let account_number = gen_account_number();
 	tracing::info!(%display_name, %account_number, "insert user attempt");
 
-    sql_execute!(
+	sql_execute!(
 		[ctx]
 		"
 		INSERT INTO db_user.users (
@@ -432,7 +436,7 @@ async fn remove_from_teams(ctx: &ActivityCtx, input: &RemoveFromTeamsInput) -> G
 		.buffer_unordered(32)
 		.try_collect::<Vec<_>>()
 		.await?;
-	
+
 	Ok(())
 }
 
@@ -473,7 +477,10 @@ struct PublishDeletionAnalyticsInput {
 }
 
 #[activity(PublishDeletionAnalytics)]
-async fn publish_deletion_analytics(ctx: &ActivityCtx, input: &PublishDeletionAnalyticsInput) -> GlobalResult<()> {
+async fn publish_deletion_analytics(
+	ctx: &ActivityCtx,
+	input: &PublishDeletionAnalyticsInput
+) -> GlobalResult<()> {
 	msg!([ctx] analytics::msg::event_create() {
 		events: vec![
 			analytics::msg::event_create::Event {
@@ -487,6 +494,28 @@ async fn publish_deletion_analytics(ctx: &ActivityCtx, input: &PublishDeletionAn
 		],
 	})
 	.await?;
+
+	Ok(())
+}
+
+// Identity Create
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+struct LoopsContactCreateInput {
+	user_id: Uuid,
+	identity: crate::types::identity::Identity,
+}
+
+#[activity(LoopsContactCreate)]
+async fn loops_contact_create(
+	ctx: &ActivityCtx,
+	input: &LoopsContactCreateInput
+) -> GlobalResult<()> {
+	if let crate::types::identity::Kind::Email(email) = &input.identity.kind {
+		ctx.op(loops::ops::create_contact::Input {
+			user_id: input.user_id,
+			email: email.email.clone(),
+		}).await?;
+	}
 
 	Ok(())
 }
@@ -515,7 +544,9 @@ pub struct AdminSet {}
 pub struct ChangedTeam {}
 
 #[signal("user_created_identity")]
-pub struct CreatedIdentity {}
+pub struct CreatedIdentity {
+	pub identity: crate::types::identity::Identity
+}
 
 #[signal("user_completed_avatar_upload")]
 pub struct CompletedAvatarUpload {}

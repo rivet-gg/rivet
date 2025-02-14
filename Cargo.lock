@@ -8466,6 +8466,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
+name = "loops"
+version = "25.1.1"
+dependencies = [
+ "chirp-client",
+ "chirp-worker",
+ "chirp-workflow",
+ "reqwest 0.11.27",
+ "rivet-config",
+ "rivet-operation",
+ "rivet-runtime",
+ "serde_json",
+]
+
+[[package]]
 name = "lru"
 version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15872,6 +15886,7 @@ dependencies = [
  "faker",
  "lazy_static",
  "linode",
+ "loops",
  "rand",
  "reqwest 0.11.27",
  "rivet-config",
