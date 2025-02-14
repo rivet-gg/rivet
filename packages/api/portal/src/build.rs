@@ -14,7 +14,7 @@ pub async fn group_summaries(
 	// Fetch team metadata
 	let (user_team_list_res, teams_res, team_member_count_res) = tokio::try_join!(
 		ctx.op(
-			::user::ops::team_list::Input {
+			user::ops::team_list::Input {
 				user_ids: vec![current_user_id.into()],
 			}
 		),

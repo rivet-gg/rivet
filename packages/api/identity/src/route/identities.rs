@@ -142,10 +142,10 @@ pub async fn update_profile(
 	);
 
 	let mut sub = ctx
-		.subscribe::<::user::workflows::user::ProfileSetStatus>(("user_id", user_ent.user_id))
+		.subscribe::<user::workflows::user::ProfileSetStatus>(("user_id", user_ent.user_id))
 		.await?;
 
-	ctx.signal(::user::workflows::user::ProfileSet {
+	ctx.signal(user::workflows::user::ProfileSet {
 		display_name: body.display_name.clone(),
 		account_number: body.account_number.map(|n| n.api_try_into()).transpose()?,
 		bio: body.bio.clone(),
@@ -172,7 +172,7 @@ pub async fn validate_profile(
 		"invalid parameter account_number"
 	);
 
-	let res =  ctx.op(::user::ops::profile_validate::Input {
+	let res =  ctx.op(user::ops::profile_validate::Input {
 		user_id: user_ent.user_id,
 		display_name: body.display_name.clone(),
 		account_number: body.account_number
@@ -245,7 +245,7 @@ pub async fn complete_avatar_upload(
 ) -> GlobalResult<serde_json::Value> {
 	let user_ent = ctx.auth().user(ctx.op_ctx()).await?;
 
-	ctx.op(::user::ops::avatar_upload_complete::Input {
+	ctx.op(user::ops::avatar_upload_complete::Input {
 		user_id: user_ent.user_id,
 		upload_id: upload_id,
 	})
@@ -261,7 +261,7 @@ pub async fn mark_deletion(
 ) -> GlobalResult<serde_json::Value> {
 	let user_ent = ctx.auth().user(ctx.op_ctx()).await?;
 
-	ctx.op(::user::ops::pending_delete_toggle::Input {
+	ctx.op(user::ops::pending_delete_toggle::Input {
 		user_id: user_ent.user_id,
 		active: true,
 	})
@@ -274,7 +274,7 @@ pub async fn mark_deletion(
 pub async fn unmark_deletion(ctx: Ctx<Auth>) -> GlobalResult<serde_json::Value> {
 	let user_ent = ctx.auth().user(ctx.op_ctx()).await?;
 
-	ctx.op(::user::ops::pending_delete_toggle::Input {
+	ctx.op(user::ops::pending_delete_toggle::Input {
 		user_id: user_ent.user_id,
 		active: false,
 	})

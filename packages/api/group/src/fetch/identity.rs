@@ -10,8 +10,8 @@ use crate::{auth::Auth, convert};
 pub async fn users(
 	ctx: &Ctx<Auth>,
 	user_ids: Vec<Uuid>,
-) -> GlobalResult<::user::ops::get::Output> {
-	ctx.op(::user::ops::get::Input {
+) -> GlobalResult<user::ops::get::Output> {
+	ctx.op(user::ops::get::Input {
 		user_ids,
 	})
 	.await

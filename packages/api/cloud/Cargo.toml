@@ -118,5 +118,3 @@ rivet-connection.workspace = true
 
 faker-region.workspace = true
 faker-team.workspace = true
-token-create.workspace = true
-user-identity-create.workspace = true

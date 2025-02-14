@@ -63,7 +63,7 @@ impl Ctx {
 
 		let token_res = chirp_workflow::compat::op(
 			&ctx,
-			::user::ops::token_create::Input {
+			user::ops::token_create::Input {
 				user_id,
 				client: backend::net::ClientInfo {
 					user_agent: Some(USER_AGENT.into()),

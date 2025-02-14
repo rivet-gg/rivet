@@ -7,7 +7,7 @@ async fn empty(ctx: TestCtx) {
 	let user_id = user_res.user_id;
 
 	let email = util::faker::email();
-    ctx.op(::user::ops::identity::create::Input {
+    ctx.op(user::ops::identity::create::Input {
 		user_id,
 		identity: backend::user_identity::Identity {
 			kind: Some(backend::user_identity::identity::Kind::Email(
@@ -20,7 +20,7 @@ async fn empty(ctx: TestCtx) {
 	.await
 	.unwrap();
 
-	let res = ctx.op(::user::ops::identity::get::Input {
+	let res = ctx.op(user::ops::identity::get::Input {
 		user_ids: vec![user_id, Uuid::new_v4()],
 	})
 	.await

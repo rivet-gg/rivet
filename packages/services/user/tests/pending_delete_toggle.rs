@@ -8,7 +8,7 @@ async fn empty(ctx: TestCtx) {
 
 	// Register user
 	let email = util::faker::email();
-	let _res = ctx.op(::user::ops::identity::create::Input {
+	let _res = ctx.op(user::ops::identity::create::Input {
 		user_id,
 		identity: backend::user_identity::Identity {
 			kind: Some(backend::user_identity::identity::Kind::Email(
@@ -21,7 +21,7 @@ async fn empty(ctx: TestCtx) {
 	.await
 	.unwrap();
 
-	ctx.op(::user::ops::pending_delete_toggle::Input {
+	ctx.op(user::ops::pending_delete_toggle::Input {
 		user_id,
 		active: true,
 	})
@@ -43,7 +43,7 @@ async fn empty(ctx: TestCtx) {
 
 	assert!(delete_request_ts.is_some());
 
-	ctx.op(::user::ops::pending_delete_toggle::Input {
+	ctx.op(user::ops::pending_delete_toggle::Input {
 		user_id,
 		active: false,
 	})

@@ -24,7 +24,7 @@ pub async fn summaries(
 			if let Some(current_user_id) = current_user_id {
 				let user_team_list_res = chirp_workflow::compat::op(
 					&ctx,
-					::user::ops::team_list::Input {
+					user::ops::team_list::Input {
 						user_ids: vec![current_user_id.into()],
 					},
 				)

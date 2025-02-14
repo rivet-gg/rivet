@@ -4,7 +4,7 @@ use chirp_workflow::prelude::*;
 async fn empty(ctx: TestCtx) {
 	let res = ctx.op(faker::ops::user::Input {}).await.unwrap();
 
-	let get_res = ctx.op(::user::ops::get::Input {
+	let get_res = ctx.op(user::ops::get::Input {
 		user_ids: vec![res.user_id],
 	})
 	.await

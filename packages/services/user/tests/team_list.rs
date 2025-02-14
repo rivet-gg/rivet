@@ -31,7 +31,7 @@ async fn empty(ctx: TestCtx) {
 		.unwrap();
 	}
 
-	let res = ctx.op(::user::ops::team_list::Input {
+	let res = ctx.op(user::ops::team_list::Input {
 		user_ids: vec![user_a, user_b, user_c],
 	})
 	.await

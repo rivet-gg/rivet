@@ -62,7 +62,7 @@ impl Auth {
 
 		let user_res = chirp_workflow::compat::op(
 			&ctx,
-			::user::ops::get::Input {
+			user::ops::get::Input {
 				user_ids: vec![user_ent.user_id],
 			},
 		)
@@ -279,7 +279,7 @@ impl Auth {
 			// Fetch teams associated with user
 			let teams_res = chirp_workflow::compat::op(
 				&ctx,
-				::user::ops::team_list::Input {
+				user::ops::team_list::Input {
 					user_ids: vec![user_ent.user_id.into()],
 				},
 			)

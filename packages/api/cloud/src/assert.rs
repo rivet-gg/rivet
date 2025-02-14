@@ -9,7 +9,7 @@ pub async fn user_registered(ctx: &OperationContext<()>, user_id: Uuid) -> Globa
 	// If the user has at least one identity they are considered registered
 	let identity = chirp_workflow::compat::op(
 		&ctx,
-		::user::ops::identity::get::Input {
+		user::ops::identity::get::Input {
 			user_ids: vec![user_id]
 		},
 	)
