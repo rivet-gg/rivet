@@ -1,10 +1,11 @@
-use rivet_api::models;
 use rivet_operation::prelude::*;
+use rivet_api::models;
+use chirp_workflow::prelude::*;
 
 use crate::convert;
 
 pub async fn summaries(
-	ctx: &OperationContext<()>,
+	ctx: &ApiCtx,
 	current_user_id: Option<Uuid>,
 	group_ids: Vec<Uuid>,
 ) -> GlobalResult<Vec<models::GroupGroupSummary>> {
@@ -22,11 +23,10 @@ pub async fn summaries(
 	let (user_teams, teams_res, team_member_count_res) = tokio::try_join!(
 		async {
 			if let Some(current_user_id) = current_user_id {
-				let user_team_list_res = chirp_workflow::compat::op(
-					&ctx,
+				let user_team_list_res = ctx.op(
 					user::ops::team_list::Input {
 						user_ids: vec![current_user_id.into()],
-					},
+					}
 				)
 				.await?;
 

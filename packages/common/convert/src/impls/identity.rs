@@ -1,17 +1,16 @@
-use proto::backend;
 use rivet_api::models;
 use rivet_operation::prelude::*;
 
 use crate::ApiTryFrom;
 
-impl ApiTryFrom<backend::user_identity::Identity> for models::IdentityLinkedAccount {
+impl ApiTryFrom<user::types::identity::Identity> for models::IdentityLinkedAccount {
 	type Error = GlobalError;
 
 	fn api_try_from(
-		value: backend::user_identity::Identity,
+		value: user::types::identity::Identity,
 	) -> GlobalResult<models::IdentityLinkedAccount> {
-		match unwrap_ref!(value.kind) {
-			backend::user_identity::identity::Kind::Email(email_ident) => {
+		match value.kind {
+			user::types::identity::Kind::Email(email_ident) => {
 				Ok(models::IdentityLinkedAccount {
 					email: Some(Box::new(models::IdentityEmailLinkedAccount {
 						email: email_ident.email.to_owned(),
@@ -19,7 +18,7 @@ impl ApiTryFrom<backend::user_identity::Identity> for models::IdentityLinkedAcco
 					..Default::default()
 				})
 			}
-			backend::user_identity::identity::Kind::DefaultUser(_) => {
+			user::types::identity::Kind::DefaultUser(_) => {
 				Ok(models::IdentityLinkedAccount {
 					default_user: Some(true),
 					..Default::default()

@@ -1,9 +1,8 @@
-use proto::{
-	backend::{self},
-	common,
-};
+
+use rivet_operation::prelude::proto;
+use proto::{backend::{self}, common};
 use rivet_api::models;
-use rivet_operation::prelude::*;
+use chirp_workflow::prelude::*;
 
 use crate::convert;
 
@@ -14,7 +13,7 @@ pub struct TeamsCtx {
 }
 
 pub async fn handles(
-	ctx: &OperationContext<()>,
+	ctx: &ApiCtx,
 	current_user_id: Uuid,
 	user_ids: Vec<Uuid>,
 ) -> GlobalResult<Vec<models::IdentityHandle>> {
@@ -33,7 +32,7 @@ pub async fn handles(
 }
 
 pub async fn summaries(
-	ctx: &OperationContext<()>,
+	ctx: &ApiCtx,
 	current_user_id: Uuid,
 	user_ids: Vec<Uuid>,
 ) -> GlobalResult<Vec<models::IdentitySummary>> {
@@ -52,7 +51,7 @@ pub async fn summaries(
 }
 
 pub async fn profiles(
-	ctx: &OperationContext<()>,
+	ctx: &ApiCtx,
 	current_user_id: Uuid,
 	raw_user_ids: Vec<Uuid>,
 ) -> GlobalResult<Vec<models::IdentityProfile>> {
@@ -60,16 +59,10 @@ pub async fn profiles(
 		return Ok(Vec::new());
 	}
 
-	let user_ids = raw_user_ids
-		.clone()
-		.into_iter()
-		.map(Into::into)
-		.collect::<Vec<_>>();
-
 	let (users, teams_ctx, linked_accounts) = tokio::try_join!(
 		users(ctx, raw_user_ids.clone()),
-		teams(ctx, user_ids.clone()),
-		linked_accounts(ctx, user_ids.clone()),
+		teams(ctx, raw_user_ids.clone()),
+		linked_accounts(ctx, raw_user_ids.clone()),
 	)?;
 
 	// Convert all data
@@ -92,26 +85,19 @@ pub async fn profiles(
 }
 
 pub async fn users(
-	ctx: &OperationContext<()>,
+	ctx: &ApiCtx,
 	user_ids: Vec<Uuid>,
 ) -> GlobalResult<user::ops::get::Output> {
-	chirp_workflow::compat::op(
-		&ctx,
-		user::ops::get::Input {
-			user_ids,
-		},
-	)
+	ctx.op(user::ops::get::Input {
+		user_ids,
+	})
 	.await
 }
 
-async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> GlobalResult<TeamsCtx> {
-	let user_teams_res = chirp_workflow::compat::op(
-		&ctx,
+async fn teams(ctx: &ApiCtx, user_ids: Vec<Uuid>) -> GlobalResult<TeamsCtx> {
+	let user_teams_res = ctx.op(
 		user::ops::team_list::Input {
-			user_ids: user_ids
-				.iter()
-				.map(|x| (*x).into())
-				.collect::<Vec<Uuid>>(),
+			user_ids,
 		},
 	)
 	.await?;
@@ -145,17 +131,13 @@ async fn teams(ctx: &OperationContext<()>, user_ids: Vec<common::Uuid>) -> Globa
 }
 
 async fn linked_accounts(
-	ctx: &OperationContext<()>,
-	user_ids: Vec<common::Uuid>,
+	ctx: &ApiCtx,
+	user_ids: Vec<Uuid>,
 ) -> GlobalResult<user::ops::identity::get::Output> {
-	Ok(chirp_workflow::compat::op(
-		&ctx,
-		user::ops::identity::get::Input {
-			user_ids: user_ids
-				.iter()
-				.map(|i| i.as_uuid())
-				.collect::<Vec<Uuid>>()
-		},
+	Ok(
+		ctx.op(user::ops::identity::get::Input {
+			user_ids,
+		})
+		.await?
 	)
-	.await?)
 }

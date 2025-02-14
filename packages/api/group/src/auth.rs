@@ -2,7 +2,7 @@ use api_helper::{
 	auth::{ApiAuth, AuthRateLimitCtx},
 	util::{as_auth_expired, basic_rate_limit},
 };
-use proto::{backend, claims::Claims};
+use proto::claims::Claims;
 use rivet_claims::ClaimsDecode;
 use rivet_operation::prelude::*;
 
@@ -52,7 +52,7 @@ impl Auth {
 	pub async fn user(
 		&self,
 		ctx: &OperationContext<()>,
-	) -> GlobalResult<(backend::user::User, rivet_claims::ent::User)> {
+	) -> GlobalResult<(user::types::User, rivet_claims::ent::User)> {
 		let claims = self.claims()?;
 		let user_ent = claims.as_user()?;
 

@@ -251,7 +251,7 @@ pub async fn join_requests(
 			let join_request_ts = team_join_requests
 				.join_requests
 				.iter()
-				.find(|join_request| user.user_id == join_request.user_id)
+				.find(|join_request| Some(user.user_id.into()) == join_request.user_id)
 				.map(|jr| jr.ts)
 				.unwrap_or(util::timestamp::now());
 			Ok(models::GroupJoinRequest {
@@ -1019,7 +1019,7 @@ pub async fn bans(
 			let ban_ts = unwrap!(team_bans
 				.banned_users
 				.iter()
-				.find(|ban| user.user_id == ban.user_id)
+				.find(|ban| Some(user.user_id.into()) == ban.user_id)
 			).ban_ts;
 
 			Ok(models::GroupBannedIdentity {

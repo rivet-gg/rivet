@@ -66,7 +66,7 @@ async fn fetch(ctx: TestCtx) {
 		let user_res = res
 			.users
 			.iter()
-			.find(|u| u.user_id.unwrap().as_uuid() == user.user_id.unwrap())
+			.find(|u| u.user_id == user.user_id.unwrap())
 			.expect("user not returned");
 
 		assert_eq!(user.display_name, user_res.display_name);

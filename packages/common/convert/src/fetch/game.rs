@@ -1,16 +1,14 @@
 use std::collections::HashMap;
 
+use rivet_operation::prelude::proto;
+use proto::{backend::{self,pkg::*}, common};
 use rivet_api::models;
-use rivet_operation::prelude::*;
-use types_proto::rivet::{
-	backend::{self, pkg::*},
-	common,
-};
+use chirp_workflow::prelude::*;
 
 use crate::convert;
 
 pub async fn summaries(
-	ctx: &OperationContext<()>,
+	ctx: &ApiCtx,
 	game_ids: Vec<Uuid>,
 ) -> GlobalResult<Vec<models::GameGameSummary>> {
 	if game_ids.is_empty() {
@@ -39,7 +37,7 @@ pub async fn summaries(
 }
 
 pub async fn games_and_dev_teams(
-	ctx: &OperationContext<()>,
+	ctx: &ApiCtx,
 	game_ids: Vec<common::Uuid>,
 ) -> GlobalResult<(game::get::Response, HashMap<Uuid, backend::team::Team>)> {
 	let games_res = op!([ctx] game_get {
@@ -74,7 +72,7 @@ pub async fn games_and_dev_teams(
 }
 
 pub async fn region_summaries(
-	ctx: &OperationContext<()>,
+	ctx: &ApiCtx,
 	game_id: Uuid,
 ) -> GlobalResult<Vec<models::CloudRegionSummary>> {
 	let list_res = op!([ctx] region_list_for_game {

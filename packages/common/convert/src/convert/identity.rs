@@ -1,24 +1,21 @@
 use rivet_api::models;
 use rivet_operation::prelude::*;
-use types_proto::rivet::backend::{self};
 
 use crate::{convert, fetch, ApiTryInto};
 
 pub fn handle(
 	config: &rivet_config::Config,
 	_current_user_id: Uuid,
-	user: &backend::user::User,
+	user: &user::types::User,
 ) -> GlobalResult<models::IdentityHandle> {
-	let user_id = unwrap_ref!(user.user_id).as_uuid();
-
 	Ok(models::IdentityHandle {
-		identity_id: user_id,
+		identity_id: user.user_id,
 		display_name: user.display_name.clone(),
 		account_number: user.account_number as i32,
-		avatar_url: util::route::user_avatar(config, user),
+		avatar_url: user::route::user_avatar(config, user),
 		is_registered: true, // TODO:
 		external: Box::new(models::IdentityExternalLinks {
-			profile: util::route::user_profile(config, user_id),
+			profile: user::route::user_profile(config, user.user_id),
 			settings: None,
 		}),
 	})
@@ -27,19 +24,16 @@ pub fn handle(
 pub fn summary(
 	config: &rivet_config::Config,
 	_current_user_id: Uuid,
-	user: &backend::user::User,
+	user: &user::types::User,
 ) -> GlobalResult<models::IdentitySummary> {
-	let user_id_proto = unwrap!(user.user_id);
-	let user_id = user_id_proto.as_uuid();
-
 	Ok(models::IdentitySummary {
-		identity_id: user_id,
+		identity_id: user.user_id,
 		display_name: user.display_name.clone(),
 		account_number: user.account_number as i32,
-		avatar_url: util::route::user_avatar(config, user),
+		avatar_url: user::route::user_avatar(config, user),
 		is_registered: true, // TODO:
 		external: Box::new(models::IdentityExternalLinks {
-			profile: util::route::user_profile(config, user_id),
+			profile: user::route::user_profile(config, user.user_id),
 			settings: None,
 		}),
 		following: false,
@@ -58,12 +52,10 @@ pub struct ProfileCtx<'a> {
 pub fn profile(
 	config: &rivet_config::Config,
 	current_user_id: Uuid,
-	user: &backend::user::User,
+	user: &user::types::User,
 	pctx: ProfileCtx,
 ) -> GlobalResult<models::IdentityProfile> {
-	let user_id_proto = unwrap!(user.user_id);
-	let user_id = user_id_proto.as_uuid();
-
+	let user_id = user.user_id;
 	let is_self = user_id == current_user_id;
 
 	let identities = unwrap!(pctx
@@ -81,7 +73,7 @@ pub fn profile(
 			.user_teams
 			.users
 			.iter()
-			.find(|u| Some(common::Uuid::from(u.user_id)) == user.user_id));
+			.find(|u| u.user_id == user.user_id));
 		let team_ids = user
 			.teams
 			.iter()
@@ -108,10 +100,10 @@ pub fn profile(
 		identity_id: user_id,
 		display_name: user.display_name.to_owned(),
 		account_number: user.account_number as i32,
-		avatar_url: util::route::user_avatar(config, user),
+		avatar_url: user::route::user_avatar(config, user),
 		is_registered,
 		external: Box::new(models::IdentityExternalLinks {
-			profile: util::route::user_profile(config, user_id),
+			profile: user::route::user_profile(config, user_id),
 			settings: None,
 		}),
 		dev_state: None,

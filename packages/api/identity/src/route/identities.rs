@@ -53,7 +53,7 @@ async fn get_profile(
 	_watch_index: WatchIndexQuery,
 ) -> GlobalResult<(models::IdentityProfile, i64)> {
 	let identities =
-		fetch::identity::profiles(ctx.op_ctx(), current_user_id, vec![identity_id]).await?;
+		fetch::identity::profiles(&*ctx, current_user_id, vec![identity_id]).await?;
 
 	Ok((
 		unwrap_with!(identities.into_iter().next(), IDENTITY_NOT_FOUND),
@@ -87,7 +87,7 @@ pub async fn handles(
 	);
 
 	let identities =
-		fetch::identity::handles(ctx.op_ctx(), current_user_id, query.identity_ids).await?;
+		fetch::identity::handles(&*ctx, current_user_id, query.identity_ids).await?;
 
 	Ok(models::IdentityGetHandlesResponse {
 		identities,
@@ -120,7 +120,7 @@ pub async fn summaries(
 	// Wait for an update if needed
 
 	let identities =
-		fetch::identity::summaries(ctx.op_ctx(), current_user_id, query.identity_ids).await?;
+		fetch::identity::summaries(&*ctx, current_user_id, query.identity_ids).await?;
 
 	Ok(models::IdentityGetSummariesResponse {
 		identities,

@@ -1,6 +1,5 @@
 use chirp_workflow::prelude::*;
-use rivet_operation::prelude::{common,proto};
-use proto::backend;
+use rivet_operation::prelude::common;
 
 #[derive(Debug)]
 pub struct Input {
@@ -9,7 +8,7 @@ pub struct Input {
 
 #[derive(Debug)]
 pub struct Output {
-    pub users: Vec<backend::user::User>
+    pub users: Vec<crate::types::User>
 }
 
 
@@ -89,18 +88,17 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 		users: users
 			.into_iter()
 			.map(|user| {
-				let profile_id = user.profile_id.map(Into::<common::Uuid>::into);
 
 				// Fetch all information relating to the profile image
 				let (profile_upload_complete_ts, profile_file_name, profile_provider) = {
 					let upload = upload_res
 						.uploads
 						.iter()
-						.find(|upload| upload.upload_id == profile_id);
+						.find(|upload| upload.upload_id.map(|x| x.as_uuid()) == user.profile_id);
 					let file = files_res
 						.files
 						.iter()
-						.find(|file| file.upload_id == profile_id);
+						.find(|file| file.upload_id.map(|x| x.as_uuid()) == user.profile_id);
 
 					if let (Some(upload), Some(file)) = (upload, file) {
 						// TODO: Why do we parse the file name here? Based on route.rs in utils shouldn't
@@ -116,13 +114,13 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 					}
 				};
 
-				backend::user::User {
-					user_id: Some(user.user_id.into()),
+				crate::types::User {
+					user_id: user.user_id,
 					display_name: user.display_name,
 					account_number: user.account_number as u32,
 					avatar_id: user.avatar_id,
 					profile_upload_id: if profile_upload_complete_ts.is_some() {
-						profile_id
+						user.profile_id
 					} else {
 						None
 					},
