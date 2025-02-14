@@ -4,10 +4,8 @@ use api_helper::{
 	anchor::{WatchIndexQuery, WatchResponse},
 	ctx::Ctx,
 };
-use chirp_client::TailAnchorResponse;
-use futures_util::FutureExt;
 use proto::{
-	backend::{self, pkg::*},
+	backend::{self,pkg::*},
 	common,
 };
 use rivet_api::models as new_models;
@@ -34,7 +32,7 @@ enum TeamConsumerUpdate {
 pub async fn profile(
 	ctx: Ctx<Auth>,
 	group_id: Uuid,
-	watch_index: WatchIndexQuery,
+	_watch_index: WatchIndexQuery,
 ) -> GlobalResult<models::GetGroupProfileResponse> {
 	let (_, user_ent) = ctx.auth().user(ctx.op_ctx()).await?;
 
@@ -47,77 +45,7 @@ pub async fn profile(
 	let team = unwrap!(teams.teams.first()).clone();
 
 	// Wait for an update if needed
-	let (update, update_ts) = if let Some(anchor) = watch_index.to_consumer()? {
-		// Team events
-		let team_update_sub = tail_anchor!([ctx, anchor] team::msg::update(group_id));
-
-		// Member creation/deletion tails ONLY for the current requesting user (required for
-		// `is_current_identity_member` property)
-		let team_member_create_sub = tail_anchor!([ctx, anchor] team::msg::member_create_complete(group_id, user_ent.user_id));
-		let team_member_remove_sub = tail_anchor!([ctx, anchor] team::msg::member_remove_complete(group_id, user_ent.user_id));
-
-		// Join request creation/deletion tails ONLY for the current requesting user (required for
-		// `is_current_identity_requesting_join` property)
-		let team_join_request_create_sub = tail_anchor!([ctx, anchor] team::msg::join_request_create_complete(group_id, user_ent.user_id));
-		let team_join_request_resolve_sub = tail_anchor!([ctx, anchor] team::msg::join_request_resolve_complete(group_id, user_ent.user_id));
-
-		// Listen for updates
-		util::macros::select_with_timeout!({
-			event = team_update_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(Some(TeamConsumerUpdate::Team), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = team_member_create_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(Some(TeamConsumerUpdate::MemberCreate), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = team_member_remove_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(Some(TeamConsumerUpdate::MemberRemove), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = team_join_request_create_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(Some(TeamConsumerUpdate::JoinRequestCreate), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = team_join_request_resolve_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(Some(TeamConsumerUpdate::JoinRequestResolve), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-		})
-	} else {
-		Default::default()
-	};
-	let update_ts = update_ts.unwrap_or_else(util::timestamp::now);
-
-	let (team, team_members_res, team_join_requests_res) = tokio::try_join!(
-		// Fetch new team data (if updated)
-		async {
-			if let Some(TeamConsumerUpdate::Team) = update {
-				let teams_res = op!([ctx] team_get {
-					team_ids: vec![group_id.into()],
-				})
-				.await?;
-
-				Ok(unwrap!(teams_res.teams.first()).clone())
-			} else {
-				Ok(team)
-			}
-		},
+	let (team_members_res, team_join_requests_res) = tokio::try_join!(
 		op!([ctx] team_member_list {
 			team_ids: vec![group_id.into()],
 			limit: None,
@@ -168,7 +96,7 @@ pub async fn profile(
 
 			thread_id: Default::default(),
 		},
-		watch: convert::watch_response(WatchResponse::new(update_ts + 1)),
+		watch: convert::watch_response(WatchResponse::new(util::timestamp::now())),
 	})
 }
 
@@ -188,7 +116,7 @@ pub struct ListMembersQuery {
 pub async fn members(
 	ctx: Ctx<Auth>,
 	group_id: Uuid,
-	watch_index: WatchIndexQuery,
+	_watch_index: WatchIndexQuery,
 	query: ListMembersQuery,
 ) -> GlobalResult<models::GetGroupMembersResponse> {
 	let (user, user_ent) = ctx.auth().user(ctx.op_ctx()).await?;
@@ -221,69 +149,11 @@ pub async fn members(
 	.await?;
 	let team_members = unwrap!(team_members_res.teams.first());
 
-	let mut user_ids = team_members
+	let user_ids = team_members
 		.members
 		.iter()
 		.map(|member| Ok(unwrap!(member.user_id)))
 		.collect::<GlobalResult<Vec<_>>>()?;
-
-	// Wait for an update if needed
-	let (update, update_ts) = if let Some(anchor) = watch_index.to_consumer()? {
-		// Team events
-		let team_member_create_sub =
-			tail_anchor!([ctx, anchor] team::msg::member_create_complete(group_id, "*"));
-		let team_member_remove_sub =
-			tail_anchor!([ctx, anchor] team::msg::member_remove_complete(group_id, "*"));
-
-		// User subs
-		let user_subs_select =
-			util::future::select_all_or_wait(user_ids.iter().cloned().map(|user_id| {
-				tail_anchor!([ctx, anchor] user::msg::update(user_id.as_uuid())).boxed()
-			}));
-
-		// Listen for updates
-		util::macros::select_with_timeout!({
-			event = team_member_create_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(msg.user_id.map(TeamMemberConsumerUpdate::MemberCreate), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = team_member_remove_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(msg.user_id.map(TeamMemberConsumerUpdate::MemberRemove), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = user_subs_select => {
-				(None, event?.msg_ts())
-			}
-		})
-	} else {
-		Default::default()
-	};
-	let update_ts = update_ts.unwrap_or_else(util::timestamp::now);
-
-	// Handle member list changes
-	match update {
-		Some(TeamMemberConsumerUpdate::MemberCreate(user_id)) => {
-			// New member is within the paginated range
-			if team_members
-				.anchor
-				.map(|anchor| update_ts < anchor)
-				.unwrap_or(true)
-			{
-				user_ids.push(user_id);
-			}
-		}
-		Some(TeamMemberConsumerUpdate::MemberRemove(user_id)) => {
-			// Will remove the removed member if they are within the paginated range
-			user_ids.retain(|u| u != &user_id);
-		}
-		_ => {}
-	}
 
 	// NOTE: We don't use fetch::identities::handles here because the end model is `GroupMember` not `IdentityHandle`
 	// Fetch team member and join request data
@@ -295,7 +165,6 @@ pub async fn members(
 			.collect::<Vec<_>>()
 	).await?;
 
-	let raw_user_ent_id = Into::<common::Uuid>::into(user_ent.user_id);
 	let members = users
 		.users
 		.iter()
@@ -309,7 +178,7 @@ pub async fn members(
 	Ok(models::GetGroupMembersResponse {
 		members,
 		anchor: team_members.anchor.map(|anchor| anchor.to_string()),
-		watch: convert::watch_response(WatchResponse::new(update_ts + 1)),
+		watch: convert::watch_response(WatchResponse::new(util::timestamp::now())),
 	})
 }
 
@@ -328,7 +197,7 @@ pub struct ListJoinRequestsQuery {
 pub async fn join_requests(
 	ctx: Ctx<Auth>,
 	group_id: Uuid,
-	watch_index: WatchIndexQuery,
+	_watch_index: WatchIndexQuery,
 	_query: ListJoinRequestsQuery,
 ) -> GlobalResult<models::GetGroupJoinRequestsResponse> {
 	let (_, user_ent) = ctx.auth().user(ctx.op_ctx()).await?;
@@ -358,74 +227,11 @@ pub async fn join_requests(
 		GROUP_INSUFFICIENT_PERMISSIONS
 	);
 
-	let mut user_ids = team_join_requests
+	let user_ids = team_join_requests
 		.join_requests
 		.iter()
 		.map(|join_request| Ok(unwrap!(join_request.user_id)))
 		.collect::<GlobalResult<Vec<_>>>()?;
-
-	// Wait for an update if needed
-	let (update, update_ts) = if let Some(anchor) = watch_index.to_consumer()? {
-		// Team events
-		let team_join_request_create_sub =
-			tail_anchor!([ctx, anchor] team::msg::join_request_create_complete(group_id, "*"));
-		let team_join_request_resolve_sub =
-			tail_anchor!([ctx, anchor] team::msg::join_request_resolve_complete(group_id, "*"));
-
-		// User subs
-		let user_subs_select =
-			util::future::select_all_or_wait(user_ids.iter().cloned().map(|user_id| {
-				tail_anchor!([ctx, anchor] user::msg::update(user_id.as_uuid())).boxed()
-			}));
-
-		// Listen for updates
-		util::macros::select_with_timeout!({
-			event = team_join_request_create_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(msg.user_id.map(TeamJoinRequestConsumerUpdate::JoinRequestCreate), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = team_join_request_resolve_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(msg.user_id.map(TeamJoinRequestConsumerUpdate::JoinRequestResolve), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = user_subs_select => {
-				(None, event?.msg_ts())
-			}
-		})
-	} else {
-		Default::default()
-	};
-	let update_ts = update_ts.unwrap_or_else(util::timestamp::now);
-
-	// Handle join request list changes
-	match update {
-		Some(TeamJoinRequestConsumerUpdate::JoinRequestCreate(user_id)) => {
-			// New join request is within the paginated range
-
-			// TODO: Re-add when pagination is added to join requests
-			// if team_join_requests
-			// 	.anchor
-			// 	.map(|anchor| team_member.join_ts < anchor)
-			// 	.unwrap_or(true)
-			// {
-			// 	user_ids.push(user_id);
-			// }
-
-			// TODO: Remove when pagination is added
-			user_ids.push(user_id);
-		}
-		Some(TeamJoinRequestConsumerUpdate::JoinRequestResolve(user_id)) => {
-			// Remove the unbanned user id
-			user_ids.retain(|u| u != &user_id);
-		}
-		_ => {}
-	}
 
 	// NOTE: We don't use fetch::identities::handles here because the end model is `GroupMember` not
 	// `IdentityHandle`
@@ -438,7 +244,6 @@ pub async fn join_requests(
 			.collect::<Vec<_>>()
 	).await?;
 
-	let raw_user_ent_id = Into::<common::Uuid>::into(user_ent.user_id);
 	let join_requests = users
 		.users
 		.iter()
@@ -448,7 +253,7 @@ pub async fn join_requests(
 				.iter()
 				.find(|join_request| user.user_id == join_request.user_id)
 				.map(|jr| jr.ts)
-				.unwrap_or(update_ts);
+				.unwrap_or(util::timestamp::now());
 			Ok(models::GroupJoinRequest {
 				identity: convert::identity::handle(ctx.config(), user_ent.user_id, user)?,
 				ts: util::timestamp::to_chrono(join_request_ts)?,
@@ -461,7 +266,7 @@ pub async fn join_requests(
 		// TODO: Re-add when pagination is added to join requests
 		// anchor: team_members.anchor.map(|anchor| anchor.to_string()),
 		anchor: None,
-		watch: convert::watch_response(WatchResponse::new(update_ts + 1)),
+		watch: convert::watch_response(WatchResponse::new(util::timestamp::now())),
 	})
 }
 
@@ -1159,7 +964,7 @@ pub struct ListBansQuery {
 pub async fn bans(
 	ctx: Ctx<Auth>,
 	group_id: Uuid,
-	watch_index: WatchIndexQuery,
+	_watch_index: WatchIndexQuery,
 	_query: ListBansQuery,
 ) -> GlobalResult<models::GetGroupBansResponse> {
 	let (_, user_ent) = ctx.auth().user(ctx.op_ctx()).await?;
@@ -1189,73 +994,11 @@ pub async fn bans(
 		GROUP_INSUFFICIENT_PERMISSIONS
 	);
 
-	let mut user_ids = team_bans
+	let user_ids = team_bans
 		.banned_users
 		.iter()
 		.map(|ban| Ok(unwrap!(ban.user_id)))
 		.collect::<GlobalResult<Vec<_>>>()?;
-
-	// Wait for an update if needed
-	let (update, update_ts) = if let Some(anchor) = watch_index.to_consumer()? {
-		// Team events
-		let team_ban_sub = tail_anchor!([ctx, anchor] team::msg::user_ban_complete(group_id, "*"));
-		let team_unban_sub =
-			tail_anchor!([ctx, anchor] team::msg::user_unban_complete(group_id, "*"));
-
-		// User subs
-		let user_subs_select =
-			util::future::select_all_or_wait(user_ids.iter().cloned().map(|user_id| {
-				tail_anchor!([ctx, anchor] user::msg::update(user_id.as_uuid())).boxed()
-			}));
-
-		// Listen for updates
-		util::macros::select_with_timeout!({
-			event = team_ban_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(msg.user_id.map(TeamBanConsumerUpdate::Ban), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = team_unban_sub => {
-				if let TailAnchorResponse::Message(msg) = event? {
-					(msg.user_id.map(TeamBanConsumerUpdate::Unban), Some(msg.msg_ts()))
-				} else {
-					Default::default()
-				}
-			}
-			event = user_subs_select => {
-				(None, event?.msg_ts())
-			}
-		})
-	} else {
-		Default::default()
-	};
-	let update_ts = update_ts.unwrap_or_else(util::timestamp::now);
-
-	// Handle ban list changes
-	match update {
-		Some(TeamBanConsumerUpdate::Ban(user_id)) => {
-			// New ban is within the paginated range
-
-			// TODO: Re-add when pagination is added to bans
-			// if team_bans
-			// 	.anchor
-			// 	.map(|anchor| team_member.join_ts < anchor)
-			// 	.unwrap_or(true)
-			// {
-			// 	user_ids.push(user_id);
-			// }
-
-			// TODO: Remove when pagination is added
-			user_ids.push(user_id);
-		}
-		Some(TeamBanConsumerUpdate::Unban(user_id)) => {
-			// Remove the unbanned user id
-			user_ids.retain(|u| u != &user_id);
-		}
-		_ => {}
-	}
 
 	// NOTE: We don't use fetch::identities::handles here because the end model is `BannedIdentity` not
 	// `IdentityHandle`
@@ -1268,21 +1011,16 @@ pub async fn bans(
 			.collect::<Vec<_>>()
 	).await?;
 
-	let raw_user_ent_id = Into::<common::Uuid>::into(user_ent.user_id);
 	let banned_identities = users
 		.users
 		.iter()
 		.map(|user| {
 			// Determine ban ts
-			let ban_ts = if let Some(TeamBanConsumerUpdate::Ban(_)) = update {
-				update_ts
-			} else {
-				unwrap!(team_bans
-					.banned_users
-					.iter()
-					.find(|ban| user.user_id == ban.user_id))
-				.ban_ts
-			};
+			let ban_ts = unwrap!(team_bans
+				.banned_users
+				.iter()
+				.find(|ban| user.user_id == ban.user_id)
+			).ban_ts;
 
 			Ok(models::GroupBannedIdentity {
 				identity: convert::identity::handle(ctx.config(), user_ent.user_id, user)?,
@@ -1296,6 +1034,6 @@ pub async fn bans(
 		// TODO: Re-add when pagination is added to bans
 		// anchor: team_members.anchor.map(|anchor| anchor.to_string()),
 		anchor: None,
-		watch: convert::watch_response(WatchResponse::new(update_ts + 1)),
+		watch: convert::watch_response(WatchResponse::new(util::timestamp::now())),
 	})
 }

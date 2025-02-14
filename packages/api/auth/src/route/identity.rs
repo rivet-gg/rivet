@@ -143,10 +143,10 @@ pub async fn complete(
 		.await?;
 
 		// Send user update to hub
-		msg!([ctx] user::msg::update(user_ent.user_id) {
-			user_id: Some(user_ent.user_id.into()),
-		})
-		.await?;
+		ctx.msg(::user::workflows::user::Update {})
+			.tag("user_id", user_ent.user_id)
+			.send()
+			.await?;
 
 		Ok(models::AuthIdentityCompleteEmailVerificationResponse {
 			status: models::AuthCompleteStatus::LinkedAccountAdded,

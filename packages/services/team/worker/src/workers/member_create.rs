@@ -58,10 +58,11 @@ async fn worker(ctx: &OperationContext<team::msg::member_create::Message>) -> Gl
 		user_id: Some(user_id.into()),
 	})
 	.await?;
-	msg!([ctx] user::msg::update(user_id) {
-		user_id: Some(user_id.into()),
-	})
-	.await?;
+
+	chirp_workflow::compat::signal(
+		ctx,
+		::user::workflows::user::ChangedTeam {}
+	).await?.tag("user_id", user_id).send().await?;
 
 	msg!([ctx] analytics::msg::event_create() {
 		events: vec![

@@ -9,12 +9,14 @@ service:
   base-path: /identity/events
   endpoints:
     watch:
+      availability: deprecated
       docs: Returns all events relative to the current identity.
       path: /live
       method: GET
       request:
         name: WatchEventsRequest
         query-parameters:
+          availability: deprecated
           watch_index: commons.WatchQuery
       response: WatchEventsResponse
 
@@ -22,4 +24,6 @@ types:
   WatchEventsResponse:
     properties:
       events: list<localCommons.GlobalEvent>
-      watch: commons.WatchResponse
+      watch:
+        availability: deprecated
+        type: commons.WatchResponse
