@@ -32,3 +32,4 @@ default-features = false
 faker-user.workspace = true
 reqwest = "0.11"
 upload-prepare.workspace = true
+faker.workspace = true

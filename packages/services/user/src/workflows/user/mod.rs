@@ -24,7 +24,7 @@ pub struct Input {
 }
 
 #[workflow]
-pub async fn user(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {	
+pub async fn user(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
 	let (display_name, _account_number) = ctx.activity(InsertDbInput {
 		user_id: input.user_id,
 		display_name: input.display_name.clone(),
@@ -248,7 +248,7 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<(St
 	};
 
 	let account_number = gen_account_number();
-	tracing::debug!(%display_name, %account_number, "insert user attempt");
+	tracing::info!(%display_name, %account_number, "insert user attempt");
 
     sql_execute!(
 		[ctx]

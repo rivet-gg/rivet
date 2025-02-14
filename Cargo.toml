@@ -560,6 +560,9 @@ path = "packages/services/external/ops/request-validate"
 [workspace.dependencies.external-worker]
 path = "packages/services/external/worker"
 
+[workspace.dependencies.faker]
+path = "packages/services/faker"
+
 [workspace.dependencies.faker-build]
 path = "packages/services/faker/ops/build"
 
