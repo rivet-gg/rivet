@@ -876,7 +876,6 @@ dependencies = [
  "api-matchmaker",
  "api-portal",
  "api-status",
- "api-ui",
  "async-trait",
  "chirp-client",
  "http 0.2.12",
@@ -12141,6 +12140,7 @@ dependencies = [
  "tracing",
  "url",
  "user-delete-pending",
+ "user-workflow-create",
  "uuid",
  "workflow-gc",
  "workflow-metrics-publish",
@@ -15927,6 +15927,21 @@ dependencies = [
  "tracing-logfmt",
  "tracing-subscriber",
  "user",
+]
+
+[[package]]
+name = "user-workflow-create"
+version = "25.1.1"
+dependencies = [
+ "chirp-client",
+ "chirp-workflow",
+ "futures-util",
+ "rivet-config",
+ "rivet-connection",
+ "rivet-pools",
+ "tokio",
+ "user",
+ "uuid",
 ]
 
 [[package]]

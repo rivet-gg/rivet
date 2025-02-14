@@ -22,6 +22,7 @@ pub async fn user(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output>  {
         user::workflows::user::Input {
             user_id,
             display_name: None,
+            is_already_in_db: false
         }
     )
     .await?

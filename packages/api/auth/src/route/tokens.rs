@@ -190,6 +190,7 @@ async fn fallback_user(
 				::user::workflows::user::Input {
 					user_id,
 					display_name: None,
+					is_already_in_db: false
 				}
 			)
 			.await?

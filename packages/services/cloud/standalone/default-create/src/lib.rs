@@ -42,6 +42,7 @@ pub async fn start(config: rivet_config::Config, pools: rivet_pools::Pools) -> G
 			::user::workflows::user::Input {
 				user_id,
 				display_name: Some(dev_defaults::USER_NAME.into()),
+				is_already_in_db: false
 			}
 		)
 		.tag("user_id", user_id)
