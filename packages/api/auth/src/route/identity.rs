@@ -97,7 +97,7 @@ pub async fn complete(
 		return Ok(models::AuthIdentityCompleteEmailVerificationResponse { status });
 	}
 
-	let email_res = op!([ctx] user_resolve_email {
+	let email_res = ctx.op(::user::ops::resolve_email::Input {
 		emails: vec![res.email.clone()],
 	})
 	.await?;
@@ -106,13 +106,13 @@ pub async fn complete(
 	if let Some(new_user) = email_res.users.first() {
 		tracing::info!(email = %new_user.email, "resolved email");
 
-		let new_user_id = unwrap_ref!(new_user.user_id).as_uuid();
+		let new_user_id = new_user.user_id;
 
 		tracing::info!(old_user_id = %user_ent.user_id, %new_user_id, "identity found, switching user");
 
-		let token_res = op!([ctx] user_token_create {
-			user_id: Some(new_user_id.into()),
-			client: Some(ctx.client_info()),
+		let token_res = ctx.op(::user::ops::token_create::Input {
+			user_id: new_user_id,
+			client: ctx.client_info(),
 		})
 		.await?;
 
@@ -130,15 +130,15 @@ pub async fn complete(
 	else {
 		tracing::info!(user_id = %user_ent.user_id, "creating new identity for guest");
 
-		op!([ctx] user_identity_create {
-			user_id: Some(Into::into(user_ent.user_id)),
-			identity: Some(backend::user_identity::Identity {
+		ctx.op(::user::ops::identity::create::Input {
+			user_id: user_ent.user_id,
+			identity: backend::user_identity::Identity {
 				kind: Some(backend::user_identity::identity::Kind::Email(
 					backend::user_identity::identity::Email {
 						email: res.email.clone(),
 					}
 				))
-			})
+			}
 		})
 		.await?;
 

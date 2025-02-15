@@ -282,7 +282,7 @@ pub fn config(rivet_config: rivet_config::Config) -> Result<RunConfigData> {
 		SqlService {
 			kind: SqlServiceKind::CockroachDB,
 			migrations: include_dir!(
-				"$CARGO_MANIFEST_DIR/../../services/user-identity/db/user-identity"
+				"$CARGO_MANIFEST_DIR/../../services/user/db/user-identity"
 			),
 			db_name: "db_user_identity",
 		},

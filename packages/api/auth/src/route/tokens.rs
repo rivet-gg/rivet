@@ -11,7 +11,7 @@ use crate::{
 	utils::{delete_refresh_token_header, refresh_token_header},
 };
 
-// Also see user-token-create/src/main.rs
+// Also see user/src/ops/token_create.rs
 pub const TOKEN_TTL: i64 = util::duration::minutes(15);
 pub const REFRESH_TOKEN_TTL: i64 = util::duration::days(90);
 
@@ -137,8 +137,8 @@ pub async fn identity(
 
 	// Verify user is not deleted
 	if has_refresh_token {
-		let user_res = op!([ctx] user_get {
-			user_ids: vec![user_ent.user_id.into()],
+		let user_res = ctx.op(::user::ops::get::Input {
+			user_ids: vec![user_ent.user_id],
 		})
 		.await?;
 		let user = unwrap!(user_res.users.first());
@@ -205,10 +205,13 @@ async fn fallback_user(
 	};
 
 	// Generate token
-	let token_res = op!([ctx] user_token_create {
-		user_id: Some(user_id.into()),
-		client: Some(client_info),
-	})
+	let token_res = chirp_workflow::compat::op(
+		ctx,
+		::user::ops::token_create::Input {
+			user_id,
+			client: client_info,
+		},
+	)
 	.await?;
 
 	Ok((token_res.token.clone(), token_res.refresh_token))
