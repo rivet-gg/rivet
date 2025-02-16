@@ -21,24 +21,27 @@ const UPLOAD_BATCH_SIZE: usize = 256;
 pub struct Input {
 	pub user_id: Uuid,
 	pub display_name: Option<String>,
+	pub is_already_in_db: bool
 }
 
 #[workflow]
 pub async fn user(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
-	let (display_name, _account_number) = ctx.activity(InsertDbInput {
-		user_id: input.user_id,
-		display_name: input.display_name.clone(),
-	}).await?;
+	if !input.is_already_in_db {
+		let (display_name, _account_number) = ctx.activity(InsertDbInput {
+			user_id: input.user_id,
+			display_name: input.display_name.clone(),
+		}).await?;
+
+		ctx.activity(PublishCreationAnalyticsInput {
+			user_id: input.user_id,
+			display_name,
+		}).await?;
+	}
 
 	ctx.msg(CreateComplete {})
 		.tag("user_id", input.user_id)
 		.send()
 		.await?;
-
-	ctx.activity(PublishCreationAnalyticsInput {
-		user_id: input.user_id,
-		display_name,
-	}).await?;
 
 	ctx.repeat(|ctx| {
 		let user_id = input.user_id;
