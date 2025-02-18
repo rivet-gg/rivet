@@ -5,7 +5,6 @@ use std::{
 	time::Duration,
 };
 use tokio::sync::broadcast;
-
 use sqlx::{
 	migrate::MigrateDatabase,
 	sqlite::{
@@ -15,8 +14,9 @@ use sqlx::{
 	Executor, Sqlite,
 };
 use tokio::{sync::Mutex, time::Instant};
-
-use crate::Error;
+use global_error::{GlobalError, GlobalResult, unwrap};
+use foundationdb::{self, directory::DirectoryLayer};
+use crate::{Error, FdbPool};
 
 const GC_INTERVAL: Duration = Duration::from_secs(1);
 const POOL_TTL: Duration = Duration::from_secs(15);
@@ -56,7 +56,7 @@ struct SqlitePoolEntry {
 	last_access: Instant,
 }
 
-#[derive(Debug, Hash, Eq, PartialEq)]
+#[derive(Debug, Hash, Eq, PartialEq, Clone)]
 struct Key {
 	key: String,
 	read_only: bool,
@@ -97,7 +97,7 @@ impl SqlitePoolManager {
             let key = key.to_string();
             async move {
                 let mut chunks = Vec::new();
-                let subspace = fdb::directory::DirectoryLayer::default()
+                let subspace = DirectoryLayer::default()
                     .create_or_open(&tx, &["rivet", "sqlite", &key], None, None)
                     .await?;
 
@@ -128,7 +128,7 @@ impl SqlitePoolManager {
             let key = key.to_string();
             let data = data.to_vec();
             async move {
-                let subspace = fdb::directory::DirectoryLayer::default()
+                let subspace = DirectoryLayer::default()
                     .create_or_open(&tx, &["rivet", "sqlite", &key], None, None)
                     .await?;
 
