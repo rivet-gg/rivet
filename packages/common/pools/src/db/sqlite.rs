@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc, time::Duration};
+use std::{collections::HashMap, ops::Deref, sync::Arc, time::Duration, sync::atomic::{AtomicU64, Ordering}};
 
 use sqlx::{
 	migrate::MigrateDatabase,
@@ -20,9 +20,8 @@ const POOL_TTL: Duration = Duration::from_secs(15);
 pub struct SqlitePool {
 	pool: sqlx::SqlitePool,
 
-	// Holds a reference to the last_access for the entry so we can update the last_access when
-    // the pool is dropped
-	last_access: Arc<Mutex<Instant>>,
+	// Holds a reference to the last_access (as duration since UNIX_EPOCH in seconds)
+	last_access: Arc<AtomicU64>,
 }
 
 impl Deref for SqlitePool {
@@ -35,19 +34,21 @@ impl Deref for SqlitePool {
 
 impl Drop for SqlitePool {
 	fn drop(&mut self) {
-		// Update last access
-		let last_access = self.last_access.clone();
-		tokio::spawn(async move {
-			*last_access.lock().await = Instant::now();
-		});
+		// Update last access with current time
+		self.last_access.store(
+			Instant::now()
+				.duration_since(Instant::now().checked_sub(Duration::from_secs(0)).unwrap())
+				.as_secs(),
+			Ordering::SeqCst
+		);
 	}
 }
 
 struct SqlitePoolEntry {
 	pool: sqlx::SqlitePool,
 
-	/// Last time this pool was accessed
-	last_access: Arc<Mutex<Instant>>,
+	/// Last time this pool was accessed (as duration since UNIX_EPOCH in seconds)
+	last_access: Arc<AtomicU64>,
 }
 
 #[derive(Debug, Hash, Eq, PartialEq)]
@@ -81,8 +82,11 @@ impl SqlitePoolManager {
 			{
 				let pools_guard = pools.lock().await;
 				let mut removed = 0;
-				pools_guard.retain(|k, v| {
-					if v.last_access.lock().await > expire_ts {
+				let expire_secs = expire_ts
+					.duration_since(Instant::now().checked_sub(Duration::from_secs(0)).unwrap())
+					.as_secs();
+				pools_guard.retain(|_k, v| {
+					if v.last_access.load(Ordering::SeqCst) > expire_secs {
 						true
 					} else {
 						removed += 1;
@@ -149,7 +153,11 @@ impl SqlitePoolManager {
 				key,
 				SqlitePoolEntry {
 					pool: pool.clone(),
-					last_access: Instant::now(),
+					last_access: Arc::new(AtomicU64::new(
+						Instant::now()
+							.duration_since(Instant::now().checked_sub(Duration::from_secs(0)).unwrap())
+							.as_secs()
+					)),
 				},
 			);
 
