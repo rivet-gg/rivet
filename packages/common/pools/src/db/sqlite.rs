@@ -1,10 +1,11 @@
-use std::{
-	collections::HashMap,
-	ops::Deref,
-	sync::{Arc, Weak},
-	time::Duration,
+use crate::{Error, FdbPool};
+use foundationdb::{
+	self,
+	directory::{Directory, DirectoryLayer},
+	options::StreamingMode,
+	FdbBindingError,
 };
-use tokio::sync::broadcast;
+use global_error::{unwrap, GlobalError, GlobalResult};
 use sqlx::{
 	migrate::MigrateDatabase,
 	sqlite::{
@@ -13,15 +14,14 @@ use sqlx::{
 	},
 	Executor, Sqlite,
 };
-use tokio::{sync::Mutex, time::Instant};
-use global_error::{GlobalError, GlobalResult, unwrap};
-use foundationdb::{
-    self,
-    directory::{DirectoryLayer, Directory},
-    options::StreamingMode,
-    FdbBindingError,
+use std::{
+	collections::HashMap,
+	ops::Deref,
+	sync::{Arc, Weak},
+	time::Duration,
 };
-use crate::{Error, FdbPool};
+use tokio::sync::broadcast;
+use tokio::{sync::Mutex, time::Instant};
 
 const GC_INTERVAL: Duration = Duration::from_secs(1);
 const POOL_TTL: Duration = Duration::from_secs(15);
@@ -31,16 +31,16 @@ const CHUNK_SIZE: usize = 9 * 1024; // 9KB to stay safely under FDB's 10KB limit
 /// Pool wrapper that tracks when it was dropped to automatically update the last used on
 /// `SqlitePoolEntry` in order to know when to GC the pool.
 pub struct SqlitePool {
-    /// Reference to the inner pool. Holds a reference as a separate Arc so we can hold a weak
-    /// reference in `SqlitePoolEntry` to know if the pool is dropped.
+	/// Reference to the inner pool. Holds a reference as a separate Arc so we can hold a weak
+	/// reference in `SqlitePoolEntry` to know if the pool is dropped.
 	pool: Arc<sqlx::SqlitePool>,
 }
 
 impl Drop for SqlitePoolManager {
-    fn drop(&mut self) {
-        // Ignore send errors - receivers may already be dropped
-        let _ = self.shutdown.send(());
-    }
+	fn drop(&mut self) {
+		// Ignore send errors - receivers may already be dropped
+		let _ = self.shutdown.send(());
+	}
 }
 
 impl Deref for SqlitePool {
@@ -69,105 +69,111 @@ struct Key {
 
 #[derive(Clone)]
 pub struct SqlitePoolManager {
-    pools: Arc<Mutex<HashMap<Key, SqlitePoolEntry>>>,
-    shutdown: broadcast::Sender<()>,
-    fdb: Option<FdbPool>,
-    force_local: bool,
+	pools: Arc<Mutex<HashMap<Key, SqlitePoolEntry>>>,
+	shutdown: broadcast::Sender<()>,
+	fdb: Option<FdbPool>,
+	force_local: bool,
 }
 
 impl SqlitePoolManager {
-    pub fn new(fdb: Option<FdbPool>) -> Self {
-        let pools = Arc::new(Mutex::new(HashMap::new()));
-        let (shutdown, _) = broadcast::channel(1);
-        let shutdown_rx = shutdown.subscribe();
-        let force_local = std::env::var("_RIVET_POOL_SQLITE_FORCE_LOCAL")
-            .map(|x| x == "1")
-            .unwrap_or(false);
-        
-        let pools_clone = pools.clone();
-        let manager = SqlitePoolManager { 
-            pools: pools_clone,
-            shutdown,
-            fdb,
-            force_local,
-        };
+	pub fn new(fdb: Option<FdbPool>) -> Self {
+		let pools = Arc::new(Mutex::new(HashMap::new()));
+		let (shutdown, _) = broadcast::channel(1);
+		let shutdown_rx = shutdown.subscribe();
+		let force_local = std::env::var("_RIVET_POOL_SQLITE_FORCE_LOCAL")
+			.map(|x| x == "1")
+			.unwrap_or(false);
 
-        tokio::task::spawn(Self::start(pools.clone(), shutdown_rx));
-        
-        manager
-    }
+		let pools_clone = pools.clone();
+		let manager = SqlitePoolManager {
+			pools: pools_clone,
+			shutdown,
+			fdb,
+			force_local,
+		};
 
-    async fn read_from_fdb(&self, key: &str) -> GlobalResult<Option<Vec<u8>>> {
-        let fdb = unwrap!(self.fdb.as_ref());
-        let data = fdb.run(|tx, _mc| {
-            let key = key.to_string();
-            async move {
-                let mut chunks = Vec::new();
-                let subspace = DirectoryLayer::default()
-                    .create_or_open(&tx, &["rivet".to_string(), "sqlite".to_string(), key.to_string()], None, None)
-                    .await?;
+		tokio::task::spawn(Self::start(pools.clone(), shutdown_rx));
 
-                // Read all chunks
-                let range = subspace.range()?;
-                let range_opt = foundationdb::RangeOption {
-                    mode: StreamingMode::WantAll,
-                    ..(&range.0[..], &range.1[..]).into()
-                };
-                let kvs = tx.get_range(&range_opt, 0, false).await?;
-                for kv in kvs {
-                    let Ok((_, idx)) = subspace.unpack::<(String, usize)>(kv.key()).map_err(|e| FdbBindingError::from(e))? else {
-                        continue;
-                    };
-                    chunks.push((idx, kv.value().to_vec()));
-                }
+		manager
+	}
 
-                // Sort and combine chunks
-                chunks.sort_by_key(|(idx, _)| *idx);
-                let data = chunks.into_iter()
-                    .flat_map(|(_, chunk)| chunk)
-                    .collect::<Vec<_>>();
+	async fn read_from_fdb(&self, key: &str) -> GlobalResult<Option<Vec<u8>>> {
+		let fdb = unwrap!(self.fdb.as_ref());
+		let data = fdb
+			.run(|tx, _mc| {
+				let key = key.to_string();
+				async move {
+					let mut chunks = Vec::new();
+					let subspace = DirectoryLayer::default()
+						.create_or_open(
+							&tx,
+							&["rivet".to_string(), "sqlite".to_string(), key.to_string()],
+							None,
+							None,
+						)
+						.await?;
 
-                Ok::<_, FdbBindingError>(if data.is_empty() { None } else { Some(data) })
-            }
-        }).await?;
+					// Read all chunks
+					let range = subspace.range()?;
+					let range_opt = foundationdb::RangeOption {
+						mode: StreamingMode::WantAll,
+						..(&range.0[..], &range.1[..]).into()
+					};
+					let kvs = tx.get_range(&range_opt, 0, false).await?;
+					let data = kvs.into_iter().flat_map(|kv| kv.value().iter()).collect::<Vec<u8>>();
 
-        Ok(data)
-    }
+					Ok::<_, FdbBindingError>(if data.is_empty() { None } else { Some(data) })
+				}
+			})
+			.await?;
 
-    async fn write_to_fdb(&self, key: &str, data: &[u8]) -> GlobalResult<()> {
-        let fdb = unwrap!(self.fdb.as_ref());
-        fdb.run(|tx, _mc| {
-            let key = key.to_string();
-            let data = data.to_vec();
-            async move {
-                let subspace = DirectoryLayer::default()
-                    .create_or_open(&tx, &["rivet".to_string(), "sqlite".to_string(), key.to_string()], None, None)
-                    .await?;
+		Ok(data)
+	}
 
-                // Clear previous data
-                let range = subspace.range();
-                let range = range?;
-                tx.clear_range(&range.0, &range.1);
+	async fn write_to_fdb(&self, key: &str, data: &[u8]) -> GlobalResult<()> {
+		let fdb = unwrap!(self.fdb.as_ref());
+		fdb.run(|tx, _mc| {
+			let key = key.to_string();
+			let data = data.to_vec();
+			async move {
+				let subspace = DirectoryLayer::default()
+					.create_or_open(
+						&tx,
+						&["rivet".to_string(), "sqlite".to_string(), key.to_string()],
+						None,
+						None,
+					)
+					.await?;
 
-                // Write chunks
-                for (idx, chunk) in data.chunks(CHUNK_SIZE).enumerate() {
-                    if let Ok(key) = subspace.pack(&("data", idx)) {
-                        tx.set(&key, chunk);
-                    }
-                }
+				// Clear previous data
+				let range = subspace.range();
+				let range = range?;
+				tx.clear_range(&range.0, &range.1);
 
-                Ok(())
-            }
-        }).await.map_err(|e| GlobalError::Internal { 
-            ty: "fdb_error".into(),
-            message: format!("FDB error: {}", e),
-            debug: format!("{:?}", e),
-            retry_immediately: false,
-        })?;
-        Ok(())
-    }
+				// Write chunks
+				for (idx, chunk) in data.chunks(CHUNK_SIZE).enumerate() {
+					if let Ok(key) = subspace.pack(&("data", idx)) {
+						tx.set(&key, chunk);
+					}
+				}
 
-	async fn start(pools: Arc<Mutex<HashMap<Key, SqlitePoolEntry>>>, mut shutdown: broadcast::Receiver<()>) {
+				Ok(())
+			}
+		})
+		.await
+		.map_err(|e| GlobalError::Internal {
+			ty: "fdb_error".into(),
+			message: format!("FDB error: {}", e),
+			debug: format!("{:?}", e),
+			retry_immediately: false,
+		})?;
+		Ok(())
+	}
+
+	async fn start(
+		pools: Arc<Mutex<HashMap<Key, SqlitePoolEntry>>>,
+		mut shutdown: broadcast::Receiver<()>,
+	) {
 		let mut interval = tokio::time::interval(GC_INTERVAL);
 
 		loop {
@@ -201,7 +207,7 @@ impl SqlitePoolManager {
 					}
 				});
 
-                tracing::debug!(?removed, "gced sqlite pools");
+				tracing::debug!(?removed, "gced sqlite pools");
 			}
 		}
 	}
@@ -225,21 +231,25 @@ impl SqlitePoolManager {
 			}
 		};
 
-        // Load from FDB if enabled
-        let db_path = if !self.force_local && self.fdb.is_some() {
-            let temp_dir = std::env::temp_dir();
-            let db_path = temp_dir.join(format!("rivet-sqlite-{}.db", key.key));
-            
-            if let Some(data) = self.read_from_fdb(&key.key).await.map_err(|e| Error::Fdb(anyhow::anyhow!("{}", e)))? {
-                tokio::fs::write(&db_path, data).await.map_err(Error::Io)?;
-            }
-            
-            db_path.to_str().unwrap().to_string()
-        } else {
-            format!("/var/lib/rivet-sqlite/{}.db", key.key)
-        };
+		// Load from FDB if enabled
+		let db_path = if !self.force_local && self.fdb.is_some() {
+			let temp_dir = std::env::temp_dir();
+			let db_path = temp_dir.join(format!("rivet-sqlite-{}.db", key.key));
 
-        let db_url = format!("sqlite://{}", db_path);
+			if let Some(data) = self
+				.read_from_fdb(&key.key)
+				.await
+				.map_err(|e| Error::Fdb(anyhow::anyhow!("{}", e)))?
+			{
+				tokio::fs::write(&db_path, data).await.map_err(Error::Io)?;
+			}
+
+			db_path.to_str().unwrap().to_string()
+		} else {
+			format!("/var/lib/rivet-sqlite/{}.db", key.key)
+		};
+
+		let db_url = format!("sqlite://{}", db_path);
 
 		tracing::debug!(?key, "sqlite connecting");
 
@@ -274,39 +284,39 @@ impl SqlitePoolManager {
 			.connect_with(opts)
 			.await
 			.map_err(Error::BuildSqlx)?;
-        let pool = Arc::new(pool_raw);
+		let pool = Arc::new(pool_raw);
 
-        tracing::debug!(?key, "sqlite connected");
+		tracing::debug!(?key, "sqlite connected");
 
-        if !self.force_local && self.fdb.is_some() {
-            let key = key.clone();
-            let db_path = db_path.clone();
-            let this = self.clone();
-            
-            tokio::task::spawn(async move {
-                let mut interval = tokio::time::interval(SQLITE_SNAPSHOT_INTERVAL);
-                loop {
-                    interval.tick().await;
-                    
-                    // Read current DB file
-                    if let Ok(data) = tokio::fs::read(&db_path).await {
-                        if let Err(err) = this.write_to_fdb(&key.key, &data).await {
-                            tracing::error!(?err, "failed to snapshot sqlite db to fdb");
-                        }
-                    }
-                }
-            });
-        }
+		if !self.force_local && self.fdb.is_some() {
+			let key = key.clone();
+			let db_path = db_path.clone();
+			let this = self.clone();
 
-        pools_guard.insert(
-            key,
-            SqlitePoolEntry {
-                pool: Arc::downgrade(&pool),
-                last_access: Instant::now(),
-            },
-        );
+			tokio::task::spawn(async move {
+				let mut interval = tokio::time::interval(SQLITE_SNAPSHOT_INTERVAL);
+				loop {
+					interval.tick().await;
 
-        Ok(SqlitePool { pool })
+					// Read current DB file
+					if let Ok(data) = tokio::fs::read(&db_path).await {
+						if let Err(err) = this.write_to_fdb(&key.key, &data).await {
+							tracing::error!(?err, "failed to snapshot sqlite db to fdb");
+						}
+					}
+				}
+			});
+		}
+
+		pools_guard.insert(
+			key,
+			SqlitePoolEntry {
+				pool: Arc::downgrade(&pool),
+				last_access: Instant::now(),
+			},
+		);
+
+		Ok(SqlitePool { pool })
 	}
 }
 
