@@ -82,7 +82,7 @@ impl Pools {
 			redis,
 			clickhouse: None,
 			fdb,
-			sqlite: SqlitePoolManager::new(None),
+			sqlite: SqlitePoolManager::new(fdb.clone()),
 			clickhouse_enabled: config
 				.server
 				.as_ref()
