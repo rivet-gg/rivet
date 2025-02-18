@@ -46,7 +46,7 @@ impl Pools {
 			redis,
 			clickhouse,
 			fdb,
-			sqlite: SqlitePoolManager::new(),
+			sqlite: SqlitePoolManager::new(fdb.clone()),
 			clickhouse_enabled: config
 				.server
 				.as_ref()
