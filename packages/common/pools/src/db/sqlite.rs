@@ -147,7 +147,7 @@ impl SqlitePoolManager {
 					// Validate chunk sequence
 					for (i, (idx, _)) in chunks.iter().enumerate() {
 						if *idx != i {
-							return Err(FdbBindingError::from(format!("Missing chunk {} in sequence", i)));
+							return Err(FdbBindingError::from(foundationdb::Error::new(1000, format!("Missing chunk {} in sequence", i))));
 						}
 					}
 					
