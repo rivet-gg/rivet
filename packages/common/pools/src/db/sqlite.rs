@@ -15,7 +15,7 @@ use sqlx::{
 };
 use tokio::{sync::Mutex, time::Instant};
 use global_error::{GlobalError, GlobalResult, unwrap};
-use foundationdb::{self, directory::DirectoryLayer};
+use foundationdb::{self, directory::{DirectoryLayer, Directory}};
 use crate::{Error, FdbPool};
 
 const GC_INTERVAL: Duration = Duration::from_secs(1);
@@ -79,8 +79,9 @@ impl SqlitePoolManager {
             .map(|x| x == "1")
             .unwrap_or(false);
         
+        let pools_clone = pools.clone();
         let manager = SqlitePoolManager { 
-            pools,
+            pools: pools_clone,
             shutdown,
             fdb,
             force_local,
@@ -103,7 +104,13 @@ impl SqlitePoolManager {
 
                 // Read all chunks
                 let range = subspace.range();
-                let kvs = tx.get_range_owned(range, false).await?;
+                let kvs = tx.get_ranges_keyvalues_owned(
+                    fdb::RangeOption {
+                        mode: fdb::options::StreamingMode::WantAll,
+                        ..subspace.range().into()
+                    },
+                    false,
+                ).await?;
                 for kv in kvs {
                     let (_, idx) = subspace.unpack::<(String, usize)>(kv.key())?;
                     chunks.push((idx, kv.value().to_vec()));
@@ -115,7 +122,7 @@ impl SqlitePoolManager {
                     .flat_map(|(_, chunk)| chunk)
                     .collect::<Vec<_>>();
 
-                Ok::<_, GlobalError>(if data.is_empty() { None } else { Some(data) })
+                Ok::<_, GlobalError>(if data.is_empty() { None } else { Some(data) }).map_err(|e| GlobalError::Internal(e.into()))?
             }
         }).await?;
 
@@ -133,7 +140,8 @@ impl SqlitePoolManager {
                     .await?;
 
                 // Clear previous data
-                tx.clear_range(subspace.range());
+                let range = subspace.range();
+                tx.clear_range(range.0, range.1);
 
                 // Write chunks
                 for (idx, chunk) in data.chunks(CHUNK_SIZE).enumerate() {
