@@ -4,6 +4,7 @@ use std::{
 	sync::{Arc, Weak},
 	time::Duration,
 };
+use tokio::sync::broadcast;
 
 use sqlx::{
 	migrate::MigrateDatabase,
@@ -26,6 +27,13 @@ pub struct SqlitePool {
     /// Reference to the inner pool. Holds a reference as a separate Arc so we can hold a weak
     /// reference in `SqlitePoolEntry` to know if the pool is dropped.
 	pool: Arc<sqlx::SqlitePool>,
+}
+
+impl Drop for SqlitePoolManager {
+    fn drop(&mut self) {
+        // Ignore send errors - receivers may already be dropped
+        let _ = self.shutdown.send(());
+    }
 }
 
 impl Deref for SqlitePool {
@@ -55,20 +63,34 @@ struct Key {
 #[derive(Clone)]
 pub struct SqlitePoolManager {
 	pools: Arc<Mutex<HashMap<Key, SqlitePoolEntry>>>,
+	shutdown: broadcast::Sender<()>,
 }
 
 impl SqlitePoolManager {
 	pub fn new() -> Self {
 		let pools = Arc::new(Mutex::new(HashMap::new()));
-		tokio::task::spawn(Self::start(pools.clone()));
-		SqlitePoolManager { pools }
+		let (shutdown, _) = broadcast::channel(1);
+		let shutdown_rx = shutdown.subscribe();
+		
+		tokio::task::spawn(Self::start(pools.clone(), shutdown_rx));
+		
+		SqlitePoolManager { 
+			pools,
+			shutdown,
+		}
 	}
 
-	async fn start(pools: Arc<Mutex<HashMap<Key, SqlitePoolEntry>>>) {
+	async fn start(pools: Arc<Mutex<HashMap<Key, SqlitePoolEntry>>>, mut shutdown: broadcast::Receiver<()>) {
 		let mut interval = tokio::time::interval(GC_INTERVAL);
 
 		loop {
-			interval.tick().await;
+			tokio::select! {
+				_ = interval.tick() => {},
+				Ok(_) = shutdown.recv() => {
+					tracing::debug!("shutting down sqlite pool manager");
+					break;
+				}
+			}
 
 			// Anything last used before this instant will be removed
 			let expire_ts = Instant::now() - POOL_TTL;
