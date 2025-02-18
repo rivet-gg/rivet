@@ -15,7 +15,11 @@ use sqlx::{
 };
 use tokio::{sync::Mutex, time::Instant};
 use global_error::{GlobalError, GlobalResult, unwrap};
-use foundationdb::{self, directory::{DirectoryLayer, Directory}};
+use foundationdb::{
+    self,
+    directory::{DirectoryLayer, Directory},
+    options::StreamingMode,
+};
 use crate::{Error, FdbPool};
 
 const GC_INTERVAL: Duration = Duration::from_secs(1);
@@ -99,20 +103,22 @@ impl SqlitePoolManager {
             async move {
                 let mut chunks = Vec::new();
                 let subspace = DirectoryLayer::default()
-                    .create_or_open(&tx, &["rivet", "sqlite", &key], None, None)
+                    .create_or_open(&tx, &["rivet", "sqlite", &key.to_string()], None, None)
                     .await?;
 
                 // Read all chunks
                 let range = subspace.range();
-                let kvs = tx.get_ranges_keyvalues_owned(
-                    fdb::RangeOption {
-                        mode: fdb::options::StreamingMode::WantAll,
+                let kvs = tx.get_ranges_keyvalues(
+                    foundationdb::RangeOption {
+                        mode: StreamingMode::WantAll,
                         ..subspace.range().into()
                     },
                     false,
                 ).await?;
                 for kv in kvs {
-                    let (_, idx) = subspace.unpack::<(String, usize)>(kv.key())?;
+                    let Ok((_, idx)) = subspace.unpack::<(String, usize)>(kv.key()) else {
+                        continue;
+                    };
                     chunks.push((idx, kv.value().to_vec()));
                 }
 
@@ -122,7 +128,7 @@ impl SqlitePoolManager {
                     .flat_map(|(_, chunk)| chunk)
                     .collect::<Vec<_>>();
 
-                Ok::<_, GlobalError>(if data.is_empty() { None } else { Some(data) }).map_err(|e| GlobalError::Internal(e.into()))?
+                Ok::<_, GlobalError>(if data.is_empty() { None } else { Some(data) })
             }
         }).await?;
 
@@ -141,14 +147,14 @@ impl SqlitePoolManager {
 
                 // Clear previous data
                 let range = subspace.range();
-                tx.clear_range(range.0, range.1);
+                let range = range?;
+                tx.clear_range(&range.0, &range.1);
 
                 // Write chunks
                 for (idx, chunk) in data.chunks(CHUNK_SIZE).enumerate() {
-                    tx.set(
-                        &subspace.pack(&("data", idx)),
-                        chunk
-                    );
+                    if let Ok(key) = subspace.pack(&("data", idx)) {
+                        tx.set(&key, chunk);
+                    }
                 }
 
                 Ok(())
