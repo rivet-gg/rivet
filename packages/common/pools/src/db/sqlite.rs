@@ -19,6 +19,7 @@ use foundationdb::{
     self,
     directory::{DirectoryLayer, Directory},
     options::StreamingMode,
+    FdbBindingError,
 };
 use crate::{Error, FdbPool};
 
@@ -107,9 +108,10 @@ impl SqlitePoolManager {
                     .await?;
 
                 // Read all chunks
+                let range = subspace.range()?;
                 let range_opt = foundationdb::RangeOption {
                     mode: StreamingMode::WantAll,
-                    ..subspace.range().into()
+                    ..(&range.0, &range.1).into()
                 };
                 let kvs = tx.get_range(&range_opt, 0, false).await?;
                 for kv in kvs {
@@ -159,7 +161,7 @@ impl SqlitePoolManager {
         }).await.map_err(|e| GlobalError::Internal { 
             ty: "fdb_error".into(),
             message: format!("FDB error: {}", e),
-            debug: None,
+            debug: format!("{:?}", e),
             retry_immediately: false,
         })?;
         Ok(())
