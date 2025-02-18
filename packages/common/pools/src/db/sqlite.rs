@@ -103,15 +103,17 @@ impl SqlitePoolManager {
             async move {
                 let mut chunks = Vec::new();
                 let subspace = DirectoryLayer::default()
-                    .create_or_open(&tx, &["rivet", "sqlite".to_string(), key.to_string()], None, None)
+                    .create_or_open(&tx, &["rivet".to_string(), "sqlite".to_string(), key.to_string()], None, None)
                     .await?;
 
                 // Read all chunks
-                let range = subspace.range();
-                let range = subspace.range()?;
-                let kvs = tx.get_range(&range.0, &range.1, 0, false, StreamingMode::WantAll).await?;
+                let range_opt = foundationdb::RangeOption {
+                    mode: StreamingMode::WantAll,
+                    ..subspace.range().into()
+                };
+                let kvs = tx.get_range(&range_opt, 0, false).await?;
                 for kv in kvs {
-                    let Ok(Ok((_, idx))) = subspace.unpack::<(String, usize)>(kv.key()) else {
+                    let Ok((_, idx)) = subspace.unpack::<(String, usize)>(kv.key()).map_err(|e| FdbBindingError::from(e))? else {
                         continue;
                     };
                     chunks.push((idx, kv.value().to_vec()));
@@ -123,7 +125,7 @@ impl SqlitePoolManager {
                     .flat_map(|(_, chunk)| chunk)
                     .collect::<Vec<_>>();
 
-                Ok::<_, GlobalError>(if data.is_empty() { None } else { Some(data) })
+                Ok::<_, FdbBindingError>(if data.is_empty() { None } else { Some(data) })
             }
         }).await?;
 
@@ -137,7 +139,7 @@ impl SqlitePoolManager {
             let data = data.to_vec();
             async move {
                 let subspace = DirectoryLayer::default()
-                    .create_or_open(&tx, &["rivet", "sqlite".to_string(), key.to_string()], None, None)
+                    .create_or_open(&tx, &["rivet".to_string(), "sqlite".to_string(), key.to_string()], None, None)
                     .await?;
 
                 // Clear previous data
@@ -154,7 +156,12 @@ impl SqlitePoolManager {
 
                 Ok(())
             }
-        }).await.map_err(|e| GlobalError::Internal(format!("FDB error: {}", e)))?;
+        }).await.map_err(|e| GlobalError::Internal { 
+            ty: "fdb_error".into(),
+            message: format!("FDB error: {}", e),
+            debug: None,
+            retry_immediately: false,
+        })?;
         Ok(())
     }
 
@@ -221,7 +228,7 @@ impl SqlitePoolManager {
             let temp_dir = std::env::temp_dir();
             let db_path = temp_dir.join(format!("rivet-sqlite-{}.db", key.key));
             
-            if let Some(data) = self.read_from_fdb(&key.key).await.map_err(|e| Error::Fdb(e.into()))? {
+            if let Some(data) = self.read_from_fdb(&key.key).await.map_err(|e| Error::Fdb(anyhow::anyhow!("{}", e)))? {
                 tokio::fs::write(&db_path, data).await.map_err(Error::Io)?;
             }
             
