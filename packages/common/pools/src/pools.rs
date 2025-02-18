@@ -39,6 +39,7 @@ impl Pools {
 		)?;
 		let clickhouse = crate::db::clickhouse::setup(config.clone())?;
 
+		let fdb_clone = fdb.clone();
 		let pool = Pools(Arc::new(PoolsInner {
 			_guard: token.clone().drop_guard(),
 			nats: Some(nats),
@@ -46,7 +47,7 @@ impl Pools {
 			redis,
 			clickhouse,
 			fdb,
-			sqlite: SqlitePoolManager::new(fdb.clone()),
+			sqlite: SqlitePoolManager::new(fdb_clone),
 			clickhouse_enabled: config
 				.server
 				.as_ref()
@@ -75,6 +76,7 @@ impl Pools {
 			crate::db::fdb::setup(config.clone()),
 		)?;
 
+		let fdb_clone = fdb.clone();
 		let pool = Pools(Arc::new(PoolsInner {
 			_guard: token.clone().drop_guard(),
 			nats: Some(nats),
@@ -82,7 +84,7 @@ impl Pools {
 			redis,
 			clickhouse: None,
 			fdb,
-			sqlite: SqlitePoolManager::new(fdb.clone()),
+			sqlite: SqlitePoolManager::new(fdb_clone),
 			clickhouse_enabled: config
 				.server
 				.as_ref()
