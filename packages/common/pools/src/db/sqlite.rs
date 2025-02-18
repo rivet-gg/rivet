@@ -111,7 +111,7 @@ impl SqlitePoolManager {
                 let range = subspace.range()?;
                 let range_opt = foundationdb::RangeOption {
                     mode: StreamingMode::WantAll,
-                    ..(&range.0, &range.1).into()
+                    ..(&range.0[..], &range.1[..]).into()
                 };
                 let kvs = tx.get_range(&range_opt, 0, false).await?;
                 for kv in kvs {
