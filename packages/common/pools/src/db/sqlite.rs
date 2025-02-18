@@ -120,9 +120,43 @@ impl SqlitePoolManager {
 						..(&range.0[..], &range.1[..]).into()
 					};
 					let kvs = tx.get_range(&range_opt, 0, false).await?;
-					let data = kvs.into_iter().flat_map(|kv| kv.value().iter()).collect::<Vec<u8>>();
-
-					Ok::<_, FdbBindingError>(if data.is_empty() { None } else { Some(data) })
+					
+					// Parse and validate chunks
+					let mut chunks: Vec<(usize, Vec<u8>)> = Vec::new();
+					for kv in kvs {
+						let Ok((key_type, idx)) = subspace.unpack::<(String, usize)>(kv.key()).map_err(|e| FdbBindingError::from(e))? else {
+							continue;
+						};
+						
+						// Validate key type is "data"
+						if key_type != "data" {
+							continue;
+						}
+						
+						chunks.push((idx, kv.value().to_vec()));
+					}
+					
+					// Validate we have all chunks in sequence
+					if chunks.is_empty() {
+						return Ok(None);
+					}
+					
+					// Sort chunks by index
+					chunks.sort_by_key(|(idx, _)| *idx);
+					
+					// Validate chunk sequence
+					for (i, (idx, _)) in chunks.iter().enumerate() {
+						if *idx != i {
+							return Err(FdbBindingError::from(format!("Missing chunk {} in sequence", i)));
+						}
+					}
+					
+					// Combine chunks
+					let data = chunks.into_iter()
+						.flat_map(|(_, chunk)| chunk)
+						.collect::<Vec<u8>>();
+					
+					Ok::<_, FdbBindingError>(Some(data))
 				}
 			})
 			.await?;
