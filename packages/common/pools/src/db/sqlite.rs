@@ -28,6 +28,14 @@ const POOL_TTL: Duration = Duration::from_secs(15);
 const SQLITE_SNAPSHOT_INTERVAL: Duration = Duration::from_secs(300); // 5 minutes
 const CHUNK_SIZE: usize = 9 * 1024; // 9KB to stay safely under FDB's 10KB limit
 
+#[derive(Debug, thiserror::Error)]
+enum SqliteFdbError {
+	#[error("unexpected key type: {key_type}")]
+	UnexpectedKeyType { key_type: String },
+	#[error("mismatched chunk {key_idx}, expected {chunk_idx}")]
+	MismatchedChunk { chunk_idx: usize, key_idx: usize },
+}
+
 /// Pool wrapper that tracks when it was dropped to automatically update the last used on
 /// `SqlitePoolEntry` in order to know when to GC the pool.
 pub struct SqlitePool {
@@ -103,7 +111,6 @@ impl SqlitePoolManager {
 			.run(|tx, _mc| {
 				let key = key.to_string();
 				async move {
-					let mut chunks = Vec::new();
 					let subspace = DirectoryLayer::default()
 						.create_or_open(
 							&tx,
@@ -120,41 +127,36 @@ impl SqlitePoolManager {
 						..(&range.0[..], &range.1[..]).into()
 					};
 					let kvs = tx.get_range(&range_opt, 0, false).await?;
-					
+
+					// TODO: Replace data with writing straight to file
 					// Parse and validate chunks
-					let mut chunks: Vec<(usize, Vec<u8>)> = Vec::new();
+					let mut data = Vec::<u8>::new();
+					let chunk_idx = 0;
 					for kv in kvs {
-						let Ok((key_type, idx)) = subspace.unpack::<(String, usize)>(kv.key()).map_err(|e| FdbBindingError::from(e))? else {
+						let Ok((key_type, key_idx)) = subspace
+							.unpack::<(String, usize)>(kv.key())
+							.map_err(|e| FdbBindingError::from(e))?
+						else {
 							continue;
 						};
-						
-						// Validate key type is "data"
+
+						// Validate key
 						if key_type != "data" {
-							continue;
+							return Err(FdbBindingError::CustomError(
+								SqliteFdbError::UnexpectedKeyType { key_type }.into(),
+							));
 						}
-						
-						chunks.push((idx, kv.value().to_vec()));
+						if key_idx != chunk_idx {
+							return Err(FdbBindingError::CustomError(
+								SqliteFdbError::MismatchedChunk { chunk_idx, key_idx }.into(),
+							));
+						}
+
+                        // Merge data
+						data.extend(kv.value());
 					}
-					
-					// Validate we have all chunks in sequence
-					if chunks.is_empty() {
-						return Ok(None);
-					}
-					
-					// Sort chunks by index
-					chunks.sort_by_key(|(idx, _)| *idx);
-					
-					// Validate chunk sequence
-					for (i, (idx, _)) in chunks.iter().enumerate() {
-						ensure!(*idx == i, "Missing chunk {} in sequence", i);
-					}
-					
-					// Combine chunks
-					let data = chunks.into_iter()
-						.flat_map(|(_, chunk)| chunk)
-						.collect::<Vec<u8>>();
-					
-					Ok(Some(data))
+
+					Ok::<_, FdbBindingError>(Some(data))
 				}
 			})
 			.await?;
