@@ -1,0 +1,67 @@
+export const author = "nicholas-kissel";
+export const published = "2025-02-20";
+export const category = "technical";
+export const keywords = ["ai", "cost-optimization", "infrastructure", "performance"];
+
+# Cut AI Infrastructure Costs by 87%: How Rivet Actors Beat Traditional Solutions
+
+<Lead>
+  When you're building AI-powered applications—whether it's a recommendation engine, a chatbot, or an automation workflow—scalability and performance aren't negotiable. But as any developer knows, backend costs can spiral out of control fast. The challenge? Balancing power and cost without compromising on performance.
+</Lead>
+
+In this post, we're breaking down how Rivet Actors stack up against well-known database solutions like Postgres, DynamoDB, and Cassandra.
+
+## Breaking Down the Costs: Where Are You Really Spending?
+
+Before we dive into the why, let's take a look at the numbers:
+
+| Name         | Reads | Writes | Storage | Compute (Lambda & Actors)                   | Total   |
+| ------------ | ----- | ------ | ------- | ------------------------------------------- | ------- |
+| Postgres     | $0    | $0     | $300    | $3,000 (DB IOPS) + $40 (Lambda) = $3,040   | $3,340  |
+| DynamoDB     | $25   | $375   | $750    | $40 (Lambda)                               | $1,190  |
+| Cassandra    | $10   | $90    | $900    | $40 (Lambda)                               | $1,040  |
+| Rivet Actors | $20   | $100   | $200    | $100 (Actors)                              | $420    |
+
+## Digging Into the Cost Factors
+
+Let's break down why some options cost more—and why Rivet Actors could be a better fit for modern AI workloads.
+
+### Postgres: Reliable, but Not Built for Speed
+
+Postgres is a workhorse when it comes to relational databases. It's rock-solid for transactional data and complex queries. But when you try to scale it for AI workloads, especially those requiring real-time state updates, costs skyrocket. Between high computing needs for database operations and slow query performance at scale, you'll be looking at costs of over $3,300 for a typical AI setup.
+
+### DynamoDB: Scalable, but Pricey for Heavy Writes
+
+AWS's DynamoDB shines for serverless applications. It scales seamlessly; you don't have to think about server management. The downside? Write-heavy applications rack up costs quickly, and storage isn't cheap either. For AI agents processing continuous streams of real-time data, you're looking at nearly $1,200 to keep things running smoothly.
+
+### Cassandra: Better for Scale, but with Hidden Costs
+
+Cassandra handles large-scale, high-write applications better than many alternatives. It's great for systems that demand availability and partition tolerance. But managing Cassandra's distributed system architecture isn't trivial, and operational overhead can sneak up on you. Even with better baseline costs than DynamoDB, you're still over $1,000.
+
+### Rivet Actors: Scalable State Management, Built for AI
+
+This is where Rivet flips the script. Designed for real-time applications, Rivet Actors allow your AI agents to maintain persistent state across invocations—no external caching or database queries needed.
+
+Here's why it works:
+
+- **Stateful Compute:** Actors maintain their state between executions, meaning your AI agent can remember previous interactions without hitting a database every time.
+- **Edge Deployment:** Rivet deploys actors closer to the user, cutting down on latency—critical for real-time AI applications.
+- **Cost-Effective Scaling:** With compute and storage built into the same architecture, you're eliminating layers (and costs) typically needed for managing state externally.
+
+The result? $420 total cost—a whopping **87% reduction** compared to Postgres.
+
+## Why Does This Matter for AI Developers?
+
+If you're developing AI agents that need fast response times and handle massive amounts of data in real-time, traditional databases simply aren't built for this kind of workload. You end up bolting on caches, scaling compute power unnecessarily, or spending hours tweaking performance settings—all while burning through your budget.
+
+Rivet Actors provide a more natural solution for these challenges:
+
+- No external caching is required
+- Ultra-low-latency operations with edge deployment
+- Simplified architecture means fewer moving parts to maintain
+
+## Final Thoughts: Why You Should Care
+
+When your AI agents handle thousands—or millions—of real-time interactions, every millisecond and every dollar counts. Traditional databases and serverless functions weren't built with this scale or need for persistent state in mind.
+
+Rivet Actors offer a new way forward: faster, simpler, and dramatically cheaper. If cutting your infrastructure costs by **87%** while boosting performance sounds good, it's time to rethink how you're building your backend.
