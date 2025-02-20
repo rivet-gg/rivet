@@ -1,0 +1,186 @@
+export const author = "nicholas-kissel"
+export const published = "2025-02-20"
+export const category = "technical"
+export const keywords = ["AI", "Agents", "State Management", "Cloud Computing", "Cost Analysis"]
+
+import Image from 'next/image'
+import basicAgentImg from "./basic-agent.png"
+import salesAssistantImg from "./sales-assistant.png"
+import enterpriseAssistantImg from "./enterprise-assistant.png"
+
+# Why Actors Crush Lambda & Redis for AI Agents (With Real Numbers)
+
+When deploying AI agents in production, one of the most critical decisions you'll face is how to manage conversation state and context. Let's explore how different infrastructure choices affect your agent's capabilities, costs, and development complexity.
+
+---
+
+## 🤖 Understanding AI Agent Requirements
+
+State management for AI agents has unique characteristics:
+- **Maintains conversation history**
+- **Tracks context efficiently**
+- **Stores embeddings for semantic search**
+- **Ensures low-latency responses**
+- **Manages both short-term and long-term memory**
+
+---
+
+## 🏗️ Infrastructure Options
+
+### 🔹 Rivet Actors
+- **Compute:** $0.00000000163 per millisecond
+- **128MB RAM per actor (including state)**
+- **Automatic state persistence**
+- **Zero cold starts**
+- **Built-in scaling**
+
+### 🔸 AWS Lambda with State Options
+- **Lambda Compute:**
+  - x86: $0.0000166667 per GB-second
+  - ARM: $0.0000133334 per GB-second
+  - $0.20 per million requests
+  - Cold starts to consider
+  - Memory from 128MB to 10GB
+
+**For state, choose from:**
+- **Redis (ElastiCache)** (Sub-millisecond latency, best for active conversations)
+  - t4g.micro (0.5GB): $11.68/month
+  - t4g.small (1.37GB): $23.36/month
+  - t4g.medium (3.09GB): $46.72/month
+
+- **MemoryDB for Redis** (Durable, Multi-AZ option, great for persistent memory)
+  - db.t4g.small: $30.37/month
+  - db.t4g.medium: $60.74/month
+
+- **PostgreSQL (RDS)** (Full SQL capabilities, vector storage support)
+  - db.t4g.micro: $12.24/month
+  - db.t4g.small: $24.48/month
+
+---
+
+## 📊 Real-World Deployment Patterns
+
+### Pattern 1: Basic Support Agent
+<Image 
+  src={basicAgentImg} 
+  alt="Basic Support Agent Architecture and Cost Comparison"
+/>
+
+📌 **Scenario:**
+- **10,000 conversations/month**
+- **5 turns per conversation**
+- **2KB state per turn**
+- **1s processing time**
+
+| Implementation | Cost Breakdown | Total |
+|----------------|----------------|--------|
+| **Rivet Actors** | 50,000 turns * 1000ms * $0.00000000163 | **$0.0815/month** |
+| **Lambda + Redis** | Lambda (2GB): $1.67<br/>Redis (t4g.micro): $11.68 | **$13.35/month** |
+| **Lambda + Postgres** | Lambda: $1.67<br/>RDS (t4g.micro): $12.24 | **$13.91/month** |
+
+---
+
+### Pattern 2: Intelligent Sales Assistant
+<Image 
+  src={salesAssistantImg} 
+  alt="Intelligent Sales Assistant Architecture and Cost Comparison"
+/>
+
+📌 **Scenario:**
+- **100,000 conversations/month**
+- **8 turns per conversation**
+- **5KB state per turn**
+- **2s processing time**
+- **Needs semantic search**
+
+| Implementation | Cost Breakdown | Total |
+|----------------|----------------|--------|
+| **Rivet Actors** | (excludes vector store costs) | **$2.608/month** |
+| **Lambda + MemoryDB** | Lambda (4GB): $106.67<br/>MemoryDB (t4g.medium): $60.74 | **$167.41/month** |
+| **Lambda + Postgres** | Lambda: $106.67<br/>RDS (t4g.small): $24.48 | **$131.15/month** |
+
+---
+
+### Pattern 3: Enterprise Digital Assistant
+<Image 
+  src={enterpriseAssistantImg} 
+  alt="Enterprise Digital Assistant Architecture and Cost Comparison"
+/>
+
+📌 **Scenario:**
+- **500,000 conversations/month**
+- **10 turns per conversation**
+- **10KB state per turn**
+- **1.5s processing time**
+- **Needs audit trail and analytics**
+
+| Implementation | Cost Breakdown | Total |
+|----------------|----------------|--------|
+| **Rivet + Postgres** | Rivet: $12.225<br/>Postgres: $24.48 | **$36.705/month** |
+| **Lambda + MemoryDB + Postgres** | Lambda (6GB): $750<br/>MemoryDB: $60.74<br/>Postgres: $24.48 | **$835.22/month** |
+
+---
+
+## 🚀 Architectural Best Practices
+
+### Tiered Storage Approach
+- **Active conversations:** Rivet/Redis
+- **Historical data:** Postgres
+- **Embeddings:** Vector store
+
+### State Management Strategies
+- **Minimize state in active memory**
+- **Archive completed conversations**
+- **Use efficient serialization**
+
+### Performance Optimization
+- **Batch operations** where possible
+- **Implement caching** for efficiency
+- **Optimize indexes** for queries
+
+---
+
+## ✅ Making the Right Choice
+
+| Aspect | Rivet Actors | Redis/MemoryDB | Postgres |
+|--------|--------------|----------------|-----------|
+| **Development Complexity** | 🟢 Easiest (managed) | 🟡 Moderate | 🔴 Complex |
+| **Operational Requirements** | 🟢 Fully managed | 🟡 Needs monitoring | 🔴 Needs maintenance |
+| **Cost Structure** | 🟢 Linear scaling | 🟡 Base costs | 🔴 Best for structure |
+| **Data Requirements** | 🟢 128MB per actor | 🟡 Large active state | 🔴 Best for analytics |
+
+---
+
+## How is Rivet so cheap?
+
+Rivet achieves its low operational costs through an efficient architecture that combines 
+compute and state management within a unified actor model. By integrating compute (i.e., “RPC”) 
+with data (i.e., “state”), performance is significantly improved. This design eliminates the need 
+for external state management systems, reducing both complexity and expenses. Additionally, Rivet’s use of 
+V8 isolates and the Deno runtime ensures lightweight, high-performance execution environments, further minimizing 
+resource consumption. The platform’s ability to automatically scale to zero during inactivity means that resources 
+are only utilized when necessary, leading to cost savings. Moreover, Rivet’s open-source nature allows for self-hosting, 
+providing flexibility and control over deployment and associated costs.
+
+---
+
+## 💡 Optimizing Your AI Agent Deployment
+
+### State Management
+- Keep state minimal
+- Implement serialization
+- Use appropriate storage tiers
+
+### Architecture
+- Hybrid approaches can be effective
+- Plan for scaling
+- Design for fault tolerance
+
+### Cost Optimization
+- Monitor usage patterns
+- Implement cleanup strategies
+- Choose optimal instance sizes
+
+The best solution **often combines multiple approaches**. Start with **Rivet Actors** for simplicity and scale as needed!
+
+🔍 **Always verify pricing before committing.** Small usage changes can significantly impact costs. 

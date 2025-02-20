@@ -151,6 +151,19 @@ State management for AI agents has unique characteristics:
 
 ---
 
+## How is Rivet so cheap?
+
+Rivet achieves its low operational costs through an efficient architecture that combines 
+compute and state management within a unified actor model. By integrating compute (i.e., “RPC”) 
+with data (i.e., “state”), performance is significantly improved. This design eliminates the need 
+for external state management systems, reducing both complexity and expenses. Additionally, Rivet’s use of 
+V8 isolates and the Deno runtime ensures lightweight, high-performance execution environments, further minimizing 
+resource consumption. The platform’s ability to automatically scale to zero during inactivity means that resources 
+are only utilized when necessary, leading to cost savings. Moreover, Rivet’s open-source nature allows for self-hosting, 
+providing flexibility and control over deployment and associated costs.
+
+---
+
 ## 💡 Optimizing Your AI Agent Deployment
 
 ### State Management
