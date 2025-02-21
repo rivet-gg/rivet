@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - frontend/packages/cli/**
+      - frontend/packages/create-actor/**
       - sdks/actor/**
 
 jobs:
@@ -18,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: yarn install
         
-      - run: yarn build --filter='./{sdks,frontend/packages/cli}/**'
+      - run: yarn build --filter='./{sdks,frontend/packages/cli,frontend/packages/create-actor}/**'
       # TODO: Add --compact once we publish cli to npm
-      - run: rm -rf ./sdks/actor/client/node_modules; rm -rf ./sdks/actor/runtime/node_modules; rm -rf ./frontend/packages/cli/node_modules
-      - run: yarn dlx pkg-pr-new publish --yarn './sdks/actor/client' './frontend/packages/cli'
+      - run: rm -rf ./sdks/actor/client/node_modules; rm -rf ./frontend/packages/cli/node_modules; rm -rf ./frontend/packages/create-actor/node_modules
+      - run: yarn dlx pkg-pr-new publish --yarn './sdks/actor/client' './frontend/packages/cli' './frontend/packages/create-actor'

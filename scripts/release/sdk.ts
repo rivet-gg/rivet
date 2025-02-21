@@ -81,6 +81,12 @@ export async function publishSdk(opts: ReleaseOpts) {
 			//jsr: true,
 			npm: true,
 			turbo: true
+		},
+		{
+			path: `${opts.root}/frontend/packages/create-actor`,
+			name: "create-actor",
+			npm: true,
+			turbo: true,
 		}
 	];
 

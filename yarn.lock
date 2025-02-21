@@ -4659,6 +4659,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/degit@npm:^2.8.6":
+  version: 2.8.6
+  resolution: "@types/degit@npm:2.8.6"
+  checksum: 10c0/b1860d95e1590a6de41b8a9f5bfb4ec531f8e31db9cb0b4b81db548a35a93a46e3e8f784c333f2950515a431fdb8435b686b97169a80a12d50d11a389401cbc6
+  languageName: node
+  linkType: hard
+
 "@types/deno@npm:^2.0.0":
   version: 2.0.0
   resolution: "@types/deno@npm:2.0.0"
@@ -4839,6 +4846,16 @@ __metadata:
   dependencies:
     undici-types: "npm:~6.20.0"
   checksum: 10c0/3a234fa7766a3efc382cf81f66f474c26cdab2f54f43f757634c81c0444eb2160c2dabbde9741e4983078a318a88515b65416b5f1ab5478548579d7b3ead1d95
+  languageName: node
+  linkType: hard
+
+"@types/prompts@npm:^2":
+  version: 2.4.9
+  resolution: "@types/prompts@npm:2.4.9"
+  dependencies:
+    "@types/node": "npm:*"
+    kleur: "npm:^3.0.3"
+  checksum: 10c0/22fe0da6807681c85e88ba283184f4be4c8a95c744ea12a638865c98c4e0c22e7f733542f6b0f1fbca02245cdc3fe84feacf9c9adf4ddd8bc98a337fd679d8d2
   languageName: node
   linkType: hard
 
@@ -6355,6 +6372,21 @@ __metadata:
   dependencies:
     "@rivet-gg/actor": "workspace:*"
     "@rivet-gg/actor-client": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"create-actor@workspace:frontend/packages/create-actor":
+  version: 0.0.0-use.local
+  resolution: "create-actor@workspace:frontend/packages/create-actor"
+  dependencies:
+    "@types/degit": "npm:^2.8.6"
+    "@types/node": "npm:^22.13.4"
+    "@types/prompts": "npm:^2"
+    kleur: "npm:^4.1.5"
+    prompts: "npm:^2.4.2"
+    tsup: "npm:^8.3.6"
+  bin:
+    create-actor: bin/create-actor.js
   languageName: unknown
   linkType: soft
 
@@ -9609,6 +9641,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"kleur@npm:^3.0.3":
+  version: 3.0.3
+  resolution: "kleur@npm:3.0.3"
+  checksum: 10c0/cd3a0b8878e7d6d3799e54340efe3591ca787d9f95f109f28129bdd2915e37807bf8918bb295ab86afb8c82196beec5a1adcaf29042ce3f2bd932b038fe3aa4b
+  languageName: node
+  linkType: hard
+
+"kleur@npm:^4.1.5":
+  version: 4.1.5
+  resolution: "kleur@npm:4.1.5"
+  checksum: 10c0/e9de6cb49657b6fa70ba2d1448fd3d691a5c4370d8f7bbf1c2f64c24d461270f2117e1b0afe8cb3114f13bbd8e51de158c2a224953960331904e636a5e4c0f2a
+  languageName: node
+  linkType: hard
+
 "kolorist@npm:^1.8.0":
   version: 1.8.0
   resolution: "kolorist@npm:1.8.0"
@@ -12045,6 +12091,16 @@ __metadata:
     err-code: "npm:^2.0.2"
     retry: "npm:^0.12.0"
   checksum: 10c0/9c7045a1a2928094b5b9b15336dcd2a7b1c052f674550df63cc3f36cd44028e5080448175b6f6ca32b642de81150f5e7b1a98b728f15cb069f2dd60ac2616b96
+  languageName: node
+  linkType: hard
+
+"prompts@npm:^2.4.2":
+  version: 2.4.2
+  resolution: "prompts@npm:2.4.2"
+  dependencies:
+    kleur: "npm:^3.0.3"
+    sisteransi: "npm:^1.0.5"
+  checksum: 10c0/16f1ac2977b19fe2cf53f8411cc98db7a3c8b115c479b2ca5c82b5527cd937aa405fa04f9a5960abeb9daef53191b53b4d13e35c1f5d50e8718c76917c5f1ea4
   languageName: node
   linkType: hard
 

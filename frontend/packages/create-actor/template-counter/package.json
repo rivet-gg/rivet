@@ -1,0 +1,15 @@
+{
+	"name": "template-counter",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"test": "vitest"
+	},
+	"dependencies": {
+		"@rivet-gg/actor": "workspace:*"
+	},
+	"devDependencies": {
+		"@rivet-gg/actor-client": "workspace:*",
+		"vitest": "^3.0.6"
+	}
+}

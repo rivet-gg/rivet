@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"strict": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"moduleResolution": "node16",
+		"allowSyntheticDefaultImports": true,
+		"types": ["node"]
+	},
+	"include": ["cli.ts"]
+}
