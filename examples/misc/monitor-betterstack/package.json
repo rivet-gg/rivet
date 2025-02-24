@@ -1,0 +1,7 @@
+{
+  "name": "monitor-betterstack",
+  "packageManager": "yarn@4.6.0",
+  "dependencies": {
+    "hono": "^4.7.2"
+  }
+}
