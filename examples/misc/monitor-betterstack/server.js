@@ -4,9 +4,11 @@ import { serve } from "@hono/node-server";
 
 // Validate required environment variables in production
 if (process.env.NODE_ENV === 'production') {
-  if (!process.env.BETTERSTACK_TOKEN || !process.env.BETTERSTACK_HOST) {
-    console.error("Error: BETTERSTACK_TOKEN and BETTERSTACK_HOST environment variables must be set in production");
-    process.exit(1);
+  if (!process.env.BETTERSTACK_TOKEN) {
+    throw new Error("BETTERSTACK_TOKEN environment variable is required in production");
+  }
+  if (!process.env.BETTERSTACK_HOST) {
+    throw new Error("BETTERSTACK_HOST environment variable is required in production");
   }
 }
 
