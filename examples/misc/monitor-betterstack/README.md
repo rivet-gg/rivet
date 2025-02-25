@@ -14,13 +14,6 @@ The BetterStack credentials are hardcoded in the Dockerfile as build arguments a
 - [Docker](https://docs.docker.com/desktop/)
 - [Node.js](https://nodejs.org/) (for local development)
 
-## File structure
-
-- `rivet.json` - Configuration file for deploying the service
-- `Dockerfile` - Dockerfile that will automatically be deployed
-- `server.js` - Hono HTTP server implementation
-- `package.json` - Node.js dependencies
-
 ## Local Development
 
 ```sh
@@ -33,12 +26,8 @@ PORT_HTTP=8080 yarn start
 ### Using Docker
 
 ```sh
-# Build with default credentials
-docker build -t bs-actor .
+docker build --build-arg BETTERSTACK_HOST=<HOST> --build-arg BETTERSTACK_TOKEN=<TOKEN> -t bs-actor .
 docker run bs-actor
-
-# Or with custom BetterStack credentials
-docker build -t bs-actor --build-arg BETTERSTACK_TOKEN=<TOKEN> .
 ```
 
 ### Using e2e_test.js
