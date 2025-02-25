@@ -1,5 +1,5 @@
 import { RivetClient } from "@rivet-gg/api";
-import readline from 'readline';
+import readline from "readline";
 
 // Can be opt since they're not required for dev
 const RIVET_ENDPOINT = process.env.RIVET_ENDPOINT;
@@ -56,17 +56,17 @@ async function run() {
 		// Setup readline interface for user input
 		const rl = readline.createInterface({
 			input: process.stdin,
-			output: process.stdout
+			output: process.stdout,
 		});
 
 		// Wait for user to press Enter
-		await new Promise(resolve => {
-			rl.question('Press Enter to destroy the actor...', () => {
+		await new Promise((resolve) => {
+			rl.question("Press Enter to destroy the actor...", () => {
 				rl.close();
 				resolve();
 			});
 		});
-		
+
 		if (actorId) {
 			console.log("Destroying", actorId);
 			await client.actor.destroy(actorId, {
