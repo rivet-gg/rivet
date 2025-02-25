@@ -33,12 +33,7 @@ docker run bs-actor
 ### Using e2e_test.js
 
 ```sh
-RIVET_SERVICE_TOKEN=<TOKEN> RIVET_PROJECT=<PROJECT> RIVET_ENVIRONMENT=<ENV> yarn test
-```
-
-## Deploying
-
-```sh
 rivet deploy
+RIVET_SERVICE_TOKEN=<TOKEN> RIVET_PROJECT=<PROJECT> RIVET_ENVIRONMENT=<ENV> yarn test
 ```
 
