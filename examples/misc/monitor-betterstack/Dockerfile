@@ -3,18 +3,10 @@
 
 FROM node:22-bookworm-slim
 
-# BetterStack credentials as build arguments - required
-ARG BETTERSTACK_TOKEN
-ARG BETTERSTACK_HOST
-RUN test -n "$BETTERSTACK_TOKEN" || { echo "BETTERSTACK_TOKEN build argument is required"; exit 1; } && \
-    test -n "$BETTERSTACK_HOST" || { echo "BETTERSTACK_HOST build argument is required"; exit 1; }
-
-# Set environment variables including BetterStack credentials
+# Set environment variables
 ENV CI=true
 ENV COREPACK_ENABLE_STRICT=0
 ENV VECTOR_LOG=WARN
-ENV BETTERSTACK_TOKEN=${BETTERSTACK_TOKEN}
-ENV BETTERSTACK_HOST=${BETTERSTACK_HOST}
 RUN corepack enable
 
 # Install Vector
@@ -23,8 +15,19 @@ RUN apt-get update -y && \
 	bash -c "$(curl -L https://setup.vector.dev)" && \
 	apt-get install -y vector
 
-# Configure Vector with BetterStack
+# Copy configuration files
+COPY ./.env* /app/.env* 2>/dev/null || :
 COPY ./vector.yaml /etc/vector/vector.yaml
+
+# Load environment variables from .env file
+RUN if [ -f /app/.env ]; then \
+      export $(grep -v '^#' /app/.env | xargs); \
+      test -n "$BETTERSTACK_TOKEN" || { echo "BETTERSTACK_TOKEN is required in .env file"; exit 1; }; \
+      test -n "$BETTERSTACK_HOST" || { echo "BETTERSTACK_HOST is required in .env file"; exit 1; }; \
+      echo "BetterStack credentials loaded from .env file"; \
+    else \
+      echo "Warning: .env file not found. Make sure to set BETTERSTACK_TOKEN and BETTERSTACK_HOST environment variables at runtime."; \
+    fi
 
 # Create a non-root user
 RUN groupadd -r rivet && useradd -r -g rivet rivet

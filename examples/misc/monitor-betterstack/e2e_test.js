@@ -7,9 +7,7 @@ const RIVET_SERVICE_TOKEN = process.env.RIVET_SERVICE_TOKEN;
 const RIVET_PROJECT = process.env.RIVET_PROJECT;
 const RIVET_ENVIRONMENT = process.env.RIVET_ENVIRONMENT;
 
-// Hardcoded BetterStack credentials
-const BETTERSTACK_TOKEN = "your_token_here";
-const BETTERSTACK_HOST = "logs.betterstack.com";
+// BetterStack credentials are now loaded from .env file in the Docker image
 
 // Check required environment variables
 if (!RIVET_SERVICE_TOKEN) {
