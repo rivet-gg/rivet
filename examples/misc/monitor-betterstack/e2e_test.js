@@ -50,6 +50,9 @@ async function run() {
 		const actorOrigin = `${port.protocol}://${port.hostname}:${port.port}${port.path ?? ""}`;
 		console.log("Created actor at", actorOrigin);
 
+		console.log("Press Enter to destroy the actor...");
+		await new Promise(resolve => Deno.stdin.read(new Uint8Array(1)).then(resolve));
+		
 		if (actorId) {
 			console.log("Destroying", actorId);
 			await client.actor.destroy(actorId, {
