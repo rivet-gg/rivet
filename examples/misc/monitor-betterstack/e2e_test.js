@@ -52,6 +52,10 @@ async function run() {
 						},
 					},
 				},
+				resources: {
+					cpu: 100,
+					memory: 100,
+				},
 				lifecycle: {
 					durable: false,
 				},
@@ -61,8 +65,7 @@ async function run() {
 
 		const port = actor.network.ports.http;
 		if (!port) throw new Error("missing port http");
-		const actorOrigin = `${port.protocol}://${port.hostname}:${port.port}${port.path ?? ""}`;
-		console.log("Created actor at", actorOrigin);
+		console.log("Created actor at", port.url);
 
 		// Setup readline interface for user input
 		const rl = readline.createInterface({
