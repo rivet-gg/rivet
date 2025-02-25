@@ -31,5 +31,5 @@ RUN yarn install && \
 USER rivet
 
 # Vector will spawn your server as a child process
-CMD ["sh", "-c", "NODE_ENV=production node ./server.js 2>&1 | vector -vv"]
+CMD ["sh", "-c", "NODE_ENV=production node -r dotenv/config ./server.js 2>&1 | vector -vv"]
 
