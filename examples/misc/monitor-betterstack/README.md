@@ -6,13 +6,6 @@ Ships container metrics & logs to BetterStack. Uses Vector to collect & ship log
 
 Vector will run as the parent process to your main process. It will collect logs & send all metrics to BetterStack automatically.
 
-You need to provide these environment variables:
-
-```
-BETTERSTACK_TOKEN=your_token_here
-BETTERSTACK_HOST=logs.betterstack.com
-```
-
 ## Prerequisites
 
 - [Rivet CLI](https://rivet.gg/docs/setup)
