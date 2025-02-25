@@ -1,22 +1,22 @@
 import { RivetClient } from "@rivet-gg/api";
 import readline from "readline";
 
-// Check required environment variables
-if (!process.env.RIVET_SERVICE_TOKEN) {
-	throw new Error("RIVET_SERVICE_TOKEN environment variable is required");
-}
-if (!process.env.RIVET_PROJECT) {
-	throw new Error("RIVET_PROJECT environment variable is required");
-}
-if (!process.env.RIVET_ENVIRONMENT) {
-	throw new Error("RIVET_ENVIRONMENT environment variable is required");
-}
-
-// Can be opt since they're not required for dev
+// Read environment variables
 const RIVET_ENDPOINT = process.env.RIVET_ENDPOINT;
 const RIVET_SERVICE_TOKEN = process.env.RIVET_SERVICE_TOKEN;
 const RIVET_PROJECT = process.env.RIVET_PROJECT;
 const RIVET_ENVIRONMENT = process.env.RIVET_ENVIRONMENT;
+
+// Check required environment variables
+if (!RIVET_SERVICE_TOKEN) {
+	throw new Error("RIVET_SERVICE_TOKEN environment variable is required");
+}
+if (!RIVET_PROJECT) {
+	throw new Error("RIVET_PROJECT environment variable is required");
+}
+if (!RIVET_ENVIRONMENT) {
+	throw new Error("RIVET_ENVIRONMENT environment variable is required");
+}
 
 let region = process.env.REGION;
 if (!region || region.length === 0) {
