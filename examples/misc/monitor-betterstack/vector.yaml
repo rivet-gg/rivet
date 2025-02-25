@@ -9,6 +9,21 @@ sources:
     scrape_interval_secs: 30
     collectors: [cpu, load, host, memory, network]
 
+transforms:
+  # Add lobby ID to logs
+  add_lobby_id:
+    type: "remap"
+    inputs: ["server_logs"]
+    source: |
+      .lobby_id = "${LOBBY_ID:unknown}"
+
+  # Add lobby ID to metrics
+  add_lobby_id_metrics:
+    type: "remap"
+    inputs: ["host_metrics"]
+    source: |
+      .lobby_id = "${LOBBY_ID:unknown}"
+
 sinks:
   # Ship logs to BetterStack
   logs_sink:
@@ -21,7 +36,7 @@ sinks:
     auth:
       strategy: "bearer"
       token: "${BETTERSTACK_TOKEN}"
-    inputs: ["server_logs"]
+    inputs: ["add_lobby_id"]
     request:
       retry_attempts: 5
       retry_initial_backoff_secs: 1
@@ -38,7 +53,7 @@ sinks:
     auth:
       strategy: "bearer"
       token: "${BETTERSTACK_TOKEN}"
-    inputs: ["host_metrics"]
+    inputs: ["add_lobby_id_metrics"]
     request:
       retry_attempts: 5
       retry_initial_backoff_secs: 1
@@ -47,7 +62,7 @@ sinks:
   # Print to console for debugging
   console:
     type: "console"
-    inputs: ["server_logs"]
+    inputs: ["add_lobby_id"]
     encoding:
       codec: "text"
 

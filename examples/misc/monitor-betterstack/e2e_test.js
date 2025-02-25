@@ -6,8 +6,8 @@ const RIVET_ENDPOINT = process.env.RIVET_ENDPOINT;
 const RIVET_SERVICE_TOKEN = process.env.RIVET_SERVICE_TOKEN;
 const RIVET_PROJECT = process.env.RIVET_PROJECT;
 const RIVET_ENVIRONMENT = process.env.RIVET_ENVIRONMENT;
-
-// BetterStack credentials are now loaded from .env file in the Docker image
+const BETTERSTACK_TOKEN = process.env.BETTERSTACK_TOKEN;
+const BETTERSTACK_HOST = process.env.BETTERSTACK_HOST;
 
 // Check required environment variables
 if (!RIVET_SERVICE_TOKEN) {
@@ -19,10 +19,11 @@ if (!RIVET_PROJECT) {
 if (!RIVET_ENVIRONMENT) {
 	throw new Error("RIVET_ENVIRONMENT environment variable is required");
 }
-
-let region = process.env.REGION;
-if (!region || region.length === 0) {
-	region = undefined;
+if (!BETTERSTACK_TOKEN) {
+	throw new Error("BETTERSTACK_TOKEN environment variable is required");
+}
+if (!BETTERSTACK_HOST) {
+	throw new Error("BETTERSTACK_HOST environment variable is required");
 }
 
 const client = new RivetClient({
@@ -55,16 +56,29 @@ process.on('SIGINT', async () => {
 	await cleanupActor();
 });
 
+// Generate lobby URL for logs viewing
+function generatelobbyUrl(lobbyId) {
+	const encodedProjectId = encodeURIComponent(RIVET_PROJECT);
+	const encodedEnvironmentId = encodeURIComponent(RIVET_ENVIRONMENT);
+	
+	// Encode the tags parameter properly - this is a JSON structure that needs to be encoded
+	const tagsParam = encodeURIComponent(JSON.stringify([["lobby", lobbyId]]));
+	
+	return `https://hub.rivet.gg/projects/${encodedProjectId}/environments/${encodedEnvironmentId}/actors?tab=logs&showDestroyed=true&tags=${tagsParam}`;
+}
+
 async function run() {
 	try {
-		console.log("Creating actor", { region });
+		const lobbyId = crypto.randomUUID();
+		const lobbyUrl = generatelobbyUrl(lobbyId);
+		console.log("Creating actor", { lobbyId, lobbyUrl });
 		const { actor } = await client.actor.create({
 			project: RIVET_PROJECT,
 			environment: RIVET_ENVIRONMENT,
 			body: {
-				region,
 				tags: {
 					name: "example",
+					lobby: lobbyId,
 				},
 				buildTags: { name: "example", current: "true" },
 				network: {
@@ -81,8 +95,13 @@ async function run() {
 					cpu: 100,
 					memory: 100,
 				},
-				// No need to pass BetterStack credentials as they're hardcoded in the Dockerfile
-				env: {},
+				// Pass BetterStack credentials as environment variables
+				env: {
+					LOBBY_ID: lobbyId,
+					LOBBY_URL: lobbyUrl,
+					BETTERSTACK_TOKEN,
+					BETTERSTACK_HOST
+				},
 				lifecycle: {
 					durable: false,
 				},
@@ -93,6 +112,9 @@ async function run() {
 		const port = actor.network.ports.http;
 		if (!port) throw new Error("missing port http");
 		console.log("Created actor at", port.url);
+		
+		// Generate and display the lobby URL for viewing logs
+		console.log("\nView logs at:", lobbyUrl);
 
 		// Setup readline interface for user input
 		const rl = readline.createInterface({

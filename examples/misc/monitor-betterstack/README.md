@@ -36,8 +36,15 @@ docker run bs-actor
 ### Using e2e_test.js
 
 ```sh
-# Deploy to Rivet (make sure to set your BetterStack credentials in rivet.json)
+# Deploy to Rivet
 rivet deploy
-RIVET_SERVICE_TOKEN=<TOKEN> RIVET_PROJECT=<PROJECT> RIVET_ENVIRONMENT=<ENV> yarn test
+
+# Run the test with all required environment variables
+BETTERSTACK_TOKEN=your_token_here \
+BETTERSTACK_HOST=logs.betterstack.com \
+RIVET_SERVICE_TOKEN=<TOKEN> \
+RIVET_PROJECT=<PROJECT> \
+RIVET_ENVIRONMENT=<ENV> \
+yarn test
 ```
 

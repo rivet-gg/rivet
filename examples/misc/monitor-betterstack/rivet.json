@@ -2,11 +2,7 @@
 	"builds": {
 		"example": {
 			"dockerfile": "Dockerfile",
-			"access": "private",
-			"build_args": {
-				"BETTERSTACK_HOST": "s1215886.eu-nbg-2.betterstackdata.com",
-				"BETTERSTACK_TOKEN": "dC86FVveBgq7mcQNVyef7eyy"
-			}
+			"access": "private"
 		}
 	},
 	"unstable": {

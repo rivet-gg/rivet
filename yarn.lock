@@ -9949,7 +9949,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hono@npm:^4.6.16, hono@npm:^4.6.17, hono@npm:^4.7.2":
+"hono@npm:^4.6.16, hono@npm:^4.6.17":
   version: 4.7.2
   resolution: "hono@npm:4.7.2"
   checksum: 10c0/2bf7a85f25048c0deb181a767cf020491be611089a51f45448018fc4fa8a33ab9d34d8d0d39fe4e05c0abd5cd338d9c973984583c27ce7dc8d8919cadd2991d9
@@ -12063,14 +12063,6 @@ __metadata:
   checksum: 10c0/69e738218a13d6365caf930e0ab4e2b848b84eec261597df9788cefb9930f3e40667be9cb58a4718834ba5f97a6efeef31d3b5a95f4388143fd4e0d0deff72ff
   languageName: node
   linkType: hard
-
-"monitor-betterstack@workspace:examples/misc/monitor-betterstack":
-  version: 0.0.0-use.local
-  resolution: "monitor-betterstack@workspace:examples/misc/monitor-betterstack"
-  dependencies:
-    hono: "npm:^4.7.2"
-  languageName: unknown
-  linkType: soft
 
 "motion-dom@npm:^11.18.1":
   version: 11.18.1
@@ -15563,11 +15555,11 @@ __metadata:
 
 "typescript@patch:typescript@npm%3A^5.1.6#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.3.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.5.4#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>":
   version: 5.7.3
-  resolution: "typescript@patch:typescript@npm%3A5.7.3#optional!builtin<compat/typescript>::version=5.7.3&hash=5786d5"
+  resolution: "typescript@patch:typescript@npm%3A5.7.3#optional!builtin<compat/typescript>::version=5.7.3&hash=b45daf"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 10c0/6fd7e0ed3bf23a81246878c613423730c40e8bdbfec4c6e4d7bf1b847cbb39076e56ad5f50aa9d7ebd89877999abaee216002d3f2818885e41c907caaa192cc4
+  checksum: 10c0/3b56d6afa03d9f6172d0b9cdb10e6b1efc9abc1608efd7a3d2f38773d5d8cfb9bbc68dfb72f0a7de5e8db04fc847f4e4baeddcd5ad9c9feda072234f0d788896
   languageName: node
   linkType: hard
 

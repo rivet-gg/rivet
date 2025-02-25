@@ -3,18 +3,10 @@
 
 FROM node:22-bookworm-slim
 
-# BetterStack credentials as build arguments - required
-ARG BETTERSTACK_TOKEN
-ARG BETTERSTACK_HOST
-RUN test -n "$BETTERSTACK_TOKEN" || { echo "BETTERSTACK_TOKEN build argument is required"; exit 1; } && \
-    test -n "$BETTERSTACK_HOST" || { echo "BETTERSTACK_HOST build argument is required"; exit 1; }
-
 # Set environment variables including BetterStack credentials
 ENV CI=true
 ENV COREPACK_ENABLE_STRICT=0
-ENV VECTOR_LOG=WARN
-ENV BETTERSTACK_TOKEN=${BETTERSTACK_TOKEN}
-ENV BETTERSTACK_HOST=${BETTERSTACK_HOST}
+ENV VECTOR_LOG=ERROR
 RUN corepack enable
 
 # Install Vector
@@ -38,6 +30,6 @@ COPY --chown=rivet:rivet . .
 USER rivet
 RUN yarn install
 
-# Vector will spawn your server as a child process
+# Vector read logs from stdin and send to BetterStack
 CMD ["sh", "-c", "NODE_ENV=production node ./server.js 2>&1 | vector -vv"]
 
