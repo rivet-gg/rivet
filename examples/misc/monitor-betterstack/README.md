@@ -28,6 +28,12 @@ yarn install
 PORT_HTTP=8080 yarn start
 ```
 
+## Testing
+
+```
+docker build -t bs-actor . && docker run -e BETTERSTACK_TOKEN=<TOKEN> -e BETTERSTACK_HOST=<HOST> bs-actor
+```
+
 ## Deploying
 
 ```sh

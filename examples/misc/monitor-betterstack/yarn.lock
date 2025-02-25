@@ -5,6 +5,15 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
+"@hono/node-server@npm:^1.8.2":
+  version: 1.13.8
+  resolution: "@hono/node-server@npm:1.13.8"
+  peerDependencies:
+    hono: ^4
+  checksum: 10c0/5880892fddc2e3272886b3158a278baf3d054d5772bbe98bb71d5eb1c6030900653c7445221ad4de688527522d782ac5924fb27f944d76fad0cdf7d48ca030d0
+  languageName: node
+  linkType: hard
+
 "hono@npm:^4.7.2":
   version: 4.7.2
   resolution: "hono@npm:4.7.2"
@@ -16,6 +25,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "monitor-betterstack@workspace:."
   dependencies:
+    "@hono/node-server": "npm:^1.8.2"
     hono: "npm:^4.7.2"
   languageName: unknown
   linkType: soft

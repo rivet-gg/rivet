@@ -22,6 +22,5 @@ RUN yarn install
 
 # Vector will spawn your server as a child process
 ENV VECTOR_LOG=WARN
-# CMD ["sh", "-c", "ls node_modules && node ./server.js 2>&1 | vector -vv"]
-CMD ["sh", "-c", "node ./server.js"]
+CMD ["sh", "-c", "node ./server.js 2>&1 | vector -vv"]
 
