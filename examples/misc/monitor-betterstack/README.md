@@ -6,8 +6,6 @@ Ships container metrics & logs to BetterStack. Uses Vector to collect & ship log
 
 Vector will run as the parent process to your main process. It will collect logs & send all metrics to BetterStack automatically.
 
-The BetterStack credentials are loaded from a `.env` file. Create a `.env` file with the following variables:
-
 ```
 BETTERSTACK_TOKEN=your_token_here
 BETTERSTACK_HOST=logs.betterstack.com
@@ -31,7 +29,6 @@ PORT_HTTP=8080 yarn start
 ### Using Docker
 
 ```sh
-# Make sure you have a .env file with BETTERSTACK_TOKEN and BETTERSTACK_HOST
 docker build -t bs-actor .
 docker run bs-actor
 ```
