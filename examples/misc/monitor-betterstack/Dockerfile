@@ -16,9 +16,20 @@ RUN apt-get update -y && \
 # Configure Vector with BetterStack
 COPY ./vector.yaml /etc/vector/vector.yaml
 
+# Create a non-root user
+RUN groupadd -r rivet && useradd -r -g rivet rivet
+
 WORKDIR /app
 COPY . .
-RUN yarn install
+RUN yarn install && \
+    chown -R rivet:rivet /app
+
+# Switch to non-root user
+USER rivet
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
 
 # Vector will spawn your server as a child process
 ENV VECTOR_LOG=WARN
