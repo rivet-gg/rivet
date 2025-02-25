@@ -3,13 +3,13 @@ import readline from "readline";
 
 // Check required environment variables
 if (!process.env.RIVET_SERVICE_TOKEN) {
-  throw new Error("RIVET_SERVICE_TOKEN environment variable is required");
+	throw new Error("RIVET_SERVICE_TOKEN environment variable is required");
 }
 if (!process.env.RIVET_PROJECT) {
-  throw new Error("RIVET_PROJECT environment variable is required");
+	throw new Error("RIVET_PROJECT environment variable is required");
 }
 if (!process.env.RIVET_ENVIRONMENT) {
-  throw new Error("RIVET_ENVIRONMENT environment variable is required");
+	throw new Error("RIVET_ENVIRONMENT environment variable is required");
 }
 
 // Can be opt since they're not required for dev
