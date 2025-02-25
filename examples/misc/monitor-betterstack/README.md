@@ -6,6 +6,8 @@ Ships container metrics & logs to BetterStack. Uses Vector to collect & ship log
 
 Vector will run as the parent process to your main process. It will collect logs & send all metrics to BetterStack automatically.
 
+You need to provide these environment variables:
+
 ```
 BETTERSTACK_TOKEN=your_token_here
 BETTERSTACK_HOST=logs.betterstack.com
@@ -29,13 +31,19 @@ PORT_HTTP=8080 yarn start
 ### Using Docker
 
 ```sh
-docker build -t bs-actor .
+# Build with your BetterStack credentials
+docker build -t bs-actor \
+  --build-arg BETTERSTACK_TOKEN=your_token_here \
+  --build-arg BETTERSTACK_HOST=logs.betterstack.com .
+
+# Run the container
 docker run bs-actor
 ```
 
 ### Using e2e_test.js
 
 ```sh
+# Deploy to Rivet (make sure to set your BetterStack credentials in rivet.json)
 rivet deploy
 RIVET_SERVICE_TOKEN=<TOKEN> RIVET_PROJECT=<PROJECT> RIVET_ENVIRONMENT=<ENV> yarn test
 ```

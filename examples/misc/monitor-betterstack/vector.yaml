@@ -9,7 +9,6 @@ sources:
     scrape_interval_secs: 30
     collectors: [cpu, load, host, memory, network]
 
-
 sinks:
   # Ship logs to BetterStack
   logs_sink:
