@@ -12,6 +12,7 @@ const app = new Hono();
 app.use("*", logger());
 
 app.get("/", (c) => c.text("Hello, world!"));
+app.get("/health", (c) => c.json({ status: "ok" }));
 
 const port = parseInt(process.env.PORT_HTTP || "8080");
 console.log(`Server starting on port ${port}`);
