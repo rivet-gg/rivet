@@ -6,14 +6,9 @@ import { serve } from "@hono/node-server";
 const BETTERSTACK_TOKEN = process.env.BETTERSTACK_TOKEN;
 const BETTERSTACK_HOST = process.env.BETTERSTACK_HOST;
 
-// Validate required environment variables in production
+// Log BetterStack configuration in production
 if (process.env.NODE_ENV === 'production') {
-  if (!BETTERSTACK_TOKEN) {
-    console.warn("BETTERSTACK_TOKEN environment variable is not set, using default value");
-  }
-  if (!BETTERSTACK_HOST) {
-    console.warn("BETTERSTACK_HOST environment variable is not set, using default value");
-  }
+  console.log(`BetterStack configured with host: ${BETTERSTACK_HOST}`);
 }
 
 const app = new Hono();

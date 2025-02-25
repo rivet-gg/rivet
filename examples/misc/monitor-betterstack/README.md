@@ -33,9 +33,12 @@ PORT_HTTP=8080 yarn start
 ### Using Docker
 
 ```sh
-# Build with custom BetterStack credentials
-docker build -t bs-actor --build-arg BETTERSTACK_TOKEN=<TOKEN> --build-arg BETTERSTACK_HOST=<HOST> .
+# Build with default credentials
+docker build -t bs-actor .
 docker run bs-actor
+
+# Or with custom BetterStack credentials
+docker build -t bs-actor --build-arg BETTERSTACK_TOKEN=<TOKEN> .
 ```
 
 ### Using e2e_test.js
