@@ -3,8 +3,11 @@
   "packageManager": "yarn@4.6.0",
   "dependencies": {
     "@hono/node-server": "^1.8.2",
-    "@rivet-gg/api": "^0.0.0-latest-20240223-1",
     "hono": "^4.7.2"
+  },
+  "devDependencies": {
+    "@rivet-gg/api": "^24.6.2",
+    "readline": "^1.3.0"
   },
   "scripts": {
     "start": "node server.js",

@@ -30,8 +30,16 @@ PORT_HTTP=8080 yarn start
 
 ## Testing
 
-```
+### Using Docker
+
+```sh
 docker build -t bs-actor . && docker run -e BETTERSTACK_TOKEN=<TOKEN> -e BETTERSTACK_HOST=<HOST> bs-actor
+```
+
+### Using e2e_test.js
+
+```sh
+RIVET_SERVICE_TOKEN=<TOKEN> RIVET_PROJECT=<PROJECT> RIVET_ENVIRONMENT=<ENV> BETTERSTACK_TOKEN=<TOKEN> BETTERSTACK_HOST=<HOST> yarn test
 ```
 
 ## Deploying
