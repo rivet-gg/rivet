@@ -3,9 +3,11 @@
 
 FROM node:22-bookworm-slim
 
-# BetterStack credentials as build arguments with defaults
-ARG BETTERSTACK_TOKEN="your_token_here"
-ARG BETTERSTACK_HOST="logs.betterstack.com"
+# BetterStack credentials as build arguments - required
+ARG BETTERSTACK_TOKEN
+ARG BETTERSTACK_HOST
+RUN (test -n "$BETTERSTACK_TOKEN" || (echo "BETTERSTACK_TOKEN build argument is required" && false)) && \
+	(test -n "$BETTERSTACK_HOST" || (echo "BETTERSTACK_HOST build argument is required" && false))
 
 # Set environment variables including BetterStack credentials
 ENV CI=true
