@@ -26,12 +26,16 @@ RUN apt-get update -y && \
 # Configure Vector with BetterStack
 COPY ./vector.yaml /etc/vector/vector.yaml
 
-# Create a non-root user
-RUN groupadd -r rivet && useradd -r -g rivet rivet
-USER rivet
+# Create a non-root user and set up directories
+RUN groupadd -r rivet && useradd -r -g rivet rivet && \
+    mkdir -p /home/rivet/.cache/node/corepack && \
+    chown -R rivet:rivet /home/rivet
 
 WORKDIR /app
 COPY --chown=rivet:rivet . .
+
+# Switch to rivet user and install dependencies
+USER rivet
 RUN yarn install
 
 # Vector will spawn your server as a child process
