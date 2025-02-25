@@ -38,6 +38,29 @@ const client = new RivetClient({
 
 let actorId;
 
+// Function to clean up and destroy the actor
+async function cleanupActor() {
+	if (actorId) {
+		console.log("\nDestroying actor", actorId);
+		try {
+			await client.actor.destroy(actorId, {
+				project: RIVET_PROJECT,
+				environment: RIVET_ENVIRONMENT,
+			});
+			console.log("Actor destroyed successfully");
+		} catch (error) {
+			console.error("Error destroying actor:", error);
+		}
+		process.exit(0);
+	}
+}
+
+// Handle Ctrl+C
+process.on('SIGINT', async () => {
+	console.log("\nCtrl+C detected, cleaning up...");
+	await cleanupActor();
+});
+
 async function run() {
 	try {
 		console.log("Creating actor", { region });
@@ -93,13 +116,7 @@ async function run() {
 			});
 		});
 
-		if (actorId) {
-			console.log("Destroying", actorId);
-			await client.actor.destroy(actorId, {
-				project: RIVET_PROJECT,
-				environment: RIVET_ENVIRONMENT,
-			});
-		}
+		await cleanupActor();
 	} catch (error) {
 		console.error("Error:", error);
 		process.exit(1);
