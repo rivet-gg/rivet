@@ -31,7 +31,11 @@ USER rivet
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8080/health || exit 1
 
+# Add labels for better container management
+LABEL org.opencontainers.image.description="BetterStack monitoring example"
+LABEL org.opencontainers.image.source="https://github.com/rivet-gg/examples"
+
 # Vector will spawn your server as a child process
 ENV VECTOR_LOG=WARN
-CMD ["sh", "-c", "node ./server.js 2>&1 | vector -vv"]
+CMD ["sh", "-c", "NODE_ENV=production node ./server.js 2>&1 | vector -vv"]
 

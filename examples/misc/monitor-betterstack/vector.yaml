@@ -23,6 +23,10 @@ sinks:
       strategy: "bearer"
       token: "${BETTERSTACK_TOKEN}"
     inputs: ["server_logs"]
+    request:
+      retry_attempts: 5
+      retry_initial_backoff_secs: 1
+      retry_max_duration_secs: 10
 
   # Ship metrics to BetterStack
   metrics_sink:
@@ -36,6 +40,10 @@ sinks:
       strategy: "bearer"
       token: "${BETTERSTACK_TOKEN}"
     inputs: ["host_metrics"]
+    request:
+      retry_attempts: 5
+      retry_initial_backoff_secs: 1
+      retry_max_duration_secs: 10
 
   # Print to console for debugging
   console:

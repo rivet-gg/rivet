@@ -1,6 +1,22 @@
 import { RivetClient } from "@rivet-gg/api";
 import readline from "readline";
 
+// Required environment variables
+const REQUIRED_ENV_VARS = [
+	"RIVET_SERVICE_TOKEN",
+	"RIVET_PROJECT",
+	"RIVET_ENVIRONMENT"
+];
+
+// Validate required environment variables
+function validateEnvVars() {
+	const missing = REQUIRED_ENV_VARS.filter(varName => !process.env[varName]);
+	if (missing.length > 0) {
+		console.error(`Error: Missing required environment variables: ${missing.join(", ")}`);
+		process.exit(1);
+	}
+}
+
 // Can be opt since they're not required for dev
 const RIVET_ENDPOINT = process.env.RIVET_ENDPOINT;
 const RIVET_SERVICE_TOKEN = process.env.RIVET_SERVICE_TOKEN;
@@ -20,6 +36,8 @@ const client = new RivetClient({
 let actorId;
 
 async function run() {
+	// Validate environment variables before running
+	validateEnvVars();
 	try {
 		console.log("Creating actor", { region });
 		const { actor } = await client.actor.create({
