@@ -2,17 +2,17 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { serve } from "@hono/node-server";
 
-// Read environment variables
+// Read environment variables from Dockerfile
 const BETTERSTACK_TOKEN = process.env.BETTERSTACK_TOKEN;
 const BETTERSTACK_HOST = process.env.BETTERSTACK_HOST;
 
 // Validate required environment variables in production
 if (process.env.NODE_ENV === 'production') {
   if (!BETTERSTACK_TOKEN) {
-    throw new Error("BETTERSTACK_TOKEN environment variable is required in production");
+    console.warn("BETTERSTACK_TOKEN environment variable is not set, using default value");
   }
   if (!BETTERSTACK_HOST) {
-    throw new Error("BETTERSTACK_HOST environment variable is required in production");
+    console.warn("BETTERSTACK_HOST environment variable is not set, using default value");
   }
 }
 

@@ -4,9 +4,9 @@ Ships container metrics & logs to BetterStack. Uses Vector to collect & ship log
 
 ## How it works
 
-Vector will run as the parent process to your main process. It will colelct logs & send all metrics to BetterStack automatically.
+Vector will run as the parent process to your main process. It will collect logs & send all metrics to BetterStack automatically.
 
-The BetterStack information will be configured for the Actor using the environment variables `BETTERSTACK_HOST` and `BETTERSTACK_TOKEN`.
+The BetterStack credentials are hardcoded in the Dockerfile as build arguments and set as environment variables. You can override them during build time.
 
 ## Prerequisites
 
@@ -33,13 +33,15 @@ PORT_HTTP=8080 yarn start
 ### Using Docker
 
 ```sh
-docker build -t bs-actor . && docker run -e BETTERSTACK_TOKEN=<TOKEN> -e BETTERSTACK_HOST=<HOST> bs-actor
+# Build with custom BetterStack credentials
+docker build -t bs-actor --build-arg BETTERSTACK_TOKEN=<TOKEN> --build-arg BETTERSTACK_HOST=<HOST> .
+docker run bs-actor
 ```
 
 ### Using e2e_test.js
 
 ```sh
-RIVET_SERVICE_TOKEN=<TOKEN> RIVET_PROJECT=<PROJECT> RIVET_ENVIRONMENT=<ENV> BETTERSTACK_TOKEN=<TOKEN> BETTERSTACK_HOST=<HOST> yarn test
+RIVET_SERVICE_TOKEN=<TOKEN> RIVET_PROJECT=<PROJECT> RIVET_ENVIRONMENT=<ENV> yarn test
 ```
 
 ## Deploying

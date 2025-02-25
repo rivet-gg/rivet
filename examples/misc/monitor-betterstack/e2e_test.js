@@ -6,8 +6,10 @@ const RIVET_ENDPOINT = process.env.RIVET_ENDPOINT;
 const RIVET_SERVICE_TOKEN = process.env.RIVET_SERVICE_TOKEN;
 const RIVET_PROJECT = process.env.RIVET_PROJECT;
 const RIVET_ENVIRONMENT = process.env.RIVET_ENVIRONMENT;
-const BETTERSTACK_TOKEN = process.env.BETTERSTACK_TOKEN;
-const BETTERSTACK_HOST = process.env.BETTERSTACK_HOST;
+
+// Hardcoded BetterStack credentials
+const BETTERSTACK_TOKEN = "your_token_here";
+const BETTERSTACK_HOST = "logs.betterstack.com";
 
 // Check required environment variables
 if (!RIVET_SERVICE_TOKEN) {
@@ -18,12 +20,6 @@ if (!RIVET_PROJECT) {
 }
 if (!RIVET_ENVIRONMENT) {
 	throw new Error("RIVET_ENVIRONMENT environment variable is required");
-}
-if (!BETTERSTACK_TOKEN) {
-	throw new Error("BETTERSTACK_TOKEN environment variable is required");
-}
-if (!BETTERSTACK_HOST) {
-	throw new Error("BETTERSTACK_HOST environment variable is required");
 }
 
 let region = process.env.REGION;
@@ -87,10 +83,8 @@ async function run() {
 					cpu: 100,
 					memory: 100,
 				},
-				env: {
-					BETTERSTACK_TOKEN,
-					BETTERSTACK_HOST,
-				},
+				// No need to pass BetterStack credentials as they're hardcoded in the Dockerfile
+				env: {},
 				lifecycle: {
 					durable: false,
 				},

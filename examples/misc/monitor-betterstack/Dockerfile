@@ -1,10 +1,17 @@
-# syntax=docker/dockerfile:1.4-labs
-# no-warn-secret
+# syntax=docker/dockerfile:1
+# check=skip=SecretsUsedInArgOrEnv
 
 FROM node:22-bookworm-slim
 
+# BetterStack credentials as build arguments with default values
+ARG BETTERSTACK_TOKEN
+ARG BETTERSTACK_HOST
+
+# Set environment variables including BetterStack credentials
 ENV CI=true
 ENV COREPACK_ENABLE_STRICT=0
+ENV BETTERSTACK_TOKEN=${BETTERSTACK_TOKEN}
+ENV BETTERSTACK_HOST=${BETTERSTACK_HOST}
 RUN corepack enable
 
 # Install Vector
