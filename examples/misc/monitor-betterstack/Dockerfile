@@ -16,18 +16,8 @@ RUN apt-get update -y && \
 	apt-get install -y vector
 
 # Copy configuration files
-COPY ./.env* /app/.env* 2>/dev/null || :
+COPY ./.env* /app/.env*
 COPY ./vector.yaml /etc/vector/vector.yaml
-
-# Load environment variables from .env file
-RUN if [ -f /app/.env ]; then \
-      export $(grep -v '^#' /app/.env | xargs); \
-      test -n "$BETTERSTACK_TOKEN" || { echo "BETTERSTACK_TOKEN is required in .env file"; exit 1; }; \
-      test -n "$BETTERSTACK_HOST" || { echo "BETTERSTACK_HOST is required in .env file"; exit 1; }; \
-      echo "BetterStack credentials loaded from .env file"; \
-    else \
-      echo "Warning: .env file not found. Make sure to set BETTERSTACK_TOKEN and BETTERSTACK_HOST environment variables at runtime."; \
-    fi
 
 # Create a non-root user
 RUN groupadd -r rivet && useradd -r -g rivet rivet
