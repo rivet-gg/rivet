@@ -1,13 +1,13 @@
 import { RivetClient } from "@rivet-gg/api";
-import { assertExists } from "@std/assert";
+import readline from 'readline';
 
 // Can be opt since they're not required for dev
-const RIVET_ENDPOINT = Deno.env.get("RIVET_ENDPOINT");
-const RIVET_SERVICE_TOKEN = Deno.env.get("RIVET_SERVICE_TOKEN");
-const RIVET_PROJECT = Deno.env.get("RIVET_PROJECT");
-const RIVET_ENVIRONMENT = Deno.env.get("RIVET_ENVIRONMENT");
+const RIVET_ENDPOINT = process.env.RIVET_ENDPOINT;
+const RIVET_SERVICE_TOKEN = process.env.RIVET_SERVICE_TOKEN;
+const RIVET_PROJECT = process.env.RIVET_PROJECT;
+const RIVET_ENVIRONMENT = process.env.RIVET_ENVIRONMENT;
 
-let region = Deno.env.get("REGION");
+let region = process.env.REGION;
 if (!region || region.length === 0) {
 	region = undefined;
 }
@@ -17,7 +17,10 @@ const client = new RivetClient({
 	token: RIVET_SERVICE_TOKEN,
 });
 
+let actorId;
+
 async function run() {
+	try {
 		console.log("Creating actor", { region });
 		const { actor } = await client.actor.create({
 			project: RIVET_PROJECT,
@@ -46,12 +49,23 @@ async function run() {
 		actorId = actor.id;
 
 		const port = actor.network.ports.http;
-		assertExists(port, "missing port http");
+		if (!port) throw new Error("missing port http");
 		const actorOrigin = `${port.protocol}://${port.hostname}:${port.port}${port.path ?? ""}`;
 		console.log("Created actor at", actorOrigin);
 
-		console.log("Press Enter to destroy the actor...");
-		await new Promise(resolve => Deno.stdin.read(new Uint8Array(1)).then(resolve));
+		// Setup readline interface for user input
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout
+		});
+
+		// Wait for user to press Enter
+		await new Promise(resolve => {
+			rl.question('Press Enter to destroy the actor...', () => {
+				rl.close();
+				resolve();
+			});
+		});
 		
 		if (actorId) {
 			console.log("Destroying", actorId);
@@ -60,6 +74,10 @@ async function run() {
 				environment: RIVET_ENVIRONMENT,
 			});
 		}
+	} catch (error) {
+		console.error("Error:", error);
+		process.exit(1);
+	}
 }
 
 run();
