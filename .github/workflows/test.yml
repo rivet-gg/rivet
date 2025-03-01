@@ -1,0 +1,33 @@
+name: Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  complete:
+    name: "Complete"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: 'true'
+
+      - uses: ./.github/actions/docker-setup
+        with:
+          docker_username: ${{ secrets.DOCKER_CI_USERNAME }}
+          docker_password: ${{ secrets.DOCKER_CI_ACCESS_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN}}
+
+      - name: Complete
+        env:
+          R2_RELEASES_ACCESS_KEY_ID: ${{ secrets.R2_RELEASES_ACCESS_KEY_ID }}
+          R2_RELEASES_SECRET_ACCESS_KEY: ${{ secrets.R2_RELEASES_SECRET_ACCESS_KEY }}
+        run: |
+          # Install Deno
+          curl -fsSL https://deno.land/x/install/install.sh | sh
+          export PATH=$HOME/.deno/bin:$PATH
+
+          ./scripts/release/main.ts --updateArtifacts --version 25.1.2 --commit 5237e0e
