@@ -38,14 +38,14 @@ pub async fn run_from_env(
 	let rows = sql_fetch_all!(
 		[ctx, (Uuid, Uuid,)]
 		"
-		UPDATE db_workflow.workflows AS w
+		UPDATE db_workflow.workflows@workflows_active_idx AS w
 		SET
 			worker_instance_id = NULL,
 			wake_immediate = true,
 			wake_deadline_ts = NULL,
 			wake_signals = ARRAY[],
 			wake_sub_workflow_id = NULL
-		FROM db_workflow.worker_instances AS wi
+		FROM db_workflow.worker_instances@worker_instances_ping_idx AS wi
 		WHERE
 			wi.last_ping_ts < $1 AND
 			wi.worker_instance_id = w.worker_instance_id AND

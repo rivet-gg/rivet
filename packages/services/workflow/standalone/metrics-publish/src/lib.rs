@@ -37,7 +37,8 @@ pub async fn run_from_env(
 			[ctx, (i64,)]
 			"
 			SELECT COUNT(*)
-			FROM db_workflow.worker_instances AS OF SYSTEM TIME '-1s'
+			FROM db_workflow.worker_instances@worker_instances_ping_idx
+			AS OF SYSTEM TIME '-1s'
 			WHERE last_ping_ts > $1
 			",
 			util::timestamp::now() - util::duration::seconds(30),
@@ -46,7 +47,8 @@ pub async fn run_from_env(
 			[ctx, (String, i64)]
 			"
 			SELECT workflow_name, COUNT(*)
-			FROM db_workflow.workflows AS OF SYSTEM TIME '-1s'
+			FROM db_workflow.workflows@workflows_total_count_idx
+			AS OF SYSTEM TIME '-1s'
 			GROUP BY workflow_name
 			",
 		),
@@ -54,7 +56,8 @@ pub async fn run_from_env(
 			[ctx, (String, i64)]
 			"
 			SELECT workflow_name, COUNT(*)
-			FROM db_workflow.workflows AS OF SYSTEM TIME '-1s'
+			FROM db_workflow.workflows@workflows_active_count_idx
+			AS OF SYSTEM TIME '-1s'
 			WHERE
 				output IS NULL AND
 				worker_instance_id IS NOT NULL AND
@@ -66,7 +69,8 @@ pub async fn run_from_env(
 			[ctx, (String, String, i64)]
 			"
 			SELECT workflow_name, error, COUNT(*)
-			FROM db_workflow.workflows AS OF SYSTEM TIME '-1s'
+			FROM db_workflow.workflows@workflows_dead_count_idx
+			AS OF SYSTEM TIME '-1s'
 			WHERE
 				error IS NOT NULL AND
 				output IS NULL AND
@@ -82,7 +86,8 @@ pub async fn run_from_env(
 			[ctx, (String, i64)]
 			"
 			SELECT workflow_name, COUNT(*)
-			FROM db_workflow.workflows AS OF SYSTEM TIME '-1s'
+			FROM db_workflow.workflows@workflows_sleeping_count_idx
+			AS OF SYSTEM TIME '-1s'
 			WHERE
 				worker_instance_id IS NULL AND
 				output IS NULL AND
@@ -102,17 +107,18 @@ pub async fn run_from_env(
 			SELECT signal_name, COUNT(*)
 			FROM (
 				SELECT signal_name
-				FROM db_workflow.signals
+				FROM db_workflow.signals@signals_unack_idx
 				WHERE
 					ack_ts IS NULL AND
 					silence_ts IS NULL
 				UNION ALL
 				SELECT signal_name
-				FROM db_workflow.tagged_signals
+				FROM db_workflow.tagged_signals@tagged_signals_unack_idx
 				WHERE
 					ack_ts IS NULL AND
 					silence_ts IS NULL
-			) AS OF SYSTEM TIME '-1s'
+			)
+			AS OF SYSTEM TIME '-1s'
 			GROUP BY signal_name
 			",
 		),
