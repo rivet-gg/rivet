@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [5.1.3](https://github.com/rivet-gg/rivet/compare/v5.1.2...v5.1.3) (2025-03-03)
+
+
+### Chores
+
+* ai docs blog ([#2093](https://github.com/rivet-gg/rivet/issues/2093)) ([bf17bcd](https://github.com/rivet-gg/rivet/commit/bf17bcd449e41418bc1a93a1622522518c175c5b))
+* better stack changelog ([#2080](https://github.com/rivet-gg/rivet/issues/2080)) ([b6bfa06](https://github.com/rivet-gg/rivet/commit/b6bfa06faa15c71280fec89ca27755d2b5406d6a))
+* edit ai docs blog ([#2095](https://github.com/rivet-gg/rivet/issues/2095)) ([5bfbe61](https://github.com/rivet-gg/rivet/commit/5bfbe61532b47b2aa8df7eec60b7492b4baebaf8))
+* **examples:** add Better Stack monitoring example ([#2077](https://github.com/rivet-gg/rivet/issues/2077)) ([2d495e4](https://github.com/rivet-gg/rivet/commit/2d495e465970af1dad31329c305011a2a24268b4))
+
 ## [5.1.2](https://github.com/rivet-gg/rivet/compare/v25.1.1...v5.1.2) (2025-02-24)
 
 
