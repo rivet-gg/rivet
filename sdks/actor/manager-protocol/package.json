@@ -1,13 +1,8 @@
 {
 	"name": "@rivet-gg/manager-protocol",
 	"private": true,
-	"version": "5.1.2",
-	"files": [
-		"dist",
-		"src",
-		"deno.json",
-		"package.json"
-	],
+	"version": "25.1.0-rc.1",
+	"files": ["dist", "src", "deno.json", "package.json"],
 	"type": "module",
 	"exports": {
 		".": {
