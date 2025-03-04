@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Parser;
-use std::result::Result as StdResult;
 
 #[derive(Parser)]
 pub struct Opts {
@@ -14,10 +13,8 @@ impl Opts {
 		let ctx = crate::util::login::load_or_login().await?;
 		match self.json {
 			true => {
-				match serde_json::to_string(&ctx.project.namespaces) {
-					StdResult::Ok(json) => println!("{}", json),
-					StdResult::Err(err) => eprintln!("failed to serialize output: {err:?}"),
-				}
+				let json = serde_json::to_string(&ctx.project.namespaces)?;
+				println!("{}", json);
 				Ok(())
 			}
 			false => {
