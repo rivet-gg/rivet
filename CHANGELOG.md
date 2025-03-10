@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [25.2.1](https://github.com/rivet-gg/rivet/compare/v25.2.0...v25.2.1) (2025-03-10)
+
+
+### Bug Fixes
+
+* container runner logs not working ([#2152](https://github.com/rivet-gg/rivet/issues/2152)) ([bf69be0](https://github.com/rivet-gg/rivet/commit/bf69be0a9b975ddbccff2a0bab398a65bc8d634b))
+* delete history for select wf, add actor start metric ([#2155](https://github.com/rivet-gg/rivet/issues/2155)) ([560bd20](https://github.com/rivet-gg/rivet/commit/560bd20a65ff64b84d2bebed1b03f542a45d7b22))
+* **hub:** force context creation on lobbies page ([#2161](https://github.com/rivet-gg/rivet/issues/2161)) ([391708d](https://github.com/rivet-gg/rivet/commit/391708da0ffd16349f0ac3f3d1414757677e4d40))
+
+
+### Chores
+
+* **api-status:** add container status check ([#2159](https://github.com/rivet-gg/rivet/issues/2159)) ([d1f57f4](https://github.com/rivet-gg/rivet/commit/d1f57f4a43f34e72065713c41f70a5f8b6aa8838))
+* disable durable lifecycle in system test ([#2157](https://github.com/rivet-gg/rivet/issues/2157)) ([aa1ecc9](https://github.com/rivet-gg/rivet/commit/aa1ecc9496b255a79a204354b890e5f806a76ee5))
+
 ## [25.2.0](https://github.com/rivet-gg/rivet/compare/v5.1.2...v25.2.0) (2025-03-07)
 
 
