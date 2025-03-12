@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "target": "ES2018",
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "lib": ["ES6", "DOM"],
+        "outDir": "dist/",
+        "strictNullChecks": true,
+        "skipLibCheck": true,
+        "paths": {
+            "@shared/*": ["./shared/*"],
+            "@display/*": ["./client/display/*"]
+        }
+    },
+    "include": ["server/**/*.ts", "client/**/*.ts", "shared/**/*.ts"],
+    "exclude": ["node_modules", "dist"]
+}

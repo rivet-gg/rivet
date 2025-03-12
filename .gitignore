@@ -38,4 +38,5 @@ frontend/packages/icons/src/*
 frontend/apps/hub/vite.config.ts.*
 
 .aider*
+.actorcore
 
