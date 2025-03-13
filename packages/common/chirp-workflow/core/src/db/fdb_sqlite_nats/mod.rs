@@ -1139,12 +1139,12 @@ impl Database for DatabaseFdbSqliteNats {
 						// Clear sub workflow secondary idx
 						let wake_sub_workflow_key =
 							keys::workflow::WakeSubWorkflowKey::new(*workflow_id);
-						if let Some(raw) = tx
+						if let Some(entry) = tx
 							.get(&self.subspace.pack(&wake_sub_workflow_key), SERIALIZABLE)
 							.await?
 						{
 							let sub_workflow_id = wake_sub_workflow_key
-								.deserialize(&raw)
+								.deserialize(&entry)
 								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
 							let sub_workflow_wake_key =
@@ -2136,7 +2136,7 @@ impl Database for DatabaseFdbSqliteNats {
 
 					// NOTE: This does not have to be serializable because wf name doesn't change
 					// Check if the workflow exists
-					let Some(workflow_name_raw) = tx
+					let Some(workflow_name_entry) = tx
 						.get(&self.subspace.pack(&workflow_name_key), SNAPSHOT)
 						.await?
 					else {
@@ -2146,7 +2146,7 @@ impl Database for DatabaseFdbSqliteNats {
 					};
 
 					let workflow_name = workflow_name_key
-						.deserialize(&workflow_name_raw)
+						.deserialize(&workflow_name_entry)
 						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
 					// Write name
@@ -2222,11 +2222,12 @@ impl Database for DatabaseFdbSqliteNats {
 						.await?
 						.is_some()
 					{
-						let wake_condition_key = keys::wake::WorkflowWakeConditionKey::new(
+						let mut wake_condition_key = keys::wake::WorkflowWakeConditionKey::new(
 							workflow_name,
 							workflow_id,
 							keys::wake::WakeCondition::Signal { signal_id },
 						);
+						wake_condition_key.ts = pending_signal_key.ts;
 
 						// Add wake condition for workflow
 						tx.set(
@@ -2239,7 +2240,7 @@ impl Database for DatabaseFdbSqliteNats {
 
 					Ok(())
 				}
-				.instrument(tracing::info_span!("publish_singal_tx"))
+				.instrument(tracing::info_span!("publish_signal_tx"))
 			})
 			.await?;
 

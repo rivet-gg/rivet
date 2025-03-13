@@ -122,6 +122,7 @@ pub enum WorkflowState {
 	Running,
 	Sleeping,
 	Dead,
+	Silenced,
 }
 
 impl From<WorkflowState> for DebugWorkflowState {
@@ -131,6 +132,7 @@ impl From<WorkflowState> for DebugWorkflowState {
 			WorkflowState::Running => DebugWorkflowState::Running,
 			WorkflowState::Sleeping => DebugWorkflowState::Sleeping,
 			WorkflowState::Dead => DebugWorkflowState::Dead,
+			WorkflowState::Silenced => DebugWorkflowState::Silenced,
 		}
 	}
 }
