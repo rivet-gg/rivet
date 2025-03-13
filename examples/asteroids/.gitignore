@@ -1,0 +1,11 @@
+node_modules
+dist
+serverDist
+build
+
+.rivet
+.vscode
+
+.env
+.dev.env
+.env.local
