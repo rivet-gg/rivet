@@ -653,6 +653,13 @@ impl DatabaseDebug for DatabaseFdbSqliteNats {
 						let has_wake_condition_key =
 							keys::workflow::HasWakeConditionKey::new(workflow_id);
 						tx.clear(&self.subspace.pack(&has_wake_condition_key));
+
+						tx.set(
+							&self.subspace.pack(&silence_ts_key),
+							&silence_ts_key
+								.serialize(rivet_util::timestamp::now())
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
 					}
 
 					Ok(())
@@ -1110,12 +1117,23 @@ impl DatabaseDebug for DatabaseFdbSqliteNats {
 						let signal_name_key = keys::signal::NameKey::new(signal_id);
 						let create_ts_key = keys::signal::CreateTsKey::new(signal_id);
 						let workflow_id_key = keys::signal::WorkflowIdKey::new(signal_id);
+						let silence_ts_key = keys::signal::SilenceTsKey::new(signal_id);
 
-						let (signal_name_entry, create_ts_entry, workflow_id_entry) = tokio::try_join!(
+						let (
+							signal_name_entry,
+							create_ts_entry,
+							workflow_id_entry,
+							silence_ts_entry,
+						) = tokio::try_join!(
 							tx.get(&self.subspace.pack(&signal_name_key), SNAPSHOT),
 							tx.get(&self.subspace.pack(&create_ts_key), SNAPSHOT),
 							tx.get(&self.subspace.pack(&workflow_id_key), SNAPSHOT),
+							tx.get(&self.subspace.pack(&silence_ts_key), SERIALIZABLE),
 						)?;
+
+						if silence_ts_entry.is_some() {
+							continue;
+						}
 
 						let Some(signal_name_entry) = signal_name_entry else {
 							tracing::warn!(?signal_id, "signal not found");
@@ -1173,6 +1191,13 @@ impl DatabaseDebug for DatabaseFdbSqliteNats {
 						);
 						wake_condition_key.ts = create_ts;
 						tx.clear(&self.subspace.pack(&wake_condition_key));
+
+						tx.set(
+							&self.subspace.pack(&silence_ts_key),
+							&silence_ts_key
+								.serialize(rivet_util::timestamp::now())
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
 					}
 
 					Ok(())

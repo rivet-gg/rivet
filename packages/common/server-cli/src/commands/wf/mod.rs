@@ -30,7 +30,7 @@ pub enum SubCommand {
 		pretty: bool,
 	},
 	/// Silences a workflow from showing up as dead or running again.
-	Ack { workflow_ids: Vec<Uuid> },
+	Silence { workflow_ids: Vec<Uuid> },
 	/// Sets the wake immediate property of a workflow to true.
 	Wake { workflow_ids: Vec<Uuid> },
 	/// Lists the entire event history of a workflow.
@@ -96,7 +96,7 @@ impl SubCommand {
 					.await?;
 				util::wf::print_workflows(workflows, pretty).await
 			}
-			Self::Ack { workflow_ids } => db.silence_workflows(workflow_ids).await,
+			Self::Silence { workflow_ids } => db.silence_workflows(workflow_ids).await,
 			Self::Wake { workflow_ids } => db.wake_workflows(workflow_ids).await,
 			Self::History {
 				workflow_id,
