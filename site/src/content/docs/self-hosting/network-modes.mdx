@@ -13,11 +13,11 @@ Actor networking is configured with two properties:
 ### Bridge
 
 Bridge networking maps a random port on the host to the chosen port number for
-your actor. Ports can only be access over the LAN. All inbound traffic to actors
+your actor. Ports can only be accessed over the LAN. All inbound traffic to actors
 using bridge networking must be routed through Rivet Guard (see below).
 
 Actors in bridge networking have isolated network namespaces and cannot
-interfere with other actor's networking.
+interfere with other actors' networking.
 
 For containers, Rivet uses <Link href='https://www.cni.dev/'>CNI</Link> on our
 actor servers to provide bridged port access to any ports chosen by the user. It
@@ -64,10 +64,10 @@ Rivet Guard routing can be used with either host or bridge network modes.
 
 _Requires enterprise or self-hosted cluster._
 
-Host ports do not provide any proxying between the end-user and your application and **is not enabled on
+Host ports do not provide any proxying between the end-user and your application and **are not enabled on
 production Rivet servers**. This is primarily an option for <Link href='/docs/self-hosting'>self hosting</Link> Rivet.
 
-It recommended to use Rivet Guard whenever possible for production applications
+It is recommended to use Rivet Guard whenever possible for production applications
 to better protect from DDoS attacks & improve monitoring of your application.
 
 If using host ports, read about differences in behavior with [actor rescheduling](/docs/durability).
@@ -86,7 +86,7 @@ For example, the URL `c03fc1cf-66dc-4946-9663-eae42a399060-http.actor.45a33878-e
 - Port labelled `http`
 - Region with ID `45a33878-e0e5-4f6b-8e72-7e9f6c0a306c`
 
-If self-hosting, host endpoints requires [wildcard DNS records](https://en.wikipedia.org/wiki/Wildcard_DNS_record#:~:text=A%20wildcard%20DNS%20record%20is,example.com%20.) & [wildcard SSL certificates](https://letsencrypt.org/docs/faq/#does-let-s-encrypt-issue-wildcard-certificates).
+If self-hosting, host endpoints require [wildcard DNS records](https://en.wikipedia.org/wiki/Wildcard_DNS_record#:~:text=A%20wildcard%20DNS%20record%20is,example.com%20.) & [wildcard SSL certificates](https://letsencrypt.org/docs/faq/#does-let-s-encrypt-issue-wildcard-certificates).
 
 ### Path
 
