@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [25.2.2](https://github.com/rivet-gg/rivet/compare/v25.2.1...v25.2.2) (2025-03-15)
+
+
+### Chores
+
+* remove `rivet init1 from readme ([93ab2f8](https://github.com/rivet-gg/rivet/commit/93ab2f8950aa0659f8089581ec7114f7e45c965f))
+
 ## [25.2.1](https://github.com/rivet-gg/rivet/compare/v25.2.0...v25.2.1) (2025-03-15)
 
 
