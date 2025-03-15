@@ -85,7 +85,7 @@ impl TestCtx {
 		let shared_client = chirp_client::SharedClient::from_env(pools.clone())
 			.expect("failed to create chirp client");
 		let cache =
-			rivet_cache::CacheInner::from_env(pools.clone()).expect("failed to create cache");
+			rivet_cache::CacheInner::from_env(&config, pools.clone()).expect("failed to create cache");
 		let conn = utils::new_conn(
 			&shared_client,
 			&pools,
