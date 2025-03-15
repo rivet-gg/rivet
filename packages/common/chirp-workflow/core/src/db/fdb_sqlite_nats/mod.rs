@@ -1954,9 +1954,10 @@ impl Database for DatabaseFdbSqliteNats {
 									sql_execute!(
 										[self, &pool]
 										"
-									DELETE FROM workflow_signal_events
-									WHERE location = jsonb(?)
-									",
+										DELETE FROM workflow_signal_events
+										WHERE location = jsonb(?1)
+										",
+										location
 									)
 									.await
 								})
