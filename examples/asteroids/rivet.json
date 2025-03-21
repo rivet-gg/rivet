@@ -1,0 +1,8 @@
+{
+	"builds": {
+		"game": {
+			"dockerfile": "Dockerfile",
+			"tags": { "access": "public" }
+		}
+	}
+}

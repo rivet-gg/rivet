@@ -1,0 +1,5 @@
+node_modules
+serverDist
+client
+.vscode
+.dev.env

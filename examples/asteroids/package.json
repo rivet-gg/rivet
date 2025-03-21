@@ -1,0 +1,44 @@
+{
+    "name": "asteroids",
+    "version": "0.1.0",
+    "description": "",
+    "main": "server/index.ts",
+    "author": "Rivet Gaming, LLC",
+    "scripts": {
+        "dev:server": "npx nodemon -r dotenv/config --delay 1 --watch server --watch shared --ext ts --exec tsx server/index.ts",
+        "build:server": "npx tsc --outDir build/server",
+        "start:server": "node -r module-alias/register -r dotenv/config ./build/server/server/index.js",
+        "start:server:inspect": "node --inspect -r module-alias/register -r dotenv/config ./build/server/server/index.js",
+        "dev:client": "npx vite --host 0.0.0.0",
+        "build:client": "npx vite build",
+        "check-types": "npx tsc --noEmit",
+        "deploy:matchmaker": "npx @actor-core/cli deploy rivet",
+        "deploy:game": "rivet deploy"
+    },
+    "dependencies": {
+        "actor-core": "file:./vendor/actor-core.tgz",
+        "dotenv-flow": "^4.1.0",
+        "module-alias": "^2.2.3",
+        "socket.io": "^4.7.2",
+        "socket.io-client": "^4.7",
+        "tsconfig-paths": "^4.2.0"
+    },
+    "devDependencies": {
+        "@actor-core/cli": "file:./vendor/actor-core-cli.tgz",
+        "@actor-core/lobby-manager": "file:./vendor/actor-core-lobby-manager.tgz",
+        "@actor-core/nodejs": "^0.6.2",
+        "@actor-core/rivet": "file:./vendor/actor-core-rivet.tgz",
+        "nodemon": "^3.0.1",
+        "ts-transform-import-path-rewrite": "^0.3.0",
+        "tsx": "^4.19.3",
+        "typescript": "^5.8.2",
+        "vite": "^6.2.2",
+        "vite-plugin-environment": "^1.1.3",
+        "vite-plugin-node-polyfills": "^0.23.0",
+        "vite-tsconfig-paths": "^5.1.4"
+    },
+    "_moduleAliases": {
+        "@shared": "./shared",
+        "@display": "./client/display"
+    }
+}
