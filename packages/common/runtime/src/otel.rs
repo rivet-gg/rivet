@@ -10,7 +10,8 @@ use opentelemetry_sdk::{
 };
 use opentelemetry_semantic_conventions::{attribute::SERVICE_VERSION, SCHEMA_URL};
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
+use console_subscriber;
 
 fn resource() -> Resource {
 	Resource::builder()
@@ -92,11 +93,11 @@ fn init_meter_provider() -> SdkMeterProvider {
 
 // Initialize tracing-subscriber and return OtelGuard for opentelemetry-related termination processing
 pub fn init_tracing_subscriber() -> OtelGuard {
-	let tracer_provider = init_tracer_provider();
-	let meter_provider = init_meter_provider();
+	//let tracer_provider = init_tracer_provider();
+	//let meter_provider = init_meter_provider();
 	//let logger_provider = init_logger_provider();
 
-	let tracer = tracer_provider.tracer("tracing-otel-subscriber");
+	//let tracer = tracer_provider.tracer("tracing-otel-subscriber");
 
 	// For the OpenTelemetry layer, add a tracing filter to filter events from
 	// OpenTelemetry and its dependent crates (opentelemetry-otlp uses crates
@@ -141,35 +142,46 @@ pub fn init_tracing_subscriber() -> OtelGuard {
 		}
 	}
 
-	tracing_subscriber::registry()
+	// Check if tokio console is enabled
+	let enable_tokio_console = std::env::var("TOKIO_CONSOLE_ENABLE").map_or(false, |x| x == "1");
+
+	let subscriber = tracing_subscriber::registry()
 		.with(env_filter)
-		.with(OpenTelemetryLayer::new(tracer))
-		.with(MetricsLayer::new(meter_provider.clone()))
+		//.with(OpenTelemetryLayer::new(tracer))
+		//.with(MetricsLayer::new(meter_provider.clone()))
 		//.with(logger)
-		.with(logfmt_layer)
-		.init();
+		.with(logfmt_layer);
+	
+	if enable_tokio_console {
+		let console_layer = console_subscriber::ConsoleLayer::builder()
+			.with_default_env()
+			.spawn();
+		subscriber.with(console_layer).init();
+	} else {
+		subscriber.init();
+	}
 
 	OtelGuard {
-		tracer_provider,
-		meter_provider,
+		//tracer_provider,
+		//meter_provider,
 		//logger_provider,
 	}
 }
 
 pub struct OtelGuard {
-	tracer_provider: SdkTracerProvider,
-	meter_provider: SdkMeterProvider,
+	//tracer_provider: SdkTracerProvider,
+	//meter_provider: SdkMeterProvider,
 	//logger_provider: SdkLoggerProvider,
 }
 
 impl Drop for OtelGuard {
 	fn drop(&mut self) {
-		if let Err(err) = self.tracer_provider.shutdown() {
-			eprintln!("{err:?}");
-		}
-		if let Err(err) = self.meter_provider.shutdown() {
-			eprintln!("{err:?}");
-		}
+		//if let Err(err) = self.tracer_provider.shutdown() {
+		//	eprintln!("{err:?}");
+		//}
+		//if let Err(err) = self.meter_provider.shutdown() {
+		//	eprintln!("{err:?}");
+		//}
 		//if let Err(err) = self.logger_provider.shutdown() {
 		//	eprintln!("{err:?}");
 		//}
