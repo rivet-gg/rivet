@@ -1,25 +1,38 @@
 import { useAuth } from "@/domains/auth/contexts/auth";
 import { useDialog } from "@/hooks/use-dialog";
 import { FullscreenLoading } from "@rivet-gg/components";
+import * as Layout from "@/layouts/page-centered";
 import {
-	Navigate,
 	Outlet,
 	createFileRoute,
-	useLocation,
+	retainSearchParams,
+	useNavigate,
 } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
+import { LoginView } from "@/domains/auth/views/login-view/login-view";
 
 function Authenticated() {
 	const auth = useAuth();
-	const location = useLocation();
+	const navigate = useNavigate();
 
 	if (auth.isProfileLoading) {
 		return <FullscreenLoading />;
 	}
 
 	if (!auth.profile?.identity.isRegistered) {
-		return <Navigate to="/login" search={{ redirect: location.href }} />;
+		return (
+			<Layout.Root>
+				<LoginView
+					onSuccess={async () => {
+						await auth.refreshToken();
+						await navigate({
+							to: "/",
+						});
+					}}
+				/>
+			</Layout.Root>
+		);
 	}
 	return (
 		<>
@@ -37,6 +50,9 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/_authenticated")({
 	validateSearch: zodValidator(searchSchema),
 	component: Authenticated,
+	search: {
+		middlewares: [retainSearchParams(["modal"])],
+	},
 });
 
 function Modals() {
@@ -46,13 +62,9 @@ function Modals() {
 	const CreateGroupProjectDialog = useDialog.CreateProject.Dialog;
 	const CreateGroupDialog = useDialog.CreateGroup.Dialog;
 
-	if (!search || !("modal" in search)) {
-		return;
-	}
-
 	const { groupId, modal } = search;
 
-	const handleonOpenChange = (value: boolean) => {
+	const handleOnOpenChange = (value: boolean) => {
 		if (!value) {
 			navigate({ search: { modal: undefined } });
 		}
@@ -69,7 +81,7 @@ function Modals() {
 				}
 				dialogProps={{
 					open: modal === "create-project",
-					onOpenChange: handleonOpenChange,
+					onOpenChange: handleOnOpenChange,
 				}}
 			/>
 			<CreateGroupDialog
@@ -81,7 +93,7 @@ function Modals() {
 				}
 				dialogProps={{
 					open: modal === "create-group",
-					onOpenChange: handleonOpenChange,
+					onOpenChange: handleOnOpenChange,
 				}}
 			/>
 		</>

@@ -39,10 +39,13 @@ export function ActorsActorDetails({
 	...props
 }: ActorsActorDetailsProps) {
 	const { data } = useSuspenseQuery(actorQueryOptions(props));
+
+	const isActorCore = data?.tags?.framework === "actor-core";
+
 	return (
 		<ActorDetailsSettingsProvider>
 			<ActorWorkerContextProvider
-				enabled={!data.destroyedAt}
+				enabled={!data.destroyedAt && isActorCore}
 				endpoint={data.endpoint}
 				{...props}
 			>
@@ -61,15 +64,19 @@ export function ActorsActorDetails({
 							<motion.div layout className="flex flex-1">
 								<TabsList className="overflow-auto border-none">
 									<TabsTrigger value="logs">Logs</TabsTrigger>
-									<TabsTrigger value="state">
-										State
-									</TabsTrigger>
-									<TabsTrigger value="connections">
-										Connections
-									</TabsTrigger>
 									<TabsTrigger value="config">
 										Config
 									</TabsTrigger>
+									{isActorCore ? (
+										<>
+											<TabsTrigger value="state">
+												State
+											</TabsTrigger>
+											<TabsTrigger value="connections">
+												Connections
+											</TabsTrigger>
+										</>
+									) : null}
 								</TabsList>
 								<Flex
 									gap="2"
@@ -90,7 +97,7 @@ export function ActorsActorDetails({
 							className="min-h-0 flex-1 mt-0 h-full"
 						>
 							<Suspense fallback={<ActorLogsTab.Skeleton />}>
-								<ActorLogsTab {...props} />
+								<ActorLogsTab {...props} {...data} />
 							</Suspense>
 						</TabsContent>
 						<TabsContent
@@ -117,7 +124,7 @@ export function ActorsActorDetails({
 						</TabsContent>
 					</Tabs>
 
-					{!data.destroyTs ? <ActorConsole /> : null}
+					{!data.destroyTs && isActorCore ? <ActorConsole /> : null}
 				</div>
 			</ActorWorkerContextProvider>
 		</ActorDetailsSettingsProvider>

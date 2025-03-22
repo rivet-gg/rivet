@@ -12,7 +12,7 @@ import {
 	Outlet,
 	createRootRouteWithContext,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { usePostHog } from "posthog-js/react";
 import { useKonami } from "react-konami-code";
@@ -28,10 +28,6 @@ function Modals() {
 	const SecretDialog = useDialog.Secret.Dialog;
 
 	useKonami(() => navigate({ search: { modal: "secret" } }));
-
-	if (!search || !("modal" in search)) {
-		return;
-	}
 
 	const { modal, utm_source } = search;
 
@@ -114,10 +110,7 @@ export interface RouterContext {
 }
 
 const searchSchema = z.object({
-	modal: z
-		.enum(["secret", "feedback"])
-		.optional()
-		.catch(({ input }) => input),
+	modal: z.enum(["secret", "feedback"]).or(z.string()).optional(),
 	utm_source: z.string().optional(),
 });
 
