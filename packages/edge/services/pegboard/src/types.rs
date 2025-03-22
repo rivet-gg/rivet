@@ -54,7 +54,7 @@ pub enum NetworkMode {
 	Host = 1,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 pub struct Port {
 	// Null when using host networking since one is automatically assigned
 	pub internal_port: Option<i32>,
@@ -255,21 +255,19 @@ impl ApiFrom<Port> for models::ActorsPort {
 					(
 						GameGuardProtocol::Http | GameGuardProtocol::Https,
 						Some(hostname),
-						Some(port),
-						path,
-					) => Some(format!(
-						"{protocol}://{hostname}:{port}{}",
-						util::format::OptDisplay(path)
-					)),
-					(
-						GameGuardProtocol::Http | GameGuardProtocol::Https,
-						Some(hostname),
-						None,
+						_port,
 						path,
 					) => Some(format!(
 						"{protocol}://{hostname}{}",
 						util::format::OptDisplay(path)
 					)),
+					(_protocol, Some(hostname), Some(port), path) => Some(format!(
+						"{hostname}:{port}{}",
+						util::format::OptDisplay(path)
+					)),
+					(_protocol, Some(hostname), None, path) => {
+						Some(format!("{hostname}{}", util::format::OptDisplay(path)))
+					}
 					_ => None,
 				};
 
