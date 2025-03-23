@@ -18,6 +18,7 @@ import {
 	CardHeader,
 	CardTitle,
 	CopyButton,
+	DiscreteCopyButton,
 	Flex,
 	Skeleton,
 	Table,
@@ -141,38 +142,18 @@ function ProjectBuildsRoute() {
 									<WithTooltip
 										content={build.id}
 										trigger={
-											<CopyButton value={build.id}>
-												<Button
-													type="button"
-													variant="ghost"
-													endIcon={
-														<Icon
-															className="group-hover:opacity-100 opacity-0 transition-opacity"
-															icon={faCopy}
-														/>
-													}
-												>
-													{build.id.split("-")[0]}
-												</Button>
-											</CopyButton>
+											<DiscreteCopyButton
+												value={build.id}
+											>
+												{build.id.split("-")[0]}
+											</DiscreteCopyButton>
 										}
 									/>
 								</TableCell>
 								<TableCell>
-									<CopyButton value={build.tags.name}>
-										<Button
-											type="button"
-											variant="ghost"
-											endIcon={
-												<Icon
-													className="group-hover:opacity-100 opacity-0 transition-opacity"
-													icon={faCopy}
-												/>
-											}
-										>
-											{build.tags.name}
-										</Button>
-									</CopyButton>
+									<DiscreteCopyButton value={build.tags.name}>
+										{build.tags.name}
+									</DiscreteCopyButton>
 								</TableCell>
 								<TableCell>
 									<ActorTags
