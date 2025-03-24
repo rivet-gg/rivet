@@ -23,7 +23,7 @@ export function useDestroyActorMutation() {
 			const { queryKey: projectActorsQueryKey } =
 				projectActorsQueryOptions({
 					projectNameId: "<placeholder>",
-					environmentNameId: "<placeholder>>",
+					environmentNameId: "<placeholder>",
 				});
 
 			await queryClient.invalidateQueries(
