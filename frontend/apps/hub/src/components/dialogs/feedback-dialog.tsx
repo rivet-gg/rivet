@@ -32,7 +32,7 @@ export default function FeedbackDialogContent({
 					<DialogTitle>Feedback sent!</DialogTitle>
 				</DialogHeader>
 				<Text>
-					All submissions are ready by humans, we appreciate your
+					All submissions are read by humans, we appreciate your
 					feedback.
 				</Text>
 				<DialogFooter>
