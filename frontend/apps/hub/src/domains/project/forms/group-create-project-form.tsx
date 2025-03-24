@@ -21,7 +21,7 @@ export const formSchema = z
 		name: z
 			.string()
 			.max(25)
-			.refine((value) => value.trim() !== "" || value.trim() !== value, {
+			.refine((value) => value.trim() !== "" && value.trim() === value, {
 				message: "Name cannot be empty or contain whitespaces",
 			}),
 		slug: z.string().max(25).optional(),
