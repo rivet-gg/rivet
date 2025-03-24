@@ -127,7 +127,7 @@ export const DiscreteCopyButton = forwardRef<
 		<WithTooltip
 			content="Click to copy"
 			trigger={
-				<CopyButton value={value} {...props} ref={ref}>
+				<CopyButton ref={ref} value={value} {...props}>
 					<Button
 						type="button"
 						variant="ghost"

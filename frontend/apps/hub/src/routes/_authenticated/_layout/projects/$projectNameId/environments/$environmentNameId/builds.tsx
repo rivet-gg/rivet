@@ -17,7 +17,6 @@ import {
 	CardContent,
 	CardHeader,
 	CardTitle,
-	CopyButton,
 	DiscreteCopyButton,
 	Flex,
 	Skeleton,
@@ -30,13 +29,7 @@ import {
 	Text,
 	WithTooltip,
 } from "@rivet-gg/components";
-import {
-	Icon,
-	faCheckCircle,
-	faCopy,
-	faInfoCircle,
-	faRefresh,
-} from "@rivet-gg/icons";
+import { Icon, faCheckCircle, faInfoCircle, faRefresh } from "@rivet-gg/icons";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";

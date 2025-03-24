@@ -44,7 +44,7 @@ export function ActorNetwork({ network }: ActorNetworkProps) {
 				<Flex gap="2" direction="col" className="text-xs">
 					<Dl className="items-start">
 						<Dt>Ports</Dt>
-						<Dt>
+						<Dd>
 							{Object.entries(network.ports).map(
 								([name, port]) => (
 									<Fragment key={name}>
@@ -54,9 +54,9 @@ export function ActorNetwork({ network }: ActorNetworkProps) {
 											<Dd>
 												<DiscreteCopyButton
 													size="xs"
-													value={
-														String(port.port) || ""
-													}
+													value={String(
+														port.port || "",
+													)}
 												>
 													{port.port}
 												</DiscreteCopyButton>
@@ -93,7 +93,7 @@ export function ActorNetwork({ network }: ActorNetworkProps) {
 									</Fragment>
 								),
 							)}
-						</Dt>
+						</Dd>
 					</Dl>
 				</Flex>
 			</div>

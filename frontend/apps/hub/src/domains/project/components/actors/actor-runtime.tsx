@@ -35,7 +35,7 @@ export function ActorRuntime({
 }: ActorRuntimeProps) {
 	return (
 		<>
-			<div className="px-4 mt-4 mb-4 ">
+			<div className="px-4 mt-4 mb-4">
 				<div className="flex gap-1 items-center mb-2">
 					<h3 className=" font-semibold">Runtime</h3>
 				</div>
@@ -101,7 +101,7 @@ export function ActorRuntime({
 				<Flex gap="2" direction="col" className="text-xs">
 					<Dl>
 						<Dt>Durable?</Dt>
-						<Dt>{lifecycle.durable ? "Yes" : "No"}</Dt>
+						<Dd>{lifecycle.durable ? "Yes" : "No"}</Dd>
 					</Dl>
 				</Flex>
 			</div>
