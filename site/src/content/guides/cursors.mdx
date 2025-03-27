@@ -1,0 +1,333 @@
+# Building a Realtime Collaborative Cursor App with Actors
+
+<img 
+  src="/images/guides/cursors-hero.png" 
+  alt="Collaborative cursors showing multiple users interacting in real-time"
+  className="w-full rounded-lg shadow-lg"
+/>
+
+In this guide, we're building a realtime collaborative cursor application using the <a href="https://actorcore.org" target="_blank">ActorCore framework</a> and deploying to Rivet. The app consists of:
+
+- **CursorRoom Actor**: A server-side component that:
+  - Tracks cursor positions for all connected users
+  - Maintains a list of active cursors with their positions
+  - Handles user connections and disconnections
+  - Broadcasts cursor updates to all connected clients
+
+- **Web Client**: A Next.js-based UI that:
+  - Generates unique user IDs, usernames, and colors
+  - Tracks and broadcasts cursor movements
+  - Displays all connected users' cursors in realtime
+  - Shows a list of active cursors with their coordinates
+  - Updates cursor positions with efficient throttling
+
+
+<img 
+  src="/images/guides/nextjs-rivet.png" 
+  alt="image of the cursor app architecture with nextjs, actorcore, and rivet"
+  className="w-full rounded-lg shadow-lg"
+/>
+
+## Getting Started
+
+### Create and Deploy the Project
+
+1. Create a new Rivet actor project:
+```sh
+npx create-actor@latest cursor-demo -p rivet -t cursors
+```
+
+2. Deploy the actors to Rivet:
+```sh
+cd cursor-demo
+npm run deploy
+```
+
+3. Follow the deployment prompts to:
+   - Sign in to your Rivet account
+   - Create or select a project
+   - Choose an environment
+
+After deployment, you'll receive your Actor Manager URL, which clients will use to connect to your cursor room.
+
+### Local Development
+
+For local development:
+
+1. Start both development servers:
+```sh
+yarn dev
+```
+
+This will start:
+- ActorCore server on port 6420
+- Next.js development server on port 3000
+
+2. Open multiple browser tabs/windows to `http://localhost:3000` to see the cursors interact
+
+## About the Project
+
+The collaborative cursor application demonstrates real-time state synchronization using ActorCore's distributed actor system. Let's explore how it works:
+
+### The CursorRoom Actor
+
+The CursorRoom actor (`src/cursor-room.ts`) is the central coordinator that manages the shared state of all cursors:
+
+```typescript
+import { Actor, type Rpc } from "actor-core";
+
+// State managed by the actor
+export interface State {
+  cursors: {
+    [userId: string]: {
+      username: string;
+      color: string;
+      x: number;
+      y: number;
+    };
+  };
+}
+
+export default class CursorRoom extends Actor<State> {
+  // Methods will be added in the following steps
+}
+```
+
+It maintains a state object that maps user IDs to their cursor information, including username, color, and coordinates.
+
+#### Initialize the Actor State
+
+First, we define the initialization method:
+
+```typescript
+export default class CursorRoom extends Actor<State> {
+  _onInitialize() {
+    return { cursors: {} };
+  }
+}
+```
+
+This method runs when the actor is first created and:
+- Creates an empty cursors object to store user cursor data
+- Prepares the actor to track multiple users in real-time
+- Sets up the initial shared state
+
+#### Add Real-time Cursor Updates
+
+Next, we implement the cursor update functionality:
+
+```typescript
+export default class CursorRoom extends Actor<State> {
+  // ...previous code...
+  
+  updateCursor(
+    _rpc: Rpc<CursorRoom>,
+    userId: string,
+    username: string,
+    color: string,
+    x: number,
+    y: number
+  ): void {
+    // Update cursor position in state
+    this._state.cursors[userId] = { username, color, x, y };
+
+    // Broadcast update to all connected clients
+    this._broadcast("cursorUpdate", userId, username, color, x, y);
+  }
+}
+```
+
+This method provides real-time synchronization by:
+- Taking user information and cursor coordinates as parameters
+- Updating the cursor position in the actor's shared state
+- Broadcasting the update to all connected clients instantly
+- Ensuring all users see cursor movements in real-time
+
+#### Handle User Disconnections
+
+Finally, we add disconnection handling:
+
+```typescript
+export default class CursorRoom extends Actor<State> {
+  // ...previous code...
+  
+  removeCursor(_rpc: Rpc<CursorRoom>, userId: string): void {
+    delete this._state.cursors[userId];
+    this._broadcast("cursorRemove", userId);
+  }
+}
+```
+
+<Accordion title="Complete Cursor Room Actor Code">
+```typescript
+import { Actor, type Rpc } from "actor-core";
+
+export interface State {
+  cursors: {
+    [userId: string]: {
+      username: string;
+      color: string;
+      x: number;
+      y: number;
+    };
+  };
+}
+
+export default class CursorRoom extends Actor<State> {
+  _onInitialize(): State {
+    return { cursors: {} };
+  }
+  
+  updateCursor(
+    _rpc: Rpc<CursorRoom>,
+    userId: string,
+    username: string,
+    color: string,
+    x: number,
+    y: number
+  ): void {
+    this._state.cursors[userId] = { username, color, x, y };
+    this._broadcast("cursorUpdate", userId, username, color, x, y);
+  }
+  
+  removeCursor(_rpc: Rpc<CursorRoom>, userId: string): void {
+    delete this._state.cursors[userId];
+    this._broadcast("cursorRemove", userId);
+  }
+}
+```
+</Accordion>
+
+### Real-Time Communication Flow
+
+The actor system enables efficient real-time updates through the following flow:
+
+1. **Cursor Movement**:
+   - Client throttles movement events (16ms intervals)
+   - Sends position updates to the CursorRoom actor
+   - Actor broadcasts the update to all connected clients
+
+2. **Update Reception**:
+   - Clients receive broadcast events from the actor
+   - Update their local state with new cursor positions
+   - Re-render cursor visuals and list accordingly
+
+3. **User Disconnection**:
+   - Actor detects the disconnection
+   - Removes user's cursor from shared state
+   - Broadcasts removal to all clients
+   - Clients remove cursor from display
+
+### React Components
+
+The client-side React components (`src/components/`) interact with the actor system to provide the real-time cursor experience:
+
+#### CursorList Component (`src/components/CursorList.tsx`)
+
+```typescript
+function CursorList({ cursors }) {
+  return (
+    <div className="cursor-list">
+      {Object.entries(cursors).map(([userId, cursor]) => (
+        <div key={userId} className="cursor-item">
+          <div className="cursor-color" style={{ backgroundColor: cursor.color }} />
+          <span className="cursor-name">{cursor.username}</span>
+          <span className="cursor-coords">
+            ({Math.round(cursor.x)}, {Math.round(cursor.y)})
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+This component:
+- Receives cursor data from the actor's state
+- Displays a real-time list of all connected users
+- Updates automatically when the actor broadcasts changes
+
+#### CursorPointers Component (`src/components/CursorPointers.tsx`)
+
+```typescript
+function CursorPointers({ cursors, currentUserId }) {
+  return (
+    <div className="cursor-pointers">
+      {Object.entries(cursors).map(([userId, cursor]) => {
+        if (userId === currentUserId) return null;
+        
+        return (
+          <div
+            key={userId}
+            className="cursor-pointer"
+            style={{
+              transform: `translate(${cursor.x}px, ${cursor.y}px)`,
+              backgroundColor: cursor.color
+            }}
+          >
+            <div className="cursor-label">{cursor.username}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+```
+
+This component:
+- Renders visual cursor indicators for all users except the current one
+- Updates positions based on actor state changes
+- Provides smooth animations through CSS transforms
+
+#### App Component Integration (`src/components/App.tsx`)
+
+```typescript
+function App() {
+  const [cursors, setCursors] = useState({});
+  const { actor } = actorCore.useActor("cursorRoom");
+
+  // Handle cursor updates
+  actorCore.useActorEvent(
+    { actor, event: "cursorUpdate" },
+    (userId, username, color, x, y) => {
+      setCursors(prev => ({
+        ...prev,
+        [userId]: { username, color, x, y }
+      }));
+    }
+  );
+
+  // Handle cursor removals
+  actorCore.useActorEvent(
+    { actor, event: "cursorRemove" },
+    (userId) => {
+      setCursors(prev => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+    }
+  );
+
+  // Throttled cursor update handler
+  const updateCursor = useCallback(
+    throttle((x, y) => {
+      actor?.updateCursor(userId, username, color, x, y);
+    }, 16),
+    [actor]
+  );
+
+  return (
+    <div onMouseMove={e => updateCursor(e.clientX, e.clientY)}>
+      <CursorList cursors={cursors} />
+      <CursorPointers cursors={cursors} currentUserId={userId} />
+    </div>
+  );
+}
+```
+
+The App component:
+- Uses ActorCore React hooks to connect to the CursorRoom actor
+- Handles real-time state updates through actor events
+- Throttles cursor position updates for efficiency
+- Coordinates the CursorList and CursorPointers components
