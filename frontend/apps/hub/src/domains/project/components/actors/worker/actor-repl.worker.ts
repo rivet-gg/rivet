@@ -129,6 +129,7 @@ addEventListener("message", async (event) => {
 
 		try {
 			const url = new URL("inspect", endWithSlash(data.endpoint));
+			url.searchParams.set("token", data.token);
 			const ws = new WebSocket(url);
 
 			await waitForOpen(ws);

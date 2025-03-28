@@ -11,6 +11,7 @@ import {
 	ResponseSchema,
 	type SetStateMessage,
 } from "./actor-worker-schema";
+import { ls } from "@/lib/ls";
 
 export type ReplCommand = {
 	logs: Log[];
@@ -104,7 +105,11 @@ export class ActorWorkerContainer {
 			const worker = new ActorWorker({ name: `actor-${actorId}` });
 			signal.throwIfAborted();
 			// now worker needs to check if the actor is supported
-			this.#setupWorker(worker, { actorId, endpoint });
+			this.#setupWorker(worker, {
+				actorId,
+				endpoint,
+				token: ls.get("rivet-token"),
+			});
 			signal.throwIfAborted();
 			return worker;
 		} catch (e) {
