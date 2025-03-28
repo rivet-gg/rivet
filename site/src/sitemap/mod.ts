@@ -17,11 +17,11 @@ import {
 	faRuler,
 	faTerminal,
 	faSquareTerminal,
-    faJs,
-    faDocker,
-    faCircleNodes,
-    faKey,
-    faLeaf,
+	faJs,
+	faDocker,
+	faCircleNodes,
+	faKey,
+	faLeaf,
 } from "@rivet-gg/icons";
 
 // Goals:
@@ -66,6 +66,10 @@ export const sitemap = [
 					{
 						title: "Realtime Chat App",
 						href: "/guides/chat",
+					},
+					{
+						title: "Collaborative Cursors",
+						href: "/guides/cursors",
 					},
 					//{
 					//	title: "Collaborative App with Y.js",
