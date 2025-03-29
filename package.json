@@ -18,10 +18,12 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
+		"@yarnpkg/plugin-exec": "^3.0.1",
 		"turbo": "^2.0.1"
 	},
 	"resolutions": {
 		"react": "^19",
-		"react-dom": "^19"
+		"react-dom": "^19",
+		"actor-core": "exec:./frontend/scripts/resolve-actor-core.js"
 	}
 }

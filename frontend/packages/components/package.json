@@ -21,7 +21,12 @@
 		"./tailwind-base": "./src/tailwind-base.ts",
 		"./layout": "./src/layout/index.ts",
 		"./code-mirror": "./src/code-mirror/index.tsx",
-		"./mdx": "./src/mdx/index.tsx"
+		"./mdx": "./src/mdx/index.tsx",
+		"./actors": "./src/actors/index.tsx",
+		"./actors/dialogs/go-to-actor-dialog": "./src/actors/dialogs/go-to-actor-dialog.tsx",
+		"./actors/dialogs/create-actor-dialog": "./src/actors/dialogs/create-actor-dialog.tsx",
+		"./dialogs/feedback-dialog": "./src/dialogs/feedback-dialog.tsx",
+		"./vite": "./src/vite/index.mjs"
 	},
 	"types": "./dist/index.d.ts",
 	"dependencies": {
@@ -63,8 +68,11 @@
 		"clsx": "^2.1.0",
 		"cmdk": "^1.0.0",
 		"date-fns": "^3.6.0",
+		"fast-deep-equal": "^3.1.3",
 		"framer-motion": "^11.2.11",
 		"input-otp": "^1.2.3",
+		"jotai": "^2.12.2",
+		"jotai-effect": "^2.0.2",
 		"lucide-react": "^0.439.0",
 		"react": "^19",
 		"react-day-picker": "^9.0.9",
