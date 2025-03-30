@@ -1,0 +1,3 @@
+- Don't try to define SQLITE_* constants yourself. Use the ones exported from libsqlite3-sys.
+- This implementation is designed for single reader/writer, so you don't need to worry about concurrency issues with foundationdb.
+- Don't use sed or hexdump or cat to attempt to read files. Always read files manually.
