@@ -6,8 +6,8 @@
 
 ```bash
 cd frontend/apps/actor-core-studio
-yarn install
-yarn dlx turbo dev
+pnpm install
+pnpm dev
 ```
 
 Open [http://localhost:43708](http://localhost:43708) in your browser to view the website.

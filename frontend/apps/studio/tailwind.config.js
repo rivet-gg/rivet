@@ -7,7 +7,7 @@ module.exports = {
 		"./src/**/layouts/**/*.{ts,tsx}",
 		"./src/**/views/**/*.{ts,tsx}",
 		"./src/**/routes/**/*.{ts,tsx}",
-		"../../../node_modules/@rivet-gg/components/**/*.{ts,tsx}",
+		"./node_modules/@rivet-gg/components/**/*.{ts,tsx}",
 	],
 	presets: [require("@rivet-gg/components/tailwind-base")],
 };

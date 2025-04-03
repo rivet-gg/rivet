@@ -13,7 +13,7 @@ For more information check README.md in the desired directory.
 
 ### Prerequisites
 - Node.js (>=18.19)
-- Yarn (use [Corepack](https://nodejs.org/api/corepack.html))
+- pnpm (use [Corepack](https://nodejs.org/api/corepack.html))
 
 
 ### Setup
@@ -21,21 +21,21 @@ For more information check README.md in the desired directory.
 1. Clone the repository
 2. Install dependencies
     ```bash
-    yarn
+    pnpm
     ```
 3. Start the development server
     ```bash
-    yarn start
+    pnpm start
     ```
 
 ### Build
 1. Build the project
     ```bash
-    yarn build
+    pnpm build
     ```
     1. You can define what app should be built using the `--filter` flag
         ```bash
-        yarn build --filter=./site
+        pnpm build --filter=./site
         ```
 
 ### Code Quality
