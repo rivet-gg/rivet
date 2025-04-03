@@ -1,29 +1,19 @@
 {
 	"private": true,
-	"packageManager": "yarn@4.6.0",
 	"name": "rivet",
-	"workspaces": [
-		"frontend/apps/*",
-		"frontend/packages/*",
-		"site",
-		"sdks/api/full/typescript",
-		"examples/*",
-		"tests/load"
-	],
 	"scripts": {
 		"start": "npx turbo dev",
 		"dev": "npx turbo dev",
 		"build": "npx turbo build",
-		"fmt": "yarn biome check --write ."
+		"fmt": "pnpm biome check --write ."
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
-		"@yarnpkg/plugin-exec": "^3.0.1",
 		"turbo": "^2.0.1"
 	},
 	"resolutions": {
 		"react": "^19",
-		"react-dom": "^19",
-		"actor-core": "exec:./frontend/scripts/resolve-actor-core.js"
-	}
+		"react-dom": "^19"
+	},
+	"packageManager": "pnpm@8.15.1+sha1.8adba2d20330c02d3856e18c4eb3819d1d3ca6aa"
 }

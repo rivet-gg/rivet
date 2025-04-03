@@ -46,6 +46,7 @@
 		}
 	},
 	"devDependencies": {
+		"dedent": "^1.5.3",
 		"esbuild": "^0.25.0"
 	}
 }

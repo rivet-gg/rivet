@@ -3,7 +3,6 @@ import path from "node:path";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
-import { visualizer } from "rollup-plugin-visualizer";
 // @ts-expect-error types are missing
 import { viteShikiTransformer } from "@rivet-gg/components/vite";
 import { defineConfig } from "vite";
@@ -41,7 +40,6 @@ export default defineConfig({
 				})
 			: null,
 		viteShikiTransformer(),
-		process.env.DEBUG_BUNDLE ? visualizer() : null,
 	],
 	server: {
 		port: 43708,

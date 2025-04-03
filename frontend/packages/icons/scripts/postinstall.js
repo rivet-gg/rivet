@@ -5,64 +5,16 @@ const { join, resolve } = require("node:path");
 const manifest = require("./../manifest.json");
 const esbuild = require("esbuild");
 
-let hasFaToken = !!process.env.FONTAWESOME_PACKAGE_TOKEN;
+let hasFaToken = false;
 
 const sourceDir = join(__dirname, "..", "src");
 
 if (!fs.existsSync(sourceDir)){
     fs.mkdirSync(sourceDir, { recursive: true });
 }
-
-if (process.env.FONTAWESOME_PACKAGE_TOKEN) {
-	fs.writeFileSync(
-		join(sourceDir, ".yarnrc.yml"),
-		dedent`
-		nodeLinker: node-modules
-
-		enableImmutableInstalls: false
-
-		npmScopes:
-		  fortawesome:
-		    npmAlwaysAuth: true
-		    npmRegistryServer: 'https://npm.fontawesome.com/'
-		    npmAuthToken: \${FONTAWESOME_PACKAGE_TOKEN}
-		  awesome.me:
-		    npmAlwaysAuth: true
-		    npmRegistryServer: "https://npm.fontawesome.com/"
-		    npmAuthToken: \${FONTAWESOME_PACKAGE_TOKEN}
-		`,
-	);
-
-	fs.writeFileSync(join(sourceDir, "./package.json"), JSON.stringify({
-		"name": "@rivet-gg/internal-icons",
-		"private": true,
-		"sideEffects": false,
-		"dependencies": {
-			"@awesome.me/kit-63db24046b": "^1.0.11",
-			"@fortawesome/pro-regular-svg-icons": "6.6.0",
-			"@fortawesome/pro-solid-svg-icons": "6.6.0"
-		}
-	}));
-
-	fs.writeFileSync(join(sourceDir, "yarn.lock"), "");
-
-	spawnSync(
-		"yarn",
-		["config", "set", "-H", "enableImmutableInstalls", "false"],
-		{
-			stdio: "inherit",
-			cwd: sourceDir,
-		},
-	);
-
-	spawnSync("yarn", [], {
-		stdio: "inherit",
-		cwd: sourceDir,
-		env: {
-			...process.env,
-			CI: 0,
-		},
-	});
+const output = spawnSync("pnpm", ["view", "@awesome.me/kit-63db24046b"]);
+if (output.status === 0) {
+	hasFaToken = true;
 }
 
 const banner = dedent`

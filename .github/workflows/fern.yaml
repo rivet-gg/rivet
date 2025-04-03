@@ -52,9 +52,9 @@ jobs:
 
           npm config set '//registry.npmjs.org/:_authToken' "$NPM_TOKEN"
 
-          yarn version --no-git-tag-version --new-version "${{ github.ref_name }}"
-          yarn pack --ignore-scripts -f archive.tgz
-          yarn publish --ignore-scripts archive.tgz
+          pnpm version --no-git-tag-version "${{ github.ref_name }}"
+          pnpm pack --ignore-scripts archive.tgz
+          pnpm publish --ignore-scripts archive.tgz
 
       - name: Publish Runtime
         if: steps.check-tag.outputs.match == 'true'
@@ -65,6 +65,6 @@ jobs:
 
           npm config set '//registry.npmjs.org/:_authToken' "$NPM_TOKEN"
 
-          yarn version --no-git-tag-version --new-version "${{ github.ref_name }}"
-          yarn pack --ignore-scripts -f archive.tgz
-          yarn publish --ignore-scripts archive.tgz
+          pnpm version --no-git-tag-version "${{ github.ref_name }}"
+          pnpm pack --ignore-scripts -f archive.tgz
+          pnpm publish --ignore-scripts archive.tgz

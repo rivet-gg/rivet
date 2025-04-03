@@ -16,9 +16,7 @@ jobs:
       - run: corepack enable
       - uses: actions/setup-node@v4
       - name: Install dependencies
-        run: yarn install
+        run: pnpm install
         
-      - run: yarn build --filter='./{sdks,frontend/packages/cli}/**'
-      # TODO: Add --compact once we publish cli to npm
-      - run: rm -rf ./sdks/actor/client/node_modules; rm -rf ./sdks/actor/runtime/node_modules; rm -rf ./frontend/packages/cli/node_modules
-      - run: yarn dlx pkg-pr-new publish --yarn './sdks/actor/client' './frontend/packages/cli'
+      - run: pnpm build --filter='./{sdks,frontend/packages/cli}/**'
+      - run: pnpm dlx pkg-pr-new publish './frontend/packages/cli' --packageManager pnpm

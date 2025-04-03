@@ -6,8 +6,8 @@
 
 ```bash
 cd frontend/apps/hub
-yarn install
-yarn dlx turbo dev
+pnpm install
+pnpm turbo dev
 ```
 
 Open [http://localhost:5080](http://localhost:5080) in your browser to view the website.

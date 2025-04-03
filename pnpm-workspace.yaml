@@ -1,0 +1,5 @@
+packages:
+  - frontend/apps/**
+  - frontend/packages/**
+  - "!frontend/packages/icons/src"
+  - site
