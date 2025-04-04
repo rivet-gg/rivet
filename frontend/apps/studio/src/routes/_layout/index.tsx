@@ -1,6 +1,5 @@
 import { Actors } from "@/components/actors";
 import {
-	ACTOR_CORE_MANAGER_PORT,
 	connectionEffect,
 	connectionStateAtom,
 	initiallyConnectedAtom,
@@ -9,23 +8,20 @@ import {
 	Button,
 	Card,
 	CardContent,
-	CardDescription,
 	CardFooter,
 	CardHeader,
 	CardTitle,
-	Code,
 	CodeFrame,
 	CodeGroup,
 	CodeSource,
 	DocsSheet,
+	H1,
 	Link,
 	Strong,
-	Text,
 } from "@rivet-gg/components";
 import { currentActorIdAtom } from "@rivet-gg/components/actors";
 import {
 	Icon,
-	faActors,
 	faBrave,
 	faReact,
 	faRust,
@@ -85,175 +81,133 @@ function RouteComponent() {
 					exit={{ opacity: 0, scale: 0.95 }}
 					className="h-full w-full flex items-center justify-center flex-col"
 				>
-					<div className="max-w-md">
-						<Card>
-							<CardHeader className="flex flex-row items-center justify-start gap-4">
-								<Icon icon={faActors} className="text-6xl" />
-								<div className="flex flex-col gap-1">
-									<CardTitle>Rivet Studio</CardTitle>
-									<CardDescription>
-										Take your Actors to the next level
-									</CardDescription>
+					<H1>Rivet Studio</H1>
+					<Card className="max-w-md w-full mb-6 mt-8">
+						<CardHeader>
+							<CardTitle>Create New Project</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p>
+								Get started with one of our quick start guides.
+							</p>
+							<div className="flex-1 flex flex-col gap-2 mt-2">
+								<div className="flex flex-row justify-stretch items-center gap-2">
+									<DocsSheet
+										path="docs/quickstart/react"
+										title="React Quick Start"
+									>
+										<Button
+											className="flex-1"
+											variant="outline"
+											startIcon={<Icon icon={faReact} />}
+										>
+											React
+										</Button>
+									</DocsSheet>
+									<DocsSheet
+										path="docs/quickstart/typescript"
+										title="TypeScript Quick Start"
+									>
+										<Button
+											className="flex-1"
+											variant="outline"
+											startIcon={<Icon icon={faTs} />}
+										>
+											TypeScript
+										</Button>
+									</DocsSheet>
+									<DocsSheet
+										path="docs/quickstart/typescript"
+										title="Rust Quick Start"
+									>
+										<Button
+											className="flex-1"
+											variant="outline"
+											startIcon={<Icon icon={faRust} />}
+										>
+											Rust
+										</Button>
+									</DocsSheet>
 								</div>
-							</CardHeader>
-							<CardContent>
-								<Text>
-									<Strong>Welcome!</Strong>
-								</Text>
-								<Text>
-									To get started, you need to connect to your
-									ActorCore project.
-								</Text>
+							</div>
+						</CardContent>
+					</Card>
+					<Card className="max-w-md w-full my-6">
+						<CardHeader>
+							<CardTitle>Connect to ActorCore</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p>
+								Connect Rivet Studio to your ActorCore project,
+								using the following command.
+							</p>
 
-								<div className="my-4 flex flex-col gap-2">
-									<Text className="text-sm flex-1">
-										<span className="font-bold">
-											Don't have an ActorCore project yet?
-										</span>
-										<br />
-										Get started with one of our quick start
-										guides.
-									</Text>
-									<div className="flex-1 flex flex-col gap-2">
-										<div className="flex flex-row justify-stretch items-center gap-0.5">
-											<DocsSheet
-												path="docs/quickstart/react"
-												title="React Quick Start"
-											>
-												<Button
-													className="flex-1"
-													variant="outline"
-													size="sm"
-													startIcon={
-														<Icon icon={faReact} />
-													}
-												>
-													React
-												</Button>
-											</DocsSheet>
-											<DocsSheet
-												path="docs/quickstart/typescript"
-												title="TypeScript Quick Start"
-											>
-												<Button
-													className="flex-1"
-													variant="outline"
-													size="sm"
-													startIcon={
-														<Icon icon={faTs} />
-													}
-												>
-													TypeScript
-												</Button>
-											</DocsSheet>
-											<DocsSheet
-												path="docs/quickstart/typescript"
-												title="Rust Quick Start"
-											>
-												<Button
-													className="flex-1"
-													variant="outline"
-													size="sm"
-													startIcon={
-														<Icon icon={faRust} />
-													}
-												>
-													Rust
-												</Button>
-											</DocsSheet>
-										</div>
-									</div>
-								</div>
+							<CodeGroup>
+								<CodeFrame
+									title="npm"
+									language="bash"
+									code={devNpmSource}
+								>
+									<CodeSource>{devNpm}</CodeSource>
+								</CodeFrame>
+								<CodeFrame
+									title="yarn"
+									language="bash"
+									code={devYarnSource}
+								>
+									<CodeSource>{devYarn}</CodeSource>
+								</CodeFrame>
+								<CodeFrame
+									title="pnpm"
+									language="bash"
+									code={devPnpmSource}
+								>
+									<CodeSource>{devPnpm}</CodeSource>
+								</CodeFrame>
+							</CodeGroup>
+						</CardContent>
+					</Card>
 
-								<hr className="my-6" />
-
-								<Text>
-									To connect, make sure you have the ActorCore
-									CLI installed and running. You can do this
-									by running the following command in your
-									project directory.
-								</Text>
-
-								<CodeGroup>
-									<CodeFrame
-										title="npm"
-										language="bash"
-										code={devNpmSource}
-									>
-										<CodeSource>{devNpm}</CodeSource>
-									</CodeFrame>
-									<CodeFrame
-										title="yarn"
-										language="bash"
-										code={devYarnSource}
-									>
-										<CodeSource>{devYarn}</CodeSource>
-									</CodeFrame>
-									<CodeFrame
-										title="pnpm"
-										language="bash"
-										code={devPnpmSource}
-									>
-										<CodeSource>{devPnpm}</CodeSource>
-									</CodeFrame>
-								</CodeGroup>
-
-								<Text>
-									This will start the development server and
-									allow Rivet Studio to connect to your
-									project.
-								</Text>
-								<Text>
-									The Studio will automatically connect to the
-									ActorCore development server running on{" "}
-									<Code>
-										localhost:{ACTOR_CORE_MANAGER_PORT}
-									</Code>
-									. It will also automatically detect changes,
-									and reconnect when you restart the server.
-								</Text>
-
-								<div className="gap-2 flex flex-col mt-6">
-									<p className="my-0 text-sm font-bold">
-										Having trouble connecting?
-									</p>
-									<p className="my-0 text-sm">
-										Make sure that your browser allow access
-										to localhost. Some browsers like{" "}
-										<Strong>
-											<Icon icon={faSafari} /> Safari
-										</Strong>{" "}
-										and{" "}
-										<Strong>
-											<Icon icon={faBrave} /> Brave
-										</Strong>{" "}
-										block access by default.
-									</p>
-								</div>
-							</CardContent>
-							<CardFooter>
-								<div className="text-muted-foreground text-xs">
-									Need help? Join the{" "}
-									<Link
-										href="https://rivet.gg/discord"
-										target="_blank"
-										rel="noopener noreferrer"
-									>
-										Rivet Discord
-									</Link>
-									.<br /> Looking for docs? Check out the{" "}
-									<Link
-										href="https://actorcore.org/docs"
-										target="_blank"
-										rel="noopener noreferrer"
-									>
-										ActorCore documentation
-									</Link>
-									.
-								</div>
-							</CardFooter>
-						</Card>
-					</div>
+					<Card className="max-w-md w-full my-6">
+						<CardHeader>
+							<CardTitle>Having trouble connecting?</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p>
+								Make sure that your browser allow access to
+								localhost. Some browsers like{" "}
+								<Strong>
+									<Icon icon={faSafari} /> Safari
+								</Strong>{" "}
+								and{" "}
+								<Strong>
+									<Icon icon={faBrave} /> Brave
+								</Strong>{" "}
+								block access by default.
+							</p>
+						</CardContent>
+						<CardFooter>
+							<p className="text-muted-foreground text-sm">
+								Need help? Join the{" "}
+								<Link
+									href="https://rivet.gg/discord"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									Rivet Discord
+								</Link>
+								.<br /> Looking for docs? Check out the{" "}
+								<Link
+									href="https://actorcore.org/docs"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									ActorCore documentation
+								</Link>
+								.
+							</p>
+						</CardFooter>
+					</Card>
 				</motion.div>
 			) : (
 				<Actors actorId={actorId} />
