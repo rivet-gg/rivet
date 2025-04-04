@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [25.4.0](https://github.com/rivet-gg/rivet/compare/v25.3.1...v25.4.0) (2025-04-04)
+
+
+### Features
+
+* **studio:** add actor-core studio ([#2283](https://github.com/rivet-gg/rivet/issues/2283)) ([7fd26d9](https://github.com/rivet-gg/rivet/commit/7fd26d90cefd03f3e97ecaf2685bc6d60b90311b))
+
+
+### Bug Fixes
+
+* **studio:** minor studio fixes ([#2306](https://github.com/rivet-gg/rivet/issues/2306)) ([a5f41c5](https://github.com/rivet-gg/rivet/commit/a5f41c543c66d1597e94eda75ec374155beae6dc))
+
+
+### Documentation
+
+* document game server use case ([#2298](https://github.com/rivet-gg/rivet/issues/2298)) ([11862b4](https://github.com/rivet-gg/rivet/commit/11862b4c3144b4c713549d51c623b35c3d1c681f))
+
+
+### Chores
+
+* update lockfile ([d8a5d93](https://github.com/rivet-gg/rivet/commit/d8a5d9321eb1e19a845e43a3aae78a2273cd63ce))
+
 ## [25.3.1](https://github.com/rivet-gg/rivet/compare/v25.3.0...v25.3.1) (2025-04-02)
 
 
