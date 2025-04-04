@@ -33,7 +33,7 @@ const createConnection = ({
 		if (ws.readyState !== WebSocket.OPEN) {
 			ws.close();
 		}
-	}, 8000);
+	}, 500);
 
 	ws.addEventListener("open", () => {
 		onConnect?.();
@@ -91,7 +91,7 @@ export const connectionEffect = atomEffect((get, set) => {
 				set(initiallyConnectedAtom, true);
 				set(connectionStateAtom, "connected");
 
-				toast.success("Connected to ActorCore Studio", {
+				toast.success("Connected to Rivet Studio", {
 					id: "ws-reconnect",
 				});
 			},
@@ -103,7 +103,7 @@ export const connectionEffect = atomEffect((get, set) => {
 				}
 				reconnectTimeout = setTimeout(() => {
 					reconnect();
-				}, 2000);
+				}, 500);
 			},
 			onMessage: (msg) => {
 				if (msg.type === "info") {
@@ -190,19 +190,13 @@ function convertActor(actor: InspectorActor): Actor {
 			errors: { lines: [], timestamps: [], ids: [] },
 			logs: { lines: [], timestamps: [], ids: [] },
 		}),
-		resources: null,
 		endpoint: `http://localhost:${ACTOR_CORE_MANAGER_PORT}/actors/${actor.id}`,
 		status: "running",
 		region: "local",
 		network: null,
-		runtime: {
-			build: "",
-		},
+		runtime: null,
+		resources: null,
 		lifecycle: {},
-		tags: {
-			...actor.tags,
-			framework: "actor-core",
-		},
 		features: [
 			ActorFeature.Console,
 			ActorFeature.State,

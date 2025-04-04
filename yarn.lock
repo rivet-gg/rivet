@@ -4111,6 +4111,8 @@ __metadata:
     "@radix-ui/react-tooltip": "npm:^1.1.1"
     "@radix-ui/react-visually-hidden": "npm:^1.0.3"
     "@rivet-gg/icons": "workspace:^"
+    "@sentry/react": "npm:^8.26.0"
+    "@shikijs/langs": "npm:^3.2.1"
     "@tailwindcss/container-queries": "npm:^0.1.1"
     "@tanstack/react-virtual": "npm:^3.10.8"
     "@types/mime": "npm:^4.0.0"
@@ -4126,6 +4128,8 @@ __metadata:
     clsx: "npm:^2.1.0"
     cmdk: "npm:^1.0.0"
     date-fns: "npm:^3.6.0"
+    esast-util-from-js: "npm:^2.0.1"
+    estree-util-to-js: "npm:^2.0.0"
     fast-deep-equal: "npm:^3.1.3"
     framer-motion: "npm:^11.2.11"
     input-otp: "npm:^1.2.3"
@@ -4143,7 +4147,6 @@ __metadata:
     tailwind-merge: "npm:^2.2.2"
     tailwindcss: "npm:^3.4.1"
     tailwindcss-animate: "npm:^1.0.7"
-    typescript: "npm:^5.5.4"
     usehooks-ts: "npm:^3.1.0"
     vite: "npm:^5.2.0"
     vite-plugin-dts: "npm:^3.8.1"
@@ -4273,7 +4276,6 @@ __metadata:
     actor-core: "npm:^0.6.2"
     autoprefixer: "npm:^10.4.19"
     bcryptjs: "npm:^2.4.3"
-    esast-util-from-js: "npm:^2.0.1"
     file-saver: "npm:^2.0.5"
     framer-motion: "npm:^11.2.11"
     jotai: "npm:^2.12.2"
@@ -4764,6 +4766,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@shikijs/langs@npm:^3.2.1":
+  version: 3.2.1
+  resolution: "@shikijs/langs@npm:3.2.1"
+  dependencies:
+    "@shikijs/types": "npm:3.2.1"
+  checksum: 10c0/8a4e8c066795f1e96686bee271ad9783febcb1cece2ebb9815dfb3d59c856ac869cf9dddc7d90cbcd186a782ddc0628b37486fcc4a46516be6825907f0e74178
+  languageName: node
+  linkType: hard
+
 "@shikijs/themes@npm:1.29.2":
   version: 1.29.2
   resolution: "@shikijs/themes@npm:1.29.2"
@@ -4793,7 +4804,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@shikijs/vscode-textmate@npm:^10.0.1":
+"@shikijs/types@npm:3.2.1":
+  version: 3.2.1
+  resolution: "@shikijs/types@npm:3.2.1"
+  dependencies:
+    "@shikijs/vscode-textmate": "npm:^10.0.2"
+    "@types/hast": "npm:^3.0.4"
+  checksum: 10c0/3380fde198d466a8771137b7ca3d4756a54d7d24c6e65f852737472a280c12c07f2123b9ad3d7eb2edec86d8d2c53bc207abe0fc0c7f78d337e52e742dc34edf
+  languageName: node
+  linkType: hard
+
+"@shikijs/vscode-textmate@npm:^10.0.1, @shikijs/vscode-textmate@npm:^10.0.2":
   version: 10.0.2
   resolution: "@shikijs/vscode-textmate@npm:10.0.2"
   checksum: 10c0/36b682d691088ec244de292dc8f91b808f95c89466af421cf84cbab92230f03c8348649c14b3251991b10ce632b0c715e416e992dd5f28ff3221dc2693fd9462
@@ -6612,9 +6633,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"actor-core@exec:./frontend/scripts/resolve-actor-core.js::locator=rivet%40workspace%3A.":
-  version: 0.7.7
-  resolution: "actor-core@exec:./frontend/scripts/resolve-actor-core.js#./frontend/scripts/resolve-actor-core.js::hash=e3457a&locator=rivet%40workspace%3A."
+"actor-core@portal:../actor-core/packages/actor-core::locator=rivet%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "actor-core@portal:../actor-core/packages/actor-core::locator=rivet%40workspace%3A."
   dependencies:
     cbor-x: "npm:^1.6.0"
     hono: "npm:^4.7.0"
@@ -6632,9 +6653,8 @@ __metadata:
       optional: true
   bin:
     actor-core: ./dist/cli/mod.cjs
-  checksum: 10c0/433c51ebd374937f8cff9a1f50b510dc5ff053897ee8f88729242e787907d70e10df88611ce01c62d68a2910322f1f25ee91ba619ef500f62b95614db8d3e431
   languageName: node
-  linkType: hard
+  linkType: soft
 
 "agent-base@npm:6":
   version: 6.0.2
