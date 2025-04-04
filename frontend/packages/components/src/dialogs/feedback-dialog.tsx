@@ -7,7 +7,9 @@ import { useState } from "react";
 import { DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Flex } from "../ui/flex";
 import { Button } from "../ui/button";
-import { Text } from "../ui/typography";
+import { Link, Text } from "../ui/typography";
+import { DialogDescription } from "@radix-ui/react-dialog";
+import { faDiscord, Icon } from "@rivet-gg/icons";
 
 interface ContentProps extends DialogContentProps {
 	source?: string;
@@ -55,6 +57,18 @@ export default function FeedbackDialogContent({
 			>
 				<DialogHeader>
 					<DialogTitle>Feedback</DialogTitle>
+					<DialogDescription>
+						Join us on{" "}
+						<Link
+							href="https://rivet.gg/discord"
+							target="_blank"
+							rel="noreferrer"
+						>
+							<Icon icon={faDiscord} /> Discord
+						</Link>{" "}
+						to discuss your feedback with the community and the
+						team.
+					</DialogDescription>
 				</DialogHeader>
 				<Flex gap="4" direction="col">
 					<FeedbackForm.Type />

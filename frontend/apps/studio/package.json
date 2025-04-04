@@ -38,7 +38,6 @@
 		"actor-core": "^0.6.2",
 		"autoprefixer": "^10.4.19",
 		"bcryptjs": "^2.4.3",
-		"esast-util-from-js": "^2.0.1",
 		"file-saver": "^2.0.5",
 		"framer-motion": "^11.2.11",
 		"jotai": "^2.12.2",

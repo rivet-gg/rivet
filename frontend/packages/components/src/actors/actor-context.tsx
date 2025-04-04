@@ -10,6 +10,8 @@ export enum ActorFeature {
 	Connections = "connections",
 	State = "state",
 	Console = "console",
+	Runtime = "runtime",
+	Durability = "durability",
 }
 
 export type Actor = Omit<
@@ -17,13 +19,14 @@ export type Actor = Omit<
 	"createdAt" | "runtime" | "lifecycle" | "network" | "resources"
 > & {
 	status: "unknown" | "starting" | "running" | "stopped" | "crashed";
-	runtime?: Rivet.actor.Runtime;
+
 	lifecycle?: Rivet.actor.Lifecycle;
 	build?: Rivet.actor.Build;
 	endpoint?: string;
 	logs: LogsAtom;
 	network?: Rivet.actor.Network | null;
 	resources?: Rivet.actor.Resources | null;
+	runtime?: Rivet.actor.Runtime | null;
 	destroy?: DestroyActorAtom;
 	destroyTs?: Date;
 	createdAt?: Date;
@@ -246,7 +249,12 @@ export const actorBuildsCountAtom = atom((get) => {
 	return get(actorBuildsAtom).length;
 });
 
-const commonActorFeatures = [ActorFeature.Logs, ActorFeature.Config];
+const commonActorFeatures = [
+	ActorFeature.Logs,
+	ActorFeature.Config,
+	ActorFeature.Runtime,
+	ActorFeature.Durability,
+];
 
 export const currentActorFeaturesAtom = atom((get) => {
 	const atom = get(currentActorAtom);

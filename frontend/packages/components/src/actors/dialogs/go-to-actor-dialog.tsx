@@ -23,10 +23,10 @@ export default function GoToActorDialogContent({
 			</DialogHeader>
 			<GoToActorForm.ActorId />
 			<DialogFooter>
-				<GoToActorForm.Submit>Go</GoToActorForm.Submit>
 				<Button type="button" variant="secondary" onClick={onClose}>
 					Close
 				</Button>
+				<GoToActorForm.Submit>Go</GoToActorForm.Submit>
 			</DialogFooter>
 		</GoToActorForm.Form>
 	);
