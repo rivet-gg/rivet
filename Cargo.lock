@@ -14227,6 +14227,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "snap"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b6b67fb9a61334225b5b790716f609cd58395f895b3fe8b328786812a40bc3b"
+
+[[package]]
 name = "socket2"
 version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14350,11 +14356,16 @@ dependencies = [
  "lazy_static",
  "libc",
  "libsqlite3-sys",
+ "lz4",
  "prometheus 0.14.0",
+ "serde",
+ "snap",
+ "strum 0.26.3",
  "thiserror 1.0.69",
  "tracing",
  "tracing-subscriber",
  "uuid",
+ "zstd 0.12.4",
 ]
 
 [[package]]
@@ -18125,7 +18136,7 @@ dependencies = [
  "time 0.3.37",
  "zeroize",
  "zopfli",
- "zstd",
+ "zstd 0.13.2",
 ]
 
 [[package]]
@@ -18144,11 +18155,30 @@ dependencies = [
 
 [[package]]
 name = "zstd"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a27595e173641171fc74a1232b7b1c7a7cb6e18222c11e9dfb9888fa424c53c"
+dependencies = [
+ "zstd-safe 6.0.6",
+]
+
+[[package]]
+name = "zstd"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcf2b778a664581e31e389454a7072dab1647606d44f7feea22cd5abb9c9f3f9"
 dependencies = [
- "zstd-safe",
+ "zstd-safe 7.2.1",
+]
+
+[[package]]
+name = "zstd-safe"
+version = "6.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee98ffd0b48ee95e6c5168188e44a54550b1564d9d530ee21d5f0eaed1069581"
+dependencies = [
+ "libc",
+ "zstd-sys",
 ]
 
 [[package]]

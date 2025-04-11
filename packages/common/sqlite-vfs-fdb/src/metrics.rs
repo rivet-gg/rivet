@@ -7,6 +7,8 @@ use prometheus::{
 };
 use std::time::Instant;
 
+use crate::impls::pages::utils::CompressionType;
+
 /// FDB SQLite VFS metrics collection
 ///
 /// This module provides metrics to monitor the performance and behavior of the SQLite VFS
@@ -246,6 +248,39 @@ lazy_static! {
         "Total number of VFS errors by type",
         &["error_type"]
     ).unwrap();
+
+    //
+    // Compression Metrics
+    //
+    pub static ref COMPRESSION_OPERATIONS_TOTAL: IntCounterVec = register_int_counter_vec!(
+        "sqlite_vfs_fdb_compression_operations_total",
+        "Total number of compression/decompression operations by type and operation",
+        &["compression_type", "operation"]
+    ).unwrap();
+
+    pub static ref COMPRESSION_BYTES_TOTAL: IntCounterVec = register_int_counter_vec!(
+        "sqlite_vfs_fdb_compression_bytes_total",
+        "Total bytes processed in compression/decompression operations by type and operation",
+        &["compression_type", "operation"]
+    ).unwrap();
+
+    pub static ref COMPRESSION_RATIO: HistogramVec = register_histogram_vec!(
+        histogram_opts!(
+            "sqlite_vfs_fdb_compression_ratio",
+            "Histogram of compression ratios (original/compressed) by compression type",
+            vec![1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.5, 10.0, 15.0, 20.0]
+        ),
+        &["compression_type", "operation"]
+    ).unwrap();
+
+    pub static ref COMPRESSION_OPERATION_LATENCY: HistogramVec = register_histogram_vec!(
+        histogram_opts!(
+            "sqlite_vfs_fdb_compression_operation_latency_milliseconds",
+            "Histogram of time taken to complete compression/decompression operations in milliseconds",
+            LATENCY_BUCKETS.to_vec()
+        ),
+        &["compression_type", "operation"]
+    ).unwrap();
 }
 
 /// Timer for measuring operation durations
@@ -431,4 +466,55 @@ pub fn complete_metadata_write(timer: &MetricsTimer) {
 /// Record VFS error
 pub fn record_vfs_error(error_type: &str) {
     VFS_ERROR_TOTAL.with_label_values(&[error_type]).inc();
+}
+
+/// Start measuring a compression operation
+pub fn start_compression_operation() -> MetricsTimer {
+    MetricsTimer::start()
+}
+
+/// Complete compression operation metrics
+pub fn complete_compression_operation(
+    timer: &MetricsTimer,
+    compression_type: CompressionType,
+    original_size: usize,
+    compressed_size: usize,
+    is_compression: bool,
+) {
+    let comp_type = match compression_type {
+        CompressionType::None => "none",
+        CompressionType::Lz4 => "lz4",
+        CompressionType::Snappy => "snappy",
+        CompressionType::Zstd => "zstd",
+    };
+    let operation = if is_compression { "compress" } else { "decompress" };
+    
+    // Record operation count
+    COMPRESSION_OPERATIONS_TOTAL
+        .with_label_values(&[comp_type, operation])
+        .inc();
+    
+    // Record bytes processed
+    let size_to_record = if is_compression { original_size } else { compressed_size };
+    COMPRESSION_BYTES_TOTAL
+        .with_label_values(&[comp_type, operation])
+        .inc_by(size_to_record as u64);
+    
+    // Record ratio (only if compression and sizes are valid)
+    if is_compression && original_size > 0 && compressed_size > 0 {
+        let ratio = original_size as f64 / compressed_size as f64;
+        COMPRESSION_RATIO
+            .with_label_values(&[comp_type, operation])
+            .observe(ratio);
+    } else if !is_compression && original_size > 0 && compressed_size > 0 {
+        let ratio = compressed_size as f64 / original_size as f64;
+        COMPRESSION_RATIO
+            .with_label_values(&[comp_type, operation])
+            .observe(ratio);
+    }
+    
+    // Record latency
+    COMPRESSION_OPERATION_LATENCY
+        .with_label_values(&[comp_type, operation])
+        .observe(timer.elapsed_ms());
 }

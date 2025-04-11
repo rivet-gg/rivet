@@ -2,7 +2,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-use crate::impls::pages::utils::FdbVfsError;
+use crate::impls::pages::utils::{CompressionType, FdbVfsError};
 
 /// Metadata associated with a file in the FDB storage
 #[derive(Debug, Clone, Copy)]
@@ -17,10 +17,16 @@ pub struct FdbFileMetadata {
 	pub modified_at: u64,
 	/// Page size for this file
 	pub page_size: usize,
+	/// Compression type used for this file
+	pub compression_type: CompressionType,
 }
 
 impl FdbFileMetadata {
 	pub fn new(page_size: usize) -> Self {
+		Self::with_compression(page_size, CompressionType::None)
+	}
+	
+	pub fn with_compression(page_size: usize, compression_type: CompressionType) -> Self {
 		let now = SystemTime::now()
 			.duration_since(UNIX_EPOCH)
 			.unwrap_or_default()
@@ -32,11 +38,12 @@ impl FdbFileMetadata {
 			created_at: now,
 			modified_at: now,
 			page_size,
+			compression_type,
 		}
 	}
 
 	pub fn to_bytes(&self) -> Bytes {
-		let mut buf = BytesMut::with_capacity(16 + 8 + 8 + 8 + 4);
+		let mut buf = BytesMut::with_capacity(16 + 8 + 8 + 8 + 4 + 1);
 
 		// Write file_id (16 bytes)
 		buf.put_slice(self.file_id.as_bytes());
@@ -52,16 +59,20 @@ impl FdbFileMetadata {
 
 		// Write page_size (4 bytes)
 		buf.put_u32(self.page_size as u32);
+		
+		// Write compression_type (1 byte)
+		buf.put_u8(self.compression_type as u8);
 
 		buf.freeze()
 	}
 
 	pub fn from_bytes(bytes: &[u8]) -> Result<Self, FdbVfsError> {
-		if bytes.len() < 16 + 8 + 8 + 8 + 4 {
+		let expected_len = 16 + 8 + 8 + 8 + 4 + 1;
+		if bytes.len() < expected_len {
 			return Err(FdbVfsError::Other(format!(
 				"Metadata too short: {} bytes, expected at least {}",
 				bytes.len(),
-				16 + 8 + 8 + 8 + 4
+				expected_len
 			)));
 		}
 
@@ -81,6 +92,13 @@ impl FdbFileMetadata {
 		]);
 
 		let page_size = u32::from_be_bytes([bytes[40], bytes[41], bytes[42], bytes[43]]) as usize;
+		
+		// Read compression type - handle older metadata format
+		let compression_type = if bytes.len() > 44 {
+			CompressionType::from(bytes[44])
+		} else {
+			CompressionType::None
+		};
 
 		Ok(Self {
 			file_id,
@@ -88,6 +106,7 @@ impl FdbFileMetadata {
 			created_at,
 			modified_at,
 			page_size,
+			compression_type,
 		})
 	}
 }

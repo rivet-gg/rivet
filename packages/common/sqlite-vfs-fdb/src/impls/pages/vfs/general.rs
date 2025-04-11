@@ -10,9 +10,12 @@ use std::sync::{Arc, RwLock};
 use super::super::fdb::{keyspace::FdbKeySpace, metadata::FdbFileMetadata};
 use super::file::{FdbFile, FdbFileExt, FDB_IO_METHODS};
 use crate::metrics;
-use crate::impls::pages::utils::{run_fdb_tx, FdbVfsError, LockState, DEFAULT_PAGE_SIZE, FDB_VFS_NAME};
 use crate::impls::pages::utils::{
-	SQLITE_CANTOPEN, SQLITE_IOERR, SQLITE_OK, SQLITE_OPEN_CREATE, SQLITE_OPEN_READONLY,
+    create_compressor, run_fdb_tx, Compression, CompressionType, FdbVfsError, 
+    LockState, DEFAULT_PAGE_SIZE, FDB_VFS_NAME
+};
+use crate::impls::pages::utils::{
+    SQLITE_CANTOPEN, SQLITE_IOERR, SQLITE_OK, SQLITE_OPEN_CREATE, SQLITE_OPEN_READONLY,
 };
 
 /// Main FoundationDB VFS implementation
@@ -23,11 +26,21 @@ pub struct FdbVfs {
 	// Locks map to track file locks (currently not used but kept for future concurrent access)
 	#[allow(dead_code)]
 	pub locks: Arc<RwLock<HashMap<String, LockState>>>,
+	// Compression type used by this VFS
+	pub compression_type: CompressionType,
+	// Compressor factory used for this VFS
+	#[allow(dead_code)]
+	pub compressor: Box<dyn Compression>,
 }
 
 /// Get a registered VFS by name
 pub fn get_registered_vfs() -> Option<*mut sqlite3_vfs> {
-	let vfs_name = CString::new(FDB_VFS_NAME).ok()?;
+	get_registered_vfs_by_name(FDB_VFS_NAME)
+}
+
+/// Get a registered VFS by specific name
+pub fn get_registered_vfs_by_name(name: &str) -> Option<*mut sqlite3_vfs> {
+	let vfs_name = CString::new(name).ok()?;
 	unsafe {
 		let vfs_ptr = sqlite3_vfs_find(vfs_name.as_ptr());
 		if vfs_ptr.is_null() {
@@ -41,17 +54,30 @@ pub fn get_registered_vfs() -> Option<*mut sqlite3_vfs> {
 impl FdbVfs {
 	/// Create a new FdbVfs with a FoundationDB database
 	pub fn with_db(db: Arc<Database>) -> Result<Self, FdbVfsError> {
+		Self::with_db_and_compression(db, CompressionType::None)
+	}
+	
+	/// Create a new FdbVfs with a FoundationDB database and specific compression type
+	pub fn with_db_and_compression(db: Arc<Database>, compression_type: CompressionType) -> Result<Self, FdbVfsError> {
 		// Create a keyspace prefix based on a UUID
 		// This allows multiple VFS instances to coexist
 		let prefix = uuid::Uuid::new_v4().as_bytes().to_vec();
 		tracing::info!("Creating FdbVfs with prefix length: {}", prefix.len());
 		tracing::info!("Prefix bytes: {:?}", prefix);
+		
+		// Create the appropriate compressor
+		let compressor = create_compressor(compression_type);
+		
+		// Get the VFS name with appropriate suffix
+		let name = format!("{}{}", FDB_VFS_NAME, compressor.vfs_name_suffix());
 
 		Ok(Self {
 			db,
-			name: FDB_VFS_NAME.to_string(),
+			name,
 			keyspace: FdbKeySpace::new(&prefix),
 			locks: Arc::new(RwLock::new(HashMap::new())),
+			compression_type,
+			compressor,
 		})
 	}
 
@@ -61,11 +87,11 @@ impl FdbVfs {
 	}
 
 	/// Register this VFS with SQLite
-	#[deprecated(note = "Use register_vfs instead for better memory management")]
+	#[deprecated(note = "Use register_vfs_with_compression instead for better memory management")]
 	pub fn register(&self) -> Result<(), FdbVfsError> {
 		tracing::debug!("Registering FdbVfs with name: {}", self.name());
 		// Call our new register_vfs function instead
-		register_vfs(self.db.clone())
+		register_vfs_with_compression(self.db.clone(), self.compression_type)
 	}
 
 	// Helper method to store file metadata
@@ -199,304 +225,46 @@ impl FdbVfs {
 		let success = result.is_ok();
 		metrics::record_file_delete(path, success);
 
-		// Return the original result
 		result
 	}
 
 	// Helper method to check if a file exists
 	pub fn file_exists(&self, path: &str) -> FdbResult<bool> {
-		tracing::info!("Checking if file exists: {}", path);
+		// Check if there's metadata for this file
 		let metadata_result = self.get_metadata(path)?;
-		tracing::info!(
-			"File exists check result for {}: {}",
-			path,
-			metadata_result.is_some()
-		);
 		Ok(metadata_result.is_some())
 	}
 }
 
-// SQLite VFS callback implementations
-// These are defined at the module level so they're not recreated each time
-
-unsafe extern "C" fn vfs_open(
-	vfs_ptr: *mut sqlite3_vfs,
-	path: *const c_char,
-	file: *mut sqlite3_file,
-	flags: c_int,
-	out_flags: *mut c_int,
-) -> c_int {
-	// Start metrics timer for file open operation
-	let timer = metrics::start_file_open();
-	let mut success = false;
-	let path_str_for_metrics;
-
-	let result = {
-		if path.is_null() {
-			tracing::info!("FDB VFS: open called with null path");
-			path_str_for_metrics = "null_path".to_string();
-			SQLITE_CANTOPEN
-		} else {
-			let path_str = CStr::from_ptr(path).to_str().unwrap_or("Invalid UTF-8");
-			path_str_for_metrics = path_str.to_string();
-			tracing::debug!("FDB VFS: open called for path: {}", path_str);
-
-			// Get the FDB VFS instance from the pAppData field
-			let vfs_instance = (*vfs_ptr).pAppData as *const FdbVfs;
-			if vfs_instance.is_null() {
-				tracing::error!("VFS instance is null in vfs_open");
-				metrics::record_vfs_error("null_vfs_instance");
-				SQLITE_CANTOPEN
-			} else {
-				// Set output flags if provided
-				if !out_flags.is_null() {
-					*out_flags = flags;
-				}
-
-				// Check if file exists
-				let file_exists = match (*vfs_instance).file_exists(path_str) {
-					Ok(exists) => exists,
-					Err(e) => {
-						tracing::error!("Error checking if file exists: {}", e);
-						metrics::record_vfs_error("file_exists_check");
-						return SQLITE_CANTOPEN;
-					}
-				};
-
-				// Handle read-only flag
-				let _is_readonly = (flags & SQLITE_OPEN_READONLY) != 0;
-
-				// Check if we're allowed to create the file
-				let can_create = (flags & SQLITE_OPEN_CREATE) != 0;
-
-				if !file_exists && !can_create {
-					tracing::debug!("File does not exist and SQLITE_OPEN_CREATE not specified");
-					SQLITE_CANTOPEN
-				} else {
-					// Fetch existing metadata or create new metadata
-					let metadata = if file_exists {
-						match (*vfs_instance).get_metadata(path_str) {
-							Ok(Some(metadata)) => metadata,
-							Ok(None) => {
-								tracing::error!("File exists but metadata not found");
-								metrics::record_vfs_error("missing_metadata");
-								return SQLITE_CANTOPEN;
-							}
-							Err(e) => {
-								tracing::error!("Error fetching metadata: {}", e);
-								metrics::record_vfs_error("fetch_metadata");
-								return SQLITE_CANTOPEN;
-							}
-						}
-					} else {
-						// Create new metadata
-						let new_metadata = FdbFileMetadata::new(DEFAULT_PAGE_SIZE);
-
-						// Save the metadata in FoundationDB
-						match (*vfs_instance).store_metadata(path_str, &new_metadata) {
-							Ok(_) => new_metadata,
-							Err(e) => {
-								tracing::error!("Error creating file metadata: {}", e);
-								metrics::record_vfs_error("create_metadata");
-								return SQLITE_CANTOPEN;
-							}
-						}
-					};
-
-					// Initialize the FdbFile structure
-					let fdb_file = match (file as *mut FdbFile).as_mut() {
-						Some(f) => f,
-						None => {
-							tracing::error!("Null file pointer in vfs_open");
-							metrics::record_vfs_error("null_file_pointer");
-							return SQLITE_CANTOPEN;
-						}
-					};
-
-					// Initialize the file structure
-					fdb_file.base.pMethods = &FDB_IO_METHODS;
-
-					// Initialize the extension part
-					let ext = FdbFileExt {
-						vfs: vfs_instance,
-						path: path_str.to_string(),
-						flags,
-						lock_state: LockState::None,
-						metadata,
-						methods: &FDB_IO_METHODS,
-						db: (*vfs_instance).db.clone(),
-						is_open: true,
-					};
-					fdb_file.ext = MaybeUninit::new(ext);
-
-					tracing::debug!("Successfully opened file: {}", path_str);
-					success = true;
-					SQLITE_OK
-				}
-			}
-		}
-	};
-
-	// Record metrics for the file open operation
-	metrics::record_file_open_result(&path_str_for_metrics, success);
-	metrics::complete_file_open(&timer);
-
-	// Update file metrics for this opened file
-	if success {
-		// Get file size and update metrics
-		let fdb_file = (file as *mut FdbFile).as_mut().unwrap();
-		let ext = fdb_file.ext.assume_init_ref();
-		metrics::update_file_size(&path_str_for_metrics, ext.metadata.size);
-	}
-
-	result
+/// Register all FDB VFS variants (None, LZ4, Snappy, Zstd) with SQLite
+pub fn register_all_vfs_variants(db: Arc<Database>) -> Result<(), FdbVfsError> {
+    // Register the default VFS (no compression)
+    register_vfs(db.clone())?;
+    
+    // Register LZ4 compression VFS
+    register_vfs_with_compression(db.clone(), CompressionType::Lz4)?;
+    
+    // Register Snappy compression VFS
+    register_vfs_with_compression(db.clone(), CompressionType::Snappy)?;
+    
+    // Register Zstd compression VFS
+    register_vfs_with_compression(db.clone(), CompressionType::Zstd)?;
+    
+    Ok(())
 }
 
-unsafe extern "C" fn vfs_delete(
-	vfs_ptr: *mut sqlite3_vfs,
-	path: *const c_char,
-	_sync_dir: c_int,
-) -> c_int {
-	if path.is_null() {
-		return SQLITE_IOERR;
-	}
-
-	let path_str = CStr::from_ptr(path).to_str().unwrap_or("Invalid UTF-8");
-	tracing::debug!("FDB VFS: delete called for path: {}", path_str);
-
-	// Get the FDB VFS instance from the pAppData field
-	let vfs_instance = (*vfs_ptr).pAppData as *const FdbVfs;
-	if vfs_instance.is_null() {
-		tracing::error!("VFS instance is null in vfs_delete");
-		return SQLITE_IOERR;
-	}
-
-	// Delete the file
-	match (*vfs_instance).delete_file(path_str) {
-		Ok(_) => {
-			tracing::debug!("Successfully deleted file: {}", path_str);
-			SQLITE_OK
-		}
-		Err(e) => {
-			tracing::error!("Error deleting file: {}", e);
-			SQLITE_IOERR
-		}
-	}
-}
-
-unsafe extern "C" fn vfs_access(
-	vfs_ptr: *mut sqlite3_vfs,
-	path: *const c_char,
-	flags: c_int,
-	res_out: *mut c_int,
-) -> c_int {
-	if path.is_null() || res_out.is_null() {
-		return SQLITE_IOERR;
-	}
-
-	let path_str = CStr::from_ptr(path).to_str().unwrap_or("Invalid UTF-8");
-	tracing::debug!(
-		"FDB VFS: access called for path: {} with flags: {}",
-		path_str,
-		flags
-	);
-
-	// Get the FDB VFS instance from the pAppData field
-	let vfs_instance = (*vfs_ptr).pAppData as *const FdbVfs;
-	if vfs_instance.is_null() {
-		tracing::error!("VFS instance is null in vfs_access");
-		return SQLITE_IOERR;
-	}
-
-	// Check if the file exists in FoundationDB
-	match (*vfs_instance).file_exists(path_str) {
-		Ok(exists) => {
-			*res_out = if exists { 1 } else { 0 };
-			SQLITE_OK
-		}
-		Err(e) => {
-			tracing::error!("Error checking if file exists: {}", e);
-			SQLITE_IOERR
-		}
-	}
-}
-
-unsafe extern "C" fn vfs_fullpathname(
-	_vfs: *mut sqlite3_vfs,
-	path: *const c_char,
-	nOut: c_int,
-	out: *mut c_char,
-) -> c_int {
-	if path.is_null() || out.is_null() {
-		return SQLITE_IOERR;
-	}
-
-	let path_str = CStr::from_ptr(path).to_str().unwrap_or("Invalid UTF-8");
-	tracing::info!("FDB VFS: fullpathname called for path: {}", path_str);
-
-	// For our FDB VFS, full pathname is the same as the input pathname
-	// Because we're not representing a file system hierarchy
-	let out_buf = std::slice::from_raw_parts_mut(out as *mut u8, nOut as usize);
-	let copy_len = std::cmp::min(path_str.len(), nOut as usize - 1);
-	out_buf[..copy_len].copy_from_slice(&path_str.as_bytes()[..copy_len]);
-	out_buf[copy_len] = 0; // Null-terminate
-
-	SQLITE_OK
-}
-
-unsafe extern "C" fn vfs_current_time_int64(_vfs: *mut sqlite3_vfs, time_out: *mut i64) -> c_int {
-	if !time_out.is_null() {
-		// Get the current system time in milliseconds since Unix epoch
-		// This is what SQLite expects
-		let time = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-			Ok(duration) => duration.as_millis() as i64,
-			Err(_) => {
-				tracing::error!("Error getting system time");
-				return SQLITE_IOERR;
-			}
-		};
-
-		*time_out = time;
-		SQLITE_OK
-	} else {
-		SQLITE_IOERR
-	}
-}
-
-unsafe extern "C" fn vfs_current_time(vfs: *mut sqlite3_vfs, time_out: *mut f64) -> c_int {
-	if time_out.is_null() {
-		return SQLITE_IOERR;
-	}
-
-	let mut time_ms: i64 = 0;
-	let result = vfs_current_time_int64(vfs, &mut time_ms);
-	if result == SQLITE_OK && !time_out.is_null() {
-		// Convert from milliseconds to days
-		*time_out = time_ms as f64 / 86_400_000.0;
-		return SQLITE_OK;
-	}
-	result
-}
-
-pub const VFS_NAME: &str = "fdbpages";
-
-/// Register a FDB VFS with SQLite, creating a stable instance that won't be moved in memory
+/// Register the default FoundationDB VFS with SQLite (no compression)
 pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
-	tracing::info!("Creating and registering a SQLite VFS");
+    register_vfs_with_compression(db, CompressionType::None)
+}
 
-	// Create a keyspace prefix based on a UUID
-	// This allows multiple VFS instances to coexist
-	let prefix = uuid::Uuid::new_v4().as_bytes().to_vec();
-	tracing::info!("Creating FdbVfs with prefix length: {}", prefix.len());
-	tracing::info!("Prefix bytes: {:?}", prefix);
+/// Register FoundationDB VFS with specific compression with SQLite
+pub fn register_vfs_with_compression(db: Arc<Database>, compression_type: CompressionType) -> Result<(), FdbVfsError> {
+	tracing::info!("Creating and registering a SQLite VFS with compression: {:?}", compression_type);
 
-	// Create the VFS instance in a Box to ensure stable memory location
-	let vfs = Box::new(FdbVfs {
-		db,
-		name: FDB_VFS_NAME.to_string(),
-		keyspace: FdbKeySpace::new(&prefix),
-		locks: Arc::new(RwLock::new(HashMap::new())),
-	});
+	// Create a VFS instance with the specified compression
+	let vfs = Box::new(FdbVfs::with_db_and_compression(db, compression_type)?);
+	let vfs_name = vfs.name.clone();
 
 	// Convert Box to a raw pointer that will be stored in the SQLite VFS structure
 	// We intentionally leak this memory since SQLite will use it for the lifetime of the application
@@ -509,100 +277,135 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 		flags: c_int,
 		out_flags: *mut c_int,
 	) -> c_int {
-		if path.is_null() {
-			tracing::info!("FDB VFS: open called with null path");
-			return SQLITE_CANTOPEN;
-		}
+		// Start metrics timer for file open operation
+		let timer = metrics::start_file_open();
+		let mut success = false;
+		let path_str_for_metrics;
 
-		let path_str = CStr::from_ptr(path).to_str().unwrap_or("Invalid UTF-8");
-		tracing::debug!("FDB VFS: open called for path: {}", path_str);
+		let result = {
+			if path.is_null() {
+				tracing::info!("FDB VFS: open called with null path");
+				path_str_for_metrics = "null_path".to_string();
+				SQLITE_CANTOPEN
+			} else {
+				let path_str = CStr::from_ptr(path).to_str().unwrap_or("Invalid UTF-8");
+				path_str_for_metrics = path_str.to_string();
+				tracing::debug!("FDB VFS: open called for path: {}", path_str);
 
-		// Get the FDB VFS instance from the pAppData field
-		let vfs_instance = (*vfs_ptr).pAppData as *const FdbVfs;
-		if vfs_instance.is_null() {
-			tracing::error!("VFS instance is null in vfs_open");
-			return SQLITE_CANTOPEN;
-		}
+				// Get the FDB VFS instance from the pAppData field
+				let vfs_instance = (*vfs_ptr).pAppData as *const FdbVfs;
+				if vfs_instance.is_null() {
+					tracing::error!("VFS instance is null in vfs_open");
+					metrics::record_vfs_error("null_vfs_instance");
+					SQLITE_CANTOPEN
+				} else {
+					// Set output flags if provided
+					if !out_flags.is_null() {
+						*out_flags = flags;
+					}
 
-		// Set output flags if provided
-		if !out_flags.is_null() {
-			*out_flags = flags;
-		}
+					// Check if file exists
+					let file_exists = match (*vfs_instance).file_exists(path_str) {
+						Ok(exists) => exists,
+						Err(e) => {
+							tracing::error!("Error checking if file exists: {}", e);
+							metrics::record_vfs_error("file_exists_check");
+							return SQLITE_CANTOPEN;
+						}
+					};
 
-		// Check if file exists
-		let file_exists = match (*vfs_instance).file_exists(path_str) {
-			Ok(exists) => exists,
-			Err(e) => {
-				tracing::error!("Error checking if file exists: {}", e);
-				return SQLITE_CANTOPEN;
-			}
-		};
+					// Handle read-only flag
+					let _is_readonly = (flags & SQLITE_OPEN_READONLY) != 0;
 
-		// Handle read-only flag
-		let _is_readonly = (flags & SQLITE_OPEN_READONLY) != 0;
+					// Check if we're allowed to create the file
+					let can_create = (flags & SQLITE_OPEN_CREATE) != 0;
 
-		// Check if we're allowed to create the file
-		let can_create = (flags & SQLITE_OPEN_CREATE) != 0;
+					if !file_exists && !can_create {
+						tracing::debug!("File does not exist and SQLITE_OPEN_CREATE not specified");
+						SQLITE_CANTOPEN
+					} else {
+						// Fetch existing metadata or create new metadata
+						let metadata = if file_exists {
+							match (*vfs_instance).get_metadata(path_str) {
+								Ok(Some(metadata)) => metadata,
+								Ok(None) => {
+									tracing::error!("File exists but metadata not found");
+									metrics::record_vfs_error("missing_metadata");
+									return SQLITE_CANTOPEN;
+								}
+								Err(e) => {
+									tracing::error!("Error fetching metadata: {}", e);
+									metrics::record_vfs_error("fetch_metadata");
+									return SQLITE_CANTOPEN;
+								}
+							}
+						} else {
+							// Create new metadata with VFS compression type
+							let compression_type = (*vfs_instance).compression_type;
+							let new_metadata = FdbFileMetadata::with_compression(DEFAULT_PAGE_SIZE, compression_type);
 
-		if !file_exists && !can_create {
-			tracing::debug!("File does not exist and SQLITE_OPEN_CREATE not specified");
-			return SQLITE_CANTOPEN;
-		}
+							// Save the metadata in FoundationDB
+							match (*vfs_instance).store_metadata(path_str, &new_metadata) {
+								Ok(_) => new_metadata,
+								Err(e) => {
+									tracing::error!("Error creating file metadata: {}", e);
+									metrics::record_vfs_error("create_metadata");
+									return SQLITE_CANTOPEN;
+								}
+							}
+						};
 
-		// Fetch existing metadata or create new metadata
-		let metadata = if file_exists {
-			match (*vfs_instance).get_metadata(path_str) {
-				Ok(Some(metadata)) => metadata,
-				Ok(None) => {
-					tracing::error!("File exists but metadata not found");
-					return SQLITE_CANTOPEN;
+						// Initialize the FdbFile structure
+						let fdb_file = match (file as *mut FdbFile).as_mut() {
+							Some(f) => f,
+							None => {
+								tracing::error!("Null file pointer in vfs_open");
+								metrics::record_vfs_error("null_file_pointer");
+								return SQLITE_CANTOPEN;
+							}
+						};
+
+						// Initialize the file structure
+						fdb_file.base.pMethods = &FDB_IO_METHODS;
+
+						// Create a compressor for this file
+						let compressor = create_compressor(metadata.compression_type);
+						
+						// Initialize the extension part
+						let ext = FdbFileExt {
+							vfs: vfs_instance,
+							path: path_str.to_string(),
+							flags,
+							lock_state: LockState::None,
+							metadata,
+							methods: &FDB_IO_METHODS,
+							db: (*vfs_instance).db.clone(),
+							is_open: true,
+							compressor,
+						};
+						fdb_file.ext = MaybeUninit::new(ext);
+
+						tracing::debug!("Successfully opened file: {}", path_str);
+						success = true;
+						SQLITE_OK
+					}
 				}
-				Err(e) => {
-					tracing::error!("Error fetching metadata: {}", e);
-					return SQLITE_CANTOPEN;
-				}
-			}
-		} else {
-			// Create new metadata
-			let new_metadata = FdbFileMetadata::new(DEFAULT_PAGE_SIZE);
-
-			// Save the metadata in FoundationDB
-			match (*vfs_instance).store_metadata(path_str, &new_metadata) {
-				Ok(_) => new_metadata,
-				Err(e) => {
-					tracing::error!("Error creating file metadata: {}", e);
-					return SQLITE_CANTOPEN;
-				}
 			}
 		};
 
-		// Initialize the FdbFile structure
-		let fdb_file = match (file as *mut FdbFile).as_mut() {
-			Some(f) => f,
-			None => {
-				tracing::error!("Null file pointer in vfs_open");
-				return SQLITE_CANTOPEN;
-			}
-		};
+		// Record metrics for the file open operation
+		metrics::record_file_open_result(&path_str_for_metrics, success);
+		metrics::complete_file_open(&timer);
 
-		// Initialize the file structure
-		fdb_file.base.pMethods = &FDB_IO_METHODS;
+		// Update file metrics for this opened file
+		if success {
+			// Get file size and update metrics
+			let fdb_file = (file as *mut FdbFile).as_mut().unwrap();
+			let ext = fdb_file.ext.assume_init_ref();
+			metrics::update_file_size(&path_str_for_metrics, ext.metadata.size);
+		}
 
-		// Initialize the extension part
-		let ext = FdbFileExt {
-			vfs: vfs_instance,
-			path: path_str.to_string(),
-			flags,
-			lock_state: LockState::None,
-			metadata,
-			methods: &FDB_IO_METHODS,
-			db: (*vfs_instance).db.clone(),
-			is_open: true,
-		};
-		fdb_file.ext = MaybeUninit::new(ext);
-
-		tracing::debug!("Successfully opened file: {}", path_str);
-		SQLITE_OK
+		result
 	}
 
 	unsafe extern "C" fn vfs_delete(
@@ -611,6 +414,7 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 		_sync_dir: c_int,
 	) -> c_int {
 		if path.is_null() {
+			tracing::info!("FDB VFS: delete called with null path");
 			return SQLITE_IOERR;
 		}
 
@@ -621,17 +425,16 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 		let vfs_instance = (*vfs_ptr).pAppData as *const FdbVfs;
 		if vfs_instance.is_null() {
 			tracing::error!("VFS instance is null in vfs_delete");
+			metrics::record_vfs_error("null_vfs_instance_delete");
 			return SQLITE_IOERR;
 		}
 
-		// Delete the file
+		// Delete the file from FDB
 		match (*vfs_instance).delete_file(path_str) {
-			Ok(_) => {
-				tracing::debug!("Successfully deleted file: {}", path_str);
-				SQLITE_OK
-			}
+			Ok(_) => SQLITE_OK,
 			Err(e) => {
 				tracing::error!("Error deleting file: {}", e);
+				metrics::record_vfs_error("delete_error");
 				SQLITE_IOERR
 			}
 		}
@@ -644,6 +447,7 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 		res_out: *mut c_int,
 	) -> c_int {
 		if path.is_null() || res_out.is_null() {
+			tracing::info!("FDB VFS: access called with null path or res_out");
 			return SQLITE_IOERR;
 		}
 
@@ -658,6 +462,7 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 		let vfs_instance = (*vfs_ptr).pAppData as *const FdbVfs;
 		if vfs_instance.is_null() {
 			tracing::error!("VFS instance is null in vfs_access");
+			metrics::record_vfs_error("null_vfs_instance_access");
 			return SQLITE_IOERR;
 		}
 
@@ -669,6 +474,7 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 			}
 			Err(e) => {
 				tracing::error!("Error checking if file exists: {}", e);
+				metrics::record_vfs_error("file_exists_error");
 				SQLITE_IOERR
 			}
 		}
@@ -677,44 +483,57 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 	unsafe extern "C" fn vfs_fullpathname(
 		_vfs: *mut sqlite3_vfs,
 		path: *const c_char,
-		out_len: c_int,
+		nOut: c_int,
 		out: *mut c_char,
 	) -> c_int {
+		if path.is_null() || out.is_null() {
+			tracing::info!("FDB VFS: fullpathname called with null path or out");
+			return SQLITE_IOERR;
+		}
+
 		let path_str = CStr::from_ptr(path).to_str().unwrap_or("Invalid UTF-8");
 		tracing::info!("FDB VFS: fullpathname called for path: {}", path_str);
 
-		// Just copy the path as is
-		let path_bytes = CStr::from_ptr(path).to_bytes_with_nul();
-		if path_bytes.len() <= out_len as usize {
-			ptr::copy_nonoverlapping(path, out, path_bytes.len());
-			return SQLITE_OK;
-		}
+		// For our FDB VFS, full pathname is the same as the input pathname
+		// Because we're not representing a file system hierarchy
+		let out_buf = std::slice::from_raw_parts_mut(out as *mut u8, nOut as usize);
+		let copy_len = std::cmp::min(path_str.len(), nOut as usize - 1);
+		out_buf[..copy_len].copy_from_slice(&path_str.as_bytes()[..copy_len]);
+		out_buf[copy_len] = 0; // Null-terminate
 
-		SQLITE_IOERR
+		SQLITE_OK
 	}
 
-	unsafe extern "C" fn vfs_current_time_int64(
-		_vfs: *mut sqlite3_vfs,
-		time_out: *mut i64,
-	) -> c_int {
+	unsafe extern "C" fn vfs_current_time_int64(_vfs: *mut sqlite3_vfs, time_out: *mut i64) -> c_int {
 		if !time_out.is_null() {
-			// Get current time in milliseconds since Unix epoch
-			if let Ok(time) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-				// Convert to Julian Day Number times 86_400_000 (milliseconds in a day)
-				// Unix epoch (1970-01-01) is 2440587.5 in Julian Day
-				let julian_day_milliseconds =
-					(2440587.5 * 86_400_000.0) as i64 + time.as_millis() as i64;
-				*time_out = julian_day_milliseconds;
-				return SQLITE_OK;
-			}
+			// Get the current system time in milliseconds since Unix epoch
+			// This is what SQLite expects
+			let time = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+				Ok(duration) => duration.as_millis() as i64,
+				Err(_) => {
+					tracing::error!("Error getting system time");
+					metrics::record_vfs_error("time_error");
+					return SQLITE_IOERR;
+				}
+			};
+
+			*time_out = time;
+			SQLITE_OK
+		} else {
+			metrics::record_vfs_error("null_time_out_pointer");
+			SQLITE_IOERR
 		}
-		SQLITE_IOERR
 	}
 
 	unsafe extern "C" fn vfs_current_time(vfs: *mut sqlite3_vfs, time_out: *mut f64) -> c_int {
+		if time_out.is_null() {
+			metrics::record_vfs_error("null_time_out_pointer");
+			return SQLITE_IOERR;
+		}
+
 		let mut time_ms: i64 = 0;
 		let result = vfs_current_time_int64(vfs, &mut time_ms);
-		if result == SQLITE_OK && !time_out.is_null() {
+		if result == SQLITE_OK {
 			// Convert from milliseconds to days
 			*time_out = time_ms as f64 / 86_400_000.0;
 			return SQLITE_OK;
@@ -723,7 +542,8 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 	}
 
 	// Create a new CString for the VFS name and clone it for later use
-	let vfs_name = CString::new(FDB_VFS_NAME).unwrap();
+	let vfs_name_str = vfs_name.as_str();
+	let vfs_name = CString::new(vfs_name_str).unwrap();
 	let vfs_name_for_check = vfs_name.clone();
 
 	// Create a new VFS structure for SQLite
@@ -739,7 +559,6 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 		}
 
 		// Initialize the VFS with our implementation functions
-		// These are now defined at the module level
 		(*vfs_ptr) = sqlite3_vfs {
 			iVersion: 1,
 			szOsFile: std::mem::size_of::<FdbFile>() as c_int,
@@ -787,7 +606,7 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 		if check_vfs.is_null() {
 			tracing::error!("Failed to find registered VFS after registration");
 			return Err(FdbVfsError::Other(
-				"VFS was registered but not found afterwards".to_string(),
+				format!("VFS '{}' was registered but not found afterwards", vfs_name_str),
 			));
 		}
 
@@ -801,7 +620,7 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 			let name_str = name.to_str().unwrap_or("Invalid UTF-8");
 			tracing::info!("Found VFS: {}", name_str);
 
-			if name_str == FDB_VFS_NAME {
+			if name_str == vfs_name_str {
 				found = true;
 			}
 
@@ -810,11 +629,11 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 
 		if !found {
 			return Err(FdbVfsError::Other(
-				"VFS is not in the list of registered VFSs".to_string(),
+				format!("VFS '{}' is not in the list of registered VFSs", vfs_name_str),
 			));
 		}
 	}
 
-	tracing::info!("Successfully registered FdbVfs with SQLite");
+	tracing::info!("Successfully registered FdbVfs '{}' with SQLite", vfs_name_str);
 	Ok(())
 }
