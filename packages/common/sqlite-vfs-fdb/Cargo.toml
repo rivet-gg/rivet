@@ -13,6 +13,11 @@ futures = "0.3.31"
 prometheus = "0.14.0"
 lazy_static = "1.4.0"
 tracing.workspace = true
+lz4 = "1.24.0"
+snap = "1.1.0"
+zstd = "0.12.4"
+serde = { version = "1.0", features = ["derive"] }
+strum = { version = "0.26", features = ["derive"] }
 
 [dev-dependencies]
 libc = "0.2.153"
@@ -25,4 +30,8 @@ env_logger = "0.11"
 [[bench]]
 name = "sqlite_vfs"
 harness = false
+
+[[bin]]
+name = "check_vfs"
+path = "src/bin/check_vfs.rs"
 

@@ -37,10 +37,15 @@ lazy_static! {
 const SAMPLE_SIZE: u32 = 1;
 const SAMPLE_COUNT: u32 = 3;
 const ARGS: &[(Vfs, usize)] = &[
+	// Filesystem variants for baseline comparison
 	(Vfs::FsDelete, 10_000),
 	(Vfs::FsWal, 10_000),
 	(Vfs::FsWal2, 10_000),
-	(Vfs::Fdb, 10_000),
+	// FoundationDB VFS variants with different compression
+	(Vfs::Fdb, 10_000),      // No compression
+	(Vfs::FdbLz4, 10_000),   // LZ4 compression
+	(Vfs::FdbSnappy, 10_000), // Snappy compression
+	(Vfs::FdbZstd, 10_000),  // Zstd compression
 ];
 
 #[derive(Clone, Copy, Debug)]
@@ -51,8 +56,14 @@ enum Vfs {
 	FsWal,
 	// Filesystem with WAL2 mode
 	FsWal2,
-	// FoundationDB VFS
+	// FoundationDB VFS with no compression
 	Fdb,
+	// FoundationDB VFS with LZ4 compression
+	FdbLz4,
+	// FoundationDB VFS with Snappy compression
+	FdbSnappy,
+	// FoundationDB VFS with Zstd compression
+	FdbZstd,
 }
 
 impl Vfs {
@@ -62,15 +73,23 @@ impl Vfs {
 			Vfs::FsWal => "WAL",
 			Vfs::FsWal2 => "WAL2",
 			Vfs::Fdb => "DELETE",
+			Vfs::FdbLz4 => "DELETE",
+			Vfs::FdbSnappy => "DELETE",
+			Vfs::FdbZstd => "DELETE",
 		}
 	}
 
 	fn vfs_name(&self) -> &'static str {
 		match self {
+			// Filesystem VFS types
 			Vfs::FsDelete => "unix",
 			Vfs::FsWal => "unix",
 			Vfs::FsWal2 => "unix",
-			Vfs::Fdb => "fdb",
+			// FoundationDB VFS types with different compression algorithms
+			Vfs::Fdb => "fdb",            // No compression
+			Vfs::FdbLz4 => "fdb_lz4",     // LZ4 compression
+			Vfs::FdbSnappy => "fdb_snappy", // Snappy compression
+			Vfs::FdbZstd => "fdb_zstd",   // Zstd compression
 		}
 	}
 }
@@ -81,8 +100,27 @@ fn main() {
 		.with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
 		.try_init();
 
-	// Register the VFS with the new stable memory approach
-	sqlite_vfs_fdb::impls::pages::vfs::register_vfs(DATABASE.clone()).expect("Failed to register VFS");
+	// Register all VFS variants (None, LZ4, Snappy, Zstd)
+	sqlite_vfs_fdb::impls::pages::vfs::register_all_vfs_variants(DATABASE.clone())
+		.expect("Failed to register VFS variants");
+		
+	// Print debug message about VFS registration
+	println!("VFS registration complete. Testing registered VFS names:");
+	unsafe {
+		use libsqlite3_sys::*;
+		use std::ffi::CStr;
+		
+		// List all registered VFSs
+		let mut current_vfs = sqlite3_vfs_find(std::ptr::null());
+		
+		while !current_vfs.is_null() {
+			let name = CStr::from_ptr((*current_vfs).zName);
+			let name_str = name.to_str().unwrap_or("Invalid UTF-8");
+			println!("Found VFS: {}", name_str);
+			
+			current_vfs = (*current_vfs).pNext;
+		}
+	}
 
 	// Start the benchmarks
 	divan::main();
@@ -98,8 +136,9 @@ fn setup_sqlite(vfs: Vfs) -> (Arc<Database>, String) {
 	// Setup FoundationDB
 	let db = DATABASE.clone();
 
-	// Register the VFS
-	sqlite_vfs_fdb::impls::pages::vfs::register_vfs(db.clone()).expect("Failed to register VFS");
+	// Register all VFS variants (only needs to be called once, but safe to call multiple times)
+	sqlite_vfs_fdb::impls::pages::vfs::register_all_vfs_variants(db.clone())
+		.expect("Failed to register VFS variants");
 
 	// Generate a unique database name
 	let db_name = bench_db_name(vfs);
@@ -109,8 +148,8 @@ fn setup_sqlite(vfs: Vfs) -> (Arc<Database>, String) {
 
 // Helper to set the journal mode for a SQLite database
 fn set_journal_mode(sqlite_db: *mut libsqlite3_sys::sqlite3, mode: Vfs) {
-	// Only set journal mode for filesystem VFS, not for FDB VFS
-	if !matches!(mode, Vfs::Fdb) {
+	// Only set journal mode for filesystem VFS, not for any FDB VFS variants
+	if !matches!(mode, Vfs::Fdb | Vfs::FdbLz4 | Vfs::FdbSnappy | Vfs::FdbZstd) {
 		let query = format!("PRAGMA journal_mode={}", mode.journal_mode());
 		execute_sql(sqlite_db, &query).expect("Failed to set journal mode");
 	}
@@ -195,7 +234,7 @@ fn read_single_row(bencher: Bencher, args: (Vfs, usize)) {
 			set_journal_mode(sqlite_db, setup.vfs);
 			(setup, sqlite_db)
 		})
-		.bench_values(|(setup, sqlite_db)| {
+		.bench_values(|(_setup, sqlite_db)| {
 			// Benchmark reading a single row
 			let _value = query_count(sqlite_db, "SELECT value FROM test WHERE id = 1")
 				.expect("Failed to query");
@@ -214,7 +253,7 @@ fn read_all_rows(bencher: Bencher, args: (Vfs, usize)) {
 			set_journal_mode(sqlite_db, setup.vfs);
 			(setup, sqlite_db)
 		})
-		.bench_values(|(setup, sqlite_db)| {
+		.bench_values(|(_setup, sqlite_db)| {
 			// Benchmark reading all rows
 			let _count =
 				query_count(sqlite_db, "SELECT COUNT(*) FROM test").expect("Failed to query");
