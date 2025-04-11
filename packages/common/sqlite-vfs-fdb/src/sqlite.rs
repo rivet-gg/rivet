@@ -3,7 +3,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::ptr;
 
-use crate::impls::pages::utils::{FdbVfsError, SQLITE_OK, SQLITE_OPEN_CREATE, SQLITE_OPEN_READWRITE};
+use crate::utils::{FdbVfsError, SQLITE_OK, SQLITE_OPEN_CREATE, SQLITE_OPEN_READWRITE};
 
 /// Open a SQLite database with our FDB VFS
 pub fn open_sqlite_db(db_name: &str, vfs_name: &str) -> Result<*mut sqlite3, FdbVfsError> {

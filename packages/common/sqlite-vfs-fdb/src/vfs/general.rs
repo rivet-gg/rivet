@@ -10,8 +10,8 @@ use std::sync::{Arc, RwLock};
 use super::super::fdb::{keyspace::FdbKeySpace, metadata::FdbFileMetadata};
 use super::file::{FdbFile, FdbFileExt, FDB_IO_METHODS};
 use crate::metrics;
-use crate::impls::pages::utils::{run_fdb_tx, FdbVfsError, LockState, DEFAULT_PAGE_SIZE, FDB_VFS_NAME};
-use crate::impls::pages::utils::{
+use crate::utils::{run_fdb_tx, FdbVfsError, LockState, DEFAULT_PAGE_SIZE, FDB_VFS_NAME};
+use crate::utils::{
 	SQLITE_CANTOPEN, SQLITE_IOERR, SQLITE_OK, SQLITE_OPEN_CREATE, SQLITE_OPEN_READONLY,
 };
 

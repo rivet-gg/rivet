@@ -2,7 +2,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-use crate::impls::pages::utils::FdbVfsError;
+use crate::utils::FdbVfsError;
 
 /// Metadata associated with a file in the FDB storage
 #[derive(Debug, Clone, Copy)]
@@ -36,7 +36,7 @@ impl FdbFileMetadata {
 	}
 
 	pub fn to_bytes(&self) -> Bytes {
-		let mut buf = BytesMut::with_capacity(16 + 8 + 8 + 8 + 4);
+		let mut buf = BytesMut::with_capacity(16 + 8 + 8 + 8 + 4 + 1);
 
 		// Write file_id (16 bytes)
 		buf.put_slice(self.file_id.as_bytes());
@@ -57,11 +57,12 @@ impl FdbFileMetadata {
 	}
 
 	pub fn from_bytes(bytes: &[u8]) -> Result<Self, FdbVfsError> {
-		if bytes.len() < 16 + 8 + 8 + 8 + 4 {
+		let expected_len = 16 + 8 + 8 + 8 + 4 + 1;
+		if bytes.len() < expected_len {
 			return Err(FdbVfsError::Other(format!(
 				"Metadata too short: {} bytes, expected at least {}",
 				bytes.len(),
-				16 + 8 + 8 + 8 + 4
+				expected_len
 			)));
 		}
 
