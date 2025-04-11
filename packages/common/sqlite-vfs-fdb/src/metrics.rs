@@ -305,13 +305,15 @@ pub fn start_file_open() -> MetricsTimer {
 }
 
 /// Record file open success or failure
-pub fn record_file_open_result(_file_path: &str, success: bool) {
-    // We use _file_path to maintain the API, could be used in the future for per-file metrics
+pub fn record_file_open_result(file_path: &str, success: bool) {
     if !success {
         FILE_OPEN_ERRORS_TOTAL.inc();
     } else {
         // Increment open file count
         OPEN_FILES.inc();
+        // Track per-file metrics
+        READ_OPERATIONS_BY_FILE.with_label_values(&[file_path]);
+        WRITE_OPERATIONS_BY_FILE.with_label_values(&[file_path]);
     }
 }
 
@@ -321,7 +323,7 @@ pub fn complete_file_open(timer: &MetricsTimer) {
 }
 
 /// Record file close metrics
-pub fn record_file_close(success: bool) {
+pub fn record_file_close(_file_path: &str, success: bool) {
     FILE_CLOSE_TOTAL.inc();
     
     if success {
