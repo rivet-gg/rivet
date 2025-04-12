@@ -38,6 +38,27 @@ pub fn open_sqlite_db(db_name: &str, vfs_name: &str) -> Result<*mut sqlite3, Fdb
 	}
 
 	tracing::debug!("Successfully opened database with VFS: {}", vfs_name);
+	
+	// Enforce WAL mode and other important settings
+	
+	// WAL mode provides better concurrency and is generally faster than the 
+	// default DELETE journaling mode. It allows readers to continue reading 
+	// while a writer is active.
+	execute_sql(db, "PRAGMA journal_mode=WAL")?;
+	
+	// With WAL mode, NORMAL synchronous setting provides a good balance between 
+	// performance and data integrity. Data is safe in case of app crash, but 
+	// potentially at risk only during system crashes or power failures.
+	execute_sql(db, "PRAGMA synchronous=NORMAL")?;
+	
+	// Use a larger cache (16 MiB) to improve performance by reducing disk I/O.
+	// Negative value means size in KiB.
+	execute_sql(db, "PRAGMA cache_size=-16384")?;
+	
+	// Larger page size (8 KiB) reduces the number of round trips to FoundationDB 
+	// while staying under FDB's value size limits. Only affects new databases.
+	execute_sql(db, "PRAGMA page_size=8192")?;
+	
 	Ok(db)
 }
 

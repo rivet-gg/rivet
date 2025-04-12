@@ -21,6 +21,8 @@ divan = "0.1.0"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 criterion = "0.5"
 env_logger = "0.11"
+insta = "1.36.1"
+serde = { version = "1.0", features = ["derive"] }
 
 [[bench]]
 name = "sqlite_vfs"
