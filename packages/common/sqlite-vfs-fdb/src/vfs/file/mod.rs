@@ -758,6 +758,31 @@ pub unsafe extern "C" fn fdb_file_control(
 			SQLITE_OK
 		}
 
+		libsqlite3_sys::SQLITE_FCNTL_PDB => {
+			// This is used for persistent database binding
+			// For our implementation, we can just acknowledge without changing behavior
+			tracing::debug!("PDB control op acknowledged");
+			SQLITE_OK
+		}
+		
+		libsqlite3_sys::SQLITE_FCNTL_LOCK_TIMEOUT => {
+			// Set lock timeout in milliseconds
+			tracing::debug!("Lock timeout control op");
+			
+			if !arg.is_null() {
+				let timeout_ptr = arg as *mut c_int;
+				let timeout_value = *timeout_ptr;
+				
+				// Store the current timeout value (for our implementation we don't track this,
+				// so we're just echoing back the given value)
+				*timeout_ptr = timeout_value;
+				
+				tracing::debug!("Lock timeout set to {} ms", timeout_value);
+			}
+			
+			SQLITE_OK
+		}
+
 		// Unsupported or unknown ops
 		_ => {
             // TODO: Make these a hard error
