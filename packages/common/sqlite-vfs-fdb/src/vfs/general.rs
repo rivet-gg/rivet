@@ -323,13 +323,18 @@ pub unsafe extern "C" fn vfs_open(
 							tracing::debug!("Detected WAL file type for path: {}", path_str);
 							SqliteFileType::WAL
 						},
+						p if p.ends_with(".db-journal") => {
+							tracing::info!("Detected Journal file for path: {}", path_str);
+							tracing::debug!("Journal file is used temporarily during WAL initialization");
+							SqliteFileType::Journal
+						},
 						p if p.ends_with(".db") => {
 							tracing::debug!("Detected Database file type for path: {}", path_str);
 							SqliteFileType::Database
 						},
 						// For non-standard extensions, check for patterns and issue a warning
 						_p => {
-							tracing::error!("Invalid SQLite file extension in path: {}. Must use .db or .db-wal", path_str);
+							tracing::error!("Invalid SQLite file extension in path: {}. Must use .db, .db-wal, or .db-journal", path_str);
 							metrics::record_vfs_error("invalid_file_extension");
 							return SQLITE_CANTOPEN;
 						}
@@ -436,11 +441,62 @@ pub unsafe extern "C" fn vfs_access(
 		tracing::error!("VFS instance is null in vfs_access");
 		return SQLITE_IOERR;
 	}
-
-	// Check if the file exists in FoundationDB
+	
+	// Check if the file exists
 	match (*vfs_instance).file_exists(path_str) {
 		Ok(exists) => {
-			*res_out = if exists { 1 } else { 0 };
+			// Handle different flag values
+			match flags {
+				libsqlite3_sys::SQLITE_ACCESS_EXISTS => {
+					*res_out = if exists { 1 } else { 0 };
+					
+					// For journal files, add additional context since they're special
+					if path_str.ends_with(".db-journal") {
+						tracing::info!(
+							"Journal file exists check for {}: flags={}, result={} (temporary file used during WAL initialization)",
+							path_str,
+							flags,
+							*res_out
+						);
+					} else {
+						tracing::info!(
+							"File exists check for {}: flags={}, result={}",
+							path_str,
+							flags,
+							*res_out
+						);
+					}
+				},
+				
+				libsqlite3_sys::SQLITE_ACCESS_READWRITE => {
+					// In our implementation, if a file exists, it's both readable and writable
+					*res_out = if exists { 1 } else { 0 };
+					tracing::info!(
+						"File read/write check for {}: flags={}, result={}",
+						path_str,
+						flags,
+						*res_out
+					);
+				},
+				
+				libsqlite3_sys::SQLITE_ACCESS_READ => {
+					// In our implementation, if a file exists, it's readable
+					*res_out = if exists { 1 } else { 0 };
+					tracing::info!(
+						"File read check for {}: flags={}, result={}",
+						path_str,
+						flags,
+						*res_out
+					);
+				},
+				
+				// Return an error for any unrecognized flag values
+				_ => {
+					tracing::error!("Unknown access flags {} for path {}", flags, path_str);
+					return SQLITE_IOERR;
+				}
+			}
+			
 			SQLITE_OK
 		}
 		Err(e) => {
@@ -516,6 +572,44 @@ pub unsafe extern "C" fn vfs_current_time(vfs: *mut sqlite3_vfs, time_out: *mut 
 	result
 }
 
+/// Implementation of SQLite vfs_get_last_error callback
+pub unsafe extern "C" fn vfs_get_last_error(
+	_vfs: *mut sqlite3_vfs,
+	n_byte: c_int,
+	z_err_msg: *mut c_char,
+) -> c_int {
+	// This function should return the last error that occurred in the VFS
+	// and copy an error message into z_err_msg if provided
+	
+	if !z_err_msg.is_null() && n_byte > 0 {
+		// We'll store the last error message here
+		// For a production implementation, you would want to track errors in a thread-local storage
+		// or another mechanism to capture the actual last error
+		let error_message = "FoundationDB VFS error";
+		
+		// Create a CString from our error message
+		let c_error = match std::ffi::CString::new(error_message) {
+			Ok(c_str) => c_str,
+			Err(_) => return SQLITE_IOERR,
+		};
+		
+		// Copy as much of the error message as will fit in the provided buffer
+		let bytes_to_copy = std::cmp::min(n_byte as usize - 1, c_error.as_bytes().len());
+		std::ptr::copy_nonoverlapping(
+			c_error.as_ptr(),
+			z_err_msg,
+			bytes_to_copy,
+		);
+		
+		// Ensure null termination
+		*z_err_msg.add(bytes_to_copy) = 0;
+	}
+	
+	// Return a SQLite error code that represents the last error
+	// In a real implementation, this would return the actual last error code
+	SQLITE_IOERR
+}
+
 // Use the VFS_NAME from utils.rs for consistency
 
 /// Register a FDB VFS with SQLite, creating a stable instance that won't be moved in memory
@@ -562,7 +656,7 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 		// Initialize the VFS with our implementation functions
 		// These are now defined at the module level
 		(*vfs_ptr) = sqlite3_vfs {
-			iVersion: 1,
+			iVersion: 3,
 			szOsFile: std::mem::size_of::<FdbFile>() as c_int,
 			mxPathname: 512,
 			pNext: ptr::null_mut(),
@@ -580,7 +674,7 @@ pub fn register_vfs(db: Arc<Database>) -> Result<(), FdbVfsError> {
 			xRandomness: None,
 			xSleep: None,
 			xCurrentTime: Some(self::vfs_current_time),
-			xGetLastError: None,
+			xGetLastError: Some(self::vfs_get_last_error),
 			xCurrentTimeInt64: Some(self::vfs_current_time_int64),
 			xSetSystemCall: None,
 			xGetSystemCall: None,

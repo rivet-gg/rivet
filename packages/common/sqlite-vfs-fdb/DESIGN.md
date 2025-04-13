@@ -12,6 +12,19 @@ TODO: caches, etc
 - Page size is 8 KiB which is less than the FDB 10 KB so it's efficient
 - Larger pages = less round trips to the database
 
+## Journal File
+
+Despite using WAL mode, SQLite requires journal file access during initialization:
+
+1. First checks if journal file exists via `xAccess` calls
+2. Creates a temporary journal file during WAL setup
+3. Writes a 4KB header to the journal file
+4. Uses the journal during database initialization
+5. Deletes journal file when switching to WAL mode is complete
+6. After initialization, all transaction logging uses WAL exclusively
+
+Our implementation provides minimal journal file handling that records operations without persistent storage. This is sufficient since the journal is only temporarily used during setup. After initialization completes, SQLite relies exclusively on the WAL file for transaction logging.
+
 ## Shared Memory File
 
 https://sqlite.org/tempfiles.html#shared_memory_files
