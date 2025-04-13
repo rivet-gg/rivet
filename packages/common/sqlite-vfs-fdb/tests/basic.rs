@@ -5,6 +5,7 @@ use common::{
 };
 use libsqlite3_sys::{sqlite3_file, SQLITE_OK, SQLITE_OPEN_CREATE, SQLITE_OPEN_READWRITE};
 use std::ffi::{c_void, CString};
+use std::os::raw::c_int;
 
 // VFS implementation specific imports
 use libsqlite3_sys::sqlite3_vfs;
@@ -73,7 +74,7 @@ fn test_persistence_and_updates() -> Result<(), Box<dyn std::error::Error>> {
     // This test is modified to handle the case where the VFS can't persist data between connections
     
     // Each test should have a unique db name to avoid interference
-    let test_db_name = format!("fdb_persistence_test_{}", std::time::SystemTime::now()
+    let test_db_name = format!("fdb_persistence_test_{}.db", std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs());
@@ -262,12 +263,11 @@ fn test_transactions() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn test_vfs_file_create_metadata() -> Result<(), Box<dyn std::error::Error>> {
-    // This test may skip assertions that fail due to VFS implementation issues
     // Get the VFS
     let vfs_ptr = setup_fdb_vfs()?;
 
     // Test file path
-    let test_path = format!("fdb_{}_file_metadata_test", std::time::SystemTime::now()
+    let test_path = format!("fdb_{}_file_metadata_test.db", std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs());
@@ -288,6 +288,7 @@ fn test_vfs_file_create_metadata() -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
         // Allocate memory for a file handle
         let file_size = (*vfs_ptr).szOsFile;
+        tracing::info!("Allocating file handle of size: {}", file_size);
         let file_memory = libc::malloc(file_size as usize) as *mut sqlite3_file;
         assert!(!file_memory.is_null(), "Failed to allocate memory for file handle");
 
@@ -306,10 +307,45 @@ fn test_vfs_file_create_metadata() -> Result<(), Box<dyn std::error::Error>> {
         );
         assert_eq!(result, SQLITE_OK, "Failed to create file");
 
-        println!("File created successfully");
-
-        // Now check if the file exists - this is currently failing in the VFS implementation
-        // Skip the rest of the test for now, as the real issue is in the VFS implementation
+        tracing::info!("File created successfully");
+        
+        // Now try to write some data to it
+        let test_data = b"This is a test of direct file writing!";
+        let write_result = (*(*file_memory).pMethods).xWrite.unwrap()(
+            file_memory,
+            test_data.as_ptr() as *const c_void,
+            test_data.len() as c_int,
+            0 // offset
+        );
+        
+        tracing::info!("Write result: {}", write_result);
+        assert_eq!(write_result, SQLITE_OK, "Failed to write to file");
+        
+        // Now try to read the data back
+        let mut read_buffer = vec![0u8; test_data.len()];
+        let read_result = (*(*file_memory).pMethods).xRead.unwrap()(
+            file_memory,
+            read_buffer.as_mut_ptr() as *mut c_void,
+            test_data.len() as c_int,
+            0 // offset
+        );
+        
+        tracing::info!("Read result: {}", read_result);
+        assert_eq!(read_result, SQLITE_OK, "Failed to read from file");
+        
+        tracing::info!("Read data: {:?}", std::str::from_utf8(&read_buffer));
+        assert_eq!(&read_buffer, test_data, "Read data doesn't match written data");
+        
+        // Close the file
+        let close_result = (*(*file_memory).pMethods).xClose.unwrap()(file_memory);
+        tracing::info!("Close result: {}", close_result);
+        assert_eq!(close_result, SQLITE_OK, "Failed to close file");
+        
+        // Check if the file still exists in the VFS
+        let xaccess = (*vfs_ptr).xAccess.expect("xAccess should be defined");
+        let check_result = xaccess(vfs_ptr, c_path.as_ptr(), 0, &mut res_out);
+        assert_eq!(check_result, SQLITE_OK);
+        assert_eq!(res_out, 1, "File should exist after writing");
         
         // Free the file memory
         libc::free(file_memory as *mut c_void);
@@ -367,9 +403,27 @@ fn test_just_open_database() -> Result<(), Box<dyn std::error::Error>> {
 
     // Verify the database was opened successfully
     assert!(!sqlite_db.is_null(), "Database should be opened successfully");
+    
+    // Create a simple test table
+    tracing::info!("Creating test table...");
+    run_sql(sqlite_db, "CREATE TABLE debug_table (id INTEGER PRIMARY KEY, value TEXT)")?;
+    tracing::info!("Successfully created test table!");
+    
+    // Insert a row to verify write functionality
+    tracing::info!("Inserting test data...");
+    run_sql(sqlite_db, "INSERT INTO debug_table (value) VALUES ('test_value')")?;
+    tracing::info!("Successfully inserted test data!");
+    
+    // Query to verify read functionality
+    tracing::info!("Querying test data...");
+    let count = run_query(sqlite_db, "SELECT COUNT(*) FROM debug_table")?;
+    tracing::info!("Query returned count: {}", count);
+    assert_eq!(count, 1, "Should have 1 row in the test table");
 
     // Close the database
+    tracing::info!("Closing database...");
     close_db(sqlite_db)?;
+    tracing::info!("Database closed successfully!");
     
     // Metrics will be automatically exported when ctx is dropped
 

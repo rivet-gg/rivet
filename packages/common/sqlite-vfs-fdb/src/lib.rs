@@ -3,6 +3,7 @@ pub mod metrics;
 mod sqlite;
 pub mod utils;
 pub mod vfs;
+pub mod wal;
 pub mod wal_parser;
 
 // Re-export foundationdb for convenience

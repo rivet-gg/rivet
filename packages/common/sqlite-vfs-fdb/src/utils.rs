@@ -116,7 +116,7 @@ impl From<String> for FdbVfsError {
 }
 
 /// Lock state for a file
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LockState {
 	None,
 	Shared,

@@ -69,4 +69,27 @@ impl FdbKeySpace {
 		buf.put_slice(safe_path.as_bytes());
 		buf.freeze()
 	}
+	
+	/// Key for WAL frame data
+	/// Using salt values in the key ensures frames are stored in the same order
+	/// as they appear in the WAL file, which is important for recovery
+	pub fn wal_frame_key(&self, file_id: &Uuid, salt1: u32, salt2: u32, frame_idx: u32) -> Bytes {
+		let mut buf = BytesMut::with_capacity(self.prefix.len() + 1 + 16 + 4 + 4 + 4);
+		buf.put_slice(&self.prefix);
+		buf.put_u8(3); // WAL frame key type
+		buf.put_slice(file_id.as_bytes());
+		buf.put_u32(salt1);
+		buf.put_u32(salt2);
+		buf.put_u32(frame_idx); // Frame index to keep order within same salt values
+		buf.freeze()
+	}
+
+	/// Key for WAL header data
+	pub fn wal_header_key(&self, file_id: &Uuid) -> Bytes {
+		let mut buf = BytesMut::with_capacity(self.prefix.len() + 1 + 16);
+		buf.put_slice(&self.prefix);
+		buf.put_u8(4); // WAL header key type
+		buf.put_slice(file_id.as_bytes());
+		buf.freeze()
+	}
 }

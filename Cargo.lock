@@ -2181,18 +2181,15 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "lazy_static",
  "lazycell",
- "log",
- "prettyplease 0.2.25",
  "proc-macro2",
  "quote",
  "regex",
  "rustc-hash 1.1.0",
  "shlex",
  "syn 2.0.90",
- "which 4.4.2",
 ]
 
 [[package]]
@@ -8686,6 +8683,7 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e99fb7a497b1e3339bc746195567ed8d3e24945ecd636e3619d20b9de9e9149"
 dependencies = [
+ "bindgen 0.69.5",
  "cc",
  "pkg-config",
  "vcpkg",
@@ -14580,6 +14578,7 @@ dependencies = [
  "libc",
  "libsqlite3-sys",
  "prometheus 0.14.0",
+ "rand",
  "serde",
  "thiserror 1.0.69",
  "tracing",

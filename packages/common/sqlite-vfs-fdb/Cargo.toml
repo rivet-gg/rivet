@@ -8,10 +8,11 @@ foundationdb = { version = "0.9.1", features = ["fdb-7_1", "embedded-fdb-include
 bytes = "1.5.0"
 uuid = { version = "1.7.0", features = ["v4"] }
 thiserror = "1.0.57"
-libsqlite3-sys = { version = "0.30.1", features = ["bundled"] }
+libsqlite3-sys = { version = "0.30.1", features = ["buildtime_bindgen"] }
 futures = "0.3.31"
 prometheus = "0.14.0"
 lazy_static = "1.4.0"
+rand = "0.8.5"
 tracing.workspace = true
 
 [dev-dependencies]

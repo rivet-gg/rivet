@@ -8,7 +8,7 @@ use std::ptr;
 use std::sync::{Arc, RwLock};
 
 use super::super::fdb::{keyspace::FdbKeySpace, metadata::FdbFileMetadata};
-use super::file::{FdbFile, FdbFileExt, FDB_IO_METHODS};
+use super::file::{FdbFile, FdbFileExt, SqliteFileType, FDB_IO_METHODS};
 use crate::metrics;
 use crate::utils::{run_fdb_tx, FdbVfsError, LockState, DEFAULT_PAGE_SIZE, FDB_VFS_NAME};
 use crate::utils::{
@@ -317,6 +317,24 @@ pub unsafe extern "C" fn vfs_open(
 					// Initialize the file structure
 					fdb_file.base.pMethods = &FDB_IO_METHODS;
 
+					// Determine file type based on path suffix and validate proper SQLite file naming
+					let file_type = match path_str {
+						p if p.ends_with(".db-wal") => {
+							tracing::debug!("Detected WAL file type for path: {}", path_str);
+							SqliteFileType::WAL
+						},
+						p if p.ends_with(".db") => {
+							tracing::debug!("Detected Database file type for path: {}", path_str);
+							SqliteFileType::Database
+						},
+						// For non-standard extensions, check for patterns and issue a warning
+						p => {
+							tracing::error!("Invalid SQLite file extension in path: {}. Must use .db or .db-wal", path_str);
+							metrics::record_vfs_error("invalid_file_extension");
+							return SQLITE_CANTOPEN;
+						}
+					};
+					
 					// Initialize the extension part
 					let ext = FdbFileExt {
 						vfs: vfs_instance,
@@ -327,6 +345,14 @@ pub unsafe extern "C" fn vfs_open(
 						methods: &FDB_IO_METHODS,
 						db: (*vfs_instance).db.clone(),
 						is_open: true,
+						// Store the file type
+						file_type,
+						// Only initialize buffer for SHM files
+						shm_buffer: None,
+						// Set default SHM region size (will be updated in shm_map if needed)
+						shm_region_size: super::file::SHM_REGION_SIZE,
+						// Initial map count is 0
+						shm_map_count: 0,
 					};
 					fdb_file.ext = MaybeUninit::new(ext);
 
