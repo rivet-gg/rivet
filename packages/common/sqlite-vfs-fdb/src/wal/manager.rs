@@ -1,6 +1,6 @@
 use crate::fdb::keyspace::FdbKeySpace;
 use crate::utils::{run_fdb_tx, FdbVfsError};
-use crate::wal_parser::{WalFrame, WalHeader, WalParser};
+use crate::wal::parser::{WalFrame, WalHeader, WalParser};
 use foundationdb::{Database, FdbBindingError};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -102,15 +102,15 @@ impl WalManager {
 
         // If the write is to offset 0, it might include the WAL header
         if offset == 0 {
-            if data.len() >= crate::wal_parser::WAL_HEADER_SIZE {
+            if data.len() >= super::parser::WAL_HEADER_SIZE {
                 // Try to parse and store the header
-                match WalHeader::from_bytes(&data[0..crate::wal_parser::WAL_HEADER_SIZE]) {
+                match WalHeader::from_bytes(&data[0..super::parser::WAL_HEADER_SIZE]) {
                     Ok(header) => {
                         self.store_wal_header(file_id, &header)?;
                         
                         // If the data only contains the header, we're done
-                        if data.len() == crate::wal_parser::WAL_HEADER_SIZE {
-                            return Ok(crate::wal_parser::WAL_HEADER_SIZE);
+                        if data.len() == super::parser::WAL_HEADER_SIZE {
+                            return Ok(super::parser::WAL_HEADER_SIZE);
                         }
                     }
                     Err(e) => {
@@ -138,8 +138,8 @@ impl WalManager {
         };
         
         // Skip header if it's included in the data and we're at offset 0
-        let data_to_parse = if offset == 0 && data.len() >= crate::wal_parser::WAL_HEADER_SIZE {
-            &data[crate::wal_parser::WAL_HEADER_SIZE..]
+        let data_to_parse = if offset == 0 && data.len() >= super::parser::WAL_HEADER_SIZE {
+            &data[super::parser::WAL_HEADER_SIZE..]
         } else {
             data
         };
@@ -148,12 +148,12 @@ impl WalManager {
         parser.add_data(data_to_parse);
         
         // Calculate the frame index based on the offset
-        let frame_size = crate::wal_parser::FRAME_HEADER_SIZE + header.page_size as usize;
+        let frame_size = super::parser::FRAME_HEADER_SIZE + header.page_size as usize;
         let first_frame_idx = if offset == 0 {
             0
         } else {
             // If offset > header size, calculate frame index
-            ((offset - crate::wal_parser::WAL_HEADER_SIZE as i64) / frame_size as i64) as u32
+            ((offset - super::parser::WAL_HEADER_SIZE as i64) / frame_size as i64) as u32
         };
         
         // Process frames
@@ -175,8 +175,8 @@ impl WalManager {
         };
         
         // Return total bytes processed including header if present
-        if offset == 0 && data.len() >= crate::wal_parser::WAL_HEADER_SIZE {
-            Ok(crate::wal_parser::WAL_HEADER_SIZE + bytes_processed)
+        if offset == 0 && data.len() >= super::parser::WAL_HEADER_SIZE {
+            Ok(super::parser::WAL_HEADER_SIZE + bytes_processed)
         } else {
             Ok(bytes_processed)
         }
@@ -190,7 +190,7 @@ impl WalManager {
         let mut result = vec![0u8; count];
         
         // If the read includes the WAL header
-        if offset < crate::wal_parser::WAL_HEADER_SIZE as i64 {
+        if offset < super::parser::WAL_HEADER_SIZE as i64 {
             // Get the header
             let header = match self.get_wal_header(file_id)? {
                 Some(h) => h,
@@ -206,7 +206,7 @@ impl WalManager {
             // Calculate how much of the header to copy
             let header_start = offset as usize;
             let header_count = std::cmp::min(
-                crate::wal_parser::WAL_HEADER_SIZE - header_start,
+                super::parser::WAL_HEADER_SIZE - header_start,
                 count
             );
             

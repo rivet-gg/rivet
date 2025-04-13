@@ -14,6 +14,7 @@ use crate::utils::{run_fdb_tx, FdbVfsError, LockState, DEFAULT_PAGE_SIZE, FDB_VF
 use crate::utils::{
 	SQLITE_CANTOPEN, SQLITE_IOERR, SQLITE_OK, SQLITE_OPEN_CREATE, SQLITE_OPEN_READONLY,
 };
+use crate::wal::WalManager;
 
 /// Main FoundationDB VFS implementation
 pub struct FdbVfs {
@@ -419,6 +420,8 @@ pub unsafe extern "C" fn vfs_open(
 						shm_region_size: super::file::SHM_REGION_SIZE,
 						// Initial map count is 0
 						shm_map_count: 0,
+						// Initialize WAL manager - will be used for WAL operations
+						wal_manager: WalManager::new((*vfs_instance).db.clone(), (*vfs_instance).keyspace.clone()),
 					};
 					fdb_file.ext = MaybeUninit::new(ext);
 
