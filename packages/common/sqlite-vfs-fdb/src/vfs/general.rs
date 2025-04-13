@@ -214,28 +214,32 @@ impl FdbVfs {
 		
 		match file_type_result {
 			Ok(file_type) => {
-				// For journal files, we pretend they always exist if requested
-				// This allows SQLite initialization to proceed normally in WAL mode
-				if file_type == super::file::SqliteFileType::Journal {
-					tracing::info!(
-						"Journal file exists check for {}: true (mocked response for WAL initialization)",
-						path
-					);
-					return Ok(true);
+				match file_type {
+					super::file::SqliteFileType::Journal => {
+						// For journal files, we don't really check the FDB metadata
+						// Instead, we should use the journal_exists flag from any open journal file
+						// For now, we'll just return false since we don't track open files at the VFS level
+						tracing::info!(
+							"Journal file exists check for {}: returning false (journals simulated)",
+							path
+						);
+						return Ok(false);
+					},
+					_ => {
+						// For database and WAL files, check actual metadata
+						let metadata_result = self.get_metadata(path)?;
+						let exists = metadata_result.is_some();
+						
+						tracing::info!(
+							"File exists check for {} (type: {:?}): {}",
+							path,
+							file_type,
+							exists
+						);
+						
+						Ok(exists)
+					}
 				}
-				
-				// For database and WAL files, check actual metadata
-				let metadata_result = self.get_metadata(path)?;
-				let exists = metadata_result.is_some();
-				
-				tracing::info!(
-					"File exists check for {} (type: {:?}): {}",
-					path,
-					file_type,
-					exists
-				);
-				
-				Ok(exists)
 			},
 			Err(err) => {
 				// Log the error and return false for invalid file types
@@ -296,14 +300,15 @@ pub unsafe extern "C" fn vfs_open(
 					}
 				};
 				
-				// For journal files, we always say they exist and create them on demand
+				// Check if this is a journal file
 				let is_journal = file_type == SqliteFileType::Journal;
 				
-				// Check if file exists (except for journals which we handle specially)
+				// Check if file exists
 				let file_exists = if is_journal {
-					// Journal files are always treated as "exists" or "can create"
-					tracing::info!("Journal file auto-handled: {}", path_str);
-					true
+					// For journal files, we report as not existing initially
+					// The journal file will be created on demand and tracked in memory
+					tracing::info!("Journal file existence check for open: {}", path_str);
+					false
 				} else {
 					// For non-journal files, check normally
 					match (*vfs_instance).get_metadata(path_str) {
@@ -422,6 +427,8 @@ pub unsafe extern "C" fn vfs_open(
 						shm_map_count: 0,
 						// Initialize WAL manager - will be used for WAL operations
 						wal_manager: WalManager::new((*vfs_instance).db.clone(), (*vfs_instance).keyspace.clone()),
+						// Initialize journal_exists to false by default
+						journal_exists: false,
 					};
 					fdb_file.ext = MaybeUninit::new(ext);
 
@@ -468,7 +475,20 @@ pub unsafe extern "C" fn vfs_delete(
 		return SQLITE_IOERR;
 	}
 
-	// Delete the file
+	// Check if it's a journal file
+	let is_journal = match super::file::SqliteFileType::from_path(path_str) {
+		Ok(file_type) => file_type == super::file::SqliteFileType::Journal,
+		Err(_) => false
+	};
+	
+	// For journal files, we handle deletion specially
+	if is_journal {
+		tracing::info!("Journal file deletion requested: {}", path_str);
+		// We'll just acknowledge deletion without doing anything
+		return SQLITE_OK;
+	}
+	
+	// For other files, delete normally
 	match (*vfs_instance).delete_file(path_str) {
 		Ok(_) => {
 			tracing::debug!("Successfully deleted file: {}", path_str);

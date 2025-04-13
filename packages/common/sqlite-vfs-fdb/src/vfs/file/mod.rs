@@ -84,6 +84,8 @@ pub struct FdbFileExt {
 	pub shm_map_count: u32,
 	/// WAL manager for WAL operations
 	pub wal_manager: WalManager,
+	/// Whether the journal file exists (only used for journal files)
+	pub journal_exists: bool,
 }
 
 /// The I/O methods for FdbFile
@@ -209,12 +211,17 @@ pub unsafe extern "C" fn fdb_file_read(
 			wal::read_wal_file(file, file_path, buf, count, offset, ext, vfs)
 		}
 		SqliteFileType::Journal => {
-			// For journal files, we just log operations without actual implementation
-			// This is sufficient because in WAL mode the journal file is only used temporarily
-			// during database initialization, then deleted once WAL mode is fully established
-			tracing::info!("Journal read operation on: {}, offset={}, count={}", file_path, offset, count);
-			// Return SQLITE_OK with zeroed buffer which is already done above
-			SQLITE_OK
+			// Journal files are mocked and SQLite should never read from them
+			// In WAL mode, journal files are only created temporarily during initialization
+			tracing::error!(
+				"UNEXPECTED journal file read attempt: {}, offset={}, count={}. This indicates a problem in WAL mode setup.", 
+				file_path, offset, count
+			);
+			
+			// Always return an error for journal reads - SQLite should not be reading from journal files
+			// when we're forcing WAL mode
+			metrics::record_vfs_error("journal_read_attempt");
+			return SQLITE_IOERR;
 		}
 		SqliteFileType::Database => {
 			db::read_database_file(file, file_path, buf, count, offset, ext, vfs)
@@ -313,6 +320,11 @@ pub unsafe extern "C" fn fdb_file_write(
 				tracing::info!("Journal write data preview (first {} bytes): {:?}", 
 					preview_size, &buf_data[..preview_size]);
 			}
+			
+			// Mark the journal file as existing now
+			let ext_mut = fdb_file.ext.assume_init_mut();
+			ext_mut.journal_exists = true;
+			tracing::info!("Journal file marked as existing: {}", file_path);
 			
 			// Return success - the operation is tracked in memory but not persisted
 			// This is sufficient for initialization since the journal is temporary
