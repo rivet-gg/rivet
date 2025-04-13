@@ -32,6 +32,19 @@ pub enum SqliteFileType {
 	Journal,
 }
 
+impl SqliteFileType {
+	/// Maps a file path to its corresponding SqliteFileType
+	/// Returns a Result with either the file type or an error if the file extension is not recognized
+	pub fn from_path(path: &str) -> Result<Self, &'static str> {
+		match path {
+			p if p.ends_with(".db-wal") => Ok(SqliteFileType::WAL),
+			p if p.ends_with(".db-journal") => Ok(SqliteFileType::Journal),
+			p if p.ends_with(".db") => Ok(SqliteFileType::Database),
+			_ => Err("Invalid SQLite file extension. Must use .db, .db-wal, or .db-journal"),
+		}
+	}
+}
+
 /// FdbFile is the implementation of a SQLite file in FoundationDB
 #[repr(C)]
 pub struct FdbFile {
