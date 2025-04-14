@@ -6,6 +6,8 @@ import {
 	actorBuildsQueryOptions,
 	actorQueryOptions,
 	projectActorsQueryOptions,
+	type Route,
+	routesQueryOptions,
 } from "./query-options";
 
 export function destroyActorMutationOptions() {
@@ -221,3 +223,94 @@ export function useCreateActorFromSdkMutation({
 		},
 	});
 }
+
+export const usePatchRouteMutation = ({
+	onSuccess,
+}: { onSuccess?: () => void } = {}) => {
+	return useMutation({
+		mutationFn: async ({
+			projectNameId,
+			environmentNameId,
+			routeNameId,
+			...request
+		}: {
+			projectNameId: string;
+			environmentNameId: string;
+			routeNameId: string;
+		} & Rivet.routes.UpdateRouteBody) =>
+			rivetClient.routes.update(routeNameId, {
+				body: request,
+				project: projectNameId,
+				environment: environmentNameId,
+			}),
+		onSuccess: async (_, { projectNameId, environmentNameId }) => {
+			await queryClient.invalidateQueries(
+				routesQueryOptions({
+					projectNameId,
+					environmentNameId,
+				}),
+			);
+			onSuccess?.();
+		},
+	});
+};
+
+export const useCreateRouteMutation = ({
+	onSuccess,
+}: { onSuccess?: () => void } = {}) => {
+	return useMutation({
+		mutationFn: async ({
+			projectNameId,
+			environmentNameId,
+			nameId,
+			...request
+		}: {
+			nameId: string;
+			projectNameId: string;
+			environmentNameId: string;
+		} & Rivet.routes.UpdateRouteBody) =>
+			rivetClient.routes.update(nameId, {
+				body: request,
+				project: projectNameId,
+				environment: environmentNameId,
+			}),
+		onSuccess: async (_, { projectNameId, environmentNameId }) => {
+			await queryClient.invalidateQueries(
+				routesQueryOptions({
+					projectNameId,
+					environmentNameId,
+				}),
+			);
+			onSuccess?.();
+		},
+	});
+};
+
+export const useDeleteRouteMutation = ({
+	onSuccess,
+}: { onSuccess?: () => void } = {}) => {
+	return useMutation({
+		mutationFn: async ({
+			projectNameId,
+			environmentNameId,
+			routeNameId,
+		}: {
+			projectNameId: string;
+			environmentNameId: string;
+			routeNameId: string;
+		}) =>
+			rivetClient.routes.delete(routeNameId, {
+				project: projectNameId,
+				environment: environmentNameId,
+			}),
+		onSuccess: async (_, { projectNameId, environmentNameId }) => {
+			await queryClient.invalidateQueries(
+				routesQueryOptions({
+					projectNameId,
+					environmentNameId,
+				}),
+			);
+			onSuccess?.();
+		},
+	});
+};
