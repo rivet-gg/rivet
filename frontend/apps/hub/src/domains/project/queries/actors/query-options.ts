@@ -522,3 +522,155 @@ export const actorBuildsCountQueryOptions = ({
 		notifyOnChangeProps: ["data"],
 	});
 };
+
+export interface FunctionInvoke {
+	id: string;
+	host: string;
+	regionId: string;
+	timestamp: string;
+	level: string;
+	message: string;
+	properties: Record<string, string>;
+}
+
+export const functionsQueryOptions = ({
+	projectNameId,
+	environmentNameId,
+}: {
+	projectNameId: string;
+	environmentNameId: string;
+}) => {
+	return queryOptions({
+		queryKey: [
+			"project",
+			projectNameId,
+			"environment",
+			environmentNameId,
+			"functions",
+		],
+		queryFn: async ({
+			signal: abortSignal,
+			queryKey: [_, project, __, environment],
+		}) => {
+			const actors = await rivetClient.actors.list(
+				{
+					project,
+					environment,
+					includeDestroyed: true,
+				},
+				{ abortSignal },
+			);
+
+			const logs = await Promise.all(
+				actors.actors.flatMap((actor) =>
+					rivetClient.actors.logs
+						.get(
+							actor.id,
+							{
+								stream: Rivet.actors.LogStream.StdOut,
+								project,
+								environment,
+							},
+							{ abortSignal },
+						)
+						.then((response) => ({ actor, ...response }))
+						.catch(() => ({ actor, lines: [], timestamps: [] })),
+				),
+			);
+
+			const resolvedLogs = logs
+				.flatMap((log) =>
+					log.lines.map((line, index) => ({
+						actor: log.actor,
+						line: window.atob(line),
+						timestamp: log.timestamps[index],
+					})),
+				)
+				.filter((log) => log.line.includes("level="));
+
+			return Array(10000)
+				.fill(0)
+				.map((_, i) => ({
+					id: String(i),
+					timestamp: new Date().toISOString(),
+					host: [
+						"actor-core-nextjs-demo",
+						"actor-core-nextjs-demo2",
+						"actor-core-nextjs-demo3",
+						"actor-core-nextjs-demo4",
+					][i % 4],
+					status: {
+						method: ["GET", "POST", "PUT", "DELETE"][i % 4],
+						code: [200, 201, 400, 500][i % 4],
+					},
+					url: ["/api/v1/endpoint1", "/api/v1/endpoint2"][i % 2],
+					messages: Array(3)
+						.fill(0)
+						.map((_, j) => ({
+							id: j,
+							text: `Message ${j + 1} for request ${i}`,
+						})),
+				})) as FunctionInvoke[];
+		},
+		select: (data) => data,
+	});
+};
+
+export interface Route {
+	id: string;
+	hostname: string;
+	pathPrefix: string;
+	selector: Record<string, string>;
+	createdAt: Date;
+}
+
+export const routesQueryOptions = ({
+	projectNameId,
+	environmentNameId,
+}: {
+	projectNameId: string;
+	environmentNameId: string;
+}) => {
+	return queryOptions({
+		queryKey: [
+			"project",
+			projectNameId,
+			"environment",
+			environmentNameId,
+			"routes",
+		],
+		queryFn: async ({
+			signal: abortSignal,
+			queryKey: [_, project, __, environment],
+		}) => {
+			return rivetClient.routes.list(
+				{
+					project,
+					environment,
+				},
+				{ abortSignal },
+			);
+		},
+		select: (data) => data.routes,
+	});
+};
+
+export const routeQueryOptions = ({
+	projectNameId,
+	environmentNameId,
+	routeNameId,
+}: {
+	projectNameId: string;
+	environmentNameId: string;
+	routeNameId: string;
+}) => {
+	return queryOptions({
+		...routesQueryOptions({
+			projectNameId,
+			environmentNameId,
+		}),
+		select: (data) => {
+			return data.routes.find((route) => route.nameId === routeNameId);
+		},
+	});
+};

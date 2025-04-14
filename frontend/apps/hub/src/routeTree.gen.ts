@@ -45,7 +45,7 @@ import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmen
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/cdn'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBuildsImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/builds'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend'
-import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors'
+import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Import } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesIndexImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/lobbies/index'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendIndexImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/index'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersSplatImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/servers/$'
@@ -53,6 +53,10 @@ import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmen
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesLogsImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/lobbies/logs'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendVariablesImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/variables'
 import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendLogsImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/logs'
+import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId._v2/settings'
+import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId._v2/functions'
+import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId._v2/actors'
+import { Route as AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsImport } from './routes/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId._v2/actor-versions'
 
 // Create/Update Routes
 
@@ -316,11 +320,10 @@ const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBacke
     } as any,
   )
 
-const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsRoute =
-  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsImport.update(
+const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Route =
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Import.update(
     {
-      id: '/actors',
-      path: '/actors',
+      id: '/_v2',
       getParentRoute: () =>
         AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdRoute,
     } as any,
@@ -393,6 +396,46 @@ const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBacke
       path: '/logs',
       getParentRoute: () =>
         AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendRoute,
+    } as any,
+  )
+
+const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsRoute =
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsImport.update(
+    {
+      id: '/settings',
+      path: '/settings',
+      getParentRoute: () =>
+        AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Route,
+    } as any,
+  )
+
+const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsRoute =
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsImport.update(
+    {
+      id: '/functions',
+      path: '/functions',
+      getParentRoute: () =>
+        AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Route,
+    } as any,
+  )
+
+const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsRoute =
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsImport.update(
+    {
+      id: '/actors',
+      path: '/actors',
+      getParentRoute: () =>
+        AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Route,
+    } as any,
+  )
+
+const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsRoute =
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsImport.update(
+    {
+      id: '/actor-versions',
+      path: '/actor-versions',
+      getParentRoute: () =>
+        AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Route,
     } as any,
   )
 
@@ -575,11 +618,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLayoutTeamsGroupIdSettingsIndexImport
       parentRoute: typeof AuthenticatedLayoutTeamsGroupIdSettingsImport
     }
-    '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors': {
-      id: '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors'
-      path: '/actors'
-      fullPath: '/projects/$projectNameId/environments/$environmentNameId/actors'
-      preLoaderRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsImport
+    '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2': {
+      id: '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2'
+      path: ''
+      fullPath: '/projects/$projectNameId/environments/$environmentNameId'
+      preLoaderRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Import
       parentRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdImport
     }
     '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend': {
@@ -644,6 +687,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectNameId/environments/$environmentNameId/'
       preLoaderRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdIndexImport
       parentRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdImport
+    }
+    '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actor-versions': {
+      id: '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actor-versions'
+      path: '/actor-versions'
+      fullPath: '/projects/$projectNameId/environments/$environmentNameId/actor-versions'
+      preLoaderRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsImport
+      parentRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Import
+    }
+    '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actors': {
+      id: '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actors'
+      path: '/actors'
+      fullPath: '/projects/$projectNameId/environments/$environmentNameId/actors'
+      preLoaderRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsImport
+      parentRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Import
+    }
+    '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/functions': {
+      id: '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/functions'
+      path: '/functions'
+      fullPath: '/projects/$projectNameId/environments/$environmentNameId/functions'
+      preLoaderRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsImport
+      parentRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Import
+    }
+    '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/settings': {
+      id: '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/settings'
+      path: '/settings'
+      fullPath: '/projects/$projectNameId/environments/$environmentNameId/settings'
+      preLoaderRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsImport
+      parentRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Import
     }
     '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/logs': {
       id: '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/logs'
@@ -732,6 +803,30 @@ const AuthenticatedLayoutProjectsProjectNameIdSettingsRouteWithChildren =
     AuthenticatedLayoutProjectsProjectNameIdSettingsRouteChildren,
   )
 
+interface AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2RouteChildren {
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsRoute
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsRoute
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsRoute
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsRoute
+}
+
+const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2RouteChildren: AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2RouteChildren =
+  {
+    AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsRoute:
+      AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsRoute,
+    AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsRoute:
+      AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsRoute,
+    AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsRoute:
+      AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsRoute,
+    AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsRoute:
+      AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsRoute,
+  }
+
+const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2RouteWithChildren =
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Route._addFileChildren(
+    AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2RouteChildren,
+  )
+
 interface AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendRouteChildren {
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendLogsRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendLogsRoute
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendVariablesRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendVariablesRoute
@@ -790,7 +885,7 @@ const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServe
   )
 
 interface AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdRouteChildren {
-  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsRoute
+  AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Route: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2RouteWithChildren
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendRouteWithChildren
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBuildsRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBuildsRoute
   AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute: typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute
@@ -804,8 +899,8 @@ interface AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdR
 
 const AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdRouteChildren: AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdRouteChildren =
   {
-    AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsRoute:
-      AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsRoute,
+    AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2Route:
+      AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2RouteWithChildren,
     AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendRoute:
       AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendRouteWithChildren,
     AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBuildsRoute:
@@ -963,11 +1058,10 @@ export interface FileRoutesByFullPath {
   '/teams/$groupId/settings': typeof AuthenticatedLayoutTeamsGroupIdSettingsRouteWithChildren
   '/projects/$projectNameId/': typeof AuthenticatedLayoutProjectsProjectNameIdIndexRoute
   '/teams/$groupId/': typeof AuthenticatedLayoutTeamsGroupIdIndexRoute
-  '/projects/$projectNameId/environments/$environmentNameId': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdRouteWithChildren
+  '/projects/$projectNameId/environments/$environmentNameId': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2RouteWithChildren
   '/projects/$projectNameId/namespaces/$': typeof AuthenticatedLayoutProjectsProjectNameIdNamespacesSplatRoute
   '/projects/$projectNameId/settings/': typeof AuthenticatedLayoutProjectsProjectNameIdSettingsIndexRoute
   '/teams/$groupId/settings/': typeof AuthenticatedLayoutTeamsGroupIdSettingsIndexRoute
-  '/projects/$projectNameId/environments/$environmentNameId/actors': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsRoute
   '/projects/$projectNameId/environments/$environmentNameId/backend': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendRouteWithChildren
   '/projects/$projectNameId/environments/$environmentNameId/builds': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBuildsRoute
   '/projects/$projectNameId/environments/$environmentNameId/cdn': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute
@@ -977,6 +1071,10 @@ export interface FileRoutesByFullPath {
   '/projects/$projectNameId/environments/$environmentNameId/tokens': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensRoute
   '/projects/$projectNameId/environments/$environmentNameId/versions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdVersionsRoute
   '/projects/$projectNameId/environments/$environmentNameId/': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdIndexRoute
+  '/projects/$projectNameId/environments/$environmentNameId/actor-versions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsRoute
+  '/projects/$projectNameId/environments/$environmentNameId/actors': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsRoute
+  '/projects/$projectNameId/environments/$environmentNameId/functions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsRoute
+  '/projects/$projectNameId/environments/$environmentNameId/settings': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsRoute
   '/projects/$projectNameId/environments/$environmentNameId/backend/logs': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendLogsRoute
   '/projects/$projectNameId/environments/$environmentNameId/backend/variables': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendVariablesRoute
   '/projects/$projectNameId/environments/$environmentNameId/lobbies/logs': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesLogsRoute
@@ -1005,14 +1103,17 @@ export interface FileRoutesByTo {
   '/projects/$projectNameId/namespaces/$': typeof AuthenticatedLayoutProjectsProjectNameIdNamespacesSplatRoute
   '/projects/$projectNameId/settings': typeof AuthenticatedLayoutProjectsProjectNameIdSettingsIndexRoute
   '/teams/$groupId/settings': typeof AuthenticatedLayoutTeamsGroupIdSettingsIndexRoute
-  '/projects/$projectNameId/environments/$environmentNameId/actors': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsRoute
+  '/projects/$projectNameId/environments/$environmentNameId': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdIndexRoute
   '/projects/$projectNameId/environments/$environmentNameId/builds': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBuildsRoute
   '/projects/$projectNameId/environments/$environmentNameId/cdn': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute
   '/projects/$projectNameId/environments/$environmentNameId/matchmaker': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdMatchmakerRoute
   '/projects/$projectNameId/environments/$environmentNameId/servers': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdServersRouteWithChildren
   '/projects/$projectNameId/environments/$environmentNameId/tokens': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensRoute
   '/projects/$projectNameId/environments/$environmentNameId/versions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdVersionsRoute
-  '/projects/$projectNameId/environments/$environmentNameId': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdIndexRoute
+  '/projects/$projectNameId/environments/$environmentNameId/actor-versions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsRoute
+  '/projects/$projectNameId/environments/$environmentNameId/actors': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsRoute
+  '/projects/$projectNameId/environments/$environmentNameId/functions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsRoute
+  '/projects/$projectNameId/environments/$environmentNameId/settings': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsRoute
   '/projects/$projectNameId/environments/$environmentNameId/backend/logs': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendLogsRoute
   '/projects/$projectNameId/environments/$environmentNameId/backend/variables': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendVariablesRoute
   '/projects/$projectNameId/environments/$environmentNameId/lobbies/logs': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesLogsRoute
@@ -1049,7 +1150,7 @@ export interface FileRoutesById {
   '/_authenticated/_layout/projects/$projectNameId/namespaces/$': typeof AuthenticatedLayoutProjectsProjectNameIdNamespacesSplatRoute
   '/_authenticated/_layout/projects/$projectNameId/settings/': typeof AuthenticatedLayoutProjectsProjectNameIdSettingsIndexRoute
   '/_authenticated/_layout/teams/$groupId/settings/': typeof AuthenticatedLayoutTeamsGroupIdSettingsIndexRoute
-  '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdActorsRoute
+  '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2RouteWithChildren
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendRouteWithChildren
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/builds': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBuildsRoute
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/cdn': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdCdnRoute
@@ -1059,6 +1160,10 @@ export interface FileRoutesById {
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/tokens': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdTokensRoute
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/versions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdVersionsRoute
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdIndexRoute
+  '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actor-versions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorVersionsRoute
+  '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actors': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2ActorsRoute
+  '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/functions': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2FunctionsRoute
+  '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/settings': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdV2SettingsRoute
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/logs': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendLogsRoute
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/variables': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdBackendVariablesRoute
   '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/lobbies/logs': typeof AuthenticatedLayoutProjectsProjectNameIdEnvironmentsEnvironmentNameIdLobbiesLogsRoute
@@ -1095,7 +1200,6 @@ export interface FileRouteTypes {
     | '/projects/$projectNameId/namespaces/$'
     | '/projects/$projectNameId/settings/'
     | '/teams/$groupId/settings/'
-    | '/projects/$projectNameId/environments/$environmentNameId/actors'
     | '/projects/$projectNameId/environments/$environmentNameId/backend'
     | '/projects/$projectNameId/environments/$environmentNameId/builds'
     | '/projects/$projectNameId/environments/$environmentNameId/cdn'
@@ -1105,6 +1209,10 @@ export interface FileRouteTypes {
     | '/projects/$projectNameId/environments/$environmentNameId/tokens'
     | '/projects/$projectNameId/environments/$environmentNameId/versions'
     | '/projects/$projectNameId/environments/$environmentNameId/'
+    | '/projects/$projectNameId/environments/$environmentNameId/actor-versions'
+    | '/projects/$projectNameId/environments/$environmentNameId/actors'
+    | '/projects/$projectNameId/environments/$environmentNameId/functions'
+    | '/projects/$projectNameId/environments/$environmentNameId/settings'
     | '/projects/$projectNameId/environments/$environmentNameId/backend/logs'
     | '/projects/$projectNameId/environments/$environmentNameId/backend/variables'
     | '/projects/$projectNameId/environments/$environmentNameId/lobbies/logs'
@@ -1132,14 +1240,17 @@ export interface FileRouteTypes {
     | '/projects/$projectNameId/namespaces/$'
     | '/projects/$projectNameId/settings'
     | '/teams/$groupId/settings'
-    | '/projects/$projectNameId/environments/$environmentNameId/actors'
+    | '/projects/$projectNameId/environments/$environmentNameId'
     | '/projects/$projectNameId/environments/$environmentNameId/builds'
     | '/projects/$projectNameId/environments/$environmentNameId/cdn'
     | '/projects/$projectNameId/environments/$environmentNameId/matchmaker'
     | '/projects/$projectNameId/environments/$environmentNameId/servers'
     | '/projects/$projectNameId/environments/$environmentNameId/tokens'
     | '/projects/$projectNameId/environments/$environmentNameId/versions'
-    | '/projects/$projectNameId/environments/$environmentNameId'
+    | '/projects/$projectNameId/environments/$environmentNameId/actor-versions'
+    | '/projects/$projectNameId/environments/$environmentNameId/actors'
+    | '/projects/$projectNameId/environments/$environmentNameId/functions'
+    | '/projects/$projectNameId/environments/$environmentNameId/settings'
     | '/projects/$projectNameId/environments/$environmentNameId/backend/logs'
     | '/projects/$projectNameId/environments/$environmentNameId/backend/variables'
     | '/projects/$projectNameId/environments/$environmentNameId/lobbies/logs'
@@ -1174,7 +1285,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_layout/projects/$projectNameId/namespaces/$'
     | '/_authenticated/_layout/projects/$projectNameId/settings/'
     | '/_authenticated/_layout/teams/$groupId/settings/'
-    | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors'
+    | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/builds'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/cdn'
@@ -1184,6 +1295,10 @@ export interface FileRouteTypes {
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/tokens'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/versions'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/'
+    | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actor-versions'
+    | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actors'
+    | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/functions'
+    | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/settings'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/logs'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/variables'
     | '/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/lobbies/logs'
@@ -1340,7 +1455,7 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId.tsx",
       "parent": "/_authenticated/_layout/projects/$projectNameId",
       "children": [
-        "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors",
+        "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2",
         "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend",
         "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/builds",
         "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/cdn",
@@ -1364,9 +1479,15 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/_layout/teams/$groupId/settings/index.tsx",
       "parent": "/_authenticated/_layout/teams/$groupId/settings"
     },
-    "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors": {
-      "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors.tsx",
-      "parent": "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId"
+    "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2": {
+      "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2.tsx",
+      "parent": "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId",
+      "children": [
+        "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actor-versions",
+        "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actors",
+        "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/functions",
+        "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/settings"
+      ]
     },
     "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend": {
       "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend.tsx",
@@ -1416,6 +1537,22 @@ export const routeTree = rootRoute
     "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/": {
       "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/index.tsx",
       "parent": "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId"
+    },
+    "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actor-versions": {
+      "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId._v2/actor-versions.tsx",
+      "parent": "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2"
+    },
+    "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actors": {
+      "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId._v2/actors.tsx",
+      "parent": "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2"
+    },
+    "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/functions": {
+      "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId._v2/functions.tsx",
+      "parent": "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2"
+    },
+    "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/settings": {
+      "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId._v2/settings.tsx",
+      "parent": "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2"
     },
     "/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/logs": {
       "filePath": "_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/backend/logs.tsx",

@@ -458,7 +458,7 @@ function ProjectActorsRoute() {
 	}
 
 	return (
-		<div className="flex flex-col w-screen h-[calc(100vh-6.5rem)] bg-card -mx-4 -my-4">
+		<div className="flex flex-col max-w-full w-full h-full bg-card">
 			<Content />
 		</div>
 	);
@@ -473,12 +473,16 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute(
-	"/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors",
+	"/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actors",
 )({
 	validateSearch: zodValidator(searchSchema),
 	staticData: {
-		layout: "actors",
+		layout: "v2",
 	},
 	component: ProjectActorsRoute,
-	pendingComponent: Layout.Content.Skeleton,
+	pendingComponent: () => (
+		<div className="p-4">
+			<Layout.Content.Skeleton />
+		</div>
+	),
 });
