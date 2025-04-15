@@ -5,6 +5,7 @@ use super::setup::test_db_name;
 use std::path::PathBuf;
 
 // Define a trait for SQLite driver implementations
+#[allow(unused)]
 pub trait SqliteDriver: Clone {
     fn name(&self) -> &'static str;
     fn register(&self) -> Result<(), Box<dyn Error>>;
@@ -16,6 +17,7 @@ pub struct FdbSqliteDriver {
     db: std::sync::Arc<foundationdb::Database>,
 }
 
+#[allow(dead_code)]
 impl FdbSqliteDriver {
     pub fn new(db: std::sync::Arc<foundationdb::Database>) -> Self {
         Self { db }
@@ -70,6 +72,7 @@ fn export_metrics(test_name: &str) {
 }
 
 // Test context that holds state for a specific test
+#[allow(dead_code)]
 pub struct SqliteTestContext<D: SqliteDriver> {
     pub db_name: String,
     pub driver: D,
@@ -77,6 +80,7 @@ pub struct SqliteTestContext<D: SqliteDriver> {
     test_name: String,
 }
 
+#[allow(dead_code)]
 impl<D: SqliteDriver> SqliteTestContext<D> {
     pub fn new(prefix: &str, driver: D) -> Result<Self, Box<dyn Error>> {
         // Register the driver
@@ -109,6 +113,7 @@ impl<D: SqliteDriver> Drop for SqliteTestContext<D> {
 }
 
 // Helper functions for working with SQLite databases in tests
+#[allow(unused)]
 pub fn run_query(
     sqlite_db: *mut sqlite3, 
     query: &str
@@ -117,6 +122,7 @@ pub fn run_query(
     Ok(count)
 }
 
+#[allow(unused)]
 pub fn run_sql(
     sqlite_db: *mut sqlite3, 
     sql: &str
@@ -125,6 +131,7 @@ pub fn run_sql(
     Ok(())
 }
 
+#[allow(unused)]
 pub fn close_db(
     sqlite_db: *mut sqlite3
 ) -> Result<(), Box<dyn Error>> {

@@ -57,7 +57,7 @@ impl FdbFileMetadata {
 	}
 
 	pub fn from_bytes(bytes: &[u8]) -> Result<Self, FdbVfsError> {
-		let expected_len = 16 + 8 + 8 + 8 + 4 + 1;
+		let expected_len = 16 + 8 + 8 + 8 + 4;
 		if bytes.len() < expected_len {
 			return Err(FdbVfsError::Other(format!(
 				"Metadata too short: {} bytes, expected at least {}",
@@ -69,19 +69,17 @@ impl FdbFileMetadata {
 		let file_id = Uuid::from_slice(&bytes[0..16])
 			.map_err(|e| FdbVfsError::Other(format!("Invalid UUID in metadata: {}", e)))?;
 
-		let size = i64::from_be_bytes([
-			bytes[16], bytes[17], bytes[18], bytes[19], bytes[20], bytes[21], bytes[22], bytes[23],
-		]);
+		let size = i64::from_be_bytes(bytes[16..24].try_into()
+			.map_err(|_| FdbVfsError::Other("Failed to convert size bytes".to_string()))?);
 
-		let created_at = u64::from_be_bytes([
-			bytes[24], bytes[25], bytes[26], bytes[27], bytes[28], bytes[29], bytes[30], bytes[31],
-		]);
+		let created_at = u64::from_be_bytes(bytes[24..32].try_into()
+			.map_err(|_| FdbVfsError::Other("Failed to convert created_at bytes".to_string()))?);
 
-		let modified_at = u64::from_be_bytes([
-			bytes[32], bytes[33], bytes[34], bytes[35], bytes[36], bytes[37], bytes[38], bytes[39],
-		]);
+		let modified_at = u64::from_be_bytes(bytes[32..40].try_into()
+			.map_err(|_| FdbVfsError::Other("Failed to convert modified_at bytes".to_string()))?);
 
-		let page_size = u32::from_be_bytes([bytes[40], bytes[41], bytes[42], bytes[43]]) as usize;
+		let page_size = u32::from_be_bytes(bytes[40..44].try_into()
+			.map_err(|_| FdbVfsError::Other("Failed to convert page_size bytes".to_string()))?) as usize;
 
 		Ok(Self {
 			file_id,

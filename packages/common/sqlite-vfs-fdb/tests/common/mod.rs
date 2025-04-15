@@ -1,6 +1,7 @@
 // Import and re-export
 pub use self::setup::setup_fdb; 
-pub use self::test_helpers::{SqliteDriver, SqliteTestContext, FdbSqliteDriver, run_query, run_sql, close_db};
+#[allow(unused_imports)]
+pub use self::test_helpers::{SqliteTestContext, FdbSqliteDriver, run_query, run_sql, close_db};
 
 // Modules
 pub mod setup;

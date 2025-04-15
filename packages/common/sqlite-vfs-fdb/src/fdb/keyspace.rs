@@ -1,6 +1,9 @@
 use bytes::{BufMut, Bytes, BytesMut};
 use uuid::Uuid;
 
+/// Maximum path length for SQLite paths 
+const MAX_PATH_LEN: usize = 4096;
+
 /// Key space management for storing file data in FoundationDB
 #[derive(Clone)]
 pub struct FdbKeySpace {
@@ -10,13 +13,6 @@ pub struct FdbKeySpace {
 
 impl FdbKeySpace {
 	pub fn new(prefix: &[u8]) -> Self {
-		tracing::info!("Creating FdbKeySpace with prefix length: {}", prefix.len());
-		if prefix.is_empty() {
-			tracing::error!("ERROR: Empty prefix provided to FdbKeySpace::new!");
-		} else {
-			tracing::info!("Prefix data: {:?}", prefix);
-		}
-		
 		Self {
 			prefix: Bytes::copy_from_slice(prefix),
 		}
@@ -35,24 +31,11 @@ impl FdbKeySpace {
 	/// Key for file metadata
 	pub fn metadata_key(&self, path: &str) -> Bytes {
 		// Validate input path - truncate if too long to prevent overflow
-		// SQLite paths typically shouldn't be extremely long anyway
-		const MAX_PATH_LEN: usize = 4096; // Reasonable maximum path length
 		let safe_path = if path.len() > MAX_PATH_LEN {
 			&path[0..MAX_PATH_LEN]
 		} else {
 			path
 		};
-		
-		tracing::info!("Creating metadata key for path: {}", path);
-		let prefix_len = self.prefix.len();
-		let prefix_empty = self.prefix.is_empty();
-		tracing::info!("Prefix check - length: {}, is_empty: {}", prefix_len, prefix_empty);
-		
-		if !prefix_empty && prefix_len > 0 {
-			tracing::info!("Prefix data: {:?}", &self.prefix[..]);
-		} else {
-			tracing::error!("Warning: Empty or invalid prefix detected!");
-		}
 		
 		let mut buf = BytesMut::with_capacity(self.prefix.len() + 1 + safe_path.len());
 		buf.put_slice(&self.prefix);
@@ -74,8 +57,6 @@ impl FdbKeySpace {
 	/// Key for lock information
 	pub fn lock_key(&self, path: &str) -> Bytes {
 		// Validate input path - truncate if too long to prevent overflow
-		// SQLite paths typically shouldn't be extremely long anyway
-		const MAX_PATH_LEN: usize = 4096; // Reasonable maximum path length
 		let safe_path = if path.len() > MAX_PATH_LEN {
 			&path[0..MAX_PATH_LEN]
 		} else {

@@ -27,6 +27,10 @@ pub use libsqlite3_sys::SQLITE_OPEN_READWRITE;
 pub const DEFAULT_PAGE_SIZE: usize = 4096;
 pub const MAX_SAFE_PAGE_SIZE: usize = 8192; // Conservative limit to avoid BytesMut capacity issues
 
+// Constants for time conversion
+pub const JULIAN_DAY_UNIX_EPOCH: f64 = 2440587.5; // Julian day for Unix epoch (1970-01-01)
+pub const MILLISECONDS_PER_DAY: f64 = 86_400_000.0; // Number of milliseconds in a day
+
 // SQLite VFS module name
 pub const FDB_VFS_NAME: &str = "fdb";
 

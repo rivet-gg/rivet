@@ -1,8 +1,7 @@
 mod common;
 
 use common::{
-    close_db, run_query, run_sql, setup_fdb, FdbSqliteDriver,
-    SqliteDriver, SqliteTestContext, setup::test_db_name,
+    close_db, run_query, run_sql, setup_fdb, FdbSqliteDriver, SqliteTestContext, 
 };
 use libsqlite3_sys::{sqlite3_file, SQLITE_OK, SQLITE_OPEN_CREATE, SQLITE_OPEN_READWRITE};
 use std::ffi::{c_void, CString};
@@ -268,7 +267,10 @@ fn test_vfs_file_create_metadata() -> Result<(), Box<dyn std::error::Error>> {
     let vfs_ptr = setup_fdb_vfs()?;
 
     // Test file path
-    let test_path = test_db_name(&format!("{}_{}", "fdb", "file_metadata_test"));
+    let test_path = format!("fdb_{}_file_metadata_test", std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs());
     let c_path = CString::new(test_path.clone()).expect("Failed to create CString");
 
     // Set up for checking if file exists
