@@ -3,7 +3,7 @@ use std::io::Read;
 use std::path::Path;
 
 use insta::assert_debug_snapshot;
-use sqlite_vfs_fdb::wal_parser::{WalFrame, WalIterator, WalParser};
+use sqlite_vfs_fdb::wal::{WalFrame, WalIterator, WalParser};
 
 #[test]
 fn test_wal_parser_callback() -> Result<(), Box<dyn std::error::Error>> {

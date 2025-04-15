@@ -1,7 +1,7 @@
 use libsqlite3_sys::*;
 use std::os::raw::{c_int, c_void};
 use std::slice;
-use std::sync::Arc;
+// Arc is now handled through FdbFileExt
 use tracing;
 use uuid::Uuid;
 
@@ -15,16 +15,13 @@ pub fn write_wal_file(
 	offset: i64,
 	buf_data: &[u8],
 	page_size: usize,
-	db: &Arc<foundationdb::Database>,
-	keyspace: &crate::fdb::keyspace::FdbKeySpace,
+	extension: &crate::vfs::file::FdbFileExt,
 ) -> c_int {
 	tracing::debug!("Writing to WAL file");
 
-	// Create WAL manager
-	let wal_manager = crate::wal::WalManager::new(db.clone(), keyspace.clone());
-
+	// Use the stored WAL manager from extension
 	// Process the WAL write
-	match wal_manager.process_wal_write(&file_id, offset, &buf_data, page_size) {
+	match extension.wal_manager.process_wal_write(&file_id, offset, &buf_data, page_size) {
 		Ok(bytes_written) => {
 			metrics::record_write_operation(file_path, bytes_written, 1, 0);
 			SQLITE_OK
@@ -44,15 +41,13 @@ pub unsafe fn read_wal_file(
 	count: c_int,
 	offset: i64,
 	extension: &crate::vfs::file::FdbFileExt,
-	vfs: &crate::vfs::general::FdbVfs,
+	_vfs: &crate::vfs::general::FdbVfs,
 ) -> c_int {
 	tracing::info!("Reading from WAL file: {}", file_path);
 
-	// Create WAL manager
-	let wal_manager = crate::wal::WalManager::new(extension.db.clone(), vfs.keyspace.clone());
-
+	// Use the stored WAL manager from extension
 	// Use WAL manager to read data
-	match wal_manager.read_wal_data(&extension.metadata.file_id, offset, count as usize) {
+	match extension.wal_manager.read_wal_data(&extension.metadata.file_id, offset, count as usize) {
 		Ok(data) => {
 			// We already zeroed the buffer, so now just copy the actual data
 			if !data.is_empty() {

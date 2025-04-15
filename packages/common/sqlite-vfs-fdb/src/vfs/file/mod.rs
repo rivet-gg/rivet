@@ -9,8 +9,10 @@ use tracing;
 
 use super::super::fdb::metadata::FdbFileMetadata;
 use super::general::FdbVfs;
+// Import from fdb is now handled through the WalManager
 use crate::metrics;
 use crate::utils::{LockState, SQLITE_IOERR, SQLITE_OK};
+use crate::wal::WalManager;
 
 // Import submodules
 pub mod db;
@@ -80,6 +82,8 @@ pub struct FdbFileExt {
 	pub shm_region_size: usize,
 	/// Number of active SHM maps (for reference counting)
 	pub shm_map_count: u32,
+	/// WAL manager for WAL operations
+	pub wal_manager: WalManager,
 }
 
 /// The I/O methods for FdbFile
@@ -283,15 +287,18 @@ pub unsafe extern "C" fn fdb_file_write(
 
 	// Dispatch to appropriate write handler based on file type
 	match file_type {
-		SqliteFileType::WAL => wal::write_wal_file(
-			&file_path,
-			file_id,
-			offset,
-			&buf_data,
-			page_size as usize,
-			&db,
-			&keyspace,
-		),
+		SqliteFileType::WAL => {
+			// Get a reference to the file extension to use the WAL manager
+			let ext = fdb_file.ext.assume_init_ref();
+			wal::write_wal_file(
+				&file_path,
+				file_id,
+				offset,
+				&buf_data,
+				page_size as usize,
+				ext,
+			)
+		},
 		SqliteFileType::Journal => {
 			// For journal files, we provide a minimal implementation that just logs operations
 			// In WAL mode, SQLite only uses the journal file temporarily during initialization
