@@ -39,5 +39,5 @@ pub fn setup_fdb() -> Arc<Database> {
 // Generate a unique database name for tests
 #[allow(dead_code)]
 pub fn test_db_name(prefix: &str) -> String {
-    format!("{}_{}_{}", "test", prefix, Uuid::new_v4())
+    format!("test_{}_{}.db", prefix, Uuid::new_v4())
 }

@@ -284,15 +284,17 @@ pub fn record_read_operation(file_path: &str, bytes: usize, success: bool) {
 }
 
 /// Record write operation metrics
-pub fn record_write_operation(file_path: &str, bytes: usize, success: bool) {
+pub fn record_write_operation(file_path: &str, bytes: usize, pages_written: usize, partial_pages: usize) {
     let timer = MetricsTimer::start();
     
     WRITE_OPERATIONS_TOTAL.inc();
     WRITE_BYTES_TOTAL.inc_by(bytes as u64);
     WRITE_OPERATIONS_BY_FILE.with_label_values(&[file_path]).inc();
     
-    if !success {
-        WRITE_OPERATION_ERRORS_TOTAL.inc();
+    // Pages metrics
+    if pages_written > 0 {
+        PAGE_WRITE_TOTAL.inc_by(pages_written as u64);
+        PARTIAL_PAGE_WRITE_TOTAL.inc_by(partial_pages as u64);
     }
     
     WRITE_OPERATION_LATENCY.observe(timer.elapsed_ms());
