@@ -328,7 +328,7 @@ pub unsafe extern "C" fn vfs_open(
 							SqliteFileType::Database
 						},
 						// For non-standard extensions, check for patterns and issue a warning
-						p => {
+						_p => {
 							tracing::error!("Invalid SQLite file extension in path: {}. Must use .db or .db-wal", path_str);
 							metrics::record_vfs_error("invalid_file_extension");
 							return SQLITE_CANTOPEN;
