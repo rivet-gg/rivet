@@ -154,6 +154,9 @@ Class | Method | HTTP request | Description
 *ProvisionTunnelApi* | [**provision_tunnel_get_tls**](docs/ProvisionTunnelApi.md#provision_tunnel_get_tls) | **GET** /tunnel/tls | 
 *RegionsApi* | [**regions_list**](docs/RegionsApi.md#regions_list) | **GET** /regions | 
 *RegionsApi* | [**regions_recommend**](docs/RegionsApi.md#regions_recommend) | **GET** /regions/recommend | 
+*RoutesApi* | [**routes_delete**](docs/RoutesApi.md#routes_delete) | **DELETE** /routes/{name_id} | 
+*RoutesApi* | [**routes_list**](docs/RoutesApi.md#routes_list) | **GET** /routes | 
+*RoutesApi* | [**routes_update**](docs/RoutesApi.md#routes_update) | **PUT** /routes/{name_id} | 
 *ServersApi* | [**servers_create**](docs/ServersApi.md#servers_create) | **POST** /games/{game_id}/environments/{environment_id}/servers | 
 *ServersApi* | [**servers_destroy**](docs/ServersApi.md#servers_destroy) | **DELETE** /games/{game_id}/environments/{environment_id}/servers/{server_id} | 
 *ServersApi* | [**servers_get**](docs/ServersApi.md#servers_get) | **GET** /games/{game_id}/environments/{environment_id}/servers/{server_id} | 
@@ -472,6 +475,10 @@ Class | Method | HTTP request | Description
  - [RegionsListRegionsResponse](docs/RegionsListRegionsResponse.md)
  - [RegionsRecommendRegionResponse](docs/RegionsRecommendRegionResponse.md)
  - [RegionsRegion](docs/RegionsRegion.md)
+ - [RoutesListRoutesResponse](docs/RoutesListRoutesResponse.md)
+ - [RoutesRoute](docs/RoutesRoute.md)
+ - [RoutesUpdateRouteBody](docs/RoutesUpdateRouteBody.md)
+ - [RoutesUpdateRouteResponse](docs/RoutesUpdateRouteResponse.md)
  - [ServersBuild](docs/ServersBuild.md)
  - [ServersBuildCompression](docs/ServersBuildCompression.md)
  - [ServersBuildKind](docs/ServersBuildKind.md)

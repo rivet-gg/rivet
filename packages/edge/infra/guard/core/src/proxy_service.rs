@@ -851,15 +851,18 @@ impl ProxyService {
 			Ok(x) => {
 				info!("Client WebSocket upgrade successful");
 				x
-			},
+			}
 			Err(err) => {
 				error!("Failed to upgrade client WebSocket: {}", err);
 				bail!("Failed to upgrade client WebSocket: {err}")
-			},
+			}
 		};
 
 		// Log response status and headers
-		info!("Client upgrade response status: {}", client_response.status());
+		info!(
+			"Client upgrade response status: {}",
+			client_response.status()
+		);
 		for (name, value) in client_response.headers() {
 			if let Ok(val) = value.to_str() {
 				debug!("Client upgrade response header - {}: {}", name, val);
@@ -881,7 +884,10 @@ impl ProxyService {
 		tokio::spawn(async move {
 			// Set up a timeout for the entire operation
 			let timeout_duration = Duration::from_secs(30); // 30 seconds timeout
-			info!("WebSocket proxy task started with {}s timeout", timeout_duration.as_secs());
+			info!(
+				"WebSocket proxy task started with {}s timeout",
+				timeout_duration.as_secs()
+			);
 
 			// Use retry logic to connect to the upstream WebSocket server
 			let mut attempts = 0;
@@ -893,7 +899,7 @@ impl ProxyService {
 				Ok(Ok(ws)) => {
 					info!("Client WebSocket is ready");
 					ws
-				},
+				}
 				Ok(Err(e)) => {
 					error!("Failed to get client WebSocket: {}", e);
 					error!("Error details: {:?}", e);
@@ -907,9 +913,12 @@ impl ProxyService {
 						])
 						.dec();
 					return;
-				},
+				}
 				Err(_) => {
-					error!("Timeout waiting for client WebSocket to be ready after {}s", timeout_duration.as_secs());
+					error!(
+						"Timeout waiting for client WebSocket to be ready after {}s",
+						timeout_duration.as_secs()
+					);
 					// Decrement pending metric
 					metrics::ACTOR_REQUEST_PENDING
 						.with_label_values(&[
@@ -924,7 +933,10 @@ impl ProxyService {
 			};
 
 			// Now attempt to connect to the upstream server
-			info!("Attempting to connect to upstream WebSocket at {}", target_url);
+			info!(
+				"Attempting to connect to upstream WebSocket at {}",
+				target_url
+			);
 			while attempts < max_attempts {
 				attempts += 1;
 				info!(
@@ -934,19 +946,21 @@ impl ProxyService {
 
 				match tokio::time::timeout(
 					Duration::from_secs(5), // 5 second timeout per connection attempt
-					tokio_tungstenite::connect_async(&target_url)
-				).await {
+					tokio_tungstenite::connect_async(&target_url),
+				)
+				.await
+				{
 					Ok(Ok((ws_stream, resp))) => {
 						info!("Successfully connected to upstream WebSocket server");
 						debug!("Upstream connection response status: {:?}", resp.status());
-						
+
 						// Log headers for debugging
 						for (name, value) in resp.headers() {
 							if let Ok(val) = value.to_str() {
 								debug!("Upstream response header - {}: {}", name, val);
 							}
 						}
-						
+
 						upstream_ws = Some(ws_stream);
 						break;
 					}
@@ -962,14 +976,10 @@ impl ProxyService {
 				// Check if we've reached max attempts
 				if attempts >= max_attempts {
 					error!("All {} WebSocket connection attempts failed", max_attempts);
-					
+
 					// Increment error metric
 					metrics::ACTOR_REQUEST_ERRORS
-						.with_label_values(&[
-							&actor_id_str_clone,
-							&server_id_str_clone,
-							"502",
-						])
+						.with_label_values(&[&actor_id_str_clone, &server_id_str_clone, "502"])
 						.inc();
 
 					// Decrement pending metric
@@ -981,25 +991,28 @@ impl ProxyService {
 							&path,
 						])
 						.dec();
-					
+
 					// Send a close message to the client since we can't connect to upstream
 					info!("Sending close message to client due to upstream connection failure");
 					let (mut client_sink, _) = client_ws.split();
-					match client_sink.send(hyper_tungstenite::tungstenite::Message::Close(Some(
-						hyper_tungstenite::tungstenite::protocol::CloseFrame {
-							code: 1011.into(), // 1011 = Server error
-							reason: "Failed to connect to upstream server".into(),
-						},
-					))).await {
+					match client_sink
+						.send(hyper_tungstenite::tungstenite::Message::Close(Some(
+							hyper_tungstenite::tungstenite::protocol::CloseFrame {
+								code: 1011.into(), // 1011 = Server error
+								reason: "Failed to connect to upstream server".into(),
+							},
+						)))
+						.await
+					{
 						Ok(_) => info!("Successfully sent close message to client"),
 						Err(e) => error!("Failed to send close message to client: {}", e),
 					};
-					
+
 					match client_sink.flush().await {
 						Ok(_) => info!("Successfully flushed client sink after close"),
 						Err(e) => error!("Failed to flush client sink after close: {}", e),
 					};
-					
+
 					return;
 				}
 
@@ -1014,7 +1027,7 @@ impl ProxyService {
 				Some(ws) => {
 					info!("Successfully established upstream WebSocket connection");
 					ws
-				},
+				}
 				Option::None => {
 					error!("Failed to establish upstream WebSocket connection (unexpected)");
 					return; // Should never happen due to checks above, but just in case
@@ -1137,7 +1150,7 @@ impl ProxyService {
 										Duration::from_secs(5),
 										sink.send(upstream_msg)
 									).await;
-									
+
 									match send_result {
 										Ok(Ok(_)) => {
 											info!("Message sent to upstream successfully");
@@ -1147,7 +1160,7 @@ impl ProxyService {
 												Duration::from_secs(2),
 												sink.flush()
 											).await;
-											
+
 											if let Err(_) = flush_result {
 												error!("Timeout flushing upstream sink");
 												let _ = shutdown_tx.send(true);
@@ -1195,16 +1208,19 @@ impl ProxyService {
 
 				// Try to send a close frame - ignore errors as the connection might already be closed
 				info!("Attempting to send close message to upstream");
-				match sink.send(tokio_tungstenite::tungstenite::Message::Close(None)).await {
+				match sink
+					.send(tokio_tungstenite::tungstenite::Message::Close(None))
+					.await
+				{
 					Ok(_) => info!("Close message sent to upstream successfully"),
 					Err(e) => warn!("Failed to send close message to upstream: {}", e),
 				};
-				
+
 				match sink.flush().await {
 					Ok(_) => info!("Upstream sink flushed successfully after close"),
 					Err(e) => warn!("Failed to flush upstream sink after close: {}", e),
 				};
-				
+
 				info!("Client-to-upstream task completed");
 			};
 
@@ -1316,7 +1332,7 @@ impl ProxyService {
 										Duration::from_secs(5),
 										sink.send(client_msg)
 									).await;
-									
+
 									match send_result {
 										Ok(Ok(_)) => {
 											info!("Message sent to client successfully");
@@ -1326,7 +1342,7 @@ impl ProxyService {
 												Duration::from_secs(2),
 												sink.flush()
 											).await;
-											
+
 											if let Err(_) = flush_result {
 												error!("Timeout flushing client sink");
 												let _ = shutdown_tx.send(true);
@@ -1374,16 +1390,19 @@ impl ProxyService {
 
 				// Try to send a close frame - ignore errors as the connection might already be closed
 				info!("Attempting to send close message to client");
-				match sink.send(hyper_tungstenite::tungstenite::Message::Close(None)).await {
+				match sink
+					.send(hyper_tungstenite::tungstenite::Message::Close(None))
+					.await
+				{
 					Ok(_) => info!("Close message sent to client successfully"),
 					Err(e) => warn!("Failed to send close message to client: {}", e),
 				};
-				
+
 				match sink.flush().await {
 					Ok(_) => info!("Client sink flushed successfully after close"),
 					Err(e) => warn!("Failed to flush client sink after close: {}", e),
 				};
-				
+
 				info!("Upstream-to-client task completed");
 			};
 
@@ -1417,7 +1436,10 @@ impl ProxyService {
 		// Extract the parts from the response but preserve all headers and status
 		let (parts, _) = client_response.into_parts();
 		// Create a new response with an empty body - WebSocket upgrades don't need a body
-		Ok(Response::from_parts(parts, Full::<Bytes>::new(Bytes::new())))
+		Ok(Response::from_parts(
+			parts,
+			Full::<Bytes>::new(Bytes::new()),
+		))
 	}
 }
 
@@ -1482,4 +1504,3 @@ macro_rules! defer {
         };
     };
 }
-

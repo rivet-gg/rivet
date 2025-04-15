@@ -1,0 +1,10 @@
+{
+	"builds": {
+		"http-isolate": {
+			"script": "src/isolate/main.ts"
+		},
+		"http-container": {
+			"dockerfile": "Dockerfile"
+		}
+	}
+}

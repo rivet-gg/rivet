@@ -244,6 +244,23 @@ impl Rivet {
 		Ok(domain_job)
 	}
 
+	/// Provides a fallback domain of `rivet-job.local` for use with routing.
+	///
+	/// Helpful for testing locally.
+	pub fn domain_job_for_routes(&self) -> GlobalResult<&str> {
+		let domain_job = match self.domain_job() {
+			Ok(x) => x,
+			Err(err) => match self.auth.access_kind {
+				AccessKind::Development => "rivet-job.local",
+				AccessKind::Public | AccessKind::Private => {
+					return Err(err);
+				}
+			},
+		};
+
+		Ok(domain_job)
+	}
+
 	pub fn domain_main(&self) -> GlobalResult<&str> {
 		let domain_main = unwrap!(
 			self.dns().ok().and_then(|dns| dns.domain_main.as_ref()),

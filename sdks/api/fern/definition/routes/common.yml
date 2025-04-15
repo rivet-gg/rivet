@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  commons: ../common.yml
+
+types:
+  Route:
+    properties:
+      id: string
+      created_at: commons.Timestamp
+      updated_at: commons.Timestamp
+      name_id: string
+      hostname: string
+      path: string
+      route_subpaths:
+        docs: Whether to route all subpaths of this path
+        type: boolean
+      selector_tags:
+        docs: Tags of actors to route requests to
+        type: map<string, string>
+

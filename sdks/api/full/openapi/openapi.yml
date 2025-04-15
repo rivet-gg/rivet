@@ -4806,6 +4806,204 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
+  /routes:
+    get:
+      description: Lists all routes of the given environment.
+      operationId: routes_list
+      tags:
+        - Routes
+      parameters:
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutesListRoutesResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+  /routes/{name_id}:
+    put:
+      description: Creates or updates a route.
+      operationId: routes_update
+      tags:
+        - Routes
+      parameters:
+        - name: name_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutesUpdateRouteResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoutesUpdateRouteBody'
+    delete:
+      description: Deletes a route.
+      operationId: routes_delete
+      tags:
+        - Routes
+      parameters:
+        - name: name_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutesDeleteRouteResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
   /games/{game_id}/environments/{environment_id}/servers/{server_id}:
     get:
       description: Gets a dynamic server.
@@ -10206,6 +10404,48 @@ components:
           $ref: '#/components/schemas/RegionsRegion'
       required:
         - region
+    RoutesListRoutesResponse:
+      type: object
+      properties:
+        routes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoutesRoute'
+      required:
+        - routes
+    RoutesUpdateRouteBody:
+      type: object
+      properties:
+        hostname:
+          type: string
+        path:
+          type: string
+        route_subpaths:
+          type: boolean
+          description: Whether to route all subpaths of this path
+        selector_tags:
+          type: object
+          additionalProperties:
+            type: string
+          description: Tags of actors to route requests to
+      required:
+        - hostname
+        - path
+        - route_subpaths
+        - selector_tags
+    RoutesUpdateRouteResponse:
+      type: object
+      properties:
+        route_id:
+          type: string
+        created:
+          type: boolean
+      required:
+        - route_id
+        - created
+    RoutesDeleteRouteResponse:
+      type: object
+      properties: {}
     ServersGetServerResponse:
       type: object
       properties:
@@ -13590,6 +13830,38 @@ components:
       required:
         - id
         - name
+    RoutesRoute:
+      type: object
+      properties:
+        id:
+          type: string
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+        name_id:
+          type: string
+        hostname:
+          type: string
+        path:
+          type: string
+        route_subpaths:
+          type: boolean
+          description: Whether to route all subpaths of this path
+        selector_tags:
+          type: object
+          additionalProperties:
+            type: string
+          description: Tags of actors to route requests to
+      required:
+        - id
+        - created_at
+        - updated_at
+        - name_id
+        - hostname
+        - path
+        - route_subpaths
+        - selector_tags
     ServersGetBuildResponse:
       type: object
       properties:
