@@ -357,34 +357,78 @@ pub unsafe extern "C" fn fdb_file_truncate(file: *mut sqlite3_file, size: i64) -
 	};
 
 	let ext = fdb_file.ext.assume_init_ref();
-	let vfs = match get_vfs_from_ext(ext, "fdb_file_truncate") {
-		Ok(vfs) => vfs,
-		Err(code) => return code,
-	};
-
-	// Get existing file metadata
-	let mut metadata = ext.metadata.clone();
+	let file_type = ext.file_type;
 	let file_path = ext.path.clone();
-
-	// If new size is same as current, nothing to do
-	if metadata.size == size {
-		return SQLITE_OK;
-	}
-
-	// Update the file size
-	metadata.size = size;
-	metadata.modified_at = SystemTime::now()
-		.duration_since(UNIX_EPOCH)
-		.unwrap_or_default()
-		.as_secs();
-
-	// Store the updated metadata
-	match vfs.store_metadata(&file_path, &metadata) {
-		Ok(_) => SQLITE_OK,
-		Err(e) => {
-			tracing::error!("Error truncating file: {}", e);
-			metrics::record_vfs_error("truncate_transaction_error");
-			SQLITE_IOERR
+	
+	tracing::info!("Truncating file: {}, file_type: {:?}, size: {}", file_path, file_type, size);
+	
+	// Handle truncate based on file type
+	match file_type {
+		SqliteFileType::WAL => {
+			// For WAL files, use the WAL manager
+			tracing::info!("WAL file truncate: {}", file_path);
+			
+			// If new size is same as current, nothing to do
+			if ext.metadata.size == size {
+				return SQLITE_OK;
+			}
+			
+			// Use the WAL manager to record truncate operation
+			let wal_manager = &ext.wal_manager;
+			match wal_manager.truncate_wal(&file_path, size) {
+				Ok(_) => {
+					// Update the in-memory metadata size
+					let ext_mut = fdb_file.ext.assume_init_mut();
+					ext_mut.metadata.size = size;
+					SQLITE_OK
+				},
+				Err(e) => {
+					tracing::error!("Error truncating WAL file: {}", e);
+					metrics::record_vfs_error("truncate_wal_transaction_error");
+					SQLITE_IOERR
+				}
+			}
+		},
+		SqliteFileType::Journal => {
+			// For journal files, we don't need to do anything since they're mocked
+			tracing::info!("Journal file truncate operation (mocked): {}, size={}", file_path, size);
+			
+			// Just update the in-memory size
+			let ext_mut = fdb_file.ext.assume_init_mut();
+			ext_mut.metadata.size = size;
+			SQLITE_OK
+		},
+		SqliteFileType::Database => {
+			// For database files, use FDB to update metadata
+			let vfs = match get_vfs_from_ext(ext, "fdb_file_truncate") {
+				Ok(vfs) => vfs,
+				Err(code) => return code,
+			};
+			
+			// Get existing file metadata
+			let mut metadata = ext.metadata.clone();
+			
+			// If new size is same as current, nothing to do
+			if metadata.size == size {
+				return SQLITE_OK;
+			}
+			
+			// Update the file size
+			metadata.size = size;
+			metadata.modified_at = SystemTime::now()
+				.duration_since(UNIX_EPOCH)
+				.unwrap_or_default()
+				.as_secs();
+			
+			// Store the updated metadata
+			match vfs.store_metadata(&file_path, &metadata) {
+				Ok(_) => SQLITE_OK,
+				Err(e) => {
+					tracing::error!("Error truncating database file: {}", e);
+					metrics::record_vfs_error("truncate_database_transaction_error");
+					SQLITE_IOERR
+				}
+			}
 		}
 	}
 }
@@ -404,8 +448,31 @@ pub unsafe extern "C" fn fdb_file_size(file: *mut sqlite3_file, size_out: *mut i
 		Err(code) => return code,
 	};
 
-	// Copy the size from metadata to the output parameter
-	*size_out = ext.metadata.size;
+	let file_type = ext.file_type;
+	let file_path = &ext.path;
+	
+	tracing::info!("Getting file size for: {}, file_type: {:?}", file_path, file_type);
+	
+	// Handle file size operation based on file type
+	match file_type {
+		SqliteFileType::WAL => {
+			// For WAL files, we can use the WAL manager to get the accurate size
+			// but for simplicity we'll use the in-memory metadata size
+			tracing::info!("WAL file size: {} = {}", file_path, ext.metadata.size);
+			*size_out = ext.metadata.size;
+		},
+		SqliteFileType::Journal => {
+			// For journal files (which are mocked), return the tracked in-memory size
+			tracing::info!("Journal file size (mocked): {} = {}", file_path, ext.metadata.size);
+			*size_out = ext.metadata.size;
+		},
+		SqliteFileType::Database => {
+			// For database files, use the metadata size from FDB
+			tracing::info!("Database file size: {} = {}", file_path, ext.metadata.size);
+			*size_out = ext.metadata.size;
+		}
+	}
+	
 	SQLITE_OK
 }
 
@@ -738,10 +805,34 @@ pub unsafe extern "C" fn fdb_file_close(file: *mut sqlite3_file) -> c_int {
 	};
 
 	let ext = fdb_file.ext.assume_init_mut();
-
-	// Mark the file as closed
-	ext.is_open = false;
-
+	let file_type = ext.file_type;
+	let file_path = ext.path.clone();
+	
+	tracing::info!("Closing file: {}, file_type: {:?}", file_path, file_type);
+	
+	// Handle close based on file type
+	match file_type {
+		SqliteFileType::WAL => {
+			// For WAL files, we might need to flush any pending WAL operations
+			// with the WAL manager before closing
+			tracing::info!("Closing WAL file: {}", file_path);
+			
+			// Any WAL-specific cleanup would go here
+			// For now, just mark as closed
+			ext.is_open = false;
+		},
+		SqliteFileType::Journal => {
+			// For journal files, just log that we're closing the mocked file
+			tracing::info!("Closing journal file (mocked): {}", file_path);
+			ext.is_open = false;
+		},
+		SqliteFileType::Database => {
+			// For database files, just mark as closed
+			tracing::info!("Closing database file: {}", file_path);
+			ext.is_open = false;
+		}
+	}
+	
 	SQLITE_OK
 }
 
