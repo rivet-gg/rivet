@@ -82,7 +82,7 @@ fn main() {
 		.try_init();
 
 	// Register the VFS with the new stable memory approach
-	sqlite_vfs_fdb::impls::pages::vfs::register_vfs(DATABASE.clone()).expect("Failed to register VFS");
+	sqlite_vfs_fdb::vfs::register_vfs(DATABASE.clone()).expect("Failed to register VFS");
 
 	// Start the benchmarks
 	divan::main();
@@ -99,7 +99,7 @@ fn setup_sqlite(vfs: Vfs) -> (Arc<Database>, String) {
 	let db = DATABASE.clone();
 
 	// Register the VFS
-	sqlite_vfs_fdb::impls::pages::vfs::register_vfs(db.clone()).expect("Failed to register VFS");
+	sqlite_vfs_fdb::vfs::register_vfs(db.clone()).expect("Failed to register VFS");
 
 	// Generate a unique database name
 	let db_name = bench_db_name(vfs);

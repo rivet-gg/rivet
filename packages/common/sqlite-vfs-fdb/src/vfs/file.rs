@@ -11,7 +11,7 @@ use tracing;
 use super::super::fdb::metadata::FdbFileMetadata;
 use super::general::FdbVfs;
 use crate::metrics;
-use crate::impls::pages::utils::{run_fdb_tx, LockState, SQLITE_IOERR, SQLITE_OK};
+use crate::utils::{run_fdb_tx, LockState, SQLITE_IOERR, SQLITE_OK};
 
 /// FdbFile is the implementation of a SQLite file in FoundationDB
 #[repr(C)]
@@ -357,7 +357,7 @@ pub unsafe extern "C" fn fdb_file_write(
 							Some(data) => {
 								// Use our safe helper to create a properly sized BytesMut
 								let mut safe_bytes =
-									crate::impls::pages::utils::create_safe_bytes(page_size as usize);
+									crate::utils::create_safe_bytes(page_size as usize);
 								// Copy existing data if any
 								if !data.is_empty() {
 									let copy_len = std::cmp::min(data.len(), safe_bytes.len());
@@ -367,7 +367,7 @@ pub unsafe extern "C" fn fdb_file_write(
 							}
 							None => {
 								// New page, initialize with zeros using our safe helper
-								crate::impls::pages::utils::create_safe_bytes(page_size as usize)
+								crate::utils::create_safe_bytes(page_size as usize)
 							}
 						};
 
@@ -791,7 +791,7 @@ pub unsafe extern "C" fn fdb_file_control(
 pub unsafe extern "C" fn fdb_file_sector_size(_file: *mut sqlite3_file) -> c_int {
 	// FoundationDB doesn't have the concept of sectors, so use the SQLite default
 	// (usually 512 or 4096 bytes)
-	crate::impls::pages::utils::DEFAULT_PAGE_SIZE as c_int
+	crate::utils::DEFAULT_PAGE_SIZE as c_int
 }
 
 pub unsafe extern "C" fn fdb_file_device_characteristics(_file: *mut sqlite3_file) -> c_int {
