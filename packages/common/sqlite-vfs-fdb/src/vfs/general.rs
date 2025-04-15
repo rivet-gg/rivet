@@ -204,15 +204,45 @@ impl FdbVfs {
 	}
 
 	// Helper method to check if a file exists
+	// We now determine existence based on the SqliteFileType mapping
 	pub fn file_exists(&self, path: &str) -> FdbResult<bool> {
 		tracing::info!("Checking if file exists: {}", path);
-		let metadata_result = self.get_metadata(path)?;
-		tracing::info!(
-			"File exists check result for {}: {}",
-			path,
-			metadata_result.is_some()
-		);
-		Ok(metadata_result.is_some())
+		
+		// First, determine the file type from the path
+		let file_type_result = super::file::SqliteFileType::from_path(path);
+		
+		match file_type_result {
+			Ok(file_type) => {
+				// For journal files, we pretend they always exist if requested
+				// This allows SQLite initialization to proceed normally in WAL mode
+				if file_type == super::file::SqliteFileType::Journal {
+					tracing::info!(
+						"Journal file exists check for {}: true (mocked response for WAL initialization)",
+						path
+					);
+					return Ok(true);
+				}
+				
+				// For database and WAL files, check actual metadata
+				let metadata_result = self.get_metadata(path)?;
+				let exists = metadata_result.is_some();
+				
+				tracing::info!(
+					"File exists check for {} (type: {:?}): {}",
+					path,
+					file_type,
+					exists
+				);
+				
+				Ok(exists)
+			},
+			Err(err) => {
+				// Log the error and return false for invalid file types
+				tracing::error!("Invalid file path in exists check: {} - {}", path, err);
+				metrics::record_vfs_error("invalid_file_extension");
+				Ok(false)
+			}
+		}
 	}
 }
 
@@ -255,12 +285,34 @@ pub unsafe extern "C" fn vfs_open(
 				}
 
 				// Check if file exists
-				let file_exists = match (*vfs_instance).file_exists(path_str) {
-					Ok(exists) => exists,
-					Err(e) => {
-						tracing::error!("Error checking if file exists: {}", e);
-						metrics::record_vfs_error("file_exists_check");
+				// Check file type
+				let file_type = match SqliteFileType::from_path(path_str) {
+					Ok(ft) => ft,
+					Err(err) => {
+						tracing::error!("Invalid file extension: {}", err);
+						metrics::record_vfs_error("invalid_file_extension");
 						return SQLITE_CANTOPEN;
+					}
+				};
+				
+				// For journal files, we always say they exist and create them on demand
+				let is_journal = file_type == SqliteFileType::Journal;
+				
+				// Check if file exists (except for journals which we handle specially)
+				let file_exists = if is_journal {
+					// Journal files are always treated as "exists" or "can create"
+					tracing::info!("Journal file auto-handled: {}", path_str);
+					true
+				} else {
+					// For non-journal files, check normally
+					match (*vfs_instance).get_metadata(path_str) {
+						Ok(Some(_)) => true,
+						Ok(None) => false,
+						Err(e) => {
+							tracing::error!("Error checking if file exists: {}", e);
+							metrics::record_vfs_error("file_exists_check");
+							return SQLITE_CANTOPEN;
+						}
 					}
 				};
 
@@ -275,7 +327,8 @@ pub unsafe extern "C" fn vfs_open(
 					SQLITE_CANTOPEN
 				} else {
 					// Fetch existing metadata or create new metadata
-					let metadata = if file_exists {
+					let metadata = if file_exists && !is_journal {
+						// For existing non-journal files, get the metadata
 						match (*vfs_instance).get_metadata(path_str) {
 							Ok(Some(metadata)) => metadata,
 							Ok(None) => {
@@ -290,18 +343,25 @@ pub unsafe extern "C" fn vfs_open(
 							}
 						}
 					} else {
-						// Create new metadata
+						// Create new metadata for new files or journal files
 						let new_metadata = FdbFileMetadata::new(DEFAULT_PAGE_SIZE);
-
-						// Save the metadata in FoundationDB
-						match (*vfs_instance).store_metadata(path_str, &new_metadata) {
-							Ok(_) => new_metadata,
-							Err(e) => {
-								tracing::error!("Error creating file metadata: {}", e);
-								metrics::record_vfs_error("create_metadata");
-								return SQLITE_CANTOPEN;
+						
+						// For non-journal files, store the metadata in the database
+						// Journal files don't need persistent metadata
+						if !is_journal {
+							match (*vfs_instance).store_metadata(path_str, &new_metadata) {
+								Ok(_) => (),
+								Err(e) => {
+									tracing::error!("Error creating file metadata: {}", e);
+									metrics::record_vfs_error("create_metadata");
+									return SQLITE_CANTOPEN;
+								}
 							}
+						} else {
+							tracing::info!("Created temporary metadata for journal file: {}", path_str);
 						}
+						
+						new_metadata
 					};
 
 					// Initialize the FdbFile structure
@@ -317,24 +377,25 @@ pub unsafe extern "C" fn vfs_open(
 					// Initialize the file structure
 					fdb_file.base.pMethods = &FDB_IO_METHODS;
 
-					// Determine file type based on path suffix and validate proper SQLite file naming
-					let file_type = match path_str {
-						p if p.ends_with(".db-wal") => {
-							tracing::debug!("Detected WAL file type for path: {}", path_str);
-							SqliteFileType::WAL
+					// Determine file type using our dedicated method
+					let file_type = match SqliteFileType::from_path(path_str) {
+						Ok(file_type) => {
+							match file_type {
+								SqliteFileType::WAL => {
+									tracing::debug!("Detected WAL file type for path: {}", path_str);
+								},
+								SqliteFileType::Journal => {
+									tracing::info!("Detected Journal file for path: {}", path_str);
+									tracing::debug!("Journal file is used temporarily during WAL initialization");
+								},
+								SqliteFileType::Database => {
+									tracing::debug!("Detected Database file type for path: {}", path_str);
+								}
+							}
+							file_type
 						},
-						p if p.ends_with(".db-journal") => {
-							tracing::info!("Detected Journal file for path: {}", path_str);
-							tracing::debug!("Journal file is used temporarily during WAL initialization");
-							SqliteFileType::Journal
-						},
-						p if p.ends_with(".db") => {
-							tracing::debug!("Detected Database file type for path: {}", path_str);
-							SqliteFileType::Database
-						},
-						// For non-standard extensions, check for patterns and issue a warning
-						_p => {
-							tracing::error!("Invalid SQLite file extension in path: {}. Must use .db, .db-wal, or .db-journal", path_str);
+						Err(err) => {
+							tracing::error!("Invalid SQLite file extension in path: {}. {}", path_str, err);
 							metrics::record_vfs_error("invalid_file_extension");
 							return SQLITE_CANTOPEN;
 						}
@@ -451,13 +512,25 @@ pub unsafe extern "C" fn vfs_access(
 					*res_out = if exists { 1 } else { 0 };
 					
 					// For journal files, add additional context since they're special
-					if path_str.ends_with(".db-journal") {
-						tracing::info!(
-							"Journal file exists check for {}: flags={}, result={} (temporary file used during WAL initialization)",
-							path_str,
-							flags,
-							*res_out
-						);
+					if let Ok(file_type) = SqliteFileType::from_path(path_str) {
+						match file_type {
+							SqliteFileType::Journal => {
+								tracing::info!(
+									"Journal file exists check for {}: flags={}, result={} (temporary file used during WAL initialization)",
+									path_str,
+									flags,
+									*res_out
+								);
+							},
+							_ => {
+								tracing::info!(
+									"File exists check for {}: flags={}, result={}",
+									path_str,
+									flags,
+									*res_out
+								);
+							}
+						}
 					} else {
 						tracing::info!(
 							"File exists check for {}: flags={}, result={}",
