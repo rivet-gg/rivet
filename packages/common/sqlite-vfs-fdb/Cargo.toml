@@ -24,6 +24,8 @@ criterion = "0.5"
 env_logger = "0.11"
 insta = "1.36.1"
 serde = { version = "1.0", features = ["derive"] }
+rusqlite = "0.32.1"
+tempfile = "3.9.0"
 
 [[bench]]
 name = "sqlite_vfs"

@@ -5,9 +5,9 @@ use std::fmt::Debug;
 use serde::Serialize;
 
 /// WAL file magic number
-const WAL_MAGIC: [u8; 4] = [0x37, 0x7F, 0x06, 0x82];
+pub const WAL_MAGIC: [u8; 4] = [0x37, 0x7F, 0x06, 0x82];
 /// Full WAL magic number with version
-const WAL_HEADER_MAGIC: [u8; 8] = [0x37, 0x7F, 0x06, 0x82, 0x00, 0xD9, 0x2C, 0x00];
+pub const WAL_HEADER_MAGIC: [u8; 8] = [0x37, 0x7F, 0x06, 0x82, 0x00, 0xD9, 0x2C, 0x00];
 
 /// Size of the WAL header
 pub const WAL_HEADER_SIZE: usize = 32;
@@ -194,9 +194,20 @@ impl WalFrame {
             bytes[0], bytes[1], bytes[2], bytes[3],
         ]);
 
+        // SQLite WAL frames should have valid page numbers (starting from 1)
+        // and they shouldn't be extremely large numbers
+        if page_number == 0 || page_number > 1_000_000 {
+            return Err(WalParseError::InvalidMagic); // Using InvalidMagic error as a general "invalid frame" error
+        }
+        
         let database_size = u32::from_be_bytes([
             bytes[4], bytes[5], bytes[6], bytes[7],
         ]);
+
+        // Database size should also be reasonable
+        if database_size > 1_000_000_000 {
+            return Err(WalParseError::InvalidMagic);
+        }
 
         let salt_1 = u32::from_be_bytes([
             bytes[8], bytes[9], bytes[10], bytes[11],

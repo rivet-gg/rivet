@@ -92,4 +92,15 @@ impl FdbKeySpace {
 		buf.put_slice(file_id.as_bytes());
 		buf.freeze()
 	}
+	
+	/// Index for WAL frames to allow easy lookup by frame number
+	/// This is needed to find frames without knowing their salt values ahead of time
+	pub fn wal_frame_index_key(&self, file_id: &Uuid, frame_idx: u32) -> Bytes {
+		let mut buf = BytesMut::with_capacity(self.prefix.len() + 1 + 16 + 4);
+		buf.put_slice(&self.prefix);
+		buf.put_u8(5); // WAL frame index key type
+		buf.put_slice(file_id.as_bytes());
+		buf.put_u32(frame_idx);
+		buf.freeze()
+	}
 }
