@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  commons: ../common.yml
+  localCommons: common.yml
+
+service:
+  auth: true
+  base-path: /routes
+  audiences:
+    - runtime
+  endpoints:
+    list:
+      path: ""
+      method: GET
+      docs: >-
+        Lists all routes of the given environment.
+      request:
+        name: ListRoutesQuery
+        query-parameters:
+          project: optional<string>
+          environment: optional<string>
+      response: ListRoutesResponse
+
+    update:
+      path: /{name_id}
+      method: PUT
+      docs: Creates or updates a route.
+      path-parameters:
+        name_id: string
+      request:
+        name: UpdateRouteQuery
+        body: UpdateRouteBody
+        query-parameters:
+          project: optional<string>
+          environment: optional<string>
+      response: UpdateRouteResponse
+
+    delete:
+      path: /{name_id}
+      method: DELETE
+      docs: Deletes a route.
+      path-parameters:
+        name_id: string
+      request:
+        name: DeleteRouteQuery
+        query-parameters:
+          project: optional<string>
+          environment: optional<string>
+      response: DeleteRouteResponse
+
+types:
+  ListRoutesResponse:
+    properties:
+      routes: list<localCommons.Route>
+
+  UpdateRouteBody:
+    properties:
+      hostname: string
+      path: string
+      route_subpaths:
+        docs: Whether to route all subpaths of this path
+        type: boolean
+      selector_tags:
+        docs: Tags of actors to route requests to
+        type: map<string, string>
+
+  UpdateRouteResponse:
+    properties:
+      route_id: string
+      created: boolean
+      
+  DeleteRouteResponse:
+    properties: {}

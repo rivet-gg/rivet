@@ -4,6 +4,7 @@ use rivet_guard_core::proxy_service::RoutingResponse;
 use std::sync::Arc;
 
 pub mod actor;
+pub mod actor_routes;
 pub mod api;
 
 /// Creates the main routing function that handles all incoming requests
@@ -19,7 +20,7 @@ pub fn create_routing_function(
 		+ Sync,
 > {
 	Arc::new(
-		move |hostname: &str, path: &str, port_type: rivet_guard_core::proxy_service::PortType| {
+		move |hostname: &str, path: &str, _port_type: rivet_guard_core::proxy_service::PortType| {
 			let ctx = ctx.clone();
 
 			Box::pin(async move {
@@ -28,14 +29,28 @@ pub fn create_routing_function(
 
 				// Get DC information
 				let dc_id = ctx.config().server()?.rivet.edge()?.datacenter_id;
+
+				// Using normal op call
 				let dc_res = ctx
 					.op(cluster::ops::datacenter::get::Input {
 						datacenter_ids: vec![dc_id],
 					})
 					.await?;
+
 				let dc = unwrap!(dc_res.datacenters.first());
 
-				// Try to route to actor
+				tracing::info!("Routing request for hostname: {host}, path: {path}");
+
+				// Try to route using configured routes first
+				tracing::info!("Attempting route-based routing for {host} {path}");
+				if let Ok(Some(routing_result)) =
+					actor_routes::route_via_route_config(&ctx, host, path, dc_id).await
+				{
+					tracing::info!("Successfully routed via route config for {host} {path}");
+					return Ok(RoutingResponse::Ok(routing_result));
+				}
+
+				// Try to route to actor directly (legacy method)
 				if let Ok(Some(routing_result)) =
 					actor::route_actor_request(&ctx, host, path, dc_id).await
 				{

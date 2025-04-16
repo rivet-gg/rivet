@@ -39,6 +39,9 @@ Class | Method | HTTP request | Description
 *BuildsApi* | [**builds_prepare**](docs/BuildsApi.md#builds_prepare) | **POST** /builds/prepare | 
 *RegionsApi* | [**regions_list**](docs/RegionsApi.md#regions_list) | **GET** /regions | 
 *RegionsApi* | [**regions_recommend**](docs/RegionsApi.md#regions_recommend) | **GET** /regions/recommend | 
+*RoutesApi* | [**routes_delete**](docs/RoutesApi.md#routes_delete) | **DELETE** /routes/{name_id} | 
+*RoutesApi* | [**routes_list**](docs/RoutesApi.md#routes_list) | **GET** /routes | 
+*RoutesApi* | [**routes_update**](docs/RoutesApi.md#routes_update) | **PUT** /routes/{name_id} | 
 
 
 ## Documentation For Models
@@ -79,6 +82,10 @@ Class | Method | HTTP request | Description
  - [RegionsListRegionsResponse](docs/RegionsListRegionsResponse.md)
  - [RegionsRecommendRegionResponse](docs/RegionsRecommendRegionResponse.md)
  - [RegionsRegion](docs/RegionsRegion.md)
+ - [RoutesListRoutesResponse](docs/RoutesListRoutesResponse.md)
+ - [RoutesRoute](docs/RoutesRoute.md)
+ - [RoutesUpdateRouteBody](docs/RoutesUpdateRouteBody.md)
+ - [RoutesUpdateRouteResponse](docs/RoutesUpdateRouteResponse.md)
  - [UploadPrepareFile](docs/UploadPrepareFile.md)
  - [UploadPresignedRequest](docs/UploadPresignedRequest.md)
  - [WatchResponse](docs/WatchResponse.md)
