@@ -6,3 +6,8 @@ export * from "./actors-actor-details-panel";
 export * from "./actors-actor-details";
 export * from "./hooks/index";
 export { getActorStatus } from "./actor-status-indicator";
+export * from "./actors-layout";
+export * from "./actors-layout-context";
+export * from "./console/actor-console-message";
+export * from "./actor-region";
+export * from "./console/actor-inspector";

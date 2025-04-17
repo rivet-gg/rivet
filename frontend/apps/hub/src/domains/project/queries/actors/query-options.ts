@@ -2,6 +2,7 @@ import { mergeWatchStreams } from "@/lib/watch-utilities";
 import { rivetClient } from "@/queries/global";
 import { getMetaWatchIndex } from "@/queries/utils";
 import { Rivet } from "@rivet-gg/api";
+import { safe, logfmt, type LogFmtValue } from "@rivet-gg/components";
 import {
 	type InfiniteData,
 	infiniteQueryOptions,
@@ -520,5 +521,154 @@ export const actorBuildsCountQueryOptions = ({
 		...actorBuildsQueryOptions({ projectNameId, environmentNameId }),
 		select: (data) => data.builds.length,
 		notifyOnChangeProps: ["data"],
+	});
+};
+
+export interface FunctionInvoke {
+	id: string;
+	regionId: string;
+	timestamp: Date;
+	level: string;
+	message: string;
+	properties: Record<string, LogFmtValue>;
+}
+
+export const functionsQueryOptions = ({
+	projectNameId,
+	environmentNameId,
+}: {
+	projectNameId: string;
+	environmentNameId: string;
+}) => {
+	return queryOptions({
+		refetchInterval: 1500,
+		queryKey: [
+			"project",
+			projectNameId,
+			"environment",
+			environmentNameId,
+			"functions",
+		],
+		queryFn: async ({
+			signal: abortSignal,
+			queryKey: [_, project, __, environment],
+		}) => {
+			const actors = await rivetClient.actors.list(
+				{
+					project,
+					environment,
+					includeDestroyed: true,
+				},
+				{ abortSignal },
+			);
+
+			const logs = await Promise.all(
+				actors.actors.flatMap((actor) =>
+					rivetClient.actors.logs
+						.get(
+							actor.id,
+							{
+								stream: Rivet.actors.LogStream.StdOut,
+								project,
+								environment,
+							},
+							{ abortSignal },
+						)
+						.then((response) => ({ actor, ...response }))
+						.catch(() => ({ actor, lines: [], timestamps: [] })),
+				),
+			);
+
+			const parsedLogs = await Promise.all(
+				logs.flatMap((log) =>
+					log.lines.map(async (line, index) => {
+						const raw = window.atob(line);
+						const fmt = (
+							await safe(logfmt.parse)(window.atob(line))
+						)[0];
+
+						const { level, msg, ...properties } = fmt || {};
+
+						return {
+							id: `${log.actor.id}-${log.timestamps[index]}-${index}`,
+							actor: log.actor,
+							regionId: log.actor.region,
+							line: raw,
+							logfmt: fmt,
+							level: level as string,
+							message: msg as string,
+							properties,
+							timestamp: log.timestamps[index],
+						};
+					}),
+				),
+			);
+
+			const filteredLogs = parsedLogs
+				.filter((log) => !!log.logfmt)
+				.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+			return filteredLogs;
+		},
+		select: (data) => data,
+	});
+};
+
+export interface Route {
+	id: string;
+	hostname: string;
+	pathPrefix: string;
+	selector: Record<string, string>;
+	createdAt: Date;
+}
+
+export const routesQueryOptions = ({
+	projectNameId,
+	environmentNameId,
+}: {
+	projectNameId: string;
+	environmentNameId: string;
+}) => {
+	return queryOptions({
+		queryKey: [
+			"project",
+			projectNameId,
+			"environment",
+			environmentNameId,
+			"routes",
+		],
+		queryFn: async ({
+			signal: abortSignal,
+			queryKey: [_, project, __, environment],
+		}) => {
+			return rivetClient.routes.list(
+				{
+					project,
+					environment,
+				},
+				{ abortSignal },
+			);
+		},
+		select: (data) => data.routes,
+	});
+};
+
+export const routeQueryOptions = ({
+	projectNameId,
+	environmentNameId,
+	routeNameId,
+}: {
+	projectNameId: string;
+	environmentNameId: string;
+	routeNameId: string;
+}) => {
+	return queryOptions({
+		...routesQueryOptions({
+			projectNameId,
+			environmentNameId,
+		}),
+		select: (data) => {
+			return data.routes.find((route) => route.nameId === routeNameId);
+		},
 	});
 };

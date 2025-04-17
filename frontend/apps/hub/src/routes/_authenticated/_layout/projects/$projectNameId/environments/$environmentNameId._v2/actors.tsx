@@ -32,7 +32,11 @@ import {
 	MutationObserver,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	type ErrorComponentProps,
+	useRouter,
+} from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { GettingStarted } from "@rivet-gg/components/actors";
@@ -48,6 +52,7 @@ import { queryClient } from "@/queries/global";
 import { toRecord } from "@rivet-gg/components";
 import { useDialog } from "@/hooks/use-dialog";
 import equal from "fast-deep-equal";
+import { ErrorComponent } from "@/components/error-component";
 
 function Actor() {
 	const navigate = Route.useNavigate();
@@ -458,7 +463,7 @@ function ProjectActorsRoute() {
 	}
 
 	return (
-		<div className="flex flex-col w-screen h-[calc(100vh-6.5rem)] bg-card -mx-4 -my-4">
+		<div className="flex flex-col max-w-full w-full h-full bg-card">
 			<Content />
 		</div>
 	);
@@ -473,12 +478,25 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute(
-	"/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/actors",
+	"/_authenticated/_layout/projects/$projectNameId/environments/$environmentNameId/_v2/actors",
 )({
 	validateSearch: zodValidator(searchSchema),
 	staticData: {
-		layout: "actors",
+		layout: "v2",
 	},
 	component: ProjectActorsRoute,
-	pendingComponent: Layout.Content.Skeleton,
+	pendingComponent: () => (
+		<div className="p-4">
+			<Layout.Content.Skeleton />
+		</div>
+	),
+	errorComponent(props: ErrorComponentProps) {
+		return (
+			<div className="p-4">
+				<div className="max-w-5xl mx-auto">
+					<ErrorComponent {...props} />
+				</div>
+			</div>
+		);
+	},
 });

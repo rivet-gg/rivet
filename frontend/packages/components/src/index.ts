@@ -82,6 +82,8 @@ export * from "./hooks";
 export * from "./lib/emoji";
 export * from "./third-party-providers";
 export * from "./lib/constants";
+export * from "./lib/table";
+export * from "./lib/logfmt";
 export * as styleHelpers from "./ui/helpers/index";
 export { toast } from "sonner";
 
