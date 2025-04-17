@@ -26,25 +26,23 @@ Every actor must export a default object with an async `start` function. Here's 
 
 ```ts {{"file": "src/index.ts"}}
 import type { ActorContext } from "@rivet-gg/actor";
-import * as http from "http";
 
 export default {
   async start(ctx: ActorContext) {
     // Get the port from environment variables or use a default
-    const port = parseInt(process.env.PORT_HTTP || "8080");
+    const port = parseInt(Deno.env.get("PORT_HTTP") || "8080");
     console.log(`HTTP server running on port ${port}`);
-    
-    // Create an HTTP server
-    const server = http.createServer((req, res) => {
-      res.writeHead(200, { "Content-Type": "text/plain" });
-      res.end(`Hello from Rivet Actor ${ctx.metadata.actor.id} running in ${ctx.metadata.region.id}!`);
+
+    // Create an HTTP server using Deno.serve
+    const server = Deno.serve({ port }, (req) => {
+      return new Response(`Hello from Rivet Actor ${ctx.metadata.actor.id} running in ${ctx.metadata.region.id}!`, {
+        status: 200,
+        headers: new Headers({ "Content-Type": "text/plain" }),
+      });
     });
-    
-    // Start listening on the specified port
-    server.listen(port);
-    
+
     // Keep the actor running until explicitly destroyed
-    await new Promise((resolve) => {});
+    await server.finished;
   }
 };
 ```
@@ -76,7 +74,8 @@ Specify the script in your `rivet.json`:
 {
   "builds": {
     "my-actor": {
-      "script": "./src/index.ts"
+      "script": "./src/index.ts",
+      "access": "public"
     }
   }
 }
@@ -95,7 +94,7 @@ In this step, you're requesting Rivet to launch your actor code in the cloud:
 ```typescript
 import { RivetClient } from "@rivet-gg/api";
 
-// Initialize the Rivet client with your API token
+// Initialize the Rivet client with your API service token
 // You can get this from the Rivet dashboard
 const client = new RivetClient({
   token: process.env.RIVET_TOKEN
