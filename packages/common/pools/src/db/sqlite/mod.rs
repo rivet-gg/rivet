@@ -1,28 +1,29 @@
+use std::{
+	fmt::Debug,
+	io::{self, Read, Write},
+	path::{Path, PathBuf},
+	sync::{Arc, Weak},
+	time::Duration,
+};
+
 use dirs;
 use fdb_util::{prelude::*, SERIALIZABLE};
 use foundationdb::{self as fdb, options::StreamingMode, tuple::Subspace, FdbBindingError};
 use uuid::Uuid;
 
 use futures_util::{StreamExt, TryStreamExt};
-use global_error::{bail, ensure, ext::AssertionError, unwrap, GlobalResult};
+use global_error::{bail, ext::AssertionError, unwrap, GlobalResult};
 use sqlx::{
 	migrate::MigrateDatabase,
-	sqlite::{SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous},
-	ConnectOptions, Sqlite,
+	pool::PoolConnection,
+	sqlite::{
+		SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqliteLockingMode,
+		SqliteSynchronous,
+	},
+	Sqlite,
 };
-use std::io::{self, Read, Write};
-use std::{
-	fmt::Debug,
-	path::{Path, PathBuf},
-	sync::{Arc, Weak},
-	time::Duration,
-};
-use tokio::sync::{oneshot, OnceCell};
-use tokio::{
-	io::AsyncReadExt,
-	sync::{broadcast, Mutex},
-	time::Instant,
-};
+use tokio::sync::{oneshot, OnceCell, RwLock};
+use tokio::{io::AsyncReadExt, sync::broadcast, time::Instant};
 use tracing::Instrument;
 
 use crate::{metrics, Error, FdbPool};
@@ -35,16 +36,6 @@ mod tests;
 const GC_INTERVAL: Duration = Duration::from_secs(5);
 const POOL_TTL: Duration = Duration::from_secs(15);
 const CHUNK_SIZE: usize = 10_000; // 10 KB, not KiB, see https://apple.github.io/foundationdb/blob.html
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct SqliteSnapshottedState {
-	total_changes: i64,
-	schema_version: i64,
-}
-
-/// Convention in pools is to expose `XXXXPool` type. This is not used internally, but used to
-/// define pool type in other modules.
-pub type SqlitePool = SqliteConnHandle;
 
 #[derive(Debug, Clone)]
 pub enum SqliteConnType {
@@ -87,22 +78,17 @@ pub struct SqliteWriterEntry {
 	key_packed: KeyPacked,
 	conn_type: SqliteConnType,
 
-	/// The underlying connection.
+	/// The underlying pool.
 	///
 	/// This is stored as a OnceCell since we need to be able to insert the SqliteEntry in to the
 	/// HashMap before the connection is initiated.
-	conn_once: OnceCell<SqliteConnHandle>,
+	pool_once: OnceCell<SqlitePool>,
 
 	/// Last time this pool was accessed (either by `get` or a ref was dropped, meaning the query
 	/// ended)
 	///
 	/// Only used for writers
-	last_access: Instant,
-
-	/// State from the last snapshot
-	///
-	/// Only used for writers
-	snapshotted_state: SqliteSnapshottedState,
+	last_access: RwLock<Instant>,
 
 	manager: SqlitePoolManagerHandleWeak,
 }
@@ -117,20 +103,16 @@ impl SqliteWriterEntry {
 			key_packed,
 			conn_type,
 
-			conn_once: OnceCell::new(),
+			pool_once: OnceCell::new(),
 
-			last_access: Instant::now(),
-			snapshotted_state: SqliteSnapshottedState {
-				total_changes: 0,
-				schema_version: 0,
-			},
+			last_access: RwLock::new(Instant::now()),
 			manager,
 		}
 	}
 
-	#[tracing::instrument(name = "sqlite_writer_conn", skip_all)]
-	async fn conn(&self) -> Result<&SqliteConnHandle, Error> {
-		self.conn_once
+	#[tracing::instrument(name = "sqlite_writer_pool", skip_all)]
+	async fn pool(&self) -> Result<&SqlitePool, Error> {
+		self.pool_once
 			.get_or_try_init(|| {
 				async {
 					let manager = self.manager.upgrade().ok_or_else(|| {
@@ -143,10 +125,10 @@ impl SqliteWriterEntry {
 						)
 					})?;
 
-					SqliteConn::connect(self.key_packed.clone(), self.conn_type.clone(), manager)
+					SqlitePoolInner::new(self.key_packed.clone(), self.conn_type.clone(), manager)
 						.await
 				}
-				.instrument(tracing::info_span!("conn_connect"))
+				.instrument(tracing::info_span!("pool_connect"))
 			})
 			.await
 	}
@@ -168,7 +150,7 @@ enum SqliteStorage {
 
 pub struct SqlitePoolManager {
 	/// Writer pools are kept in memory. Reader pools are one-off temporary SQLite databases.
-	writer_pools: scc::HashMap<KeyPacked, SqliteWriterEntry>,
+	writer_pools: papaya::HashMap<KeyPacked, SqliteWriterEntry>,
 	shutdown: broadcast::Sender<()>,
 	fdb: Option<FdbPool>,
 	storage: SqliteStorage,
@@ -205,7 +187,7 @@ impl SqlitePoolManager {
 		};
 
 		let manager = Arc::new(SqlitePoolManager {
-			writer_pools: scc::HashMap::new(),
+			writer_pools: papaya::HashMap::new(),
 			shutdown,
 			fdb: fdb.clone(),
 			storage,
@@ -226,7 +208,7 @@ impl SqlitePoolManager {
 		self: &Arc<Self>,
 		key: impl TuplePack + Debug,
 		conn_type: SqliteConnType,
-	) -> Result<SqliteConnHandle, Error> {
+	) -> Result<SqlitePool, Error> {
 		let start_instant = Instant::now();
 
 		let key_packed = Arc::new(key.pack_to_vec());
@@ -238,34 +220,25 @@ impl SqlitePoolManager {
 		let mut did_insert = false;
 
 		// Check if pool already exists
-		let conn = if conn_type.is_writer() {
+		let pool = if conn_type.is_writer() {
+			let pinned = self.writer_pools.pin_owned();
 			// Insert entry
-			let mut entry = self
-				.writer_pools
-				.entry_async(key_packed.clone())
-				.await
-				.or_insert_with(|| {
-					did_insert = true;
+			let entry = pinned.get_or_insert_with(key_packed.clone(), || {
+				did_insert = true;
 
-					// NOTE: Database will be loaded lazily on first call of `.conn()`. This is not
-					// for performance, this is because we need it to be a `OnceCell` in order to
-					// use it with scc.
-					SqliteWriterEntry::new(
-						key_packed.clone(),
-						conn_type.clone(),
-						Arc::downgrade(self),
-					)
-				});
+				// NOTE: Database will be loaded lazily on first call of `.conn()`. This is not
+				// for performance, this is because we need it to be a `OnceCell` in order to
+				// use it with scc.
+				SqliteWriterEntry::new(key_packed.clone(), conn_type.clone(), Arc::downgrade(self))
+			});
 
-			entry.last_access = Instant::now();
+			{
+				*entry.last_access.write().await = Instant::now();
+			}
 
-			let conn = entry.conn().await?;
-
-			conn.clone()
+			entry.pool().await?.clone()
 		} else {
-			let conn = SqliteConn::connect(key_packed.clone(), conn_type, self.clone()).await?;
-
-			conn
+			SqlitePoolInner::new(key_packed.clone(), conn_type, self.clone()).await?
 		};
 
 		let dt = start_instant.elapsed().as_secs_f64();
@@ -273,7 +246,7 @@ impl SqlitePoolManager {
 			.with_label_values(&[conn_type_str, &did_insert.to_string()])
 			.observe(dt);
 
-		Ok(conn)
+		Ok(pool)
 	}
 
 	/// Evicts databases from the pool and snapshots them if needed
@@ -294,13 +267,17 @@ impl SqlitePoolManager {
 	/// If the databases are loaded, then force a snapshot, or wait for existing snapshot to finish
 	/// writing.
 	#[tracing::instrument(name = "sqlite_flush", skip_all)]
-	pub async fn flush<T: TuplePack>(self: &Arc<Self>, keys: Vec<T>) -> Result<(), Error> {
+	pub async fn flush<T: TuplePack>(
+		self: &Arc<Self>,
+		keys: Vec<T>,
+		vacuum: bool,
+	) -> Result<(), Error> {
 		let keys_packed: Vec<KeyPacked> = keys
 			.into_iter()
 			.map(|key| Arc::new(key.pack_to_vec()))
 			.collect();
 
-		self.snapshot_with_key(&keys_packed, false)
+		self.snapshot_with_key(&keys_packed, vacuum, false)
 			.await
 			.map_err(Error::Global)?;
 
@@ -322,13 +299,13 @@ impl SqlitePoolManager {
 		}
 
 		// Attempt to snapshot all databases in a single call
-		self.snapshot_with_key(keys_packed, false).await?;
+		self.snapshot_with_key(keys_packed, true, false).await?;
 
 		// Remove all databases from the pools map
 		// Do this after snapshotting since we don't want to remove the db if the snapshot failed.
 		// If the snapshot failed, it will attempt to snapshot again on GC.
 		for key_packed in keys_packed {
-			self.writer_pools.remove_async(key_packed).await;
+			self.writer_pools.pin_owned().remove(key_packed);
 			// NOTE: The database file will be deleted when the SqliteEntry is dropped
 		}
 
@@ -352,6 +329,7 @@ impl SqlitePoolManager {
 	async fn snapshot_with_key(
 		&self,
 		keys_packed: &[KeyPacked],
+		vacuum: bool,
 		ensure_exists: bool,
 	) -> GlobalResult<bool> {
 		if keys_packed.is_empty() {
@@ -365,23 +343,20 @@ impl SqlitePoolManager {
 
 		let start_instant = Instant::now();
 
-		// Process each database connection in parallel using stream
+		// Process each database connection in parallel using a stream
 		let db_data_to_snapshot = futures_util::stream::iter(keys_packed.iter().cloned())
 			.map(|key_packed| {
 				async move {
 					let hex_key = hex::encode(&**key_packed);
 
-					// Acquire the connection
+					// Acquire the pool
 					//
 					// We don't lock the entry because we can't hold an scc lock in a multithreaded context.
-					// However, we hold the lock to the `SqliteConn.conn` which prevents concurrent snapshots
-					// that would cause conflict or out-of-order writes.
-					let (conn, prev_snapshotted_state) = if let Some(x) = self
+					let pool = if let Some(x) = self
 						.writer_pools
-						.read_async(&key_packed, |_, v| {
-							(v.conn_once.get().cloned(), v.snapshotted_state.clone())
-						})
-						.await
+						.pin_owned()
+						.get(&key_packed)
+						.map(|v| v.pool_once.get().cloned())
 					{
 						x
 					} else {
@@ -393,74 +368,54 @@ impl SqlitePoolManager {
 						}
 					};
 
-					let conn = match conn {
-						Some(conn) => conn,
-						None => return Ok(None), // Conn will be None if it has not been initiated yet
+					let pool = match pool {
+						Some(pool) => pool,
+						None => return Ok(None), // Pool will be None if it has not been initiated yet
 					};
-
-					// Hold a lock to the connection so nobody else can modify the database while we snapshot
-					// it
-					let mut conn_raw = conn.conn.lock().await;
 
 					tracing::debug!(key=?hex_key, "snapshotting sqlite database");
 
-					// Get current state
-					let current_state = SqliteSnapshottedState {
-						total_changes: sqlx::query_scalar("SELECT total_changes()")
-							.fetch_one(&mut *conn_raw)
-							.await
-							.map_err(Error::BuildSqlx)?,
-						schema_version: sqlx::query_scalar("PRAGMA schema_version")
-							.fetch_one(&mut *conn_raw)
-							.await
-							.map_err(Error::BuildSqlx)?,
-					};
+					let mut conn = pool.conn().await?;
 
-					// Compare with last snapshot state
-					ensure!(
-						prev_snapshotted_state.total_changes <= current_state.total_changes,
-						"total_changes() went down"
-					);
-					ensure!(
-						prev_snapshotted_state.schema_version <= current_state.schema_version,
-						"schema_version() went down"
-					);
-					if prev_snapshotted_state == current_state {
-						tracing::debug!(key=?hex_key, "no changes detected, skipping sqlite database snapshot");
-						return Ok(None);
+					if vacuum {
+						// NOTE: Must vacuum before checkpoint so the vacuum applies to the main db file
+						sqlx::query("PRAGMA incremental_vacuum(1);")
+							.execute(&mut *conn)
+							.instrument(tracing::info_span!("vacuum"))
+							.await?;
 					}
-
-					tracing::debug!(
-						key=?hex_key,
-						?prev_snapshotted_state,
-						?current_state,
-						"detected changes in sqlite database"
-					);
 
 					// Flush WAL journal
 					sqlx::query("PRAGMA wal_checkpoint(TRUNCATE);")
-						.execute(&mut *conn_raw)
+						.execute(&mut *conn)
+						.instrument(tracing::info_span!("flush_wal"))
 						.await?;
 
 					// Stream the database file and compress it
 					let mut compressed_data = Vec::new();
-					let file = tokio::fs::File::open(&conn.db_path)
+					let file = tokio::fs::File::open(&pool.db_path)
 						.await
 						.map_err(Error::Io)?;
 					let mut reader = tokio::io::BufReader::new(file);
 					let mut encoder = lz4_flex::frame::FrameEncoder::new(&mut compressed_data);
 
-					let mut buffer = [0u8; 16 * 1024]; // 16 KiB
-					loop {
-						let bytes_read = reader.read(&mut buffer).await.map_err(Error::Io)?;
-						if bytes_read == 0 {
-							break;
+					async {
+						let mut buffer = [0u8; 16 * 1024]; // 16 KiB
+						loop {
+							let bytes_read = reader.read(&mut buffer).await.map_err(Error::Io)?;
+							if bytes_read == 0 {
+								break;
+							}
+							encoder
+								.write_all(&buffer[..bytes_read])
+								.map_err(Error::Io)?;
 						}
-						encoder
-							.write_all(&buffer[..bytes_read])
-							.map_err(Error::Io)?;
+						encoder.finish().map_err(Error::Lz4)?;
+
+						Result::<_, Error>::Ok(())
 					}
-					encoder.finish().map_err(Error::Lz4)?;
+					.instrument(tracing::info_span!("compress"))
+					.await?;
 
 					// 3 MiB
 					if compressed_data.len() > 3 * 1024 * 1024 {
@@ -469,17 +424,13 @@ impl SqlitePoolManager {
 							.set(compressed_data.len().try_into().unwrap_or(i64::MAX));
 					}
 
-					Ok(Some((
-						key_packed,
-						Arc::new(compressed_data),
-						current_state,
-						prev_snapshotted_state,
-					)))
+					Ok(Some((key_packed, Arc::new(compressed_data))))
 				}
 			})
 			.buffer_unordered(32)
 			.try_filter_map(|result| async move { Ok(result) })
 			.try_collect::<Vec<_>>()
+			.in_current_span()
 			.await?;
 
 		// If no databases need to be snapshotted, return early
@@ -493,7 +444,7 @@ impl SqlitePoolManager {
 			let db_data_to_snapshot = db_data_to_snapshot.clone();
 			let subspace = self.subspace.clone();
 			async move {
-				for (key_packed, data, _, _) in &db_data_to_snapshot {
+				for (key_packed, data) in &db_data_to_snapshot {
 					// Clear previous data
 					let db_data_subspace =
 						subspace.subspace(&keys::DbDataKey::new(key_packed.clone()));
@@ -515,18 +466,19 @@ impl SqlitePoolManager {
 
 				Ok(())
 			}
-			.instrument(tracing::info_span!("snapshot_sqlite_write_tx"))
+			.in_current_span()
 		})
+		.instrument(tracing::info_span!("snapshot_sqlite_write_tx"))
 		.await?;
 
 		let dt = start_instant.elapsed().as_secs_f64();
 		let total_data_size = db_data_to_snapshot
 			.iter()
-			.map(|(_, data, _, _)| data.len())
+			.map(|(_, data)| data.len())
 			.sum::<usize>() as f64;
 
 		// Update state if write was successful
-		for (key_packed, data, current_state, prev_snapshotted_state) in db_data_to_snapshot {
+		for (key_packed, data) in db_data_to_snapshot {
 			let hex_key = hex::encode(&**key_packed);
 
 			// Because this was batch processed we don't know the rate for each individual key, just estimate
@@ -535,22 +487,6 @@ impl SqlitePoolManager {
 			metrics::SQLITE_UPLOAD_DB_RATE
 				.with_label_values(&[&hex_key])
 				.set(data.len() as f64 / (dt * ratio));
-
-			self.writer_pools
-				.update_async(&key_packed, |_, v| {
-					// Validate state
-					if v.snapshotted_state != prev_snapshotted_state {
-						tracing::error!(
-							current = ?v.snapshotted_state,
-							expected = ?prev_snapshotted_state,
-							"snapshotted state changed unexpectedly, indicating a potential race condition"
-						);
-					} else {
-						// Update snapshot
-						v.snapshotted_state = current_state;
-					}
-				})
-				.await;
 		}
 
 		Ok(true)
@@ -580,12 +516,12 @@ impl SqlitePoolManager {
 			// retained in the map until successfully snapshotted.
 			let mut to_remove = Vec::new();
 			let mut total_count = 0;
-			self.writer_pools.scan_async(|k, v| {
+			for (k, v) in self.writer_pools.pin_owned().iter() {
 				total_count += 1;
-				if v.last_access <= expire_ts {
-					if let Some(conn) = v.conn_once.get() {
+				if *v.last_access.read().await <= expire_ts {
+					if let Some(pool) = v.pool_once.get() {
 						// Validate that this is the only reference to the database
-						let ref_count = Arc::strong_count(conn);
+						let ref_count = Arc::strong_count(pool);
 						if ref_count == 1 {
 							to_remove.push(k.clone());
 						} else {
@@ -596,7 +532,7 @@ impl SqlitePoolManager {
 						to_remove.push(k.clone());
 					}
 				}
-			}).await;
+			}
 
 			// Evict each entry
 			let mut removed = 0;
@@ -671,12 +607,16 @@ impl SqlitePoolManager {
 						compressed_data_buf.extend(entry.value());
 					}
 
+					let span = tracing::info_span!("decompress");
+					let _guard = span.enter();
 					// Decompress the data
 					let mut decoder = lz4_flex::frame::FrameDecoder::new(&compressed_data_buf[..]);
 					decoder
 						.read_to_end(&mut buf)
 						.map_err(Error::Io)
 						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+					drop(_guard);
 
 					// If there is no compressed data, read from the uncompressed data (backwards compatibility)
 					if chunk_count == 0 {
@@ -717,8 +657,9 @@ impl SqlitePoolManager {
 
 					Ok((buf, chunk_count))
 				}
-				.instrument(tracing::info_span!("read_from_fdb_tx"))
+				.in_current_span()
 			})
+			.instrument(tracing::info_span!("read_from_fdb_tx"))
 			.await?;
 
 		if chunks > 0 {
@@ -748,11 +689,11 @@ impl Drop for SqlitePoolManager {
 	}
 }
 
-type SqliteConnHandle = Arc<SqliteConn>;
+pub type SqlitePool = Arc<SqlitePoolInner>;
 
-pub struct SqliteConn {
+pub struct SqlitePoolInner {
 	key_packed: KeyPacked,
-	conn: Mutex<sqlx::SqliteConnection>,
+	inner: sqlx::SqlitePool,
 	db_path: PathBuf,
 	manager: SqlitePoolManagerHandle,
 
@@ -760,13 +701,13 @@ pub struct SqliteConn {
 	_drop_task: oneshot::Sender<()>,
 }
 
-impl SqliteConn {
-	#[tracing::instrument(name = "sqlite_conn_connect", skip_all)]
-	async fn connect(
+impl SqlitePoolInner {
+	#[tracing::instrument(name = "sqlite_pool_new", skip_all)]
+	async fn new(
 		key_packed: KeyPacked,
 		conn_type: SqliteConnType,
 		manager: SqlitePoolManagerHandle,
-	) -> Result<SqliteConnHandle, Error> {
+	) -> Result<SqlitePool, Error> {
 		// Derive db path & URL
 		let hex_key_str = hex::encode(&*key_packed);
 		let (db_path, db_url) = match &manager.storage {
@@ -849,41 +790,52 @@ impl SqliteConn {
 
 		tracing::debug!(?db_url, "sqlite connecting");
 
-		// Connect to database
-		//
-		// We don't need a connection pool since we only have one reader/writer at a time
-		let res = if conn_type.is_writer() {
-			db_url
-				.parse::<SqliteConnectOptions>()
-				.map_err(Error::BuildSqlx)?
-				.create_if_missing(true)
-				// Set busy timeout to 5 seconds to avoid "database is locked" errors
-				.busy_timeout(Duration::from_secs(5))
-				// Enable foreign key constraint enforcement
-				.foreign_keys(true)
-				// Enable auto vacuuming and set it to incremental mode for gradual space reclaiming
-				.auto_vacuum(SqliteAutoVacuum::Incremental)
-				// Set synchronous mode to NORMAL for performance and data safety balance
-				.synchronous(SqliteSynchronous::Normal)
-				.journal_mode(SqliteJournalMode::Wal)
-				.connect()
-				.await
+		let opts = db_url
+			.parse::<SqliteConnectOptions>()
+			.map_err(Error::BuildSqlx)?;
+		let pool_opts = sqlx::sqlite::SqlitePoolOptions::new()
+			// The default connection timeout is too high
+			.acquire_timeout(Duration::from_secs(60))
+			.max_lifetime(Duration::from_secs(15 * 60))
+			.max_lifetime_jitter(Duration::from_secs(90))
+			// Remove connections after a while in order to reduce load after bursts
+			.idle_timeout(Some(Duration::from_secs(10 * 60)));
+
+		let (opts, pool_opts) = if conn_type.is_writer() {
+			(
+				opts.create_if_missing(true)
+					// Enable foreign key constraint enforcement
+					.foreign_keys(true)
+					// Enable auto vacuuming and set it to incremental mode for gradual space reclaiming
+					.auto_vacuum(SqliteAutoVacuum::Incremental)
+					// Set synchronous mode to NORMAL for performance and data safety balance
+					.synchronous(SqliteSynchronous::Normal)
+					// Increases write performance
+					.journal_mode(SqliteJournalMode::Wal)
+					// Reduces file system operations
+					.locking_mode(SqliteLockingMode::Exclusive),
+				// Sqlite doesnt support more than 1 concurrent connection, will get "database is locked"
+				pool_opts.min_connections(1).max_connections(1),
+			)
 		} else {
-			db_url
-				.parse::<SqliteConnectOptions>()
-				.map_err(Error::BuildSqlx)?
-				.read_only(true)
-				// Set busy timeout to 5 seconds to avoid "database is locked" errors
-				.busy_timeout(Duration::from_secs(5))
-				// Enable foreign key constraint enforcement
-				.foreign_keys(true)
-				// Set synchronous mode to NORMAL for performance and data safety balance
-				.synchronous(SqliteSynchronous::Normal)
-				.connect()
-				.await
+			(
+				opts.read_only(true)
+					// Enable foreign key constraint enforcement
+					.foreign_keys(true)
+					// Set synchronous mode to NORMAL for performance and data safety balance
+					.synchronous(SqliteSynchronous::Normal),
+				pool_opts
+					// Open connections immediately on startup
+					.min_connections(2)
+					// Shouldn't have more than 64 connections to a single sqlite db
+					.max_connections(64),
+			)
 		};
 
-		let conn_raw = match res {
+		// Create pool
+		let res = pool_opts.connect_with(opts).await;
+
+		let pool = match res {
 			Ok(x) => x,
 			Err(err) => {
 				tracing::error!(
@@ -955,12 +907,12 @@ impl SqliteConn {
 					.with_label_values(&[conn_type_str])
 					.dec();
 			}
-			.instrument(tracing::info_span!("sqlite_conn_drop"))
+			.instrument(tracing::info_span!("sqlite_pool_drop"))
 		});
 
-		Ok(Arc::new(SqliteConn {
+		Ok(Arc::new(SqlitePoolInner {
 			key_packed,
-			conn: Mutex::new(conn_raw),
+			inner: pool,
 			db_path,
 			manager,
 			_drop_task: drop_tx,
@@ -968,12 +920,12 @@ impl SqliteConn {
 	}
 }
 
-impl SqliteConn {
-	#[tracing::instrument(name = "sqlite_conn_snapshot", skip_all)]
-	pub async fn snapshot(&self) -> GlobalResult<bool> {
+impl SqlitePoolInner {
+	#[tracing::instrument(name = "sqlite_pool_snapshot", skip_all)]
+	pub async fn snapshot(&self, vacuum: bool) -> GlobalResult<bool> {
 		match self
 			.manager
-			.snapshot_with_key(&[self.key_packed.clone()], true)
+			.snapshot_with_key(&[self.key_packed.clone()], vacuum, true)
 			.await
 		{
 			Ok(x) => Ok(x),
@@ -988,24 +940,29 @@ impl SqliteConn {
 	}
 }
 
-// HACK: Implement mock methods to make this act like an SQLite pool so it can be used with the SQL
-// macros.
-impl SqliteConn {
-	pub fn try_acquire(&self) -> Option<tokio::sync::MutexGuard<'_, sqlx::SqliteConnection>> {
-		self.conn.try_lock().ok()
+impl SqlitePoolInner {
+	#[tracing::instrument(skip_all)]
+	pub async fn conn(&self) -> Result<PoolConnection<Sqlite>, sqlx::Error> {
+		// Attempt to use an existing connection
+		if let Some(conn) = self.inner.try_acquire() {
+			Ok(conn)
+		} else {
+			// Create a new connection
+			self.inner.acquire().await
+		}
 	}
+}
 
-	#[tracing::instrument(name = "sqlite_acquire", skip_all)]
-	pub async fn acquire(
-		&self,
-	) -> Result<tokio::sync::MutexGuard<'_, sqlx::SqliteConnection>, sqlx::Error> {
-		Ok(self.conn.lock().await)
+impl std::ops::Deref for SqlitePoolInner {
+	type Target = sqlx::SqlitePool;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
 	}
+}
 
-	#[tracing::instrument(name = "sqlite_conn", skip_all)]
-	pub async fn conn(
-		&self,
-	) -> Result<tokio::sync::MutexGuard<'_, sqlx::SqliteConnection>, sqlx::Error> {
-		self.acquire().await
+impl std::ops::DerefMut for SqlitePoolInner {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.inner
 	}
 }
