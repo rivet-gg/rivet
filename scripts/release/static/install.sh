@@ -11,7 +11,10 @@ rm -rf /tmp/rivet_cli_install
 mkdir /tmp/rivet_cli_install
 cd /tmp/rivet_cli_install
 
-RIVET_CLI_VERSION="__VERSION__"
+# Use existing RIVET_CLI_VERSION if set, otherwise use the default
+if [ -z "${RIVET_CLI_VERSION+x}" ]; then
+    RIVET_CLI_VERSION="__VERSION__"
+fi
 UNAME="$(uname -s)"
 ARCH="$(uname -m)"
 
