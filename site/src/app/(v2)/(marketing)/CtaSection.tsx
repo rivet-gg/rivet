@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { Button } from "@rivet-gg/components";
+import { Icon, faArrowRight } from "@rivet-gg/icons";
+import { MarketingButton } from "./MarketingButton";
 
 // CTA section
 export const CtaSection = () => {
@@ -14,25 +16,19 @@ export const CtaSection = () => {
         </p>
         
         <div className="mt-12 flex items-center justify-center gap-x-6">
-          <Button 
-            size="lg" 
-            asChild 
-            className="px-4 py-3 text-base bg-gradient-to-b from-[#FF5C00] to-[#FF5C00]/90 border border-[#FF5C00]/30 hover:border-[#FF5C00]/60 hover:from-[#E65400] hover:to-[#E65400]/90 transition-all duration-200"
-          >
-            <Link href="#deploy">
-              <span>Deploy in 1 Minute</span>
-            </Link>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="lg" 
-            asChild 
-            className="px-4 py-3 text-base border-white/10 hover:border-white/30 transition-all duration-200"
-          >
-            <Link href="#demo">
-              <span>Book Demo</span>
-            </Link>
-          </Button>
+          <MarketingButton href="#deploy" primary>
+            Deploy Now
+          </MarketingButton>
+          <MarketingButton href="/docs/rivet-vs-cloudflare-workers">
+            <span>On-Prem Cloudflare Workers</span>
+            <Icon
+              icon={faArrowRight}
+              className="ml-2 text-xs group-hover:translate-x-0.5 transition-transform"
+            />
+          </MarketingButton>
+          {/*<MarketingButton href="#demo">
+            <span>Book Demo</span>
+          </MarketingButton>*/}
         </div>
       </div>
     </div>

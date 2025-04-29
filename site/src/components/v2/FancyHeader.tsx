@@ -8,7 +8,7 @@ import { Icon, faDiscord } from "@rivet-gg/icons";
 import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "unframer";
+import { AnimatePresence, motion } from "framer-motion";
 import { HeaderPopupProductMenu } from "../HeaderPopupProductMenu";
 
 type Subnav = false | "product" | "solutions";

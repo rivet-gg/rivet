@@ -34,6 +34,7 @@ import { TutorialsSection } from "./TutorialsSection";
 import { CommandCenterSection } from "./CommandCenterSection";
 import { CommunitySection } from "./CommunitySection";
 import { CtaSection } from "./CtaSection";
+import { MarketingButton } from "./MarketingButton";
 import GlobeSvg from "../(img)/globe.svg";
 import ActorsSvg from "../(img)/actors.svg";
 import ContainerSvg from "../(img)/container.svg";
@@ -68,62 +69,13 @@ export default function IndexPage() {
 // Hero component with title, subtitle, and CTA buttons
 const Hero = () => {
 	return (
-		<div className="relative isolate overflow-hidden pt-14">
-			<div className="mx-auto max-w-7xl px-6 pt-24 pb-12 sm:pt-32 sm:pb-16 lg:px-8">
-				<div className="mx-auto max-w-4xl text-center">
-					<h1 className="text-4xl font-medium tracking-tight text-white sm:text-6xl md:text-6xl">
-						The Open-Source
-						<br className="hidden sm:block" />
-						Serverless Platform
-					</h1>
-					<p className="mt-8 text-lg leading-8 text-white/70 max-w-2xl mx-auto">
-						Easily build & scale{" "}
-						<span className="text-white font-medium">
-							AI agents
-						</span>
-						,{" "}
-						<span className="text-white font-medium">
-							functions
-						</span>
-						,{" "}
-						<span className="text-white font-medium">
-							stateful services
-						</span>
-						, and more.
-						<br />
-						<span className="text-white/60 font-light">
-							Open-source & self-hostable.
-						</span>
-					</p>
-					<div className="mt-10 flex items-center justify-center gap-x-6">
-						<Button
-							size="lg"
-							asChild
-							className="px-4 py-3 text-base bg-gradient-to-b from-[#FF5C00] to-[#FF5C00]/90 border border-[#FF5C00]/30 hover:border-[#FF5C00]/60 hover:from-[#E65400] hover:to-[#E65400]/90 transition-all duration-200"
-						>
-							<Link href="#deploy">
-								<span>Deploy in 1 Minute</span>
-							</Link>
-						</Button>
-						<Button
-							variant="outline"
-							size="lg"
-							asChild
-							className="px-4 py-3 text-base border-white/10 hover:border-white/30 transition-all duration-200"
-						>
-							<Link href="#demo">
-								<span>Book Demo</span>
-							</Link>
-						</Button>
-					</div>
-
-					<div className="mt-6 text-center">
-						<p className="text-white/40 mb-6">or run locally</p>
-						<CopyCommand command="docker run rivetgg/rivet:latest" />
-					</div>
-					<div className="mt-8 inline-flex">
+		<div className="relative isolate overflow-hidden pb-8 sm:pb-10 pt-40">
+			<div className="mx-auto max-w-[1200px] px-6 lg:px-8">
+				<div className="max-w-2xl">
+					{/* On-Prem CF Workers */}
+					{/*<div>
 						<Link
-							href="/docs/cloudflare-compatibility"
+							href="/docs/rivet-vs-cloudflare-workers"
 							className="group"
 						>
 							<div className="text-sm px-4 py-2 bg-[#FF5C00]/5 border border-[#FF5C00]/10 rounded-full inline-flex items-center group-hover:bg-[#FF5C00]/10 group-hover:border-[#FF5C00]/20 transition-all">
@@ -145,6 +97,59 @@ const Hero = () => {
 							</div>
 						</Link>
 					</div>
+
+					<div className="h-8" />*/}
+
+					{/* Title */}
+					<div className="space-y-6">
+						<h1 className="text-6xl font-700 text-white leading-[1.1] tracking-normal">
+							The open-source
+							<br className="hidden sm:inline" />
+							serverless platform
+						</h1>
+						<p className="text-xl leading-[1.2] tracking-tight font-500 text-white/60 max-w-lg">
+							Easily deploy & scale{" "}
+							<span className="text-white/80">AI agents</span>,{" "}
+							<span className="text-white/80">
+								complex workloads
+							</span>,{" "}
+							<span className="text-white/80">backends</span>{" "}
+							— all on a frictionless platform that runs anywhere.
+							{/*<span className="text-white/80">
+								Open-source
+							</span> &{" "}
+							<span className="text-white/80">
+								self-hostable
+							</span>.*/}
+						</p>
+					</div>
+
+					<div className="h-10" />
+
+					{/* CTA */}
+					<div className="flex flex-col sm:flex-row items-start gap-4">
+						<MarketingButton href="#deploy" primary>
+							Deploy Now
+						</MarketingButton>
+						<MarketingButton href="/rivet-vs-cloudflare-workers">
+							<span>On-Prem Cloudflare Workers</span>
+							<Icon
+								icon={faArrowRight}
+								className="ml-2 text-xs group-hover:translate-x-0.5 transition-transform"
+							/>
+						</MarketingButton>
+						{/* TODO */}
+						{/*<MarketingButton 
+							href="#demo"
+						>
+							Book Demo
+						</MarketingButton>*/}
+					</div>
+
+					{/*<div className="mt-4">
+						<p className="text-sm text-white/40 mb-3">or run locally with Docker</p>
+						<CopyCommand command="docker run rivetgg/rivet:latest" />
+					</div>*/}
 				</div>
 			</div>
 		</div>
@@ -158,10 +163,10 @@ const Feature = ({
 	faIcon,
 	href,
 	useCases,
-}: { 
-	title: string; 
-	description: string; 
-	faIcon: any; 
+}: {
+	title: string;
+	description: string;
+	faIcon: any;
 	href: string;
 	useCases?: string[];
 }) => {
@@ -179,14 +184,17 @@ const Feature = ({
 						</h3>
 					</div>
 
-					<p className="text-white text-sm">{description}</p>
-					
+					<p className="text-white text-sm text-white/40">
+						{description}
+					</p>
+
 					{useCases && useCases.length > 0 && (
-						<div className="mt-3 flex flex-wrap gap-x-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-							<span className="text-white/40">Good for:</span> 
+						<div className="mt-3 flex flex-wrap gap-x-2 text-xs">
+							<span className="text-white/40">Good for:</span>
 							{useCases.map((useCase, index) => (
 								<span key={index} className="text-white/70">
-									{useCase}{index < useCases.length - 1 ? "," : ""}
+									{useCase}
+									{index < useCases.length - 1 ? "," : ""}
 								</span>
 							))}
 						</div>
@@ -194,7 +202,7 @@ const Feature = ({
 				</div>
 
 				<div className="mt-auto">
-					{title === "Functions" && (
+					{title === "Stateless Functions" && (
 						<div className="absolute bottom-0 left-0 h-80 w-80 opacity-10 group-hover:opacity-20 transition-opacity duration-200 -ml-8 -mb-36">
 							<Image
 								src={GlobeSvg}
@@ -262,40 +270,42 @@ const Feature = ({
 const FeaturesGrid = () => {
 	const features = [
 		{
-			title: "Functions",
+			title: "Stateless Functions",
 			description: "Deploy serverless functions that scale automatically",
 			faIcon: faCode,
 			href: "/docs/functions",
-			useCases: ["APIs", "Edge computing", "Microservices"]
+			useCases: ["APIs", "Edge computing", "Microservices"],
 		},
 		{
 			title: "Stateful Actors",
-			description: "Long-running tasks with built-in state persistence & hibernation",
+			description:
+				"Long running tasks with state persistence, hibernation, and realtime",
 			faIcon: faLayerGroup,
 			href: "/docs/stateful-jobs",
-			useCases: ["AI agents", "Realtime apps", "Rate limiting"]
+			useCases: ["AI agents", "Realtime apps", "Local-first sync"],
 		},
 		{
 			title: "Sandboxed Containers",
-			description: "Run long-running tasks in isolated environments",
+			description:
+				"Run CPU- & memory-intensive workloads in secure containers with blazing fast coldstarts",
 			faIcon: faServer,
 			href: "/docs/stateful-jobs",
-			useCases: ["Code interpreters", "Remote desktop", "UGC games"]
+			useCases: ["Code interpreters", "Remote desktop", "Game servers"],
 		},
-		{
-			title: "Workflows",
-			description: "Orchestrate complex, multi-step processes",
-			faIcon: faArrowsToCircle,
-			href: "/docs/workflows",
-			useCases: ["AI agents", "Business logic", "Data pipelines"]
-		},
-		{
-			title: "SQLite Databases",
-			description: "On-demand SQL databases 10x faster than Postgres with vector stores & full text search",
-			faIcon: faDatabase,
-			href: "/docs/sqlite-databases",
-			useCases: ["Agent memory", "Per-tenant databases", "Local-first apps"]
-		},
+		//{
+		//	title: "Workflows",
+		//	description: "Orchestrate complex, multi-step processes",
+		//	faIcon: faArrowsToCircle,
+		//	href: "/docs/workflows",
+		//	useCases: ["AI agents", "Business logic", "Data pipelines"]
+		//},
+		//{
+		//	title: "SQLite Databases",
+		//	description: "On-demand SQL databases 10x faster than Postgres with vector stores & full text search",
+		//	faIcon: faDatabase,
+		//	href: "/docs/sqlite-databases",
+		//	useCases: ["Agent memory", "Per-tenant databases", "Local-first apps"]
+		//},
 	];
 
 	return (
@@ -313,7 +323,7 @@ const FeaturesGrid = () => {
 				))}
 			</div>
 			<div className="text-center mt-16">
-				<p className="text-white/80 text-lg">
+				<p className="text-white/70 text-lg">
 					<span className="font-normal text-white">
 						Select the products that fit your needs
 					</span>{" "}
@@ -351,7 +361,7 @@ const FrameworksSection = () => {
 	return (
 		<div className="mx-auto max-w-7xl px-6 py-28 lg:py-44 lg:px-8 mt-16">
 			<div className="flex flex-col md:flex-row md:items-start">
-				<div className="md:w-1/3 mb-8 md:mb-0 md:pr-8">
+				<div className="grow max-w-lg mb-8 md:mb-0 md:pr-8">
 					<h2 className="text-4xl font-medium tracking-tight text-white text-left">
 						Rivet works with any framework
 					</h2>
@@ -360,8 +370,8 @@ const FrameworksSection = () => {
 						with your preferred tools and languages.
 					</p>
 				</div>
-				<div className="md:w-2/3">
-					<div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-x-6 gap-y-6">
+				<div>
+					<div className="grid grid-cols-4 gap-x-6 gap-y-6">
 						{frameworks.map((framework, index) => (
 							<Link
 								key={index}
@@ -383,4 +393,3 @@ const FrameworksSection = () => {
 		</div>
 	);
 };
-

@@ -28,6 +28,7 @@ const footer = {
 		{ name: "Status Page", href: "https://rivet.betteruptime.com/" },
 		{ name: "OSS Friends", href: "/oss-friends" },
 		{ name: "Press Kit", href: "https://releases.rivet.gg/press-kit.zip" },
+		{ name: "Rivet vs Cloudflare Workers", href: "/rivet-vs-cloudflare-workers" },
 	],
 	legal: [
 		{ name: "Terms", href: "/terms" },
