@@ -55,8 +55,8 @@ export default function IndexPage() {
 		<>
 			<div />
 			<main className="min-h-screen w-full max-w-[1500px] mx-auto md:px-8">
-				<Hero />
 				<FeaturesGrid />
+				<Hero />
 				<FrameworksSection />
 				<TutorialsSection />
 				<CommandCenterSection />
@@ -69,37 +69,9 @@ export default function IndexPage() {
 // Hero component with title, subtitle, and CTA buttons
 const Hero = () => {
 	return (
-		<div className="relative isolate overflow-hidden pb-8 sm:pb-10 pt-40">
+		<div className="relative isolate overflow-hidden pb-8 sm:pb-10">
 			<div className="mx-auto max-w-[1200px] px-6 lg:px-8">
-				<div className="max-w-2xl">
-					{/* On-Prem CF Workers */}
-					{/*<div>
-						<Link
-							href="/docs/rivet-vs-cloudflare-workers"
-							className="group"
-						>
-							<div className="text-sm px-4 py-2 bg-[#FF5C00]/5 border border-[#FF5C00]/10 rounded-full inline-flex items-center group-hover:bg-[#FF5C00]/10 group-hover:border-[#FF5C00]/20 transition-all">
-								<span className="text-white/70">
-									Need on-prem{" "}
-									<span className="text-white">
-										Cloudflare Workers
-									</span>{" "}
-									or{" "}
-									<span className="text-white">
-										Durable Objects
-									</span>
-									?
-								</span>
-								<Icon
-									icon={faArrowRight}
-									className="ml-2 text-xs text-[#FF5C00] group-hover:translate-x-0.5 transition-transform"
-								/>
-							</div>
-						</Link>
-					</div>
-
-					<div className="h-8" />*/}
-
+				<div className="max-w-2xl ml-auto text-right">
 					{/* Title */}
 					<div className="space-y-6">
 						<h1 className="text-6xl font-700 text-white leading-[1.1] tracking-normal">
@@ -107,7 +79,7 @@ const Hero = () => {
 							<br className="hidden sm:inline" />
 							serverless platform
 						</h1>
-						<p className="text-xl leading-[1.2] tracking-tight font-500 text-white/60 max-w-lg">
+						<p className="text-xl leading-[1.2] tracking-tight font-500 text-white/60 max-w-lg ml-auto">
 							Easily deploy & scale{" "}
 							<span className="text-white/80">AI agents</span>,{" "}
 							<span className="text-white/80">
@@ -115,19 +87,13 @@ const Hero = () => {
 							</span>,{" "}
 							<span className="text-white/80">backends</span>{" "}
 							— all on a frictionless platform that runs anywhere.
-							{/*<span className="text-white/80">
-								Open-source
-							</span> &{" "}
-							<span className="text-white/80">
-								self-hostable
-							</span>.*/}
 						</p>
 					</div>
 
 					<div className="h-10" />
 
 					{/* CTA */}
-					<div className="flex flex-col sm:flex-row items-start gap-4">
+					<div className="flex flex-col sm:flex-row items-end gap-4 justify-end">
 						<MarketingButton href="#deploy" primary>
 							Deploy Now
 						</MarketingButton>
@@ -138,18 +104,7 @@ const Hero = () => {
 								className="ml-2 text-xs group-hover:translate-x-0.5 transition-transform"
 							/>
 						</MarketingButton>
-						{/* TODO */}
-						{/*<MarketingButton 
-							href="#demo"
-						>
-							Book Demo
-						</MarketingButton>*/}
 					</div>
-
-					{/*<div className="mt-4">
-						<p className="text-sm text-white/40 mb-3">or run locally with Docker</p>
-						<CopyCommand command="docker run rivetgg/rivet:latest" />
-					</div>*/}
 				</div>
 			</div>
 		</div>
@@ -172,27 +127,27 @@ const Feature = ({
 }) => {
 	return (
 		<Link href={href} className="block group">
-			<div className="rounded-xl bg-[#121212] group-hover:bg-zinc-800/90 border border-white/5 group-hover:border-[white]/20 shadow-sm transition-all duration-200 relative overflow-hidden h-[450px] w-[360px] flex flex-col">
+			<div className="rounded-xl bg-[#FF5C00]/90 group-hover:bg-[#FF5C00] group-hover:brightness-110 border border-[#FF5C00]/20 group-hover:border-[#FF5C00]/30 shadow-sm transition-all duration-200 relative overflow-hidden h-[450px] w-[360px] flex flex-col">
 				<div className="px-8 mt-6">
 					<div className="flex items-center gap-3 mb-6">
 						<Icon
 							icon={faIcon}
-							className="text-lg text-white/10 group-hover:text-white transition-colors duration-300"
+							className="text-lg text-black/90 group-hover:text-black transition-colors duration-300"
 						/>
-						<h3 className="text-lg font-normal text-white">
+						<h3 className="text-lg font-normal text-black/70 group-hover:text-black/90 transition-colors duration-200">
 							{title}
 						</h3>
 					</div>
 
-					<p className="text-white text-sm text-white/40">
+					<p className="text-black/60 group-hover:text-black/80 transition-colors duration-200 text-sm">
 						{description}
 					</p>
 
 					{useCases && useCases.length > 0 && (
 						<div className="mt-3 flex flex-wrap gap-x-2 text-xs">
-							<span className="text-white/40">Good for:</span>
+							<span className="text-black/50 group-hover:text-black/70 transition-colors duration-200">Good for:</span>
 							{useCases.map((useCase, index) => (
-								<span key={index} className="text-white/70">
+								<span key={index} className="text-black/60 group-hover:text-black/80 transition-colors duration-200">
 									{useCase}
 									{index < useCases.length - 1 ? "," : ""}
 								</span>
@@ -203,57 +158,57 @@ const Feature = ({
 
 				<div className="mt-auto">
 					{title === "Stateless Functions" && (
-						<div className="absolute bottom-0 left-0 h-80 w-80 opacity-10 group-hover:opacity-20 transition-opacity duration-200 -ml-8 -mb-36">
+						<div className="absolute bottom-0 left-0 h-80 w-80 opacity-10 group-hover:opacity-15 transition-opacity duration-200 -ml-8 -mb-36">
 							<Image
 								src={GlobeSvg}
 								alt="Globe"
 								fill
-								className="object-contain scale-105"
+								className="object-contain scale-105 brightness-0"
 							/>
 						</div>
 					)}
 					{title === "Stateful Actors" && (
-						<div className="absolute top-[240px] left-0 h-64 w-64 opacity-10 group-hover:opacity-20 transition-opacity duration-200 -ml-8">
+						<div className="absolute top-[240px] left-0 h-64 w-64 opacity-10 group-hover:opacity-15 transition-opacity duration-200 -ml-8">
 							<Image
 								src={ActorsSvg}
 								alt="Actors"
 								fill
-								className="object-contain scale-105"
+								className="object-contain scale-105 brightness-0"
 							/>
 						</div>
 					)}
 					{title === "Sandboxed Containers" && (
-						<div className="absolute top-[240px] left-0 h-80 w-80 opacity-10 group-hover:opacity-20 transition-opacity duration-200 -ml-[100px]">
+						<div className="absolute top-[240px] left-0 h-80 w-80 opacity-10 group-hover:opacity-15 transition-opacity duration-200 -ml-[100px]">
 							<Image
 								src={ContainerSvg}
 								alt="Container"
 								fill
-								className="object-contain scale-105"
+								className="object-contain scale-105 brightness-0"
 							/>
 						</div>
 					)}
 					{title === "Workflows" && (
-						<div className="absolute top-[200px] left-0 h-80 w-80 opacity-10 group-hover:opacity-20 transition-opacity duration-200 -ml-[100px]">
+						<div className="absolute top-[200px] left-0 h-80 w-80 opacity-10 group-hover:opacity-15 transition-opacity duration-200 -ml-[100px]">
 							<Image
 								src={WorkflowSvg}
 								alt="Workflow"
 								fill
-								className="object-contain scale-105"
+								className="object-contain scale-105 brightness-0"
 							/>
 						</div>
 					)}
 					{title === "SQLite Databases" && (
-						<div className="absolute top-[200px] left-0 h-80 w-80 opacity-10 group-hover:opacity-20 transition-opacity duration-200 -ml-[100px]">
+						<div className="absolute top-[200px] left-0 h-80 w-80 opacity-10 group-hover:opacity-15 transition-opacity duration-200 -ml-[100px]">
 							<Image
 								src={DbSvg}
 								alt="Database"
 								fill
-								className="object-contain scale-105"
+								className="object-contain scale-105 brightness-0"
 							/>
 						</div>
 					)}
 					<div className="px-8 pb-8 relative z-10">
-						<div className="flex items-center justify-end text-[#505052] opacity-0 group-hover:opacity-100 transition-opacity">
+						<div className="flex items-center justify-end text-black opacity-0 group-hover:opacity-100 transition-opacity">
 							<Icon
 								icon={faArrowRight}
 								className="text-xl group-hover:translate-x-0.5 transition-all"
@@ -309,8 +264,8 @@ const FeaturesGrid = () => {
 	];
 
 	return (
-		<div className="mx-auto w-full px-4 pt-0 pb-16 -mt-8 max-w-[1200px]">
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-16 md:mt-20 justify-items-center">
+		<div className="mx-auto w-full px-4 pt-32 pb-16 max-w-[1200px]">
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 justify-items-center">
 				{features.map((feature, index) => (
 					<Feature
 						key={index}
@@ -321,14 +276,6 @@ const FeaturesGrid = () => {
 						useCases={feature.useCases}
 					/>
 				))}
-			</div>
-			<div className="text-center mt-16">
-				<p className="text-white/70 text-lg">
-					<span className="font-normal text-white">
-						Select the products that fit your needs
-					</span>{" "}
-					— integrated together into a single platform.
-				</p>
 			</div>
 		</div>
 	);
