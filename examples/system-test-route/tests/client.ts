@@ -400,18 +400,18 @@ async function cleanup(context: TestContext): Promise<void> {
 	}
 
 	// Then delete all actors
-	for (let i = 0; i < context.actorIds.length; i++) {
-		const actorId = context.actorIds[i];
-		console.log(`Destroying actor ${i + 1}:`, actorId);
-		try {
-			await client.actors.destroy(actorId, {
-				project: RIVET_PROJECT,
-				environment: RIVET_ENVIRONMENT,
-			});
-		} catch (err) {
-			console.error(`Error destroying actor ${i + 1}:`, err);
-		}
-	}
+	// for (let i = 0; i < context.actorIds.length; i++) {
+	// 	const actorId = context.actorIds[i];
+	// 	console.log(`Destroying actor ${i + 1}:`, actorId);
+	// 	try {
+	// 		await client.actors.destroy(actorId, {
+	// 			project: RIVET_PROJECT,
+	// 			environment: RIVET_ENVIRONMENT,
+	// 		});
+	// 	} catch (err) {
+	// 		console.error(`Error destroying actor ${i + 1}:`, err);
+	// 	}
+	// }
 }
 
 // Core test setup function that handles resource creation and cleanup

@@ -27,13 +27,12 @@ const downloadLogsAtom = atom(
 			logs: Atom<LogsAtom>;
 		},
 	) => {
-		const { logs, errors } = get(get(logsAtom));
+		const { logs } = get(get(logsAtom));
 
 		const combined = filterLogs({
 			typeFilter: typeFilter ?? "all",
 			filter: filter ?? "",
 			logs,
-			errors,
 		});
 
 		const lines = combined.map((log) => {
