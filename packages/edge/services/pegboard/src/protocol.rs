@@ -97,17 +97,30 @@ pub enum Command {
 		/// Whether or not to delete related data (KV store).
 		persist_storage: bool,
 	},
+	SignalRunner {
+		runner_id: Uuid,
+		// See nix::sys::signal::Signal
+		signal: i32,
+	},
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash)]
 pub struct ActorConfig {
-	pub image: Image,
-	pub root_user_enabled: bool,
-	pub resources: Resources,
+	// TODO: Once old actors are all gone, make this not optional
+	pub runner: Option<ActorRunner>,
 	pub env: HashableMap<String, String>,
-	pub ports: HashableMap<String, Port>,
-	pub network_mode: NetworkMode,
 	pub metadata: Raw<ActorMetadata>,
+
+	#[deprecated]
+	pub image: Image,
+	#[deprecated]
+	pub root_user_enabled: bool,
+	#[deprecated]
+	pub resources: Resources,
+	#[deprecated]
+	pub ports: HashableMap<String, Port>,
+	#[deprecated]
+	pub network_mode: NetworkMode,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash)]
@@ -121,6 +134,7 @@ pub struct Image {
 	pub artifact_size_bytes: u64,
 	pub kind: ImageKind,
 	pub compression: ImageCompression,
+	pub allocation_type: ImageAllocationType,
 }
 
 #[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq)]
@@ -141,13 +155,11 @@ impl From<build::types::BuildKind> for ImageKind {
     }
 }
 
-impl ImageKind {
-	pub fn client_flavor(&self) -> ClientFlavor {
-		match self {
-			ImageKind::DockerImage | ImageKind::OciBundle => ClientFlavor::Container,
-			ImageKind::JavaScript => ClientFlavor::Isolate,
-		}
-	}
+#[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ImageAllocationType {
+	Single,
+	Multi,
 }
 
 #[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq)]
@@ -271,6 +283,36 @@ pub struct ActorMetadataBuild {
 	pub build_id: Uuid,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Hash)]
+pub struct RunnerConfig {
+	pub image: Image,
+	pub root_user_enabled: bool,
+	pub resources: Resources,
+	pub env: HashableMap<String, String>,
+	pub ports: HashableMap<String, Port>,
+	pub network_mode: NetworkMode,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum ActorRunner {
+	New {
+		runner_id: Uuid,
+		config: RunnerConfig,
+	},
+	Existing {
+		runner_id: Uuid,
+	},
+}
+
+impl ActorRunner {
+	pub fn runner_id(&self) -> Uuid {
+		match self {
+			ActorRunner::New { runner_id, .. } | ActorRunner::Existing { runner_id } => *runner_id,
+		}
+	}
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 pub struct EventWrapper {
 	pub index: i64,
@@ -327,6 +369,7 @@ pub struct ProxiedPort {
 pub enum ClientFlavor {
 	Container = 0,
 	Isolate = 1,
+	Multi = 2,
 }
 
 impl std::fmt::Display for ClientFlavor {
@@ -334,6 +377,7 @@ impl std::fmt::Display for ClientFlavor {
 		match self {
 			ClientFlavor::Container => write!(f, "container"),
 			ClientFlavor::Isolate => write!(f, "isolate"),
+			ClientFlavor::Multi => write!(f, "multi"),
 		}
 	}
 }
@@ -345,6 +389,7 @@ impl std::str::FromStr for ClientFlavor {
 		match s {
 			"container" => Ok(ClientFlavor::Container),
 			"isolate" => Ok(ClientFlavor::Isolate),
+			"multi" => Ok(ClientFlavor::Multi),
 			x => Err(PegboardProtocolError::InvalidClientFlavor(x.to_string())),
 		}
 	}
