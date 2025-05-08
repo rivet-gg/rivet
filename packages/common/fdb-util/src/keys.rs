@@ -46,6 +46,9 @@ pub const SQLITE: usize = 44;
 pub const INTERNAL: usize = 45;
 pub const METADATA: usize = 46;
 pub const COMPRESSED_DATA: usize = 47;
+pub const RUNNERS_BY_REMAINING_SLOTS: usize = 48;
+pub const REMAINING_SLOTS: usize = 49;
+pub const TOTAL_SLOTS: usize = 50;
 
 // Directories with fdbrs must use string paths instead of tuples
 pub mod dir {
@@ -103,6 +106,8 @@ pub fn key_from_str(key: &str) -> Option<usize> {
 		"sqlite" => Some(SQLITE),
 		"internal" => Some(INTERNAL),
 		"metadata" => Some(METADATA),
+		"compressed_data" => Some(COMPRESSED_DATA),
+		"runners_by_remaining_slots" => Some(RUNNERS_BY_REMAINING_SLOTS),
 		_ => None,
 	}
 }

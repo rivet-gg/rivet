@@ -184,7 +184,7 @@ async fn handle_connection(
 										// Verify client state
 										let actors = ctx.actors().read().await;
 										assert!(
-											actors.contains_key(&(actor_id, 0)),
+											!actors.contains_key(&(actor_id, 0)),
 											"actor still in client memory"
 										);
 
@@ -195,6 +195,7 @@ async fn handle_connection(
 								}
 							}
 						}
+						protocol::ToServer::AckCommands { .. } => {}
 					}
 				}
 				Message::Close(_) => {

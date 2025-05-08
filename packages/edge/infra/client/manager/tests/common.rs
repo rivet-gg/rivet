@@ -80,80 +80,15 @@ pub async fn start_echo_actor(
 				fallback_artifact_url: None,
 				kind: protocol::ImageKind::DockerImage,
 				compression: protocol::ImageCompression::None,
+				allocation_type: protocol::ImageAllocationType::Single,
 			},
+			runner: Some(protocol::ActorRunner::New {
+				runner_id: Uuid::nil(),
+			}),
 			root_user_enabled: false,
 			env: [("PORT".to_string(), port.to_string())]
 				.into_iter()
 				.collect(),
-			ports: [(
-				"main".to_string(),
-				protocol::Port {
-					target: None,
-					protocol: protocol::TransportProtocol::Tcp,
-					routing: protocol::PortRouting::Host,
-				},
-			)]
-			.into_iter()
-			.collect(),
-			network_mode: protocol::NetworkMode::Host,
-			resources: protocol::Resources {
-				cpu: 100,
-				memory: 10 * 1024 * 1024,
-				memory_max: 15 * 1024 * 1024,
-				disk: 15,
-			},
-			metadata: protocol::Raw::new(&protocol::ActorMetadata {
-				actor: protocol::ActorMetadataActor {
-					actor_id,
-					tags: [("foo".to_string(), "bar".to_string())]
-						.into_iter()
-						.collect(),
-					create_ts: 0,
-				},
-				project: protocol::ActorMetadataProject {
-					project_id: Uuid::nil(),
-					slug: "foo".to_string(),
-				},
-				environment: protocol::ActorMetadataEnvironment {
-					env_id: Uuid::nil(),
-					slug: "foo".to_string(),
-				},
-				datacenter: protocol::ActorMetadataDatacenter {
-					name_id: "local".to_string(),
-					display_name: "Local".to_string(),
-				},
-				cluster: protocol::ActorMetadataCluster {
-					cluster_id: Uuid::nil(),
-				},
-				build: protocol::ActorMetadataBuild {
-					build_id: Uuid::nil(),
-				},
-				network: None,
-			})
-			.unwrap(),
-		}),
-	};
-
-	send_command(tx, cmd).await;
-}
-
-pub async fn start_js_echo_actor(
-	tx: &mut SplitSink<WebSocketStream<tokio::net::TcpStream>, Message>,
-	actor_id: Uuid,
-) {
-	let cmd = protocol::Command::StartActor {
-		actor_id,
-		generation: 0,
-		config: Box::new(protocol::ActorConfig {
-			image: protocol::Image {
-				id: Uuid::nil(),
-				artifact_url_stub: "/js-image".into(),
-				fallback_artifact_url: None,
-				kind: protocol::ImageKind::JavaScript,
-				compression: protocol::ImageCompression::None,
-			},
-			root_user_enabled: false,
-			env: Default::default(),
 			ports: [(
 				"main".to_string(),
 				protocol::Port {
@@ -233,7 +168,6 @@ pub fn start_server<F, Fut>(
 
 pub async fn init_client(gen_path: &Path, working_path: &Path) -> Config {
 	let container_runner_binary_path = working_path.join("bin").join("container-runner");
-	let isolate_runner_binary_path = working_path.join("bin").join("isolate-runner");
 
 	tokio::fs::create_dir(working_path.join("bin"))
 		.await
@@ -243,12 +177,6 @@ pub async fn init_client(gen_path: &Path, working_path: &Path) -> Config {
 	tokio::fs::copy(
 		container_runner_path(gen_path),
 		&container_runner_binary_path,
-	)
-	.await
-	.unwrap();
-	tokio::fs::copy(
-		isolate_v8_runner_path(gen_path),
-		&isolate_runner_binary_path,
 	)
 	.await
 	.unwrap();
@@ -268,7 +196,6 @@ pub async fn init_client(gen_path: &Path, working_path: &Path) -> Config {
 				port: None,
 				use_mounts: Some(false),
 				container_runner_binary_path: Some(container_runner_binary_path),
-				isolate_runner_binary_path: Some(isolate_runner_binary_path),
 			},
 			images: Images {
 				// Should match the URL in `serve_binaries`
@@ -386,21 +313,7 @@ pub async fn build_binaries(gen_path: &Path) {
 
 	assert!(status.success());
 
-	// Js image
-	let status = Command::new("tar")
-		.arg("-cf")
-		.arg(js_image_path(gen_path))
-		.arg("-C")
-		.arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests"))
-		.arg("index.js")
-		.status()
-		.await
-		.unwrap();
-
-	assert!(status.success());
-
 	build_runner(gen_path, "container").await;
-	build_runner(gen_path, "isolate-v8").await;
 }
 
 async fn build_runner(gen_path: &Path, variant: &str) {
@@ -449,11 +362,7 @@ async fn build_runner(gen_path: &Path, variant: &str) {
 	let status = Command::new("docker")
 		.arg("cp")
 		.arg(format!("{}:{}", container_name, binary_path_in_container))
-		.arg(if variant == "container" {
-			container_runner_path(gen_path)
-		} else {
-			isolate_v8_runner_path(gen_path)
-		})
+		.arg(container_runner_path(gen_path))
 		.status()
 		.await
 		.expect("Failed to copy binary from container");
@@ -623,10 +532,6 @@ pub async fn setup_dependencies() -> (Option<tempfile::TempDir>, PathBuf) {
 
 pub fn container_runner_path(gen_path: &Path) -> PathBuf {
 	gen_path.join("pegboard-container-runner").to_path_buf()
-}
-
-pub fn isolate_v8_runner_path(gen_path: &Path) -> PathBuf {
-	gen_path.join("pegboard-isolate-v8-runner").to_path_buf()
 }
 
 pub fn image_path(gen_path: &Path) -> PathBuf {
