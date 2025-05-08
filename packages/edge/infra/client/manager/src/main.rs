@@ -7,7 +7,7 @@ use std::{
 use anyhow::*;
 use ctx::Ctx;
 use futures_util::StreamExt;
-use pegboard::system_info::SystemInfo;
+use pegboard::{protocol, system_info::SystemInfo};
 use pegboard_config::Config;
 use rand::seq::{IteratorRandom, SliceRandom};
 use service_discovery::ServiceDiscovery;
@@ -230,7 +230,7 @@ async fn build_ws_url(config: &Config) -> Result<Url> {
 	url.set_path(&format!("/v{PROTOCOL_VERSION}"));
 	url.query_pairs_mut()
 		.append_pair("client_id", &config.client.cluster.client_id.to_string())
-		.append_pair("flavor", &config.client.runner.flavor.to_string());
+		.append_pair("flavor", &protocol::ClientFlavor::Multi.to_string());
 
 	Ok(url)
 }

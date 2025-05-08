@@ -17,15 +17,15 @@ const LOGS_RETENTION: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 
 fn main() -> Result<()> {
 	let mut args = std::env::args().skip(1);
-	let actor_path_str = args.next().context("`actor_path` arg required")?;
+	let runner_path_str = args.next().context("`runner_path` arg required")?;
 	let container_id = args.next().context("`container_id` arg required")?;
-	let actor_path = Path::new(&actor_path_str);
+	let runner_path = Path::new(&runner_path_str);
 
-	rivet_logs::Logs::new(actor_path.join("logs"), LOGS_RETENTION).start_sync()?;
+	rivet_logs::Logs::new(runner_path.join("logs"), LOGS_RETENTION).start_sync()?;
 
 	// Write PID to file
 	fs::write(
-		actor_path.join("pid"),
+		runner_path.join("pid"),
 		std::process::id().to_string().as_bytes(),
 	)?;
 
@@ -35,7 +35,7 @@ fn main() -> Result<()> {
 		.map(|x| x.parse())
 		.transpose()
 		.context("failed to parse vector socket addr")?;
-	let actor_id = var("ACTOR_ID")?;
+	let runner_id = var("RUNNER_ID")?;
 
 	let (shutdown_tx, shutdown_rx) = mpsc::sync_channel(1);
 
@@ -47,7 +47,7 @@ fn main() -> Result<()> {
 			shutdown_rx,
 			msg_rx,
 			vector_socket_addr,
-			actor_id,
+			runner_id,
 		};
 		let log_shipper_thread = log_shipper.spawn();
 		(Some(msg_tx), Some(log_shipper_thread))
@@ -108,7 +108,7 @@ fn main() -> Result<()> {
 	}
 
 	fs::write(
-		actor_path.join("exit-code"),
+		runner_path.join("exit-code"),
 		exit_code.to_string().as_bytes(),
 	)?;
 
