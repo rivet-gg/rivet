@@ -1,7 +1,11 @@
 PUBLIC_IP=$(ip -4 route get 1.0.0.0 | awk '{print $7; exit}')
 
+SUBNET_IPV4="172.26.64.0/20"
+SUBNET_IPV4_GATEWAY_IP="172.26.64.1"
+SUBNET_IPV6="fd00:db8:2::/64"
+
 # MARK: Pegboard config
-cat << 'EOF' > /etc/rivet-client/config.json
+cat << EOF > /etc/rivet-client/config.json
 {
 	"client": {
 		"cluster": {
@@ -14,7 +18,7 @@ cat << 'EOF' > /etc/rivet-client/config.json
 			}
 		},
 		"runner": {
-			"flavor": "__FLAVOR__"
+			"ip": "$SUBNET_IPV4_GATEWAY_IP",
 		},
 		"images": {
 			"pull_addresses": {
@@ -55,8 +59,6 @@ EOF
 #
 # See Nomad equivalent: https://github.com/hashicorp/nomad/blob/a8f0f2612ef9d283ed903721f8453a0c0c3f51c5/client/allocrunner/networking_bridge_linux.go#L73
 ADMIN_CHAIN="RIVET-ADMIN"
-SUBNET_IPV4="172.26.64.0/20"
-SUBNET_IPV6="fd00:db8:2::/64"
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
