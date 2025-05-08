@@ -6,4 +6,11 @@ authors = ["Rivet Gaming, LLC <developer@rivet.gg>"]
 license = "Apache-2.0"
 
 [dependencies]
-tiny_http = "0.12"
+bytes = "1.0"
+futures-util = "0.3"
+http = "0.2"
+serde_json = "1.0"
+tokio = { version = "1.40", features = ["full",] }
+tokio-tungstenite = "0.23.1"
+uuid = { version = "1", features = ["v4", "serde"] }
+warp = "0.3.7"

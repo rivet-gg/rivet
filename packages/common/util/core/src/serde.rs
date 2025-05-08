@@ -3,7 +3,7 @@ use std::{
 	fmt,
 	hash::{Hash, Hasher},
 	marker::PhantomData,
-	ops::Deref,
+	ops::{Deref, DerefMut},
 };
 
 use indexmap::IndexMap;
@@ -125,6 +125,10 @@ impl<K: Eq + Hash, V: Hash> HashableMap<K, V> {
 	pub fn new() -> Self {
 		HashableMap(IndexMap::new())
 	}
+
+	pub fn with_capacity(capacity: usize) -> Self {
+		HashableMap(IndexMap::with_capacity(capacity))
+	}
 }
 
 impl<K: Eq + Hash, V: Hash> Default for HashableMap<K, V> {
@@ -138,6 +142,12 @@ impl<K: Eq + Hash, V: Hash> Deref for HashableMap<K, V> {
 
 	fn deref(&self) -> &Self::Target {
 		&self.0
+	}
+}
+
+impl<K: Eq + Hash, V: Hash> DerefMut for HashableMap<K, V> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
 	}
 }
 

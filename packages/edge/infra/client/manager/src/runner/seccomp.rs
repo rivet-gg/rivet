@@ -1,6 +1,6 @@
 use serde_json::json;
 
-// Copied from auto-generated actord
+// Copied from auto-generated containerd
 //
 // See comment in super::oci_conifg::config on how to generate this
 pub fn config() -> serde_json::Value {

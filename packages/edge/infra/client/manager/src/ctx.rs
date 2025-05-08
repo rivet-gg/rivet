@@ -1,6 +1,5 @@
 use std::{
 	collections::HashMap,
-	net::SocketAddr,
 	path::PathBuf,
 	result::Result::{Err, Ok},
 	sync::Arc,
@@ -13,11 +12,13 @@ use futures_util::{
 	SinkExt, StreamExt,
 };
 use indoc::indoc;
-use nix::{sys::signal::Signal, unistd::Pid};
-use pegboard::{protocol, system_info::SystemInfo};
-use pegboard_config::{
-	isolate_runner::Config as IsolateRunnerConfig, runner_protocol, Client, Config,
+use nix::{
+	errno::Errno,
+	sys::signal::{kill, Signal},
+	unistd::Pid,
 };
+use pegboard::{protocol, system_info::SystemInfo};
+use pegboard_config::{runner_protocol, Client, Config};
 use sqlx::{pool::PoolConnection, Acquire, Sqlite, SqlitePool};
 use tokio::{
 	fs,
@@ -38,12 +39,19 @@ use crate::{
 	actor::Actor,
 	event_sender::EventSender,
 	image_download_handler::ImageDownloadHandler,
-	metrics, runner,
+	metrics,
+	runner::{self, Runner},
 	utils::{self, sql::SqlitePoolExt},
 };
 
 const PING_INTERVAL: Duration = Duration::from_secs(1);
 const ACK_INTERVAL: Duration = Duration::from_secs(60 * 5);
+/// How long before killing a runner that hasn't sent an init packet.
+const RUNNER_INIT_TIMEOUT: Duration = Duration::from_secs(5);
+/// How often to check for the actor's runner to start.
+const GET_RUNNER_INTERVAL: Duration = std::time::Duration::from_millis(250);
+/// How many times to check for the actor's runner to start.
+const GET_RUNNER_RETRIES: usize = 32;
 
 #[derive(thiserror::Error, Debug)]
 pub enum RuntimeError {
@@ -67,8 +75,14 @@ struct ActorRow {
 	actor_id: Uuid,
 	generation: i64,
 	config: Vec<u8>,
+}
+
+#[derive(sqlx::FromRow)]
+struct RunnerRow {
+	runner_id: Uuid,
+	comms: i64,
+	config: Vec<u8>,
 	pid: Option<i32>,
-	stop_ts: Option<i64>,
 }
 
 pub struct Ctx {
@@ -82,8 +96,8 @@ pub struct Ctx {
 	event_sender: EventSender,
 	pub(crate) image_download_handler: ImageDownloadHandler,
 
+	pub(crate) runners: RwLock<HashMap<Uuid, Arc<Runner>>>,
 	pub(crate) actors: RwLock<HashMap<(Uuid, u32), Arc<Actor>>>,
-	isolate_runner: RwLock<Option<runner::Handle>>,
 }
 
 impl Ctx {
@@ -102,8 +116,8 @@ impl Ctx {
 			event_sender: EventSender::new(),
 			image_download_handler: ImageDownloadHandler::new(),
 
+			runners: RwLock::new(HashMap::new()),
 			actors: RwLock::new(HashMap::new()),
-			isolate_runner: RwLock::new(None),
 		})
 	}
 
@@ -178,50 +192,6 @@ impl Ctx {
 		self: &Arc<Self>,
 		mut rx: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,
 	) -> Result<()> {
-		// Rebuild isolate runner from db before starting runner socket
-		self.rebuild_isolate_runner().await?;
-
-		// Start runner socket
-		let self2 = self.clone();
-		let runner_socket: tokio::task::JoinHandle<Result<()>> = tokio::spawn(async move {
-			tracing::info!(port=%self2.config().runner.port(), "listening for runner sockets");
-
-			let listener = TcpListener::bind(("0.0.0.0", self2.config().runner.port()))
-				.await
-				.map_err(RuntimeError::RunnerSocketListenFailed)?;
-
-			loop {
-				match listener.accept().await {
-					Ok((stream, _)) => {
-						let mut ws_stream = tokio_tungstenite::accept_async(stream).await?;
-
-						tracing::info!("received new socket");
-
-						if let Some(runner) = &*self2.isolate_runner.read().await {
-							runner.attach_socket(ws_stream).await?;
-						} else {
-							tracing::error!("killing unknown runner");
-
-							metrics::UNKNOWN_ISOLATE_RUNNER.with_label_values(&[]).inc();
-
-							ws_stream
-								.send(Message::Binary(serde_json::to_vec(
-									&runner_protocol::ToRunner::Terminate,
-								)?))
-								.await?;
-
-							let close_frame = CloseFrame {
-								code: CloseCode::Error,
-								reason: "unknown runner".into(),
-							};
-							ws_stream.send(Message::Close(Some(close_frame))).await?;
-						}
-					}
-					Err(err) => tracing::error!(?err, "failed to connect websocket"),
-				}
-			}
-		});
-
 		// Send init packet
 		{
 			let (last_command_idx, last_workflow_id) = utils::sql::query(|| async {
@@ -245,6 +215,44 @@ impl Ctx {
 		}
 
 		self.receive_init(&mut rx).await?;
+
+		// Start runner socket and attaches incoming connections to their corresponding runner
+		let self2 = self.clone();
+		let runner_socket: tokio::task::JoinHandle<Result<()>> = tokio::spawn(async move {
+			tracing::info!(port=%self2.config().runner.port(), "listening for runner sockets");
+
+			let listener =
+				TcpListener::bind((self2.config().runner.ip(), self2.config().runner.port()))
+					.await
+					.map_err(RuntimeError::RunnerSocketListenFailed)?;
+
+			loop {
+				match listener.accept().await {
+					Ok((stream, _)) => {
+						let mut ws_stream = Some(tokio_tungstenite::accept_async(stream).await?);
+
+						tracing::info!("received new socket");
+
+						if let Err(err) = self2.receive_runner_init_message(&mut ws_stream).await {
+							tracing::error!(
+								?err,
+								"failed to receive init message from runner socket"
+							);
+						}
+
+						// Close stream
+						if let Some(mut ws_stream) = ws_stream {
+							let close_frame = CloseFrame {
+								code: CloseCode::Error,
+								reason: "init failed".into(),
+							};
+							ws_stream.send(Message::Close(Some(close_frame))).await?;
+						}
+					}
+					Err(err) => tracing::error!(?err, "failed to connect websocket"),
+				}
+			}
+		});
 
 		// Start ping thread after init packet is received because ping denotes this client as "ready"
 		let self2 = self.clone();
@@ -399,10 +407,7 @@ impl Ctx {
 		tracing::debug!(?packet, "received packet");
 
 		match packet {
-			protocol::ToClient::Init { .. } => {
-				metrics::SECOND_INIT.with_label_values(&[]).inc();
-				bail!("unexpected second init packet");
-			}
+			protocol::ToClient::Init { .. } => bail!("unexpected second init packet"),
 			protocol::ToClient::Commands(commands) => {
 				for command in commands {
 					self.process_command(command).await?;
@@ -432,15 +437,39 @@ impl Ctx {
 						"actor with this actor id + generation already exists, ignoring start command",
 					);
 				} else {
-					let actor = Actor::new(actor_id, generation, *config, metadata);
+					if let Some(runner) = self
+						.get_or_create_runner(
+							config
+								.runner
+								.as_ref()
+								.context("runner config should exist")?,
+						)
+						.await?
+					{
+						let actor = Actor::new(actor_id, generation, *config, runner);
 
-					// Insert actor
-					actors.insert((actor_id, generation), actor);
+						// Insert actor
+						actors.insert((actor_id, generation), actor);
 
-					let actor = actors.get(&(actor_id, generation)).context("unreachable")?;
+						let actor = actors.get(&(actor_id, generation)).context("unreachable")?;
 
-					// Spawn actor
-					actor.start(&self).await?;
+						// Spawn actor
+						actor.start(&self).await?;
+					} else {
+						tracing::error!(
+							?actor_id,
+							?generation,
+							runner=?config.runner,
+							"timed out waiting for actor's runner to be inserted, considering actor lost",
+						);
+
+						self.event(protocol::Event::ActorStateUpdate {
+							actor_id: actor_id,
+							generation: generation,
+							state: protocol::ActorState::Lost,
+						})
+						.await?;
+					}
 				}
 			}
 			protocol::Command::SignalActor {
@@ -458,6 +487,16 @@ impl Ctx {
 						?actor_id,
 						?generation,
 						"received stop actor command for actor that doesn't exist (likely already stopped)"
+					);
+				}
+			}
+			protocol::Command::SignalRunner { runner_id, signal } => {
+				if let Some(runner) = self.runners.read().await.get(&runner_id) {
+					runner.signal(signal.try_into()?).await?;
+				} else {
+					tracing::warn!(
+						?runner_id,
+						"received stop runner command for runner that doesn't exist (likely already stopped)"
 					);
 				}
 			}
@@ -498,111 +537,46 @@ impl Ctx {
 
 		Ok(())
 	}
-}
 
-// MARK: Isolate runner
-impl Ctx {
-	pub(crate) async fn get_or_spawn_isolate_runner(self: &Arc<Self>) -> Result<runner::Handle> {
-		let mut guard = self.isolate_runner.write().await;
+	/// Returns None if the runner could not be found in the runners map on time.
+	async fn get_or_create_runner(
+		&self,
+		runner: &protocol::ActorRunner,
+	) -> Result<Option<Arc<Runner>>> {
+		match runner {
+			protocol::ActorRunner::New { runner_id, config } => {
+				let mut runners = self.runners.write().await;
 
-		if let Some(runner) = &*guard {
-			Ok(runner.clone())
-		} else {
-			tracing::info!("spawning new isolate runner");
+				let comms = match &config.image.allocation_type {
+					protocol::ImageAllocationType::Single => runner::Comms::Basic,
+					protocol::ImageAllocationType::Multi => runner::Comms::socket(),
+				};
 
-			let working_path = self.isolate_runner_path();
+				let runner = Arc::new(Runner::new(*runner_id, comms, config.clone()));
+				runners.insert(*runner_id, runner.clone());
 
-			let config = IsolateRunnerConfig {
-				actors_path: self.actors_path(),
-				manager_ws_addr: SocketAddr::from(([127, 0, 0, 1], self.config().runner.port())),
-				foundationdb: self.config.client.foundationdb.clone(),
-			};
+				Ok(Some(runner))
+			}
+			protocol::ActorRunner::Existing { runner_id } => {
+				let mut i = 0;
 
-			// Delete existing exit code
-			if let Err(err) = fs::remove_file(working_path.join("exit-code")).await {
-				if err.kind() != std::io::ErrorKind::NotFound {
-					return Err(err.into());
+				loop {
+					{
+						let runners_guard = self.runners.read().await;
+						if let Some(runner) = runners_guard.get(runner_id) {
+							break Ok(Some(runner.clone()));
+						}
+					}
+
+					if i > GET_RUNNER_RETRIES {
+						break Ok(None);
+					}
+					i += 1;
+
+					tokio::time::sleep(GET_RUNNER_INTERVAL).await;
 				}
 			}
-
-			// Write isolate runner config
-			fs::write(
-				working_path.join("config.json"),
-				serde_json::to_vec(&config)?,
-			)
-			.await?;
-
-			let runner = runner::Handle::spawn_orphaned(
-				runner::Comms::socket(),
-				&self.config().runner.isolate_runner_binary_path(),
-				"",
-				working_path,
-				&[],
-			)?;
-			let pid = runner.pid();
-
-			self.observe_isolate_runner(&runner);
-
-			// Save runner pid
-			utils::sql::query(|| async {
-				sqlx::query(indoc!(
-					"
-					UPDATE state
-					SET isolate_runner_pid = ?1
-					",
-				))
-				.bind(pid.as_raw())
-				.execute(&mut *self.sql().await?)
-				.await
-			})
-			.await?;
-
-			*guard = Some(runner.clone());
-
-			Ok(runner)
 		}
-	}
-
-	fn observe_isolate_runner(self: &Arc<Self>, runner: &runner::Handle) {
-		tracing::info!(pid=?runner.pid(), "observing isolate runner");
-
-		// Observe runner
-		let self2 = self.clone();
-		let runner2 = runner.clone();
-		tokio::spawn(async move {
-			let exit_code = match runner2.observe().await {
-				Ok(exit_code) => exit_code,
-				Err(err) => {
-					// TODO: This should hard error the manager
-					tracing::error!(%err, "failed to observe isolate runner");
-					return;
-				}
-			};
-
-			tracing::error!(pid=?runner2.pid(), ?exit_code, "isolate runner exited");
-
-			// Update in-memory state
-			let mut guard = self2.isolate_runner.write().await;
-			*guard = None;
-
-			// Update db state
-			let res = utils::sql::query(|| async {
-				sqlx::query(indoc!(
-					"
-					UPDATE state
-					SET isolate_runner_pid = NULL
-					",
-				))
-				.execute(&mut *self2.sql().await?)
-				.await
-			})
-			.await;
-
-			if let Err(err) = res {
-				// TODO: This should hard error the manager
-				tracing::error!(%err, "failed to write isolate runner");
-			}
-		});
 	}
 
 	fn prewarm_image(self: &Arc<Ctx>, image_config: protocol::Image) {
@@ -632,42 +606,9 @@ impl Ctx {
 
 // MARK: State re-initialization
 impl Ctx {
-	/// Fetches isolate runner state from the db. Should be called before the manager's runner websocket opens.
-	async fn rebuild_isolate_runner(self: &Arc<Self>) -> Result<()> {
-		let (isolate_runner_pid,) = utils::sql::query(|| async {
-			sqlx::query_as::<_, (Option<i32>,)>(indoc!(
-				"
-				SELECT isolate_runner_pid
-				FROM state
-				",
-			))
-			.fetch_one(&mut *self.sql().await?)
-			.await
-		})
-		.await?;
-
-		// Recreate isolate runner handle
-		if let Some(isolate_runner_pid) = isolate_runner_pid {
-			let mut guard = self.isolate_runner.write().await;
-
-			tracing::info!(?isolate_runner_pid, "found existing isolate runner");
-
-			let runner = runner::Handle::from_pid(
-				runner::Comms::socket(),
-				Pid::from_raw(isolate_runner_pid),
-				self.isolate_runner_path(),
-			);
-			self.observe_isolate_runner(&runner);
-
-			*guard = Some(runner);
-		}
-
-		Ok(())
-	}
-
 	/// Destroys all active actors and runners and resets the database.
 	async fn reset(self: &Arc<Self>, workflow_id: Uuid) -> Result<()> {
-		let ((last_workflow_id,), actor_rows) = tokio::try_join!(
+		let ((last_workflow_id,), runner_rows) = tokio::try_join!(
 			// There should not be any database operations going on at this point so it is safe to read this
 			// value
 			utils::sql::query(|| async {
@@ -680,16 +621,16 @@ impl Ctx {
 				.await
 			}),
 			utils::sql::query(|| async {
-				sqlx::query_as::<_, ActorRow>(indoc!(
+				sqlx::query_as::<_, RunnerRow>(indoc!(
 					"
-					SELECT actor_id, generation, config, pid, stop_ts
-					FROM actors
+					SELECT runner_id, comms, config, pid
+					FROM runners
 					WHERE exit_ts IS NULL
 					",
 				))
 				.fetch_all(&mut *self.sql().await?)
 				.await
-			})
+			}),
 		)?;
 
 		let Some(last_workflow_id) = last_workflow_id else {
@@ -706,41 +647,19 @@ impl Ctx {
 			"manager is resetting due to a workflow change"
 		);
 
-		let isolate_runner = { self.isolate_runner.read().await.clone() };
-
-		// Kill isolate runner
-		if let Some(isolate_runner) = &isolate_runner {
-			isolate_runner.signal(Signal::SIGKILL)?;
-		}
-
-		for row in actor_rows {
+		// Kill all runners
+		for row in runner_rows {
 			let Some(pid) = row.pid else {
 				continue;
 			};
 
-			let config = serde_json::from_slice::<protocol::ActorConfig>(&row.config)?;
-			let generation = row.generation.try_into()?;
-			let metadata = config.metadata.deserialize()?;
-
-			match &isolate_runner {
-				Some(isolate_runner) if pid == isolate_runner.pid().as_raw() => {}
-				_ => {
-					// Create a basic runner handle regardless of what the runner actually is (were just going to
-					// kill it).
-					let runner = runner::Handle::from_pid(
-						runner::Comms::Basic,
-						Pid::from_raw(pid),
-						self.actor_path(row.actor_id, generation),
-					);
-
-					// Kill runner
-					runner.signal(Signal::SIGKILL)?;
+			match kill(Pid::from_raw(pid), Signal::SIGKILL) {
+				Ok(_) => {}
+				Err(Errno::ESRCH) => {
+					tracing::warn!(?pid, "pid not found for signalling")
 				}
+				Err(err) => return Err(err.into()),
 			}
-
-			// Clean up actor. We run `cleanup_setup` instead of `cleanup` because `cleanup` publishes events.
-			let actor = Actor::new(row.actor_id, generation, config, metadata);
-			actor.cleanup_setup(self).await;
 		}
 
 		// Stop any pending db operations
@@ -805,7 +724,7 @@ impl Ctx {
 
 	/// Rebuilds state from DB upon restart.
 	async fn rebuild(self: &Arc<Self>, workflow_id: Uuid) -> Result<()> {
-		let ((last_event_idx,), actor_rows) = tokio::try_join!(
+		let ((last_event_idx,), runner_rows, actor_rows) = tokio::try_join!(
 			// There should not be any database operations going on at this point so it is safe to read this
 			// value
 			utils::sql::query(|| async {
@@ -821,105 +740,166 @@ impl Ctx {
 				.await
 			}),
 			utils::sql::query(|| async {
+				sqlx::query_as::<_, RunnerRow>(indoc!(
+					"
+					SELECT runner_id, comms, config, pid
+					FROM runners
+					WHERE exit_ts IS NULL
+					",
+				))
+				.fetch_all(&mut *self.sql().await?)
+				.await
+			}),
+			utils::sql::query(|| async {
 				sqlx::query_as::<_, ActorRow>(indoc!(
 					"
-					SELECT actor_id, generation, config, pid, stop_ts
+					SELECT actor_id, generation, config
 					FROM actors
 					WHERE exit_ts IS NULL
 					",
 				))
 				.fetch_all(&mut *self.sql().await?)
 				.await
-			})
+			}),
 		)?;
 
 		self.rebuild_images_cache().await?;
 
 		self.event_sender.set_idx(last_event_idx + 1);
 
-		let isolate_runner = { self.isolate_runner.read().await.clone() };
-
-		// NOTE: Sqlite doesn't support arrays, can't parallelize this easily
 		// Emit stop events
-		for row in &actor_rows {
-			if row.pid.is_none() && row.stop_ts.is_none() {
-				tracing::error!(actor_id=?row.actor_id, "actor has no pid, stopping");
+		for row in &runner_rows {
+			if row.pid.is_none() {
+				tracing::error!(runner_id=?row.runner_id, "runner has no pid, stopping");
 
 				utils::sql::query(|| async {
 					sqlx::query(indoc!(
 						"
-						UPDATE actors
-						SET stop_ts = ?3
-						WHERE
-							actor_id = ?1 AND
-							generation = ?2
+						UPDATE runners
+						SET stop_ts = ?2
+						WHERE runner_id = ?1
 						",
 					))
-					.bind(row.actor_id)
-					.bind(row.generation)
+					.bind(row.runner_id)
 					.bind(utils::now())
 					.execute(&mut *self.sql().await?)
 					.await
 				})
 				.await?;
 
-				self.event(protocol::Event::ActorStateUpdate {
-					actor_id: row.actor_id,
-					generation: row.generation.try_into()?,
-					state: protocol::ActorState::Lost,
+				let actor_rows = utils::sql::query(|| async {
+					sqlx::query_as::<_, (Uuid, i64, Option<i64>)>(indoc!(
+						"
+						UPDATE actors
+						SET stop_ts = ?2
+						WHERE runner_id = ?1
+						RETURNING actor_id, generation, stop_ts
+						",
+					))
+					.bind(row.runner_id)
+					.bind(utils::now())
+					.fetch_all(&mut *self.sql().await?)
+					.await
 				})
 				.await?;
+
+				for (actor_id, generation, stop_ts) in &actor_rows {
+					if stop_ts.is_none() {
+						self.event(protocol::Event::ActorStateUpdate {
+							actor_id: *actor_id,
+							generation: (*generation).try_into()?,
+							state: protocol::ActorState::Lost,
+						})
+						.await?;
+					}
+				}
 			}
 		}
 
-		// Start actor observers
+		let mut runners_guard = self.runners.write().await;
 		let mut actors_guard = self.actors.write().await;
-		for row in actor_rows {
+
+		// Start runner observers
+		for row in runner_rows {
 			let Some(pid) = row.pid else {
 				continue;
 			};
 
-			let config = serde_json::from_slice::<protocol::ActorConfig>(&row.config)?;
-			let generation = row.generation.try_into()?;
-			let metadata = config.metadata.deserialize()?;
+			let config = serde_json::from_slice::<protocol::RunnerConfig>(&row.config)?;
 
-			let runner = match &isolate_runner {
-				// We have to clone the existing isolate runner handle instead of creating a new one so it
-				// becomes a shared reference
-				Some(isolate_runner) if pid == isolate_runner.pid().as_raw() => {
-					isolate_runner.clone()
-				}
-				_ => match config.image.kind {
-					protocol::ImageKind::DockerImage | protocol::ImageKind::OciBundle => {
-						runner::Handle::from_pid(
-							runner::Comms::Basic,
-							Pid::from_raw(pid),
-							self.actor_path(row.actor_id, generation),
-						)
-					}
-					protocol::ImageKind::JavaScript => runner::Handle::from_pid(
-						runner::Comms::socket(),
-						Pid::from_raw(pid),
-						self.actor_path(row.actor_id, generation),
-					),
-				},
+			let runner = match runner::setup::Comms::from_repr(row.comms.try_into()?)
+				.context("bad comms variant")?
+			{
+				runner::setup::Comms::Basic => Arc::new(Runner::from_pid(
+					row.runner_id,
+					runner::Comms::Basic,
+					config,
+					Pid::from_raw(pid),
+				)),
+				runner::setup::Comms::Socket => Arc::new(Runner::from_pid(
+					row.runner_id,
+					runner::Comms::socket(),
+					config,
+					Pid::from_raw(pid),
+				)),
 			};
 
-			let actor = Actor::with_runner(row.actor_id, generation, config, metadata, runner);
+			runners_guard.insert(row.runner_id, runner.clone());
+
+			let runner_id = row.runner_id;
+			let runner = runner.clone();
+			let self2 = self.clone();
+			tokio::spawn(async move {
+				if let Err(err) = runner.observe(&self2, false).await {
+					tracing::error!(?runner_id, ?err, "observe failed");
+				}
+
+				if let Err(err) = runner.cleanup(&self2).await {
+					tracing::error!(?runner_id, ?err, "cleanup failed");
+				}
+			});
+		}
+
+		// Start actor observers
+		for row in actor_rows {
+			let config = serde_json::from_slice::<protocol::ActorConfig>(&row.config)?;
+			let runner_id = config
+				.runner
+				.as_ref()
+				.context("should have runner config")?
+				.runner_id();
+
+			let Some(runner) = runners_guard.get(&runner_id) else {
+				tracing::warn!(actor_id=?row.actor_id, ?runner_id, "actor's runner does not exist");
+				continue;
+			};
+
+			// NOTE: No runner sockets are connected yet so there is no race condition with missed state
+			// updates here
+			let generation = row.generation.try_into()?;
+			let actor_observer = if let protocol::ImageAllocationType::Multi =
+				runner.config().image.allocation_type
+			{
+				Some(runner.new_actor_observer(row.actor_id, generation))
+			} else {
+				None
+			};
+
 			let actor = actors_guard
 				.entry((row.actor_id, generation))
-				.or_insert(actor);
+				.or_insert(Actor::new(row.actor_id, generation, config, runner.clone()));
 
+			let actor_id = row.actor_id;
 			let actor = actor.clone();
 			let self2 = self.clone();
 			tokio::spawn(async move {
-				if let Err(err) = actor.observe(&self2).await {
-					tracing::error!(actor_id=?row.actor_id, ?err, "observe failed");
+				if let Err(err) = actor.observe(&self2, actor_observer).await {
+					tracing::error!(?actor_id, ?err, "observe failed");
 				}
 
 				// Cleanup afterwards
 				if let Err(err) = actor.cleanup(&self2).await {
-					tracing::error!(actor_id=?row.actor_id, ?err, "cleanup failed");
+					tracing::error!(?actor_id, ?err, "cleanup failed");
 				}
 			});
 		}
@@ -1009,12 +989,12 @@ impl Ctx {
 		&self.config.client
 	}
 
-	pub fn actors_path(&self) -> PathBuf {
-		self.config().data_dir().join("actors")
+	pub fn runners_path(&self) -> PathBuf {
+		self.config().data_dir().join("runners")
 	}
 
-	pub fn actor_path(&self, actor_id: Uuid, generation: u32) -> PathBuf {
-		self.actors_path().join(format!("{actor_id}-{generation}"))
+	pub fn runner_path(&self, runner_id: Uuid) -> PathBuf {
+		self.runners_path().join(runner_id.to_string())
 	}
 
 	pub fn images_path(&self) -> PathBuf {

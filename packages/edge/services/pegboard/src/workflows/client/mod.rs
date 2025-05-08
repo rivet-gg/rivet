@@ -772,6 +772,9 @@ pub async fn handle_commands(
 					}
 				}
 			}
+			protocol::Command::SignalRunner { .. } => {
+				// No-op in this workflow
+			}
 		}
 	}
 

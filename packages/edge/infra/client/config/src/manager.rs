@@ -5,7 +5,6 @@ use std::{
 	time::Duration,
 };
 
-use pegboard::protocol;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -83,7 +82,6 @@ pub struct Cluster {
 #[derive(Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct Runner {
-	pub flavor: protocol::ClientFlavor,
 	/// Whether or not to use a mount for actor file systems.
 	pub use_mounts: Option<bool>,
 
@@ -100,7 +98,6 @@ pub struct Runner {
 	pub port: Option<u16>,
 
 	pub container_runner_binary_path: Option<PathBuf>,
-	pub isolate_runner_binary_path: Option<PathBuf>,
 
 	/// Custom host entries to append to /etc/hosts in actor containers.
 	#[serde(default)]
@@ -124,12 +121,6 @@ impl Runner {
 		self.container_runner_binary_path
 			.clone()
 			.unwrap_or_else(|| Path::new("/usr/local/bin/rivet-container-runner").into())
-	}
-
-	pub fn isolate_runner_binary_path(&self) -> PathBuf {
-		self.isolate_runner_binary_path
-			.clone()
-			.unwrap_or_else(|| Path::new("/usr/local/bin/rivet-isolate-v8-runner").into())
 	}
 
 	pub fn custom_hosts(&self) -> &[HostEntry] {
