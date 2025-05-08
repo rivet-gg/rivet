@@ -23,38 +23,10 @@ lazy_static::lazy_static! {
 		*REGISTRY,
 	).unwrap();
 
-	pub static ref UNKNOWN_ISOLATE_RUNNER: IntCounterVec = register_int_counter_vec_with_registry!(
-		"unknown_isolate_runner",
-		"Total number of unknown isolate runners that were found and killed.",
-		&[],
-		*REGISTRY,
-	).unwrap();
-
-	pub static ref DUPLICATE_RUNNER: IntCounterVec = register_int_counter_vec_with_registry!(
-		"duplicate_runner",
-		"Total number of duplicate runners that were found and killed.",
-		&["pid"],
-		*REGISTRY,
-	).unwrap();
-
 	pub static ref SQL_ERROR: IntCounterVec = register_int_counter_vec_with_registry!(
 		"sql_error",
 		"An SQL error occurred.",
 		&["error"],
-		*REGISTRY,
-	).unwrap();
-
-	pub static ref SECOND_INIT: IntCounterVec = register_int_counter_vec_with_registry!(
-		"second_init",
-		"Total number of second init packets encountered.",
-		&[],
-		*REGISTRY,
-	).unwrap();
-
-	pub static ref DOWNLOAD_IMAGE_DURATION: Histogram = register_histogram_with_registry!(
-		"download_image_duration",
-		"Duration of image download",
-		BUCKETS.to_vec(),
 		*REGISTRY,
 	).unwrap();
 
@@ -97,13 +69,6 @@ lazy_static::lazy_static! {
 	pub static ref SETUP_OCI_BUNDLE_DURATION: Histogram = register_histogram_with_registry!(
 		"actor_setup_oci_bundle_duration",
 		"Duration of OCI bundle setup step",
-		BUCKETS.to_vec(),
-		*REGISTRY,
-	).unwrap();
-
-	pub static ref SETUP_ISOLATE_DURATION: Histogram = register_histogram_with_registry!(
-		"actor_setup_isolate_duration",
-		"Duration of isolate setup",
 		BUCKETS.to_vec(),
 		*REGISTRY,
 	).unwrap();

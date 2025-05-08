@@ -18,7 +18,7 @@
 		}
 	},
 	"transforms": {
-		"actors": {
+		"runners": {
 			"type": "filter",
 			"inputs": [
 				"vector",
@@ -26,19 +26,19 @@
 			],
 			"condition": {
 				"type": "vrl",
-				"source": ".source == \"actors\""
+				"source": ".source == \"runners\""
 			}
 		},
 		"add_prefix": {
 			"type": "remap",
 			"inputs": [
-				"actors"
+				"runners"
 			],
-			"source": ".message, err = \"\u001b[2m\" + \"actor_id=\" + .actor_id + \"\u001b[0m \" + .message"
+			"source": ".message, err = \"\u001b[2m\" + \"runner_id=\" + .runner_id + \"\u001b[0m \" + .message"
 		}
 	},
 	"sinks": {
-		"actor_logs": {
+		"runner_logs": {
 			"type": "console",
 			"inputs": [
 				"add_prefix"

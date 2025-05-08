@@ -10,7 +10,6 @@ use notify::{
 	event::{AccessKind, AccessMode},
 	Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
 };
-use pegboard::protocol;
 use pegboard_config::Config;
 use sql::SqlitePoolExt;
 use sqlx::{
@@ -33,10 +32,9 @@ pub async fn init_dir(config: &Config) -> Result<()> {
 		bail!("data dir `{}` does not exist", data_dir.display());
 	}
 
-	if config.client.runner.flavor == protocol::ClientFlavor::Container
-		&& fs::metadata(&config.client.runner.container_runner_binary_path())
-			.await
-			.is_err()
+	if fs::metadata(&config.client.runner.container_runner_binary_path())
+		.await
+		.is_err()
 	{
 		bail!(
 			"container runner binary `{}` does not exist",
@@ -48,33 +46,16 @@ pub async fn init_dir(config: &Config) -> Result<()> {
 		);
 	}
 
-	if config.client.runner.flavor == protocol::ClientFlavor::Isolate
-		&& fs::metadata(&config.client.runner.isolate_runner_binary_path())
-			.await
-			.is_err()
-	{
-		bail!(
-			"isolate runner binary `{}` does not exist",
-			config.client.runner.isolate_runner_binary_path().display()
-		);
-	}
-
-	// Create actors dir
-	match fs::create_dir(data_dir.join("actors")).await {
+	// Create runners dir
+	match fs::create_dir(data_dir.join("runners")).await {
 		Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
-		x => x.context("failed to create /actors dir in data dir")?,
+		x => x.context("failed to create /runners dir in data dir")?,
 	}
 
 	// Create images dir
 	match fs::create_dir(data_dir.join("images")).await {
 		Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
 		x => x.context("failed to create /images dir in data dir")?,
-	}
-
-	// Create runner dir
-	match fs::create_dir(data_dir.join("runner")).await {
-		Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
-		x => x.context("failed to create /runner dir in data dir")?,
 	}
 
 	// Create db dir
@@ -147,8 +128,6 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 			last_command_idx INTEGER NOT NULL,
 			last_workflow_id BLOB, -- UUID
 
-			isolate_runner_pid INTEGER,
-
 			-- Keeps this table having one row
 			_persistence INTEGER UNIQUE NOT NULL DEFAULT TRUE -- BOOLEAN
 		) STRICT
@@ -193,6 +172,27 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 
 	sqlx::query(indoc!(
 		"
+		CREATE TABLE IF NOT EXISTS runners (
+			runner_id BLOB NOT NULL, -- UUID
+			comms INTEGER NOT NULL, -- runner::setup::Comms
+			config BLOB NOT NULL,
+
+			start_ts INTEGER NOT NULL,
+			running_ts INTEGER,
+			exit_ts INTEGER,
+
+			pid INTEGER,
+			exit_code INTEGER,
+
+			PRIMARY KEY (runner_id)
+		) STRICT
+		",
+	))
+	.execute(&mut *conn)
+	.await?;
+
+	sqlx::query(indoc!(
+		"
 		CREATE TABLE IF NOT EXISTS images_cache (
 			image_id BLOB NOT NULL, -- UUID
 			size INTEGER NOT NULL,
@@ -219,7 +219,6 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 			stop_ts INTEGER,
 			exit_ts INTEGER,
 
-			pid INTEGER,
 			exit_code INTEGER,
 
 			-- Also exists in the config column but this is for indexing
@@ -244,10 +243,11 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 
 	sqlx::query(indoc!(
 		"
-		CREATE TABLE IF NOT EXISTS actor_ports (
-			actor_id BLOB NOT NULL, -- UUID
-			generation INT NOT NULL,
-			port INT NOT NULL,
+		CREATE TABLE IF NOT EXISTS runner_ports (
+			runner_id BLOB NOT NULL, -- UUID
+			label TEXT NOT NULL,
+			source INT NOT NULL,
+			target INT,
 			protocol INT NOT NULL, -- protocol::TransportProtocol
 
 			delete_ts INT
@@ -259,8 +259,8 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 
 	sqlx::query(indoc!(
 		"
-		CREATE INDEX IF NOT EXISTS actor_ports_id_idx
-		ON actor_ports(actor_id, generation)
+		CREATE INDEX IF NOT EXISTS runner_ports_id_idx
+		ON runner_ports(runner_id)
 		",
 	))
 	.execute(&mut *conn)
@@ -268,8 +268,8 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 
 	sqlx::query(indoc!(
 		"
-		CREATE UNIQUE INDEX IF NOT EXISTS actor_ports_unique_idx
-		ON actor_ports(port, protocol)
+		CREATE UNIQUE INDEX IF NOT EXISTS runner_ports_source_unique_idx
+		ON runner_ports(source, protocol)
 		WHERE delete_ts IS NULL
 		",
 	))

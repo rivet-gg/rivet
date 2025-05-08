@@ -50,7 +50,17 @@ pub struct Build {
 	pub create_ts: i64,
 	pub kind: BuildKind,
 	pub compression: BuildCompression,
+	pub allocation_type: BuildAllocationType,
+	pub allocation_total_slots: u64,
 	pub tags: HashMap<String, String>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, FromRepr)]
+#[serde(rename_all = "snake_case")]
+pub enum BuildAllocationType {
+	None = 0,
+	Single = 1,
+	Multi = 2,
 }
 
 // TODO: Move to upload pkg when its converted to new ops
