@@ -55,27 +55,10 @@ pub async fn init_dir(config: &Config) -> Result<()> {
 		);
 	}
 
-	if config.client.runner.flavor == protocol::ClientFlavor::Isolate
-		&& fs::metadata(&config.client.runner.isolate_runner_binary_path())
-			.await
-			.is_err()
-	{
-		bail!(
-			"isolate runner binary `{}` does not exist",
-			config.client.runner.isolate_runner_binary_path().display()
-		);
-	}
-
-	// Create actors dir
-	match fs::create_dir(data_dir.join("actors")).await {
+	// Create runners dir
+	match fs::create_dir(data_dir.join("runners")).await {
 		Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
-		x => x.context("failed to create /actors dir in data dir")?,
-	}
-
-	// Create runner dir
-	match fs::create_dir(data_dir.join("runner")).await {
-		Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
-		x => x.context("failed to create /runner dir in data dir")?,
+		x => x.context("failed to create /runners dir in data dir")?,
 	}
 
 	// Create db dir
@@ -148,8 +131,6 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 			last_command_idx INTEGER NOT NULL,
 			last_workflow_id BLOB, -- UUID
 
-			isolate_runner_pid INTEGER,
-
 			-- Keeps this table having one row
 			_persistence INTEGER UNIQUE NOT NULL DEFAULT TRUE -- BOOLEAN
 		) STRICT
@@ -194,6 +175,27 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 
 	sqlx::query(indoc!(
 		"
+		CREATE TABLE IF NOT EXISTS runners (
+			runner_id BLOB NOT NULL, -- UUID
+			comms INTEGER NOT NULL, -- Comms
+			actor_config BLOB NOT NULL,
+
+			start_ts INTEGER NOT NULL,
+			running_ts INTEGER,
+			exit_ts INTEGER,
+
+			pid INTEGER,
+			exit_code INTEGER,
+
+			PRIMARY KEY (runner_id)
+		) STRICT
+		",
+	))
+	.execute(&mut *conn)
+	.await?;
+
+	sqlx::query(indoc!(
+		"
 		CREATE TABLE IF NOT EXISTS actors (
 			actor_id BLOB NOT NULL, -- UUID
 			generation INTEGER NOT NULL,
@@ -204,7 +206,6 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 			stop_ts INTEGER,
 			exit_ts INTEGER,
 
-			pid INTEGER,
 			exit_code INTEGER,
 
 			PRIMARY KEY (actor_id, generation)

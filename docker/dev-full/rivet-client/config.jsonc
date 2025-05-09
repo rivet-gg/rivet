@@ -1,7 +1,7 @@
 {
 	"client": {
 		"runner": {
-			"flavor": "isolate",
+			"flavor": "multi",
 			// Enables running in non-privileged Docker containers
 			"use_mounts": false
 		},

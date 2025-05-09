@@ -23,31 +23,10 @@ lazy_static::lazy_static! {
 		*REGISTRY,
 	).unwrap();
 
-	pub static ref UNKNOWN_ISOLATE_RUNNER: IntCounterVec = register_int_counter_vec_with_registry!(
-		"unknown_isolate_runner",
-		"Total number of unknown isolate runners that were found and killed.",
-		&[],
-		*REGISTRY,
-	).unwrap();
-
-	pub static ref DUPLICATE_RUNNER: IntCounterVec = register_int_counter_vec_with_registry!(
-		"duplicate_runner",
-		"Total number of duplicate runners that were found and killed.",
-		&["pid"],
-		*REGISTRY,
-	).unwrap();
-
 	pub static ref SQL_ERROR: IntCounterVec = register_int_counter_vec_with_registry!(
 		"sql_error",
 		"An SQL error occurred.",
 		&["error"],
-		*REGISTRY,
-	).unwrap();
-
-	pub static ref SECOND_INIT: IntCounterVec = register_int_counter_vec_with_registry!(
-		"second_init",
-		"Total number of second init packets encountered.",
-		&[],
 		*REGISTRY,
 	).unwrap();
 
@@ -85,12 +64,6 @@ lazy_static::lazy_static! {
 	pub static ref SETUP_OCI_BUNDLE_DURATION: Histogram = register_histogram_with_registry!(
 		"actor_setup_oci_bundle_duration_seconds",
 		"Duration of setup_oci_bundle step in seconds",
-		*REGISTRY,
-	).unwrap();
-
-	pub static ref SETUP_ISOLATE_DURATION: Histogram = register_histogram_with_registry!(
-		"actor_setup_isolate_duration_seconds",
-		"Duration of setup_isolate step in seconds",
 		*REGISTRY,
 	).unwrap();
 

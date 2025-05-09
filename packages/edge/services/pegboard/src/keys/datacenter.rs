@@ -3,6 +3,7 @@ use std::result::Result::Ok;
 use anyhow::*;
 use chirp_workflow::prelude::*;
 use fdb_util::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::protocol;
 
@@ -141,6 +142,114 @@ impl TuplePack for ClientsByRemainingMemSubspaceKey {
 			if let Some(remaining_mem) = &self.remaining_mem {
 				offset += remaining_mem.pack(w, tuple_depth)?;
 			}
+		}
+
+		Ok(offset)
+	}
+}
+
+#[derive(Debug)]
+pub struct RunnersByRemainingSlotsKey {
+	pub remaining_slots: u64,
+	pub runner_id: Uuid,
+}
+
+impl RunnersByRemainingSlotsKey {
+	pub fn new(remaining_slots: u64, runner_id: Uuid) -> Self {
+		RunnersByRemainingSlotsKey {
+			remaining_slots,
+			runner_id,
+		}
+	}
+
+	pub fn subspace() -> RunnersByRemainingSlotsSubspaceKey {
+		RunnersByRemainingSlotsSubspaceKey::new()
+	}
+
+	pub fn subspace_with_slots(remaining_slots: u64) -> RunnersByRemainingSlotsSubspaceKey {
+		RunnersByRemainingSlotsSubspaceKey::new_with_slots(remaining_slots)
+	}
+}
+
+impl FormalKey for RunnersByRemainingSlotsKey {
+	type Value = RunnersByRemainingSlotsKeyData;
+
+	fn deserialize(&self, raw: &[u8]) -> Result<Self::Value> {
+		serde_json::from_slice(raw).map_err(Into::into)
+	}
+
+	fn serialize(&self, value: Self::Value) -> Result<Vec<u8>> {
+		serde_json::to_vec(&value).map_err(Into::into)
+	}
+}
+
+impl TuplePack for RunnersByRemainingSlotsKey {
+	fn pack<W: std::io::Write>(
+		&self,
+		w: &mut W,
+		tuple_depth: TupleDepth,
+	) -> std::io::Result<VersionstampOffset> {
+		let t = (
+			DATACENTER,
+			RUNNERS_BY_REMAINING_SLOTS,
+			self.remaining_slots,
+			self.runner_id,
+		);
+		t.pack(w, tuple_depth)
+	}
+}
+
+impl<'de> TupleUnpack<'de> for RunnersByRemainingSlotsKey {
+	fn unpack(input: &[u8], tuple_depth: TupleDepth) -> PackResult<(&[u8], Self)> {
+		let (input, (_, _, remaining_slots, runner_id)) =
+			<(usize, usize, u64, Uuid)>::unpack(input, tuple_depth)?;
+
+		let v = RunnersByRemainingSlotsKey {
+			remaining_slots,
+			runner_id,
+		};
+
+		Ok((input, v))
+	}
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RunnersByRemainingSlotsKeyData {
+	pub client_id: Uuid,
+	pub client_workflow_id: Uuid,
+}
+
+pub struct RunnersByRemainingSlotsSubspaceKey {
+	pub remaining_slots: Option<u64>,
+}
+
+impl RunnersByRemainingSlotsSubspaceKey {
+	pub fn new() -> Self {
+		RunnersByRemainingSlotsSubspaceKey {
+			remaining_slots: None,
+		}
+	}
+
+	pub fn new_with_slots(remaining_slots: u64) -> Self {
+		RunnersByRemainingSlotsSubspaceKey {
+			remaining_slots: Some(remaining_slots),
+		}
+	}
+}
+
+impl TuplePack for RunnersByRemainingSlotsSubspaceKey {
+	fn pack<W: std::io::Write>(
+		&self,
+		w: &mut W,
+		tuple_depth: TupleDepth,
+	) -> std::io::Result<VersionstampOffset> {
+		let mut offset = VersionstampOffset::None { size: 0 };
+
+		let t = (DATACENTER, RUNNERS_BY_REMAINING_SLOTS);
+		offset += t.pack(w, tuple_depth)?;
+
+		if let Some(remaining_slots) = &self.remaining_slots {
+			offset += remaining_slots.pack(w, tuple_depth)?;
 		}
 
 		Ok(offset)

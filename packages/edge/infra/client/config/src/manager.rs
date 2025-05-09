@@ -91,7 +91,6 @@ pub struct Runner {
 	pub port: Option<u16>,
 
 	pub container_runner_binary_path: Option<PathBuf>,
-	pub isolate_runner_binary_path: Option<PathBuf>,
 }
 
 impl Runner {
@@ -107,12 +106,6 @@ impl Runner {
 		self.container_runner_binary_path
 			.clone()
 			.unwrap_or_else(|| Path::new("/usr/local/bin/rivet-container-runner").into())
-	}
-
-	pub fn isolate_runner_binary_path(&self) -> PathBuf {
-		self.isolate_runner_binary_path
-			.clone()
-			.unwrap_or_else(|| Path::new("/usr/local/bin/rivet-isolate-v8-runner").into())
 	}
 }
 
