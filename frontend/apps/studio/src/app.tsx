@@ -17,7 +17,12 @@ import {
 	currentActorIdAtom,
 	pickActorListFilters,
 } from "@rivet-gg/components/actors";
-import { useAtom } from "jotai";
+import { Provider, useAtom } from "jotai";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { queryClient } from "./queries/global";
+import { useHydrateAtoms } from "jotai/utils";
+import { queryClientAtom } from "jotai-tanstack-query";
 
 declare module "@tanstack/react-router" {
 	interface Register {
@@ -60,18 +65,29 @@ function InnerApp() {
 	return <RouterProvider router={router} />;
 }
 
+const HydrateAtoms = ({ children }) => {
+	useHydrateAtoms(new Map([[queryClientAtom, queryClient]]));
+	return children;
+};
+
 export function App() {
 	return (
 		<ConfigProvider value={getConfig()}>
-			<ThirdPartyProviders>
-				<Suspense fallback={<FullscreenLoading />}>
-					<TooltipProvider>
-						<InnerApp />
-					</TooltipProvider>
-				</Suspense>
-			</ThirdPartyProviders>
-
-			<Toaster />
+			<QueryClientProvider client={queryClient}>
+				<Provider>
+					<HydrateAtoms>
+						<ThirdPartyProviders>
+							<Suspense fallback={<FullscreenLoading />}>
+								<TooltipProvider>
+									<InnerApp />
+								</TooltipProvider>
+							</Suspense>
+						</ThirdPartyProviders>
+					</HydrateAtoms>
+					<Toaster />
+				</Provider>
+				{/* <ReactQueryDevtools /> */}
+			</QueryClientProvider>
 		</ConfigProvider>
 	);
 }

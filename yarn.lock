@@ -4208,6 +4208,8 @@ __metadata:
     "@rivet-gg/icons": "workspace:*"
     "@sentry/react": "npm:^8.26.0"
     "@sentry/vite-plugin": "npm:^2.22.2"
+    "@tanstack/react-query": "npm:^5.76.0"
+    "@tanstack/react-query-devtools": "npm:^5.76.0"
     "@tanstack/react-router": "npm:^1.114.25"
     "@tanstack/react-table": "npm:^8.20.6"
     "@tanstack/router-devtools": "npm:^1.114.25"
@@ -4231,6 +4233,7 @@ __metadata:
     jotai: "npm:^2.12.2"
     jotai-devtools: "npm:^0.11.0"
     jotai-effect: "npm:^2.0.2"
+    jotai-tanstack-query: "npm:^0.9.0"
     postcss: "npm:^8.4.38"
     posthog-js: "npm:^1.144.2"
     react: "npm:^19.0.0"
@@ -5592,10 +5595,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/query-core@npm:5.76.0":
+  version: 5.76.0
+  resolution: "@tanstack/query-core@npm:5.76.0"
+  checksum: 10c0/970cc783838bf7e30acbad476c72e4bb3b302c15525152cfcf5ffef8b185537e780b608e3f77793cb355b49cc98a9de597d978d400df44dbd550cba78742d67c
+  languageName: node
+  linkType: hard
+
 "@tanstack/query-devtools@npm:5.72.1":
   version: 5.72.1
   resolution: "@tanstack/query-devtools@npm:5.72.1"
   checksum: 10c0/7946f12f08124456f5e81ebfd610bc122c85bfd9bc96783f4b23eed06a72816567cf735fad9a8617da0a8b850c31efa12b0f10917d971572763e182b0e080529
+  languageName: node
+  linkType: hard
+
+"@tanstack/query-devtools@npm:5.76.0":
+  version: 5.76.0
+  resolution: "@tanstack/query-devtools@npm:5.76.0"
+  checksum: 10c0/2bee4a39c083a0260bd15e98f02d39f078d363430b74da313260ff37deb4b416d874e3a58f4691698f848076532eaf104ff2843a016aec6186dd1c39c5dd3d6f
   languageName: node
   linkType: hard
 
@@ -5630,6 +5647,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/react-query-devtools@npm:^5.76.0":
+  version: 5.76.0
+  resolution: "@tanstack/react-query-devtools@npm:5.76.0"
+  dependencies:
+    "@tanstack/query-devtools": "npm:5.76.0"
+  peerDependencies:
+    "@tanstack/react-query": ^5.76.0
+    react: ^18 || ^19
+  checksum: 10c0/2ddbc85aa0909fd6da6f0729fe24eb8c3e54d516ee5f8f2371bd4b1ba9b9c00315ba52d6a2fe993b5b57c68d972d2a667651def45d41acd0479a360e9ae0d098
+  languageName: node
+  linkType: hard
+
 "@tanstack/react-query-persist-client@npm:^5.56.2":
   version: 5.72.1
   resolution: "@tanstack/react-query-persist-client@npm:5.72.1"
@@ -5650,6 +5679,17 @@ __metadata:
   peerDependencies:
     react: ^18 || ^19
   checksum: 10c0/2e07d47b559ef6cdd29376c01a40c50241bcd730ea4b6b71fc6d0138d6609b762ddd3ecafa39f4dad670a8f5a45db890f9088120fdf918402b8e0973ce4dec0d
+  languageName: node
+  linkType: hard
+
+"@tanstack/react-query@npm:^5.76.0":
+  version: 5.76.0
+  resolution: "@tanstack/react-query@npm:5.76.0"
+  dependencies:
+    "@tanstack/query-core": "npm:5.76.0"
+  peerDependencies:
+    react: ^18 || ^19
+  checksum: 10c0/d17b7840f00a6f6d6253f436f9d32d63d255e6945e81930a36b58deb39a5fb63f6911f4ccdf393570ccfc8675cf0439c1db1d8c87532fd09d93807aa9771f819
   languageName: node
   linkType: hard
 
@@ -10884,6 +10924,16 @@ __metadata:
   peerDependencies:
     jotai: ">=2.12.1"
   checksum: 10c0/9db9b028521bd9157c3bc8aea25f2589723b952fadcd14f5f7d759631baa1401441523b5f17e433bb17337feaf8cd7a87e322aef5aaa2296da6fadba02e8ace3
+  languageName: node
+  linkType: hard
+
+"jotai-tanstack-query@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "jotai-tanstack-query@npm:0.9.0"
+  peerDependencies:
+    "@tanstack/query-core": "*"
+    jotai: ">=2.0.0"
+  checksum: 10c0/5bacdf976947b219f75c9de00eebbc8b8dd4ff949f386cf8ca16d0c581d743d1280979d5ff19e4f95ea63cef8a19c1c4276ae012c8b59febec6800107583d46a
   languageName: node
   linkType: hard
 

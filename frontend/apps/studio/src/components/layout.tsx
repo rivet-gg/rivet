@@ -16,7 +16,7 @@ const Root = ({ children }: RootProps) => {
 
 const Main = ({ children }: RootProps) => {
 	return (
-		<main className="bg-background flex flex-1 flex-col h-full min-h-0 relative">
+		<main className="bg-background flex flex-1 flex-col h-full min-h-0 relative min-w-0 max-w-full">
 			{children}
 		</main>
 	);
@@ -35,11 +35,11 @@ const Header = () => {
 	return (
 		<RivetHeader
 			logo={<img src="/logo.svg" alt="Rivet.gg" className="h-6" />}
-			addons={
-				connectionStatus !== "connected" ? (
-					<ShimmerLine className="-bottom-1" />
-				) : null
-			}
+			// addons={
+			// 	connectionStatus !== "connected" ? (
+			// 		<ShimmerLine className="-bottom-1" />
+			// 	) : null
+			// }
 			links={
 				<>
 					<NavItem asChild>
