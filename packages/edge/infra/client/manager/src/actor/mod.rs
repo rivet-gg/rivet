@@ -116,9 +116,15 @@ impl Actor {
 			.context("should have runner config")?
 		{
 			protocol::ActorRunner::New { .. } => {
+				let actor_id = matches!(
+					self.runner.config().image.allocation_type,
+					protocol::ImageAllocationType::Single
+				)
+				.then_some(self.actor_id);
+
 				// Because the runner is not already started we can get the ports here instead of reading from
 				// sqlite
-				let ports = self.runner.start(ctx).await?;
+				let ports = self.runner.start(ctx, actor_id).await?;
 
 				let pid = self.runner.pid().await?;
 

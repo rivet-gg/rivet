@@ -37,6 +37,8 @@ fn main() -> Result<()> {
 		.transpose()
 		.context("failed to parse vector socket addr")?;
 	let runner_id = var("RUNNER_ID")?;
+	// Only set if this is a single allocation runner (one actor running on it)
+	let actor_id = var("ACTOR_ID").ok();
 
 	let (shutdown_tx, shutdown_rx) = mpsc::sync_channel(1);
 
@@ -49,6 +51,7 @@ fn main() -> Result<()> {
 			msg_rx,
 			vector_socket_addr,
 			runner_id,
+			actor_id,
 		};
 		let log_shipper_thread = log_shipper.spawn();
 		(Some(msg_tx), Some(log_shipper_thread))
