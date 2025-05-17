@@ -37,6 +37,7 @@ pub struct LogShipper {
 	pub vector_socket_addr: String,
 
 	pub runner_id: String,
+	pub actor_id: Option<String>,
 }
 
 impl LogShipper {
@@ -91,7 +92,7 @@ impl LogShipper {
 		while let Result::Ok(message) = self.msg_rx.recv() {
 			let vector_message = VectorMessage::Runners {
 				runner_id: self.runner_id.as_str(),
-				task: "main", // Backwards compatibility with logs
+				actor_id: self.actor_id.as_ref().map(|x| x.as_str()),
 				stream_type: message.stream_type as u8,
 				ts: message.ts,
 				message: message.message.as_str(),
@@ -114,7 +115,7 @@ enum VectorMessage<'a> {
 	#[serde(rename = "runners")]
 	Runners {
 		runner_id: &'a str,
-		task: &'a str,
+		actor_id: Option<&'a str>,
 		stream_type: u8,
 		ts: u64,
 		message: &'a str,
