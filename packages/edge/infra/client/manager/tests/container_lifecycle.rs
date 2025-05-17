@@ -40,8 +40,13 @@ async fn container_lifecycle() {
 
 	// Init project directories
 	let tmp_dir = tempfile::TempDir::new().unwrap();
-	let config = init_client(&gen_tmp_dir_path, tmp_dir.path()).await;
-	tracing::info!(path=%tmp_dir.path().display(), "client dir");
+	let path = tmp_dir.path();
+	// let path = std::path::Path::new(
+	// 	"/home/rivet/rivet-ee/oss/packages/edge/infra/client/manager/tests/foo",
+	// );
+
+	let config = init_client(&gen_tmp_dir_path, &path).await;
+	tracing::info!(path=%path.display(), "client dir");
 
 	start_client(config, ctx_wrapper, close_rx, port).await;
 }
@@ -104,12 +109,12 @@ async fn handle_connection(
 											"actor not in client memory"
 										);
 									}
-									protocol::ActorState::Running { .. } => {
+									protocol::ActorState::Running { ref ports, .. } => {
 										if let State::Starting = actor_state {
 											actor_state = State::Running;
 										} else {
 											panic!(
-												"invalid prior state: {actor_state:?} -> {state:?}"
+												"invalid prior state: {actor_state:?} -> {state:?}",
 											);
 										}
 
@@ -125,10 +130,12 @@ async fn handle_connection(
 
 										tracing::info!("sending echo");
 
+										let port = ports.get("main").expect("no main port").source;
+
 										// Send echo test
 										let req = b"hello world";
 										let res = reqwest::Client::new()
-											.post(format!("http://0.0.0.0:{actor_port}"))
+											.post(format!("http://0.0.0.0:{port}"))
 											.body(req.to_vec())
 											.send()
 											.await
@@ -184,7 +191,7 @@ async fn handle_connection(
 										// Verify client state
 										let actors = ctx.actors().read().await;
 										assert!(
-											actors.contains_key(&(actor_id, 0)),
+											!actors.contains_key(&(actor_id, 0)),
 											"actor still in client memory"
 										);
 
@@ -195,6 +202,7 @@ async fn handle_connection(
 								}
 							}
 						}
+						protocol::ToServer::AckCommands { .. } => {}
 					}
 				}
 				Message::Close(_) => {
