@@ -1,8 +1,8 @@
 import { Icon, faExternalLink } from "@rivet-gg/icons";
 import { BillingHeader } from "./billing-header";
 import { BillingPlanPeriod } from "./billing-plan-period";
-import { BillingPlans } from "./billing-plans";
 import { BillingPortalButton } from "./billing-portal-button";
+import { ActorsBillingUsage } from "./actors-billing-usage";
 
 interface BillingProps {
 	projectId: string;
@@ -35,7 +35,7 @@ export function Billing({ projectId, groupId }: BillingProps) {
 					</>
 				}
 			/>
-			<BillingPlans projectId={projectId} />
+			<ActorsBillingUsage />
 		</>
 	);
 }
