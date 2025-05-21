@@ -12,7 +12,7 @@ pub struct Actor {
 	pub actor_id: Uuid,
 	pub env_id: Uuid,
 	pub tags: HashMap<String, String>,
-	pub resources: ActorResources,
+	pub resources: Option<ActorResources>,
 	pub lifecycle: ActorLifecycle,
 	pub create_ts: i64,
 	pub start_ts: Option<i64>,
@@ -184,7 +184,7 @@ pub fn convert_actor_to_api(
 				.collect::<HashMap<_, _>>(),
 		}),
 		lifecycle: Box::new(value.lifecycle.api_into()),
-		resources: Box::new(value.resources.api_into()),
+		resources: value.resources.map(ApiInto::api_into).map(Box::new),
 	})
 }
 

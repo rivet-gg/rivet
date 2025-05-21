@@ -221,6 +221,13 @@ pub fn config(rivet_config: rivet_config::Config) -> Result<RunConfigData> {
 			db_name: "db_pegboard_actor_log",
 		},
 		SqlService {
+			kind: SqlServiceKind::ClickHouse,
+			migrations: include_dir!(
+				"$CARGO_MANIFEST_DIR/../../../edge/services/pegboard/db/runner-log"
+			),
+			db_name: "db_pegboard_runner_log",
+		},
+		SqlService {
 			kind: SqlServiceKind::CockroachDB,
 			migrations: include_dir!(
 				"$CARGO_MANIFEST_DIR/../../services/team-invite/db/team-invite"
