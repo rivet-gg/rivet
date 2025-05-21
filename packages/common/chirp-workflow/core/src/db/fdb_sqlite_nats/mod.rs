@@ -2813,6 +2813,7 @@ impl Database for DatabaseFdbSqliteNats {
 				// TODO: Add config parameter in either fdb or sqlite to toggle this per wf
 				let delete_instead_of_forget =
 					workflow_name == "pegboard_client" || workflow_name == "pegboard_actor";
+				// let delete_instead_of_forget = false;
 
 				if delete_instead_of_forget {
 					sql_execute!(
