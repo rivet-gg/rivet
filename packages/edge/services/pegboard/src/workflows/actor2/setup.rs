@@ -1,4 +1,4 @@
-use build::types::{BuildAllocationType, BuildCompression, BuildKind};
+use build::types::{BuildAllocationType, BuildCompression, BuildKind, BuildResources};
 use chirp_workflow::prelude::*;
 use cluster::types::BuildDeliveryMethod;
 use fdb_util::FormalKey;
@@ -16,7 +16,7 @@ use crate::{
 pub struct ValidateInput {
 	pub env_id: Uuid,
 	pub tags: util::serde::HashableMap<String, String>,
-	pub resources: ActorResources,
+	pub resources: Option<ActorResources>,
 	pub image_id: Uuid,
 	pub root_user_enabled: bool,
 	pub args: Vec<String>,
@@ -25,13 +25,11 @@ pub struct ValidateInput {
 	pub network_ports: util::serde::HashableMap<String, Port>,
 }
 
-// TODO: Redo once a solid global error solution is established so we dont have to have validation all in one
-// place.
 #[activity(Validate)]
 pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<Option<String>> {
 	let dc_id = ctx.config().server()?.rivet.edge()?.datacenter_id;
 
-	let (has_tier, upload_res, game_config_res) = tokio::try_join!(
+	let (tiers, upload_res, game_config_res) = tokio::try_join!(
 		async {
 			let tier_res = ctx
 				.op(tier::ops::list::Input {
@@ -39,13 +37,9 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 					pegboard: true,
 				})
 				.await?;
-			let tier_dc = unwrap!(tier_res.datacenters.first());
+			let tier_dc = unwrap!(tier_res.datacenters.into_iter().next());
 
-			// Find any tier that has more CPU and memory than the requested resources
-			GlobalResult::Ok(tier_dc.tiers.iter().any(|t| {
-				t.cpu_millicores >= input.resources.cpu_millicores
-					&& t.memory >= input.resources.memory_mib
-			}))
+			GlobalResult::Ok(tier_dc.tiers)
 		},
 		async {
 			let builds_res = ctx
@@ -88,10 +82,6 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 		}
 	)?;
 
-	if !has_tier {
-		return Ok(Some("Too many resources allocated.".into()));
-	}
-
 	// TODO: Validate build belongs to env/game
 	let Some((build, upload_complete)) = upload_res else {
 		return Ok(Some("Build not found.".into()));
@@ -99,6 +89,44 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 
 	if !upload_complete {
 		return Ok(Some("Build upload not complete.".into()));
+	}
+
+	let resources = match build.allocation_type {
+		BuildAllocationType::None => {
+			// NOTE: This should be unreachable because if an old build is encountered the old actor wf is used.
+			return Ok(Some("Old builds not supported.".into()));
+		}
+		BuildAllocationType::Single => {
+			if let Some(resources) = &input.resources {
+				resources.clone()
+			} else {
+				return Ok(Some(
+					"Actors with builds of `allocation_type` = `single` must specify `resources`."
+						.into(),
+				));
+			}
+		}
+		BuildAllocationType::Multi => {
+			if input.resources.is_some() {
+				return Ok(Some("Cannot specify `resources` for actors with builds of `allocation_type` = `multi`.".into()));
+			}
+
+			let build_resources = unwrap!(build.resources, "multi build should have resources");
+
+			ActorResources {
+				cpu_millicores: build_resources.cpu_millicores,
+				memory_mib: build_resources.memory_mib,
+			}
+		}
+	};
+
+	// Find any tier that has more CPU and memory than the requested resources
+	let has_tier = tiers
+		.iter()
+		.any(|t| t.cpu_millicores >= resources.cpu_millicores && t.memory >= resources.memory_mib);
+
+	if !has_tier {
+		return Ok(Some("Too many resources allocated.".into()));
 	}
 
 	let Some(game_config) = game_config_res else {
@@ -257,7 +285,7 @@ struct InsertDbInput {
 	actor_id: Uuid,
 	env_id: Uuid,
 	tags: util::serde::HashableMap<String, String>,
-	resources: ActorResources,
+	resources: Option<ActorResources>,
 	lifecycle: ActorLifecycle,
 	image_id: Uuid,
 	args: Vec<String>,
@@ -293,8 +321,8 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 		",
 		input.env_id,
 		serde_json::to_string(&input.tags)?,
-		input.resources.cpu_millicores as i32,
-		input.resources.memory_mib as i32,
+		input.resources.as_ref().map(|x| x.cpu_millicores as i32),
+		input.resources.as_ref().map(|x| x.memory_mib as i32),
 		input.lifecycle.kill_timeout_ms,
 		input.lifecycle.durable,
 		create_ts,
@@ -470,6 +498,7 @@ pub struct GetMetaOutput {
 	pub build_compression: BuildCompression,
 	pub build_allocation_type: BuildAllocationType,
 	pub build_allocation_total_slots: u64,
+	pub build_resources: Option<BuildResources>,
 	pub dc_name_id: String,
 	pub dc_display_name: String,
 	pub dc_build_delivery_method: BuildDeliveryMethod,
@@ -512,6 +541,7 @@ async fn get_meta(ctx: &ActivityCtx, input: &GetMetaInput) -> GlobalResult<GetMe
 		build_compression: build.compression,
 		build_allocation_type: build.allocation_type,
 		build_allocation_total_slots: build.allocation_total_slots,
+		build_resources: build.resources.clone(),
 		dc_name_id: dc.name_id.clone(),
 		dc_display_name: dc.display_name.clone(),
 		dc_build_delivery_method: dc.build_delivery_method,
@@ -579,10 +609,29 @@ pub async fn setup(
 		})
 		.await?;
 
+	// Use resources from build or from actor config
+	let resources = match meta.build_allocation_type {
+		BuildAllocationType::None => bail!("actors do not support old builds"),
+		BuildAllocationType::Single => unwrap!(
+			input.resources.clone(),
+			"single builds should have actor resources"
+		),
+		BuildAllocationType::Multi => {
+			let build_resources =
+				unwrap_ref!(meta.build_resources, "multi builds should have resources");
+
+			ActorResources {
+				cpu_millicores: build_resources.cpu_millicores,
+				memory_mib: build_resources.memory_mib,
+			}
+		}
+	};
+
 	let (resources, artifacts_res) = ctx
 		.join((
 			activity(SelectResourcesInput {
-				resources: input.resources.clone(),
+				cpu_millicores: resources.cpu_millicores,
+				memory_mib: resources.memory_mib,
 			}),
 			activity(ResolveArtifactsInput {
 				build_upload_id: meta.build_upload_id,
@@ -603,7 +652,8 @@ pub async fn setup(
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
 struct SelectResourcesInput {
-	resources: ActorResources,
+	cpu_millicores: u32,
+	memory_mib: u32,
 }
 
 #[activity(SelectResources)]
@@ -628,10 +678,9 @@ async fn select_resources(
 	// Find the first tier that has more CPU and memory than the requested
 	// resources
 	let tier = unwrap!(
-		tiers.iter().find(|t| {
-			t.cpu_millicores >= input.resources.cpu_millicores
-				&& t.memory >= input.resources.memory_mib
-		}),
+		tiers
+			.iter()
+			.find(|t| { t.cpu_millicores >= input.cpu_millicores && t.memory >= input.memory_mib }),
 		"no suitable tier found"
 	);
 

@@ -23,8 +23,8 @@ async fn migrate_init(ctx: &ActivityCtx, _input: &MigrateInitInput) -> GlobalRes
 			env_id BLOB NOT NULL, -- UUID
 			tags BLOB NOT NULL, -- JSONB, map<string, string>
 			
-			resources_cpu_millicores INT NOT NULL,
-			resources_memory_mib INT NOT NULL,
+			resources_cpu_millicores INT,
+			resources_memory_mib INT,
 
 			-- Chosen based on tier
 			selected_resources_cpu_millicores INT,

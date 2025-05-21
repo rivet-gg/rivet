@@ -132,12 +132,13 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 									state,
 								} = event.inner.deserialize()?
 								{
+									// Try actor2 first
 									let res = ctx
 										.signal(crate::workflows::actor::StateUpdate {
 											generation,
-											state,
+											state: state.clone(),
 										})
-										.to_workflow::<crate::workflows::actor::Workflow>()
+										.to_workflow::<crate::workflows::actor2::Workflow>()
 										.tag("actor_id", actor_id)
 										.send()
 										.await;
@@ -145,10 +146,27 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 									if let Some(WorkflowError::WorkflowNotFound) =
 										res.as_workflow_error()
 									{
-										tracing::warn!(
-											?actor_id,
-											"actor workflow not found, likely already stopped"
-										);
+										// Try old actors
+										let res = ctx
+											.signal(crate::workflows::actor::StateUpdate {
+												generation,
+												state,
+											})
+											.to_workflow::<crate::workflows::actor::Workflow>()
+											.tag("actor_id", actor_id)
+											.send()
+											.await;
+
+										if let Some(WorkflowError::WorkflowNotFound) =
+											res.as_workflow_error()
+										{
+											tracing::warn!(
+												?actor_id,
+												"actor workflow not found, likely already stopped"
+											);
+										} else {
+											res?;
+										}
 									} else {
 										res?;
 									}

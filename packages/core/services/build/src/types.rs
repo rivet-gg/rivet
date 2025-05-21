@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chirp_workflow::prelude::*;
 use rivet_api::models;
-use rivet_convert::ApiFrom;
+use rivet_convert::{ApiFrom, ApiTryFrom};
 use strum::FromRepr;
 
 // NOTE: Do not change the serde case of this or else it will break workflow hashes
@@ -13,12 +13,12 @@ pub enum BuildKind {
 	JavaScript = 2,
 }
 
-impl ApiFrom<models::BuildsBuildKind> for BuildKind {
-	fn api_from(value: models::BuildsBuildKind) -> BuildKind {
+impl ApiFrom<models::BuildsKind> for BuildKind {
+	fn api_from(value: models::BuildsKind) -> BuildKind {
 		match value {
-			models::BuildsBuildKind::DockerImage => BuildKind::DockerImage,
-			models::BuildsBuildKind::OciBundle => BuildKind::OciBundle,
-			models::BuildsBuildKind::Javascript => BuildKind::JavaScript,
+			models::BuildsKind::DockerImage => BuildKind::DockerImage,
+			models::BuildsKind::OciBundle => BuildKind::OciBundle,
+			models::BuildsKind::Javascript => BuildKind::JavaScript,
 		}
 	}
 }
@@ -30,11 +30,11 @@ pub enum BuildCompression {
 	Lz4 = 1,
 }
 
-impl ApiFrom<models::BuildsBuildCompression> for BuildCompression {
-	fn api_from(value: models::BuildsBuildCompression) -> BuildCompression {
+impl ApiFrom<models::BuildsCompression> for BuildCompression {
+	fn api_from(value: models::BuildsCompression) -> BuildCompression {
 		match value {
-			models::BuildsBuildCompression::None => BuildCompression::None,
-			models::BuildsBuildCompression::Lz4 => BuildCompression::Lz4,
+			models::BuildsCompression::None => BuildCompression::None,
+			models::BuildsCompression::Lz4 => BuildCompression::Lz4,
 		}
 	}
 }
@@ -52,6 +52,7 @@ pub struct Build {
 	pub compression: BuildCompression,
 	pub allocation_type: BuildAllocationType,
 	pub allocation_total_slots: u64,
+	pub resources: Option<BuildResources>,
 	pub tags: HashMap<String, String>,
 }
 
@@ -61,6 +62,37 @@ pub enum BuildAllocationType {
 	None = 0,
 	Single = 1,
 	Multi = 2,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+pub struct BuildResources {
+	pub cpu_millicores: u32,
+	pub memory_mib: u32,
+}
+
+impl ApiTryFrom<models::BuildsResources> for BuildResources {
+	type Error = GlobalError;
+	
+	fn api_try_from(value: models::BuildsResources) -> GlobalResult<Self> {
+		ensure_with!(value.cpu >= 0, API_BAD_BODY, reason = "`resources.cpu` must be positive");
+		ensure_with!(value.memory >= 0, API_BAD_BODY, reason = "`resources.memory` must be positive");
+
+		Ok(BuildResources {
+			cpu_millicores: value.cpu.try_into()?,
+			memory_mib: value.memory.try_into()?,
+		})
+	}
+}
+
+impl ApiTryFrom<BuildResources> for models::BuildsResources {
+	type Error = GlobalError;
+	
+	fn api_try_from(value: BuildResources) -> GlobalResult<Self> {
+		Ok(models::BuildsResources {
+			cpu: value.cpu_millicores.try_into()?,
+			memory: value.memory_mib.try_into()?,
+		})
+	}
 }
 
 // TODO: Move to upload pkg when its converted to new ops

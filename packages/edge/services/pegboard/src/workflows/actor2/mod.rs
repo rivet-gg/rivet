@@ -32,7 +32,7 @@ pub struct Input {
 	pub actor_id: Uuid,
 	pub env_id: Uuid,
 	pub tags: HashMap<String, String>,
-	pub resources: ActorResources,
+	pub resources: Option<ActorResources>,
 	pub lifecycle: ActorLifecycle,
 	pub image_id: Uuid,
 	pub root_user_enabled: bool,

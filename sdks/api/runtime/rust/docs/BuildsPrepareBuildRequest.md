@@ -6,8 +6,10 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **image_tag** | Option<**String**> | A tag given to the project build. | [optional]
 **image_file** | [**crate::models::UploadPrepareFile**](UploadPrepareFile.md) |  | 
-**kind** | Option<[**crate::models::BuildsBuildKind**](BuildsBuildKind.md)> |  | [optional]
-**compression** | Option<[**crate::models::BuildsBuildCompression**](BuildsBuildCompression.md)> |  | [optional]
+**kind** | Option<[**crate::models::BuildsKind**](BuildsKind.md)> |  | [optional]
+**compression** | Option<[**crate::models::BuildsCompression**](BuildsCompression.md)> |  | [optional]
+**allocation** | Option<[**crate::models::BuildsAllocation**](BuildsAllocation.md)> |  | [optional]
+**resources** | Option<[**crate::models::BuildsResources**](BuildsResources.md)> |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

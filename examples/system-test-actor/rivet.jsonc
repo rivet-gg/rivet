@@ -1,9 +1,6 @@
 {
 	"builds": {
-		"ws-isolate": {
-			"script": "src/isolate/main.ts"
-		},
-		"ws-container": {
+		"ws": {
 			"dockerfile": "Dockerfile"
 		}
 	}

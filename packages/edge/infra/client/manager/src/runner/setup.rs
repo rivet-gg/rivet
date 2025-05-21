@@ -110,7 +110,11 @@ impl Runner {
 
 			tracing::info!(runner_id=?self.runner_id, "formatting disk image");
 			// Format file as ext4
-			let cmd_out = Command::new("mkfs.ext4").arg(&fs_img_path).output().await?;
+			let cmd_out = Command::new("mkfs.ext4")
+				.arg(&fs_img_path)
+				.output()
+				.await
+				.context("failed `mkfs.ext4` command")?;
 
 			ensure!(
 				cmd_out.status.success(),
@@ -126,7 +130,8 @@ impl Runner {
 				.arg(&fs_img_path)
 				.arg(&fs_path)
 				.output()
-				.await?;
+				.await
+				.context("failed `mount` command")?;
 
 			ensure!(
 				cmd_out.status.success(),
@@ -314,7 +319,8 @@ impl Runner {
 				.arg(format!("docker-archive:{}", docker_image_path.display()))
 				.arg(format!("oci:{}:default", oci_image_path.display()))
 				.output()
-				.await?;
+				.await
+				.context("failed `skopeo` command")?;
 			ensure!(
 				cmd_out.status.success(),
 				"failed `skopeo` command\n{}",
@@ -338,7 +344,8 @@ impl Runner {
 				.arg(format!("{}:default", oci_image_path.display()))
 				.arg(&fs_path)
 				.output()
-				.await?;
+				.await
+				.context("failed `umoci` command")?;
 			ensure!(
 				cmd_out.status.success(),
 				"failed `umoci` command\n{}",
@@ -512,7 +519,8 @@ impl Runner {
 			.arg("add")
 			.arg(netns_path.file_name().context("bad netns path")?)
 			.output()
-			.await?;
+			.await
+			.context("failed `ip` command")?;
 		ensure!(
 			cmd_out.status.success(),
 			"failed `ip netns` command\n{}",
@@ -533,7 +541,8 @@ impl Runner {
 			.env("CNI_IFNAME", &ctx.config().cni.network_interface)
 			.env("CAP_ARGS", cni_params_json)
 			.output()
-			.await?;
+			.await
+			.context("failed `cnitool` command")?;
 		ensure!(
 			cmd_out.status.success(),
 			"failed `cnitool` command\n{}",
@@ -619,7 +628,15 @@ impl Runner {
 
 		// Prepare the arguments for the runner
 		let runner_path = ctx.runner_path(self.runner_id);
-		let runner_args = vec![runner_path.to_str().context("bad path")?];
+		// let runner_args = vec![runner_path.to_str().context("bad path")?];
+		let runner_args = vec![
+			"-c".to_string(),
+			format!(
+				"{} {} > /tmp/foo.txt 2>&1",
+				ctx.config().runner.container_runner_binary_path().display(),
+				runner_path.to_str().context("bad path")?
+			),
+		];
 
 		// NOTE: Pipes are automatically closed on drop (OwnedFd)
 		// Pipe communication between processes
@@ -688,15 +705,13 @@ impl Runner {
 						setsid().context("setsid failed")?;
 
 						// Exit immediately on fail in order to not leak process
-						let err = std::process::Command::new(
-							&ctx.config().runner.container_runner_binary_path(),
-						)
-						.args(&runner_args)
-						.envs(env.iter().cloned())
-						.stdin(Stdio::null())
-						.stdout(Stdio::null())
-						.stderr(Stdio::null())
-						.exec();
+						let err = std::process::Command::new("sh")
+							.args(&runner_args)
+							.envs(env.iter().cloned())
+							.stdin(Stdio::null())
+							.stdout(Stdio::null())
+							.stderr(Stdio::null())
+							.exec();
 						eprintln!("exec failed: {err:?}");
 						std::process::exit(1);
 					}
@@ -906,6 +921,8 @@ impl Runner {
 					"RIVET_API_ENDPOINT".to_string(),
 					ctx.config().cluster.api_endpoint.to_string(),
 				),
+				// TODO: Replace with auth token
+				("RIVET_RUNNER_ID".to_string(), self.runner_id.to_string()),
 			])
 			.collect()
 	}
