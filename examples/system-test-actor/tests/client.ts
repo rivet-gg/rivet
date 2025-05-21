@@ -9,12 +9,7 @@ const RIVET_PROJECT = process.env.RIVET_PROJECT;
 const RIVET_ENVIRONMENT = process.env.RIVET_ENVIRONMENT;
 
 // Determine test kind from environment variable
-const BUILD_NAME = process.env.BUILD;
-if (BUILD_NAME !== "ws-isolate" && BUILD_NAME !== "ws-container") {
-	throw new Error(
-		"Must specify BUILD environment variable as either 'ws-isolate' or 'ws-container'",
-	);
-}
+const BUILD_NAME = process.env.BUILD ?? "ws";
 
 let region = process.env.REGION;
 if (!region || region.length === 0) {
@@ -49,13 +44,6 @@ async function run() {
 								guard: {},
 							},
 						},
-						http2: {
-							protocol: "http",
-							internalPort: 8085,
-							routing: {
-								guard: {},
-							},
-						},
 						udp: {
 							protocol: "udp",
 							// internalPort: 80,
@@ -65,17 +53,18 @@ async function run() {
 						},
 					},
 				},
+				runtime: {
+					environment: {
+						MULTI: "1",
+					}
+				},
 				lifecycle: {
 					durable: false,
 				},
-				...(BUILD_NAME === "ws-container"
-					? {
-						resources: {
-							cpu: 100,
-							memory: 100,
-						},
-					}
-					: {}),
+				resources: {
+					cpu: 100,
+					memory: 100,
+				},
 			},
 		});
 		actorId = actor.id;

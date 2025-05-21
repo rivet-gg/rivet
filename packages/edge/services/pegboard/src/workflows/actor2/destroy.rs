@@ -37,15 +37,18 @@ pub(crate) async fn pegboard_actor_destroy(
 
 	if let Some(actor) = actor {
 		let client_workflow_id = actor.client_workflow_id;
+		let runner_id = actor.runner_id;
 
-		ctx.activity(UpdateFdbInput {
-			actor_id: input.actor_id,
-			image_id: input.image_id,
-			build_allocation_type: input.build_allocation_type,
-			actor,
-		})
-		.await?;
+		let res = ctx
+			.activity(UpdateFdbInput {
+				actor_id: input.actor_id,
+				image_id: input.image_id,
+				build_allocation_type: input.build_allocation_type,
+				actor,
+			})
+			.await?;
 
+		// Destroy actor
 		if let (Some(client_workflow_id), Some(kill_data)) = (client_workflow_id, &input.kill) {
 			kill(
 				ctx,
@@ -55,6 +58,19 @@ pub(crate) async fn pegboard_actor_destroy(
 				kill_data.kill_timeout_ms,
 				false,
 			)
+			.await?;
+		}
+
+		// Destroy runner
+		if let (Some(client_workflow_id), Some(runner_id), true) =
+			(client_workflow_id, runner_id, res.destroy_runner)
+		{
+			ctx.signal(protocol::Command::SignalRunner {
+				runner_id,
+				signal: Signal::SIGKILL as i32,
+			})
+			.to_workflow_id(client_workflow_id)
+			.send()
 			.await?;
 		}
 	}
@@ -420,7 +436,7 @@ pub(crate) async fn clear_ports_and_resources(
 			}
 
 			// Single container per runner allocations don't require explicitly destroying the runner because
-			// it is already stopped; the sole container it was running stopped.
+			// it is already stopped; the container = the actor.
 			matches!(build_allocation_type, BuildAllocationType::Multi)
 		};
 
