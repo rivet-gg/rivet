@@ -9817,9 +9817,13 @@ components:
         image_file:
           $ref: '#/components/schemas/UploadPrepareFile'
         kind:
-          $ref: '#/components/schemas/BuildsBuildKind'
+          $ref: '#/components/schemas/BuildsKind'
         compression:
-          $ref: '#/components/schemas/BuildsBuildCompression'
+          $ref: '#/components/schemas/BuildsCompression'
+        allocation:
+          $ref: '#/components/schemas/BuildsAllocation'
+        resources:
+          $ref: '#/components/schemas/BuildsResources'
       required:
         - image_file
     BuildsPrepareBuildResponse:
@@ -9835,17 +9839,6 @@ components:
       required:
         - build
         - presigned_requests
-    BuildsBuildKind:
-      type: string
-      enum:
-        - docker_image
-        - oci_bundle
-        - javascript
-    BuildsBuildCompression:
-      type: string
-      enum:
-        - none
-        - lz4
     CloudBootstrapResponse:
       type: object
       properties:
@@ -11039,7 +11032,6 @@ components:
         - tags
         - runtime
         - network
-        - resources
         - lifecycle
         - created_at
     ActorsRuntime:
@@ -11338,6 +11330,10 @@ components:
           type: integer
           format: int64
           description: Unsigned 64 bit integer.
+        allocation:
+          $ref: '#/components/schemas/BuildsAllocation'
+        resources:
+          $ref: '#/components/schemas/BuildsResources'
         tags:
           type: object
           additionalProperties:
@@ -11349,6 +11345,52 @@ components:
         - created_at
         - content_length
         - tags
+    BuildsKind:
+      type: string
+      enum:
+        - docker_image
+        - oci_bundle
+        - javascript
+    BuildsCompression:
+      type: string
+      enum:
+        - none
+        - lz4
+    BuildsAllocation:
+      type: object
+      properties:
+        single:
+          $ref: '#/components/schemas/BuildsAllocationSingle'
+        multi:
+          $ref: '#/components/schemas/BuildsAllocationMulti'
+    BuildsAllocationSingle:
+      type: object
+      properties: {}
+    BuildsAllocationMulti:
+      type: object
+      properties:
+        slots:
+          type: integer
+      required:
+        - slots
+    BuildsResources:
+      type: object
+      properties:
+        cpu:
+          type: integer
+          description: >-
+            The number of CPU cores in millicores, or 1/1000 of a core. For
+            example,
+
+            1/8 of a core would be 125 millicores, and 1 core would be 1000
+
+            millicores.
+        memory:
+          type: integer
+          description: The amount of memory in megabytes
+      required:
+        - cpu
+        - memory
     CaptchaConfig:
       type: object
       description: Methods to verify a captcha

@@ -1,6 +1,6 @@
+use pegboard::protocol;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use pegboard::protocol;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
@@ -12,7 +12,7 @@ pub enum ToManager {
 		actor_id: Uuid,
 		generation: u32,
 		state: ActorState,
-	}
+	},
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,7 +36,5 @@ pub enum ToRunner {
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum ActorState {
 	Running,
-	Exited {
-		exit_code: Option<i32>,
-	},
+	Exited { exit_code: Option<i32> },
 }

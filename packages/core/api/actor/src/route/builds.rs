@@ -65,6 +65,25 @@ pub async fn get(
 		name: build.display_name.clone(),
 		created_at: timestamp::to_string(build.create_ts)?,
 		content_length: upload.content_length.api_try_into()?,
+		allocation: match build.allocation_type {
+			build::types::BuildAllocationType::None => None,
+			build::types::BuildAllocationType::Single => Some(Box::new(models::BuildsAllocation {
+				single: Some(json!({})),
+				multi: None,
+			})),
+			build::types::BuildAllocationType::Multi => Some(Box::new(models::BuildsAllocation {
+				single: None,
+				multi: Some(Box::new(models::BuildsAllocationMulti {
+					slots: build.allocation_total_slots.try_into()?,
+				})),
+			})),
+		},
+		resources: build
+			.resources
+			.clone()
+			.map(ApiTryInto::api_try_into)
+			.transpose()?
+			.map(Box::new),
 		tags: build.tags.clone(),
 	};
 
@@ -125,16 +144,17 @@ pub async fn list(
 	})
 	.await?;
 
-	let builds_res = op!([ctx] build_get {
-		build_ids: list_res.build_ids.clone(),
-	})
-	.await?;
+	let builds_res = ctx
+		.op(build::ops::get::Input {
+			build_ids: list_res.build_ids.iter().map(|x| x.as_uuid()).collect(),
+		})
+		.await?;
 
 	let uploads_res = op!([ctx] upload_get {
 		upload_ids: builds_res
 			.builds
 			.iter()
-			.flat_map(|build| build.upload_id)
+			.map(|build| build.upload_id.into())
 			.collect::<Vec<_>>(),
 	})
 	.await?;
@@ -144,20 +164,45 @@ pub async fn list(
 		.builds
 		.iter()
 		.filter_map(|build| {
+			let proto_upload_id = Some(build.upload_id.into());
+
 			uploads_res
 				.uploads
 				.iter()
-				.find(|u| u.upload_id == build.upload_id)
+				.find(|u| u.upload_id == proto_upload_id)
 				.map(|upload| (build, upload))
 		})
 		.map(|(build, upload)| {
 			GlobalResult::Ok((
 				build.create_ts,
 				models::BuildsBuild {
-					id: unwrap!(build.build_id).as_uuid(),
+					id: build.build_id,
 					name: build.display_name.clone(),
 					created_at: timestamp::to_string(build.create_ts)?,
 					content_length: upload.content_length.api_try_into()?,
+					allocation: match build.allocation_type {
+						build::types::BuildAllocationType::None => None,
+						build::types::BuildAllocationType::Single => {
+							Some(Box::new(models::BuildsAllocation {
+								single: Some(json!({})),
+								multi: None,
+							}))
+						}
+						build::types::BuildAllocationType::Multi => {
+							Some(Box::new(models::BuildsAllocation {
+								single: None,
+								multi: Some(Box::new(models::BuildsAllocationMulti {
+									slots: build.allocation_total_slots.try_into()?,
+								})),
+							}))
+						}
+					},
+					resources: build
+						.resources
+						.clone()
+						.map(ApiTryInto::api_try_into)
+						.transpose()?
+						.map(Box::new),
 					tags: build.tags.clone(),
 				},
 			))
@@ -326,7 +371,7 @@ pub async fn create_build(
 		.await?;
 
 	let (kind, image_tag) = match body.kind {
-		Option::None | Some(models::BuildsBuildKind::DockerImage) => (
+		Option::None | Some(models::BuildsKind::DockerImage) => (
 			build::types::BuildKind::DockerImage,
 			unwrap_with!(
 				body.image_tag,
@@ -334,18 +379,39 @@ pub async fn create_build(
 				error = "field `image_tag` is required for the given build kind"
 			),
 		),
-		Some(models::BuildsBuildKind::OciBundle) => (
+		Some(models::BuildsKind::OciBundle) => (
 			build::types::BuildKind::OciBundle,
 			// HACK(RVT-4125): Generate nonexistent image tag
 			body.image_tag
 				.unwrap_or_else(|| format!("nonexistent:{}", Uuid::new_v4())),
 		),
-		Some(models::BuildsBuildKind::Javascript) => (
+		Some(models::BuildsKind::Javascript) => (
 			build::types::BuildKind::JavaScript,
 			// HACK(RVT-4125): Generate nonexistent image tag
 			body.image_tag
 				.unwrap_or_else(|| format!("nonexistent:{}", Uuid::new_v4())),
 		),
+	};
+
+	let (allocation_type, allocation_total_slots) = if let Some(alloc) = &body.allocation {
+		match (&alloc.single, &alloc.multi) {
+			(Some(_), None) => (build::types::BuildAllocationType::Single, 1),
+			(None, Some(multi)) => (build::types::BuildAllocationType::Multi, multi.slots),
+			(Some(_), Some(_)) => {
+				bail_with!(
+					API_BAD_BODY,
+					reason = "cannot set both `single` and `multi` in `allocation`"
+				);
+			}
+			(None, None) => {
+				bail_with!(
+					API_BAD_BODY,
+					reason = "must set one of `single` or `multi` in `allocation`"
+				);
+			}
+		}
+	} else {
+		(build::types::BuildAllocationType::None, 1)
 	};
 
 	let create_res = ctx
@@ -361,8 +427,9 @@ pub async fn create_build(
 				.compression
 				.map(ApiInto::api_into)
 				.unwrap_or(build::types::BuildCompression::None),
-			allocation_type: build::types::BuildAllocationType::Single,
-			allocation_total_slots: 1,
+			allocation_type,
+			allocation_total_slots: allocation_total_slots.try_into()?,
+			resources: body.resources.map(|x| (*x).api_try_into()).transpose()?,
 		})
 		.await?;
 
@@ -387,15 +454,17 @@ pub async fn create_build_deprecated(
 		ctx,
 		models::BuildsPrepareBuildRequest {
 			compression: body.compression.map(|c| match c {
-				models::ServersBuildCompression::None => models::BuildsBuildCompression::None,
-				models::ServersBuildCompression::Lz4 => models::BuildsBuildCompression::Lz4,
+				models::ServersBuildCompression::None => models::BuildsCompression::None,
+				models::ServersBuildCompression::Lz4 => models::BuildsCompression::Lz4,
 			}),
 			image_file: body.image_file,
 			image_tag: Some(body.image_tag),
 			kind: body.kind.map(|k| match k {
-				models::ServersBuildKind::DockerImage => models::BuildsBuildKind::DockerImage,
-				models::ServersBuildKind::OciBundle => models::BuildsBuildKind::OciBundle,
+				models::ServersBuildKind::DockerImage => models::BuildsKind::DockerImage,
+				models::ServersBuildKind::OciBundle => models::BuildsKind::OciBundle,
 			}),
+			allocation: None,
+			resources: None,
 		},
 		global,
 	)
