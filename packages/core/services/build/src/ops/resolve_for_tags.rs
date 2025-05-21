@@ -73,7 +73,9 @@ async fn get_builds(
 			compression,
 			tags,
 			allocation_type,
-			allocation_total_slots
+			allocation_total_slots,
+			resources_cpu_millicores,
+			resources_memory_mib
 		FROM db_build.builds
 		WHERE env_id = $1 AND tags @> $2
 		",

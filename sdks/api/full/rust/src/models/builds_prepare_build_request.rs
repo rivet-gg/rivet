@@ -16,9 +16,13 @@ pub struct BuildsPrepareBuildRequest {
 	#[serde(rename = "image_file")]
 	pub image_file: Box<crate::models::UploadPrepareFile>,
 	#[serde(rename = "kind", skip_serializing_if = "Option::is_none")]
-	pub kind: Option<crate::models::BuildsBuildKind>,
+	pub kind: Option<crate::models::BuildsKind>,
 	#[serde(rename = "compression", skip_serializing_if = "Option::is_none")]
-	pub compression: Option<crate::models::BuildsBuildCompression>,
+	pub compression: Option<crate::models::BuildsCompression>,
+	#[serde(rename = "allocation", skip_serializing_if = "Option::is_none")]
+	pub allocation: Option<Box<crate::models::BuildsAllocation>>,
+	#[serde(rename = "resources", skip_serializing_if = "Option::is_none")]
+	pub resources: Option<Box<crate::models::BuildsResources>>,
 }
 
 impl BuildsPrepareBuildRequest {
@@ -28,6 +32,8 @@ impl BuildsPrepareBuildRequest {
 			image_file: Box::new(image_file),
 			kind: None,
 			compression: None,
+			allocation: None,
+			resources: None,
 		}
 	}
 }

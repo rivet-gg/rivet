@@ -529,7 +529,17 @@ export class Builds {
      *                 contentLength: 1000000
      *             },
      *             kind: "docker_image",
-     *             compression: "none"
+     *             compression: "none",
+     *             allocation: {
+     *                 single: {},
+     *                 multi: {
+     *                     slots: 1
+     *                 }
+     *             },
+     *             resources: {
+     *                 cpu: 1,
+     *                 memory: 1
+     *             }
      *         }
      *     })
      */

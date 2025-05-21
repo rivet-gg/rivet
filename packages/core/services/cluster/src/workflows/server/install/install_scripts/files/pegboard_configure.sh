@@ -20,7 +20,7 @@ cat << EOF > /etc/rivet-client/config.json
 			}
 		},
 		"runner": {
-			"ip": "$SUBNET_IPV4_GATEWAY_IP",
+			"ip": "$SUBNET_IPV4_GATEWAY_IP"
 		},
 		"images": {
 			"pull_addresses": {
@@ -51,7 +51,7 @@ cat << EOF > /etc/rivet-client/config.json
 			}
 		},
 		"vector": {
-			"address": "127.0.0.1:5021"
+			"address": "127.0.0.1:__TUNNEL_VECTOR_TCP_JSON_PORT__"
 		}
 	}
 }
@@ -91,6 +91,11 @@ ADMIN_CHAIN="RIVET-ADMIN"
 cat << EOF > /usr/local/bin/setup_pegboard_networking.sh
 #!/bin/bash
 set -euf
+
+# Add dummy interface for manager socket to listen on
+ip link add rivet0 type dummy
+ip addr add $SUBNET_IPV4_GATEWAY_IP/20 dev rivet0
+ip link set rivet0 up
 
 # MARK: Linux Traffic Control
 for iface in __PUBLIC_IFACE__ __VLAN_IFACE__; do
@@ -271,6 +276,7 @@ EOF
 
 chmod +x /usr/local/bin/setup_pegboard_networking.sh
 
+# Runs on every boot
 cat << 'EOF' > /etc/systemd/system/setup_pegboard_networking.service
 [Unit]
 Description=Setup Pegboard Networking

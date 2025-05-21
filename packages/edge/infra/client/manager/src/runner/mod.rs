@@ -110,7 +110,7 @@ impl Runner {
 
 	pub async fn attach_socket(
 		self: &Arc<Self>,
-		mut ws_stream: WebSocketStream<TcpStream>,
+		ws_stream: WebSocketStream<TcpStream>,
 	) -> Result<()> {
 		match &self.comms {
 			Comms::Basic => bail!("attempt to attach socket to basic runner"),
@@ -119,35 +119,39 @@ impl Runner {
 
 				let mut guard = tx.lock().await;
 
-				if guard.is_none() {
-					let (ws_tx, ws_rx) = ws_stream.split();
+				if let Some(existing_ws_tx) = &mut *guard {
+					tracing::info!(runner_id=?self.runner_id, "runner received another socket, closing old one");
 
-					*guard = Some(ws_tx);
-					self.bump();
-
-					// Spawn a new thread to handle incoming messages
-					let self2 = self.clone();
-					tokio::task::spawn(async move {
-						if let Err(err) = self2.receive_messages(ws_rx).await {
-							tracing::error!(runner_id=?self2.runner_id, ?err, "socket error, killing runner");
-
-							if let Err(err) = self2.signal(Signal::SIGKILL).await {
-								// TODO: This should hard error the manager?
-								tracing::error!(runner_id=?self2.runner_id, %err, "failed to kill runner");
-							}
-						}
-					});
-
-					tracing::info!(runner_id=?self.runner_id, "socket attached");
-				} else {
-					tracing::warn!(runner_id=?self.runner_id, "runner received another socket, closing new one");
-
+					// Close the old socket
 					let close_frame = CloseFrame {
 						code: CloseCode::Error,
-						reason: "unknown runner".into(),
+						reason: "replacing with new socket".into(),
 					};
-					ws_stream.send(Message::Close(Some(close_frame))).await?;
+					existing_ws_tx
+						.send(Message::Close(Some(close_frame)))
+						.await?;
+
+					tracing::info!(runner_id=?self.runner_id, "socket replaced");
+				} else {
+					tracing::info!(runner_id=?self.runner_id, "socket attached");
 				}
+
+				let (ws_tx, ws_rx) = ws_stream.split();
+
+				*guard = Some(ws_tx);
+				self.bump();
+
+				// Spawn a new thread to handle incoming messages
+				let self2 = self.clone();
+				tokio::task::spawn(async move {
+					if let Err(err) = self2.receive_messages(ws_rx).await {
+						tracing::error!(runner_id=?self2.runner_id, ?err, "socket error, killing runner");
+
+						if let Err(err) = self2.signal(Signal::SIGKILL).await {
+							tracing::error!(runner_id=?self2.runner_id, %err, "failed to kill runner");
+						}
+					}
+				});
 			}
 		}
 

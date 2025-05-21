@@ -26,6 +26,8 @@ pub(crate) struct BuildRow {
 	compression: i64,
 	allocation_type: i64,
 	allocation_total_slots: i64,
+	resources_cpu_millicores: Option<i64>,
+	resources_memory_mib: Option<i64>,
 	tags: sqlx::types::Json<Box<serde_json::value::RawValue>>,
 }
 
@@ -49,6 +51,16 @@ impl TryInto<types::Build> for BuildRow {
 				self.allocation_type.try_into()?
 			)),
 			allocation_total_slots: self.allocation_total_slots.try_into()?,
+			resources: if let (Some(cpu_millicores), Some(memory_mib)) =
+				(self.resources_cpu_millicores, self.resources_memory_mib)
+			{
+				Some(types::BuildResources {
+					cpu_millicores: cpu_millicores.try_into()?,
+					memory_mib: memory_mib.try_into()?,
+				})
+			} else {
+				None
+			},
 			// Filter out null values on tags
 			tags: serde_json::from_str::<HashMap<String, Option<String>>>(self.tags.0.get())?
 				.into_iter()
@@ -82,6 +94,8 @@ pub async fn build_get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output
 							compression,
 							allocation_type,
 							allocation_total_slots,
+							resources_cpu_millicores,
+							resources_memory_mib,
 							tags
 						FROM db_build.builds
 						WHERE build_id = ANY($1)

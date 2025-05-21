@@ -495,7 +495,15 @@ impl Runner {
 
 		// Prepare the arguments for the runner
 		let runner_path = ctx.runner_path(self.runner_id);
-		let runner_args = vec![runner_path.to_str().context("bad path")?];
+		// let runner_args = vec![runner_path.to_str().context("bad path")?];
+		let runner_args = vec![
+			"-c".to_string(),
+			format!(
+				"{} {} > /tmp/foo.txt 2>&1",
+				ctx.config().runner.container_runner_binary_path().display(),
+				runner_path.to_str().context("bad path")?
+			),
+		];
 
 		// NOTE: Pipes are automatically closed on drop (OwnedFd)
 		// Pipe communication between processes
@@ -564,15 +572,13 @@ impl Runner {
 						setsid().context("setsid failed")?;
 
 						// Exit immediately on fail in order to not leak process
-						let err = std::process::Command::new(
-							&ctx.config().runner.container_runner_binary_path(),
-						)
-						.args(&runner_args)
-						.envs(env.iter().cloned())
-						.stdin(Stdio::null())
-						.stdout(Stdio::null())
-						.stderr(Stdio::null())
-						.exec();
+						let err = std::process::Command::new("sh")
+							.args(&runner_args)
+							.envs(env.iter().cloned())
+							.stdin(Stdio::null())
+							.stdout(Stdio::null())
+							.stderr(Stdio::null())
+							.exec();
 						eprintln!("exec failed: {err:?}");
 						std::process::exit(1);
 					}
@@ -809,6 +815,8 @@ impl Runner {
 					"RIVET_API_ENDPOINT".to_string(),
 					ctx.config().cluster.api_endpoint.to_string(),
 				),
+				// TODO: Replace with auth token
+				("RIVET_RUNNER_ID".to_string(), self.runner_id.to_string()),
 			])
 			.collect()
 	}
