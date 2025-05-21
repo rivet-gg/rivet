@@ -1077,8 +1077,8 @@ fn legacy_convert_actor_to_server(
 				.collect(),
 		}),
 		resources: Box::new(models::ServersResources {
-			cpu: a.resources.cpu,
-			memory: a.resources.memory,
+			cpu: a.resources.as_ref().map(|x| x.cpu).unwrap_or(0),
+			memory: a.resources.as_ref().map(|x| x.memory).unwrap_or(0),
 		}),
 		runtime: Box::new(models::ServersRuntime {
 			arguments: a.runtime.arguments,

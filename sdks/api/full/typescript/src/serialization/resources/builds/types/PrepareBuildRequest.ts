@@ -6,8 +6,10 @@ import * as serializers from "../../../index";
 import * as Rivet from "../../../../api/index";
 import * as core from "../../../../core";
 import { PrepareFile } from "../../upload/resources/common/types/PrepareFile";
-import { BuildKind } from "./BuildKind";
-import { BuildCompression } from "./BuildCompression";
+import { Kind } from "../resources/common/types/Kind";
+import { Compression } from "../resources/common/types/Compression";
+import { Allocation } from "../resources/common/types/Allocation";
+import { Resources } from "../resources/common/types/Resources";
 
 export const PrepareBuildRequest: core.serialization.ObjectSchema<
     serializers.builds.PrepareBuildRequest.Raw,
@@ -15,15 +17,19 @@ export const PrepareBuildRequest: core.serialization.ObjectSchema<
 > = core.serialization.object({
     imageTag: core.serialization.property("image_tag", core.serialization.string().optional()),
     imageFile: core.serialization.property("image_file", PrepareFile),
-    kind: BuildKind.optional(),
-    compression: BuildCompression.optional(),
+    kind: Kind.optional(),
+    compression: Compression.optional(),
+    allocation: Allocation.optional(),
+    resources: Resources.optional(),
 });
 
 export declare namespace PrepareBuildRequest {
     export interface Raw {
         image_tag?: string | null;
         image_file: PrepareFile.Raw;
-        kind?: BuildKind.Raw | null;
-        compression?: BuildCompression.Raw | null;
+        kind?: Kind.Raw | null;
+        compression?: Compression.Raw | null;
+        allocation?: Allocation.Raw | null;
+        resources?: Resources.Raw | null;
     }
 }

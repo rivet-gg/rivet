@@ -4,7 +4,10 @@ use rivet_operation::prelude::proto::backend;
 const MAX_UPLOAD_SIZE: u64 = util::file_size::gigabytes(8);
 const MAX_JS_BUILD_UPLOAD_SIZE: u64 = util::file_size::megabytes(10);
 use crate::{
-	types::{upload::PrepareFile, upload::PresignedUploadRequest, BuildCompression, BuildAllocationType, BuildKind},
+	types::{
+		upload::PrepareFile, upload::PresignedUploadRequest, BuildAllocationType, BuildCompression,
+		BuildKind, BuildResources,
+	},
 	utils,
 };
 
@@ -17,6 +20,7 @@ pub struct Input {
 	pub compression: BuildCompression,
 	pub allocation_type: BuildAllocationType,
 	pub allocation_total_slots: u64,
+	pub resources: Option<BuildResources>,
 }
 
 #[derive(Debug)]
@@ -45,10 +49,36 @@ pub struct Output {
 
 #[operation]
 pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
-	ensure!(
+	ensure_with!(
 		util::check::display_name_long(&input.display_name),
-		"invalid display name"
+		BUILD_INVALID,
+		reason = "invalid display name"
 	);
+
+	// Validate allocation and resources
+	match input.allocation_type {
+		BuildAllocationType::None => {
+			ensure_with!(
+				input.resources.is_none(),
+				BUILD_INVALID,
+				reason = "`resources` can only be specified if `allocation_type` = `multi`"
+			);
+		},
+		BuildAllocationType::Single => {
+			ensure_with!(
+				input.resources.is_none(),
+				BUILD_INVALID,
+				reason = "builds with `allocation_type` = `single` cannot have `resources`"
+			);
+		},
+		BuildAllocationType::Multi => {
+			ensure_with!(
+				input.resources.is_some(),
+				BUILD_INVALID,
+				reason = "builds with `allocation_type` = `multi` must specify `resources`"
+			);
+		}
+	}
 
 	// Validate game exists
 	let (game_id, env_id) = match input.owner {
@@ -162,10 +192,12 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 				kind,
 				compression,
 				allocation_type,
-				allocation_total_slots
+				allocation_total_slots,
+				resources_cpu_millicores,
+				resources_memory_mib
 			)
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		",
 		build_id,
 		game_id,
@@ -178,6 +210,8 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 		input.compression as i32,
 		input.allocation_type as i32,
 		input.allocation_total_slots as i64,
+		input.resources.as_ref().map(|x| x.cpu_millicores as i64),
+		input.resources.as_ref().map(|x| x.memory_mib as i64),
 	)
 	.await?;
 

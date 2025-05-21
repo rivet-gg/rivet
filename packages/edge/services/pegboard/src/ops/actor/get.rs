@@ -17,8 +17,8 @@ use crate::{
 struct ActorRow {
 	env_id: Uuid,
 	tags: sqlx::types::Json<HashMap<String, String>>,
-	resources_cpu_millicores: i64,
-	resources_memory_mib: i64,
+	resources_cpu_millicores: Option<i64>,
+	resources_memory_mib: Option<i64>,
 	selected_resources_cpu_millicores: Option<i64>,
 	selected_resources_memory_mib: Option<i64>,
 	lifecycle_kill_timeout_ms: i64,
@@ -271,18 +271,25 @@ pub async fn pegboard_actor_get(ctx: &OperationCtx, input: &Input) -> GlobalResu
 				actor_id: s.actor_id,
 				env_id: s.row.env_id,
 				tags: s.row.tags.0.clone(),
-				resources: ActorResources {
-					cpu_millicores: s
-						.row
-						.selected_resources_cpu_millicores
-						.unwrap_or(s.row.resources_cpu_millicores)
-						.try_into()?,
-					memory_mib: s
-						.row
-						.selected_resources_memory_mib
-						.unwrap_or(s.row.resources_memory_mib)
-						.try_into()?,
+				resources: if let (Some(cpu_millicores), Some(memory_mib)) = (
+					s.row.selected_resources_cpu_millicores,
+					s.row.selected_resources_memory_mib,
+				) {
+					Some(ActorResources {
+						cpu_millicores: cpu_millicores.try_into()?,
+						memory_mib: memory_mib.try_into()?,
+					})
+				} else if let (Some(cpu_millicores), Some(memory_mib)) =
+					(s.row.resources_cpu_millicores, s.row.resources_memory_mib)
+				{
+					Some(ActorResources {
+						cpu_millicores: cpu_millicores.try_into()?,
+						memory_mib: memory_mib.try_into()?,
+					})
+				} else {
+					None
 				},
+
 				lifecycle: ActorLifecycle {
 					kill_timeout_ms: s.row.lifecycle_kill_timeout_ms,
 					durable: s.row.lifecycle_durable,

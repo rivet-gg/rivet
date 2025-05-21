@@ -1,6 +1,6 @@
 use chirp_workflow::prelude::*;
 
-use super::{fdb::FDB_VERSION, rivet::TUNNEL_API_EDGE_PORT};
+use super::{fdb::FDB_VERSION, rivet::TUNNEL_API_EDGE_PORT, vector::TUNNEL_VECTOR_TCP_JSON_PORT};
 
 // Cant import from pegboard::protocol because of circular dependencies
 #[derive(Debug, Clone, Copy)]
@@ -33,7 +33,7 @@ pub async fn install(config: &rivet_config::Config, flavor: ClientFlavor) -> Glo
 		)
 		.replace(
 			"__ISOLATE_V8_RUNNER_BINARY_URL__",
-			provision_config.isolate_runner_binary_url.as_ref(),
+			provision_config.old_isolate_runner_binary_url.as_ref(),
 		)
 		.replace("__FDB_VERSION__", FDB_VERSION))
 }
@@ -55,6 +55,10 @@ pub fn configure(config: &rivet_config::Config, flavor: ClientFlavor) -> GlobalR
 		.replace(
 			"__TUNNEL_API_EDGE_API__",
 			&format!("http://127.0.0.1:{TUNNEL_API_EDGE_PORT}"),
+		)
+		.replace(
+			"__TUNNEL_VECTOR_TCP_JSON_PORT__",
+			&TUNNEL_VECTOR_TCP_JSON_PORT.to_string(),
 		)
 		.replace(
 			"__RESERVED_MEMORY__",
