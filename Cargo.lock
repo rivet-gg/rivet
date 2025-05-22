@@ -6716,8 +6716,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6971da4d9c3aa03c3d8f3ff0f4155b534aad021292003895a469716b2a230378"
 dependencies = [
  "base64 0.21.7",
- "pem",
+ "pem 1.1.1",
  "ring 0.16.20",
+ "serde",
+ "serde_json",
+ "simple_asn1",
+]
+
+[[package]]
+name = "jsonwebtoken"
+version = "9.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a87cc7a48537badeae96744432de36f4be2b4a34a05a5ef32e9dd8a1c169dde"
+dependencies = [
+ "base64 0.22.1",
+ "js-sys",
+ "pem 3.0.5",
+ "ring 0.17.8",
  "serde",
  "serde_json",
  "simple_asn1",
@@ -8632,6 +8647,7 @@ version = "25.4.2"
 dependencies = [
  "ipnet",
  "pegboard",
+ "rivet-util",
  "schemars",
  "serde",
  "url",
@@ -8672,11 +8688,13 @@ name = "pegboard-manager"
 version = "25.4.2"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "bytes",
  "futures-util",
  "hyper 0.14.31",
  "indoc 2.0.5",
  "json5",
+ "jsonwebtoken 9.3.1",
  "lazy_static",
  "nix 0.30.1",
  "notify",
@@ -8687,6 +8705,7 @@ dependencies = [
  "rand 0.8.5",
  "rand_chacha 0.3.1",
  "reqwest 0.12.12",
+ "ring 0.17.8",
  "rivet-logs",
  "rivet-util",
  "scc",
@@ -8756,6 +8775,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8835c273a76a90455d7344889b0964598e3316e2a79ede8e36f16bdcf2228b8"
 dependencies = [
  "base64 0.13.1",
+]
+
+[[package]]
+name = "pem"
+version = "3.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38af38e8470ac9dee3ce1bae1af9c1671fffc44ddfd8bd1d0a3445bf349a8ef3"
+dependencies = [
+ "base64 0.22.1",
+ "serde",
 ]
 
 [[package]]
@@ -9970,7 +9999,7 @@ version = "25.4.2"
 dependencies = [
  "base64 0.13.1",
  "global-error",
- "jsonwebtoken",
+ "jsonwebtoken 8.3.0",
  "lazy_static",
  "prost 0.10.4",
  "rivet-util",
@@ -10211,6 +10240,7 @@ dependencies = [
  "reqwest 0.11.27",
  "rivet-config",
  "rivet-metrics",
+ "rivet-util",
  "rustls 0.23.25",
  "rustls-pemfile 2.2.0",
  "serde",
@@ -10639,6 +10669,7 @@ dependencies = [
  "rivet-runtime",
  "rivet-service-manager",
  "rivet-term",
+ "rivet-util",
  "rustyline",
  "s3-util",
  "serde",
@@ -10788,6 +10819,7 @@ dependencies = [
  "async-trait",
  "bcrypt",
  "chrono",
+ "fdb-util",
  "formatted-error",
  "futures-util",
  "global-error",
@@ -12840,7 +12872,7 @@ dependencies = [
  "chirp-client",
  "chirp-worker",
  "chrono",
- "jsonwebtoken",
+ "jsonwebtoken 8.3.0",
  "lazy_static",
  "prost 0.10.4",
  "rivet-claims",

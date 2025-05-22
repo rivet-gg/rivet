@@ -111,13 +111,11 @@ async fn main_inner() -> GlobalResult<()> {
 fn create_middleware_function(
 	ctx: StandaloneCtx,
 ) -> Arc<
-	dyn for<'a> Fn(
-			&'a uuid::Uuid,
-		) -> futures::future::BoxFuture<'a, GlobalResult<MiddlewareResponse>>
+	dyn for<'a> Fn(&'a util::Id) -> futures::future::BoxFuture<'a, GlobalResult<MiddlewareResponse>>
 		+ Send
 		+ Sync,
 > {
-	Arc::new(move |_actor_id: &uuid::Uuid| {
+	Arc::new(move |_actor_id: &util::Id| {
 		let _ctx = ctx.clone();
 
 		Box::pin(async move {

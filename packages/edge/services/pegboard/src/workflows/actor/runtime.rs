@@ -167,7 +167,7 @@ async fn fetch_ports(ctx: &ActivityCtx, input: &FetchPortsInput) -> GlobalResult
 		.into_iter()
 		.map(|row| {
 			let port = get::create_port_ingress(
-				input.actor_id,
+				input.actor_id.into(),
 				&row,
 				unwrap!(GameGuardProtocol::from_repr(row.protocol.try_into()?)),
 				endpoint_type,
@@ -679,7 +679,7 @@ pub async fn spawn_actor(
 	let cluster_id = ctx.config().server()?.rivet.edge()?.cluster_id;
 
 	ctx.signal(protocol::Command::StartActor {
-		actor_id: input.actor_id,
+		actor_id: input.actor_id.into(),
 		generation,
 		config: Box::new(protocol::ActorConfig {
 			image: protocol::Image {
@@ -693,7 +693,7 @@ pub async fn spawn_actor(
 				allocation_type: protocol::ImageAllocationType::Single,
 			},
 			root_user_enabled: input.root_user_enabled,
-			env: input.environment.as_hashable(),
+			env: input.environment.clone(),
 			runner: None,
 			ports: ports_res
 				.ports
@@ -733,7 +733,7 @@ pub async fn spawn_actor(
 			resources: actor_setup.resources.clone(),
 			metadata: util::serde::Raw::new(&protocol::ActorMetadata {
 				actor: protocol::ActorMetadataActor {
-					actor_id: input.actor_id,
+					actor_id: input.actor_id.into(),
 					tags: input.tags.clone(),
 					create_ts: ctx.ts(),
 				},

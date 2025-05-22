@@ -53,7 +53,7 @@ type GetActorsRequestQuery struct {
 }
 
 type Actor struct {
-	Id          uuid.UUID      `json:"id"`
+	Id          sdk.Id         `json:"id"`
 	Region      string         `json:"region"`
 	Tags        interface{}    `json:"tags,omitempty"`
 	Runtime     *Runtime       `json:"runtime,omitempty"`

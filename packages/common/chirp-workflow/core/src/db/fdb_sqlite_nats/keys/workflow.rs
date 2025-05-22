@@ -926,7 +926,6 @@ impl TuplePack for ByNameAndTagSubspaceKey {
 			&self.k,
 			&self.v,
 		);
-		tracing::info!(?t, "---------------------");
 		t.pack(w, tuple_depth)
 	}
 }
