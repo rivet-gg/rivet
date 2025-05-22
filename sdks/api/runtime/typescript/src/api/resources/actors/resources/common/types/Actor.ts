@@ -5,7 +5,7 @@
 import * as Rivet from "../../../../../index";
 
 export interface Actor {
-    id: string;
+    id: Rivet.Id;
     region: string;
     tags?: unknown;
     runtime: Rivet.actors.Runtime;

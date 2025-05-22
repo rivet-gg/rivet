@@ -107,7 +107,31 @@ define_router! {
 			),
 		},
 
-		"actors" / Uuid: {
+		"actors" / "usage": {
+			GET: actors::usage(
+				query: actors::UsageQuery,
+				opt_auth: true,
+				rate_limit: {
+					buckets: [
+						{ count: 100, bucket: duration::minutes(1) },
+					],
+				},
+			),
+		},
+
+		"actors" / "query": {
+			GET: actors::query(
+				query: actors::QueryQuery,
+				opt_auth: true,
+				rate_limit: {
+					buckets: [
+						{ count: 100, bucket: duration::minutes(1) },
+					],
+				},
+			),
+		},
+
+		"actors" / util::Id: {
 			GET: actors::get(
 				query: actors::GlobalEndpointTypeQuery,
 				opt_auth: true,
@@ -129,7 +153,7 @@ define_router! {
 			),
 		},
 
-		"actors" / Uuid / "upgrade": {
+		"actors" / util::Id / "upgrade": {
 			POST: actors::upgrade(
 				query: GlobalQuery,
 				body: models::ActorsUpgradeActorRequest,
