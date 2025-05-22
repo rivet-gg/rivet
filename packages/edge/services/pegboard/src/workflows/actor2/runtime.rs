@@ -8,6 +8,7 @@ use foundationdb::{
 	options::{ConflictRangeType, StreamingMode},
 };
 use futures_util::{FutureExt, TryStreamExt};
+use nix::sys::signal::Signal;
 use sqlx::Acquire;
 use util::serde::AsHashableExt;
 
@@ -91,7 +92,7 @@ async fn update_client_and_runner(
 		input.client_id,
 		input.client_workflow_id,
 		input.runner_id,
-		client_wan_hostname,
+		&client_wan_hostname,
 	)
 	.await?;
 
@@ -100,7 +101,7 @@ async fn update_client_and_runner(
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
 struct FetchPortsInput {
-	actor_id: Uuid,
+	actor_id: util::Id,
 	endpoint_type: Option<EndpointType>,
 }
 
@@ -201,7 +202,7 @@ async fn fetch_ports(ctx: &ActivityCtx, input: &FetchPortsInput) -> GlobalResult
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
 struct AllocateActorInput {
-	actor_id: Uuid,
+	actor_id: util::Id,
 	generation: u32,
 	image_id: Uuid,
 	build_allocation_type: BuildAllocationType,
@@ -304,7 +305,7 @@ async fn allocate_actor(
 
 					// Insert actor index key
 					let client_actor_key =
-						keys::client::ActorKey::new(data.client_id, input.actor_id);
+						keys::client::Actor2Key::new(data.client_id, input.actor_id);
 					tx.set(
 						&keys::subspace().pack(&client_actor_key),
 						&client_actor_key
@@ -477,7 +478,7 @@ async fn allocate_actor(
 				}
 
 				// Insert actor index key
-				let client_actor_key = keys::client::ActorKey::new(
+				let client_actor_key = keys::client::Actor2Key::new(
 					old_client_allocation_key.client_id,
 					input.actor_id,
 				);
@@ -509,7 +510,7 @@ async fn allocate_actor(
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
 pub struct UpdateFdbInput {
-	pub actor_id: Uuid,
+	pub actor_id: util::Id,
 	pub client_id: Uuid,
 	pub state: protocol::ActorState,
 }
@@ -527,7 +528,7 @@ pub async fn update_fdb(ctx: &ActivityCtx, input: &UpdateFdbInput) -> GlobalResu
 					// Was inserted when the actor was allocated. This is cleared when the state changes as
 					// well as when the actor is destroyed to ensure consistency during rescheduling and
 					// forced deletion.
-					let actor_key = keys::client::ActorKey::new(input.client_id, input.actor_id);
+					let actor_key = keys::client::Actor2Key::new(input.client_id, input.actor_id);
 					tx.clear(&keys::subspace().pack(&actor_key));
 
 					Ok(())
@@ -657,7 +658,7 @@ pub async fn insert_ports(ctx: &ActivityCtx, input: &InsertPortsInput) -> Global
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
 pub struct InsertPortsFdbInput {
-	pub actor_id: Uuid,
+	pub actor_id: util::Id,
 	pub ports: util::serde::HashableMap<String, protocol::ProxiedPort>,
 }
 
@@ -699,7 +700,7 @@ pub async fn insert_ports_fdb(ctx: &ActivityCtx, input: &InsertPortsFdbInput) ->
 		.map(|(port_name, port, ingress_port_number, protocol)| {
 			let protocol = unwrap!(GameGuardProtocol::from_repr((*protocol).try_into()?));
 
-			Ok(keys::actor::ProxiedPort {
+			Ok(keys::actor2::ProxiedPort {
 				port_name: port_name.clone(),
 				create_ts,
 				lan_hostname: port.lan_hostname.clone(),
@@ -716,7 +717,7 @@ pub async fn insert_ports_fdb(ctx: &ActivityCtx, input: &InsertPortsFdbInput) ->
 		.run(|tx, _mc| {
 			let proxied_ports = proxied_ports.clone();
 			async move {
-				let proxied_ports_key = keys::actor::ProxiedPortsKey::new(input.actor_id);
+				let proxied_ports_key = keys::actor2::ProxiedPortsKey::new(input.actor_id);
 
 				tx.set(
 					&keys::subspace().pack(&proxied_ports_key),
@@ -903,14 +904,27 @@ pub async fn reschedule_actor(
 ) -> GlobalResult<Option<Destroy>> {
 	tracing::debug!(actor_id=?input.actor_id, "rescheduling actor");
 
-	ctx.activity(ClearPortsAndResourcesInput {
-		actor_id: input.actor_id,
-		image_id,
-		runner_id: state.runner_id,
-		client_id: state.client_id,
-		client_workflow_id: state.client_workflow_id,
-	})
-	.await?;
+	let res = ctx
+		.activity(ClearPortsAndResourcesInput {
+			actor_id: input.actor_id,
+			image_id,
+			runner_id: state.runner_id,
+			client_id: state.client_id,
+			client_workflow_id: state.client_workflow_id,
+		})
+		.await?;
+
+	// `destroy_runner` is true when this was the last actor running on that runner, meaning we have to
+	// destroy it.
+	if res.destroy_runner {
+		ctx.signal(protocol::Command::SignalRunner {
+			runner_id: state.runner_id,
+			signal: Signal::SIGKILL as i32,
+		})
+		.to_workflow_id(state.client_workflow_id)
+		.send()
+		.await?;
+	}
 
 	let actor_setup = setup::setup(ctx, &input, setup::SetupCtx::Reschedule { image_id }).await?;
 
@@ -989,18 +1003,23 @@ struct RescheduleState {
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
 struct ClearPortsAndResourcesInput {
-	actor_id: Uuid,
+	actor_id: util::Id,
 	image_id: Uuid,
 	runner_id: Uuid,
 	client_id: Uuid,
 	client_workflow_id: Uuid,
 }
 
+#[derive(Debug, Serialize, Deserialize, Hash)]
+pub struct ClearPortsAndResourcesOutput {
+	destroy_runner: bool,
+}
+
 #[activity(ClearPortsAndResources)]
 async fn clear_ports_and_resources(
 	ctx: &ActivityCtx,
 	input: &ClearPortsAndResourcesInput,
-) -> GlobalResult<()> {
+) -> GlobalResult<ClearPortsAndResourcesOutput> {
 	let pool = &ctx.sqlite().await?;
 
 	let (
@@ -1036,7 +1055,8 @@ async fn clear_ports_and_resources(
 	)?;
 	let build = unwrap_with!(build_res.builds.first(), BUILD_NOT_FOUND);
 
-	ctx.fdb()
+	let destroy_runner = ctx
+		.fdb()
 		.await?
 		.run(|tx, _mc| {
 			let ingress_ports = ingress_ports.clone();
@@ -1059,7 +1079,7 @@ async fn clear_ports_and_resources(
 		.custom_instrument(tracing::info_span!("actor_clear_ports_and_resources_tx"))
 		.await?;
 
-	Ok(())
+	Ok(ClearPortsAndResourcesOutput { destroy_runner })
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]

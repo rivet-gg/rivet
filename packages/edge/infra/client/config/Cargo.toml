@@ -12,3 +12,4 @@ serde = { version = "1.0.195", features = ["derive"] }
 url = "2.2.2"
 uuid = { version = "1.6.1", features = ["v4"] }
 pegboard.workspace = true
+rivet-util.workspace = true

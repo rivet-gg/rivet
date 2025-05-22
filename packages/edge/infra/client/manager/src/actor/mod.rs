@@ -13,7 +13,7 @@ use uuid::Uuid;
 use crate::{ctx::Ctx, runner, utils};
 
 pub struct Actor {
-	actor_id: Uuid,
+	actor_id: rivet_util::Id,
 	generation: u32,
 	config: protocol::ActorConfig,
 	runner: Arc<runner::Runner>,
@@ -21,7 +21,7 @@ pub struct Actor {
 
 impl Actor {
 	pub fn new(
-		actor_id: Uuid,
+		actor_id: rivet_util::Id,
 		generation: u32,
 		config: protocol::ActorConfig,
 		runner: Arc<runner::Runner>,
@@ -37,9 +37,15 @@ impl Actor {
 	pub async fn start(self: &Arc<Self>, ctx: &Arc<Ctx>) -> Result<()> {
 		tracing::info!(actor_id=?self.actor_id, generation=?self.generation, "starting");
 
-		// Write actor to DB
+		let runner_id = self
+			.config
+			.runner
+			.as_ref()
+			.context("should have runner")?
+			.runner_id();
 		let config_json = serde_json::to_vec(&self.config)?;
 
+		// Write actor to DB
 		utils::sql::query(|| async {
 			// NOTE: On conflict here in case this query runs but the command is not acknowledged
 			sqlx::query(indoc!(
@@ -47,16 +53,18 @@ impl Actor {
 				INSERT INTO actors (
 					actor_id,
 					generation,
+					runner_id,
 					config,
 					start_ts,
 					image_id
 				)
-				VALUES (?1, ?2, ?3, ?4, ?5)
+				VALUES (?1, ?2, ?3, ?4, ?5, ?6)
 				ON CONFLICT (actor_id, generation) DO NOTHING
 				",
 			))
 			.bind(self.actor_id)
 			.bind(self.generation as i64)
+			.bind(runner_id)
 			.bind(&config_json)
 			.bind(utils::now())
 			.bind(self.config.image.id)
@@ -185,7 +193,7 @@ impl Actor {
 					res = self.runner.observe(ctx, true) => break res?,
 					res = actor_observer.next() => match res {
 						Some(runner_protocol::ActorState::Running) => {
-							tracing::info!(actor_id=?self.actor_id, generation=?self.generation, "actor running");
+							tracing::info!(actor_id=?self.actor_id, generation=?self.generation, "actor set to running");
 
 							let (pid, ports) = tokio::try_join!(
 								self.runner.pid(),

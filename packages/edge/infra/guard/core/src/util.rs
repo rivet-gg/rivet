@@ -1,12 +1,11 @@
 use global_error::prelude::*;
-use uuid::Uuid;
 
 use crate::types::{EndpointType, GameGuardProtocol};
 
 /// Build a hostname or path string for the given endpoint type
 pub fn build_actor_hostname_and_path(
 	endpoint_type: EndpointType,
-	actor_id: &Uuid,
+	actor_id: &rivet_util::Id,
 	port_name: &str,
 	guard_hostname: &str,
 	_protocol: GameGuardProtocol,

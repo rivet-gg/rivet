@@ -13,11 +13,11 @@ service:
     get:
       path: /{actor}
       method: GET
-      docs: Gets a dynamic actor.
+      docs: Gets a actor.
       path-parameters:
         actor:
           docs: The id of the actor to destroy
-          type: uuid
+          type: commons.Id
       request:
         name: ListActorsRequestQuery
         query-parameters:
@@ -46,7 +46,7 @@ service:
     create:
       path: ""
       method: POST
-      docs: Create a new dynamic actor.
+      docs: Create a new actor.
       request:
         name: CreateActorRequestQuery
         body: CreateActorRequest
@@ -59,11 +59,11 @@ service:
     destroy:
       path: /{actor}
       method: DELETE
-      docs: Destroy a dynamic actor.
+      docs: Destroy a actor.
       path-parameters:
         actor:
           docs: The id of the actor to destroy
-          type: uuid
+          type: commons.Id
       request:
         name: DestroyActorRequestQuery
         query-parameters:
@@ -80,11 +80,11 @@ service:
     upgrade:
       path: /{actor}/upgrade
       method: POST
-      docs: Upgrades a dynamic actor.
+      docs: Upgrades a actor.
       path-parameters:
         actor:
           docs: The id of the actor to upgrade
-          type: uuid
+          type: commons.Id
       request:
         name: UpgradeActorRequestQuery
         query-parameters:
@@ -96,7 +96,7 @@ service:
     upgradeAll:
       path: /upgrade
       method: POST
-      docs: Upgrades a dynamic actor.
+      docs: Upgrades all actors matching the given tags.
       request:
         name: UpgradeAllActorsRequestQuery
         query-parameters:
