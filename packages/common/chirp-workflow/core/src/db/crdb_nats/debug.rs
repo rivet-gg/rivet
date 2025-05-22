@@ -535,6 +535,7 @@ impl DatabaseDebug for DatabaseCrdbNats {
 				tags,
 				NULL AS workflow_id,
 				create_ts,
+				silence_ts,
 				body,
 				ack_ts
 			FROM db_workflow.tagged_signals

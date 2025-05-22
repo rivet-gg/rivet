@@ -100,7 +100,7 @@ async fn try_route_with_endpoint_type(
 			// For hostname-based routing, extract from hostname
 			if let Some(captures) = hostname_regex.captures(hostname) {
 				match (captures.name("actor_id"), captures.name("port_name")) {
-					(Some(actor_id), Some(port_name)) => match Uuid::parse_str(actor_id.as_str()) {
+					(Some(actor_id), Some(port_name)) => match util::Id::parse(actor_id.as_str()) {
 						Ok(actor_id) => (actor_id, port_name.as_str().to_string()),
 						Err(_) => return Ok(None),
 					},
@@ -127,7 +127,7 @@ async fn try_route_with_endpoint_type(
 
 			if let Some(captures) = path_regex.captures(path) {
 				match (captures.name("actor_id"), captures.name("port_name")) {
-					(Some(actor_id), Some(port_name)) => match Uuid::parse_str(actor_id.as_str()) {
+					(Some(actor_id), Some(port_name)) => match util::Id::parse(actor_id.as_str()) {
 						Ok(actor_id) => (actor_id, port_name.as_str().to_string()),
 						Err(_) => return Ok(None),
 					},
@@ -173,7 +173,7 @@ async fn try_route_with_endpoint_type(
 #[tracing::instrument(skip_all, fields(?actor_id, %port_name, %path_to_forward))]
 async fn find_actor(
 	ctx: &StandaloneCtx,
-	actor_id: &Uuid,
+	actor_id: &util::Id,
 	port_name: &str,
 	path_to_forward: String,
 ) -> GlobalResult<Option<RouteTarget>> {
@@ -182,11 +182,17 @@ async fn find_actor(
 		ctx.fdb()
 			.await?
 			.run(|tx, _mc| async move {
-				let create_ts_key = pegboard::keys::actor::CreateTsKey::new(*actor_id);
-				let exists = tx
-					.get(&pegboard::keys::subspace().pack(&create_ts_key), SNAPSHOT)
-					.await?
-					.is_some();
+				let exists = if let Some(actor_id) = actor_id.as_v0() {
+					let create_ts_key = pegboard::keys::actor::CreateTsKey::new(actor_id);
+					tx.get(&pegboard::keys::subspace().pack(&create_ts_key), SNAPSHOT)
+						.await?
+						.is_some()
+				} else {
+					let create_ts_key = pegboard::keys::actor2::CreateTsKey::new(*actor_id);
+					tx.get(&pegboard::keys::subspace().pack(&create_ts_key), SNAPSHOT)
+						.await?
+						.is_some()
+				};
 
 				Ok(exists)
 			})
@@ -266,27 +272,51 @@ async fn find_actor(
 #[tracing::instrument(skip_all, fields(?actor_id))]
 async fn fetch_proxied_ports(
 	ctx: &StandaloneCtx,
-	actor_id: &Uuid,
-) -> GlobalResult<Option<Vec<pegboard::keys::actor::ProxiedPort>>> {
+	actor_id: &util::Id,
+) -> GlobalResult<Option<Vec<pegboard::keys::actor2::ProxiedPort>>> {
 	// Fetch ports
 	ctx.fdb()
 		.await?
 		.run(|tx, _mc| async move {
-			let proxied_ports_key = pegboard::keys::actor::ProxiedPortsKey::new(*actor_id);
-			let raw = tx
-				.get(
-					&pegboard::keys::subspace().pack(&proxied_ports_key),
-					// NOTE: This is not SERIALIZABLE because we don't want to conflict with port updates
-					// and its not important if its slightly stale
-					SNAPSHOT,
-				)
-				.await?;
-			if let Some(raw) = raw {
-				Ok(Some(proxied_ports_key.deserialize(&raw).map_err(|x| {
-					fdb::FdbBindingError::CustomError(x.into())
-				})?))
+			if let Some(actor_id) = actor_id.as_v0() {
+				let proxied_ports_key = pegboard::keys::actor::ProxiedPortsKey::new(actor_id);
+				let raw = tx
+					.get(
+						&pegboard::keys::subspace().pack(&proxied_ports_key),
+						// NOTE: This is not SERIALIZABLE because we don't want to conflict with port updates
+						// and its not important if its slightly stale
+						SNAPSHOT,
+					)
+					.await?;
+				if let Some(raw) = raw {
+					Ok(Some(
+						proxied_ports_key
+							.deserialize(&raw)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?
+							.into_iter()
+							.map(Into::into)
+							.collect::<Vec<_>>(),
+					))
+				} else {
+					Ok(None)
+				}
 			} else {
-				Ok(None)
+				let proxied_ports_key = pegboard::keys::actor2::ProxiedPortsKey::new(*actor_id);
+				let raw = tx
+					.get(
+						&pegboard::keys::subspace().pack(&proxied_ports_key),
+						// NOTE: This is not SERIALIZABLE because we don't want to conflict with port updates
+						// and its not important if its slightly stale
+						SNAPSHOT,
+					)
+					.await?;
+				if let Some(raw) = raw {
+					Ok(Some(proxied_ports_key.deserialize(&raw).map_err(|x| {
+						fdb::FdbBindingError::CustomError(x.into())
+					})?))
+				} else {
+					Ok(None)
+				}
 			}
 		})
 		.custom_instrument(tracing::info_span!("fetch_proxied_ports_tx"))

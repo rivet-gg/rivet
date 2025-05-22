@@ -15,7 +15,7 @@ pub struct KillCtx {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Input {
-	pub actor_id: Uuid,
+	pub actor_id: util::Id,
 	pub image_id: Uuid,
 	pub build_allocation_type: Option<BuildAllocationType>,
 	/// Whether or not to send signals to the pb actor. In the case that the actor was already stopped
@@ -128,7 +128,7 @@ async fn update_db(
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
 pub struct UpdateFdbInput {
-	actor_id: Uuid,
+	actor_id: util::Id,
 	image_id: Uuid,
 	build_allocation_type: Option<BuildAllocationType>,
 	actor: UpdateDbOutput,
@@ -162,12 +162,12 @@ pub async fn update_fdb(
 			let ingress_ports = ingress_ports.clone();
 			async move {
 				// Update actor key index in env subspace
-				let actor_key = keys::env::ActorKey::new(
+				let actor_key = keys::env::Actor2Key::new(
 					input.actor.env_id,
 					input.actor.create_ts,
 					input.actor_id,
 				);
-				let data = keys::env::ActorKeyData {
+				let data = keys::env::Actor2KeyData {
 					is_destroyed: true,
 					tags: input.actor.tags.0.clone().into_iter().collect(),
 				};
@@ -202,7 +202,7 @@ pub async fn update_fdb(
 // TODO: Clean up args
 /// Clears allocated ports and resources (if they were allocated).
 pub(crate) async fn clear_ports_and_resources(
-	actor_id: Uuid,
+	actor_id: util::Id,
 	image_id: Uuid,
 	build_allocation_type: Option<BuildAllocationType>,
 	ingress_ports: Vec<(i64, i64)>,
@@ -215,7 +215,7 @@ pub(crate) async fn clear_ports_and_resources(
 ) -> Result<bool, fdb::FdbBindingError> {
 	// Remove all allocated ingress ports
 	for (protocol, port) in ingress_ports {
-		let ingress_port_key = keys::port::IngressKey::new(
+		let ingress_port_key = keys::port::IngressKey2::new(
 			GameGuardProtocol::from_repr(
 				usize::try_from(protocol)
 					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
@@ -233,13 +233,13 @@ pub(crate) async fn clear_ports_and_resources(
 	}
 
 	// Remove proxied ports
-	let proxied_ports_key = keys::actor::ProxiedPortsKey::new(actor_id);
+	let proxied_ports_key = keys::actor2::ProxiedPortsKey::new(actor_id);
 	tx.clear(&keys::subspace().pack(&proxied_ports_key));
 
 	if let Some(client_id) = client_id {
 		// This is cleared when the state changes as well as when the actor is destroyed to ensure
 		// consistency during rescheduling and forced deletion.
-		let actor_key = keys::client::ActorKey::new(client_id, actor_id);
+		let actor_key = keys::client::Actor2Key::new(client_id, actor_id);
 		tx.clear(&keys::subspace().pack(&actor_key));
 	}
 
@@ -448,7 +448,7 @@ pub(crate) async fn clear_ports_and_resources(
 
 pub(crate) async fn kill(
 	ctx: &mut WorkflowCtx,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	generation: u32,
 	client_workflow_id: Uuid,
 	kill_timeout_ms: i64,

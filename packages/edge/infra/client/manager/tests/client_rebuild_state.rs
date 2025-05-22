@@ -32,8 +32,7 @@ async fn client_rebuild_state() {
 	let (close_tx, mut close_rx) = tokio::sync::watch::channel(());
 	let close_tx = Arc::new(close_tx);
 
-	let actor_id = Uuid::new_v4();
-	let actor_port = portpicker::pick_unused_port().expect("no free ports");
+	let actor_id = rivet_util::Id::new_v1(0);
 	let first_client = Arc::new(AtomicBool::new(true));
 
 	let port = portpicker::pick_unused_port().expect("no free ports");
@@ -48,7 +47,6 @@ async fn client_rebuild_state() {
 				close_tx,
 				raw_stream,
 				actor_id,
-				actor_port,
 				first_client2.clone(),
 			)
 		},
@@ -71,8 +69,7 @@ async fn handle_connection(
 	ctx_wrapper: Arc<Mutex<Option<Arc<Ctx>>>>,
 	close_tx: Arc<tokio::sync::watch::Sender<()>>,
 	raw_stream: TcpStream,
-	actor_id: Uuid,
-	actor_port: u16,
+	actor_id: rivet_util::Id,
 	first_client: Arc<AtomicBool>,
 ) {
 	tokio::spawn(async move {
@@ -100,7 +97,7 @@ async fn handle_connection(
 
 							if first_client.load(Ordering::SeqCst) {
 								// Spawn actor on first client
-								start_echo_actor(&mut tx, actor_id, actor_port).await;
+								start_echo_actor(&mut tx, actor_id).await;
 							} else {
 								tokio::time::sleep(Duration::from_millis(350)).await;
 

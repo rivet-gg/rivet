@@ -72,10 +72,18 @@ pub struct BuildResources {
 
 impl ApiTryFrom<models::BuildsResources> for BuildResources {
 	type Error = GlobalError;
-	
+
 	fn api_try_from(value: models::BuildsResources) -> GlobalResult<Self> {
-		ensure_with!(value.cpu >= 0, API_BAD_BODY, reason = "`resources.cpu` must be positive");
-		ensure_with!(value.memory >= 0, API_BAD_BODY, reason = "`resources.memory` must be positive");
+		ensure_with!(
+			value.cpu >= 0,
+			API_BAD_BODY,
+			reason = "`resources.cpu` must be positive"
+		);
+		ensure_with!(
+			value.memory >= 0,
+			API_BAD_BODY,
+			reason = "`resources.memory` must be positive"
+		);
 
 		Ok(BuildResources {
 			cpu_millicores: value.cpu.try_into()?,
@@ -86,7 +94,7 @@ impl ApiTryFrom<models::BuildsResources> for BuildResources {
 
 impl ApiTryFrom<BuildResources> for models::BuildsResources {
 	type Error = GlobalError;
-	
+
 	fn api_try_from(value: BuildResources) -> GlobalResult<Self> {
 		Ok(models::BuildsResources {
 			cpu: value.cpu_millicores.try_into()?,

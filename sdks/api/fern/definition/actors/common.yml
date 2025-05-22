@@ -6,7 +6,7 @@ imports:
 types:
   Actor:
     properties:
-      id: uuid
+      id: commons.Id
       region: string
       tags: unknown
       runtime: Runtime

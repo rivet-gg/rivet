@@ -5,7 +5,6 @@ use std::time::Duration;
 use tokio::signal;
 use tokio::sync::watch;
 use toolchain::rivet_api::{apis, models};
-use uuid::Uuid;
 
 #[derive(ValueEnum, Clone)]
 pub enum LogStream {
@@ -19,7 +18,7 @@ pub enum LogStream {
 
 pub struct TailOpts<'a> {
 	pub environment: &'a str,
-	pub actor_id: Uuid,
+	pub actor_id: String,
 	pub stream: LogStream,
 	pub follow: bool,
 	pub timestamps: bool,
@@ -93,7 +92,7 @@ async fn tail_stream(
 		let res = apis::actors_logs_api::actors_logs_get(
 			&ctx.openapi_config_cloud,
 			stream,
-			&serde_json::to_string(&vec![opts.actor_id])?,
+			&serde_json::to_string(&vec![&opts.actor_id])?,
 			Some(&ctx.project.name_id),
 			Some(opts.environment),
 			None,
@@ -162,7 +161,7 @@ async fn poll_actor_state(
 
 		let res = apis::actors_api::actors_get(
 			&ctx.openapi_config_cloud,
-			&opts.actor_id.to_string(),
+			&opts.actor_id,
 			Some(&ctx.project.name_id),
 			Some(opts.environment),
 			None,

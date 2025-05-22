@@ -9,16 +9,18 @@ use strum::FromRepr;
 
 #[derive(Debug, Clone)]
 pub struct Actor {
-	pub actor_id: Uuid,
+	pub actor_id: util::Id,
 	pub env_id: Uuid,
 	pub tags: HashMap<String, String>,
-	pub resources: Option<ActorResources>,
-	pub lifecycle: ActorLifecycle,
+	pub image_id: Uuid,
+
 	pub create_ts: i64,
 	pub start_ts: Option<i64>,
 	pub connectable_ts: Option<i64>,
 	pub destroy_ts: Option<i64>,
-	pub image_id: Uuid,
+
+	pub lifecycle: ActorLifecycle,
+	pub resources: Option<ActorResources>,
 	pub args: Vec<String>,
 	pub network_mode: NetworkMode,
 	pub environment: HashMap<String, String>,
@@ -155,7 +157,7 @@ pub fn convert_actor_to_api(
 	datacenter: &cluster::types::Datacenter,
 ) -> GlobalResult<models::ActorsActor> {
 	Ok(models::ActorsActor {
-		id: value.actor_id,
+		id: value.actor_id.to_string(),
 		region: datacenter.name_id.clone(),
 		created_at: util::timestamp::to_string(value.create_ts)?,
 		// `started_at` -> `connectable_ts` is intentional. We don't expose the internal
