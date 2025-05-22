@@ -57,8 +57,7 @@ async fn handle_connection(
 			guard.clone().unwrap()
 		};
 
-		let actor_id = Uuid::new_v4();
-		let actor_port = portpicker::pick_unused_port().expect("no free ports");
+		let actor_id = rivet_util::Id::new_v1(0);
 
 		// Receive messages from socket
 		while let Some(msg) = rx.next().await {
@@ -71,7 +70,7 @@ async fn handle_connection(
 						protocol::ToServer::Init { .. } => {
 							send_init_packet(&mut tx).await;
 
-							start_echo_actor(&mut tx, actor_id, actor_port).await;
+							start_echo_actor(&mut tx, actor_id).await;
 						}
 						protocol::ToServer::Events(events) => {
 							for event in events {

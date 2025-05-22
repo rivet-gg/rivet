@@ -34,7 +34,7 @@ types:
     properties:
       actor_ids:
         docs: List of actor IDs in these logs. The order of these correspond to the index in the log entry.
-        type: list<string>
+        type: list<commons.Id>
       lines:
         docs: Sorted old to new.
         type: list<string>

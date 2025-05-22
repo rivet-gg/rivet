@@ -43,7 +43,6 @@ pub async fn get_cluster_id(ctx: &OperationCtx, input: &Input) -> GlobalResult<O
 				SELECT cluster_id 
 				FROM db_dynamic_config.config
 				WHERE NOT EXISTS (SELECT 1 FROM new_row)
-
 				",
 				default_cluster_id
 			)

@@ -45,6 +45,9 @@ func (e *ErrorBody) String() string {
 // Unstructured metadata relating to an error. Must be manually parsed.
 type ErrorMetadata = interface{}
 
+// Can be a UUID or base36 encoded binary data.
+type Id = string
+
 type Pagination struct {
 	Cursor *string `json:"cursor,omitempty"`
 

@@ -9,7 +9,7 @@ import API_SCHEMA from './../spec.json';
 # actors.upgrade
 
 ## Description
-Upgrades a dynamic actor.
+Upgrades a actor.
 
 ## Code Examples
 
@@ -36,6 +36,6 @@ await RIVET.actors.upgrade({
 </CodeGroup>
 
 ## Schema
-<JsonSchemaPreview className='not-prose mt-4' title='Request Parameters' schema={{"type":"object","properties":{"actor":{"in":"path","type":"string","format":"uuid"},"project":{"in":"query","type":"string"},"environment":{"in":"query","type":"string"}},"required":["actor"]}} defs={API_SCHEMA.definitions}/>
+<JsonSchemaPreview className='not-prose mt-4' title='Request Parameters' schema={{"type":"object","properties":{"actor":{"in":"path","$ref":"#/components/schemas/Id"},"project":{"in":"query","type":"string"},"environment":{"in":"query","type":"string"}},"required":["actor"]}} defs={API_SCHEMA.definitions}/>
 <JsonSchemaPreview className='not-prose mt-4' title='Request' schema={{"$ref":"#/components/schemas/ActorsUpgradeActorRequest"}} defs={API_SCHEMA.definitions}/>
 <JsonSchemaPreview className='not-prose mt-4' title='Response' schema={{"$ref":"#/components/schemas/ActorsUpgradeActorResponse"}} defs={API_SCHEMA.definitions}/>

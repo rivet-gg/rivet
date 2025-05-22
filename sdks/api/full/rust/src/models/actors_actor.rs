@@ -10,8 +10,9 @@
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ActorsActor {
+	/// Can be a UUID or base36 encoded binary data.
 	#[serde(rename = "id")]
-	pub id: uuid::Uuid,
+	pub id: String,
 	#[serde(rename = "region")]
 	pub region: String,
 	#[serde(rename = "tags", deserialize_with = "Option::deserialize")]
@@ -37,7 +38,7 @@ pub struct ActorsActor {
 
 impl ActorsActor {
 	pub fn new(
-		id: uuid::Uuid,
+		id: String,
 		region: String,
 		tags: Option<serde_json::Value>,
 		runtime: crate::models::ActorsRuntime,
