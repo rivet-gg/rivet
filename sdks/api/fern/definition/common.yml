@@ -38,6 +38,10 @@ errors:
     type: ErrorBody
 
 types:
+  Id:
+    type: string
+    docs: Can be a UUID or base36 encoded binary data.
+
   Identifier:
     type: string
     docs: A human readable short identifier used to references resources. Different

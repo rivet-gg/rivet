@@ -37,6 +37,7 @@ use uuid::Uuid;
 
 use crate::{
 	actor::Actor,
+	claims::{Claims, Entitlement},
 	event_sender::EventSender,
 	image_download_handler::ImageDownloadHandler,
 	metrics,
@@ -72,7 +73,7 @@ pub enum RuntimeError {
 
 #[derive(sqlx::FromRow)]
 struct ActorRow {
-	actor_id: Uuid,
+	actor_id: rivet_util::Id,
 	generation: i64,
 	config: Vec<u8>,
 }
@@ -88,6 +89,7 @@ struct RunnerRow {
 pub struct Ctx {
 	config: Config,
 	system: SystemInfo,
+	secret: Vec<u8>,
 
 	// This requires a RwLock because of the reset functionality which reinitialized the entire database. It
 	// should never be written to besides that.
@@ -97,19 +99,21 @@ pub struct Ctx {
 	pub(crate) image_download_handler: ImageDownloadHandler,
 
 	pub(crate) runners: RwLock<HashMap<Uuid, Arc<Runner>>>,
-	pub(crate) actors: RwLock<HashMap<(Uuid, u32), Arc<Actor>>>,
+	pub(crate) actors: RwLock<HashMap<(rivet_util::Id, u32), Arc<Actor>>>,
 }
 
 impl Ctx {
 	pub fn new(
 		config: Config,
 		system: SystemInfo,
+		secret: Vec<u8>,
 		pool: SqlitePool,
 		tx: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
 	) -> Arc<Self> {
 		Arc::new(Ctx {
 			config,
 			system,
+			secret,
 
 			pool: RwLock::new(pool),
 			tx: Mutex::new(tx),
@@ -788,7 +792,7 @@ impl Ctx {
 				.await?;
 
 				let actor_rows = utils::sql::query(|| async {
-					sqlx::query_as::<_, (Uuid, i64, Option<i64>)>(indoc!(
+					sqlx::query_as::<_, (rivet_util::Id, i64, Option<i64>)>(indoc!(
 						"
 						UPDATE actors
 						SET stop_ts = ?2
@@ -989,6 +993,10 @@ impl Ctx {
 		&self.config.client
 	}
 
+	pub fn secret(&self) -> &[u8] {
+		&self.secret
+	}
+
 	pub fn runners_path(&self) -> PathBuf {
 		self.config().data_dir().join("runners")
 	}
@@ -1013,7 +1021,7 @@ impl Ctx {
 // Test bindings
 #[cfg(feature = "test")]
 impl Ctx {
-	pub fn actors(&self) -> &RwLock<HashMap<(Uuid, u32), Arc<Actor>>> {
+	pub fn actors(&self) -> &RwLock<HashMap<(rivet_util::Id, u32), Arc<Actor>>> {
 		&self.actors
 	}
 }
