@@ -20,7 +20,7 @@ Method | HTTP request | Description
 > crate::models::ActorsCreateActorResponse actors_create(actors_create_actor_request, project, environment, endpoint_type)
 
 
-Create a new dynamic actor.
+Create a new actor.
 
 ### Parameters
 
@@ -53,14 +53,14 @@ Name | Type | Description  | Required | Notes
 > serde_json::Value actors_destroy(actor, project, environment, override_kill_timeout)
 
 
-Destroy a dynamic actor.
+Destroy a actor.
 
 ### Parameters
 
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**actor** | **uuid::Uuid** | The id of the actor to destroy | [required] |
+**actor** | **String** | The id of the actor to destroy | [required] |
 **project** | Option<**String**> |  |  |
 **environment** | Option<**String**> |  |  |
 **override_kill_timeout** | Option<**i64**> | The duration to wait for in milliseconds before killing the actor. This should be used to override the default kill timeout if a faster time is needed, say for ignoring a graceful shutdown. |  |
@@ -86,14 +86,14 @@ Name | Type | Description  | Required | Notes
 > crate::models::ActorsGetActorResponse actors_get(actor, project, environment, endpoint_type)
 
 
-Gets a dynamic actor.
+Gets a actor.
 
 ### Parameters
 
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**actor** | **uuid::Uuid** | The id of the actor to destroy | [required] |
+**actor** | **String** | The id of the actor to destroy | [required] |
 **project** | Option<**String**> |  |  |
 **environment** | Option<**String**> |  |  |
 **endpoint_type** | Option<[**ActorsEndpointType**](.md)> |  |  |
@@ -187,14 +187,14 @@ Name | Type | Description  | Required | Notes
 > serde_json::Value actors_upgrade(actor, actors_upgrade_actor_request, project, environment)
 
 
-Upgrades a dynamic actor.
+Upgrades a actor.
 
 ### Parameters
 
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**actor** | **uuid::Uuid** | The id of the actor to upgrade | [required] |
+**actor** | **String** | The id of the actor to upgrade | [required] |
 **actors_upgrade_actor_request** | [**ActorsUpgradeActorRequest**](ActorsUpgradeActorRequest.md) |  | [required] |
 **project** | Option<**String**> |  |  |
 **environment** | Option<**String**> |  |  |
@@ -220,7 +220,7 @@ Name | Type | Description  | Required | Notes
 > crate::models::ActorsUpgradeAllActorsResponse actors_upgrade_all(actors_upgrade_all_actors_request, project, environment)
 
 
-Upgrades a dynamic actor.
+Upgrades all actors matching the given tags.
 
 ### Parameters
 

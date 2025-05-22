@@ -51,9 +51,9 @@ export class Actors {
     }
 
     /**
-     * Gets a dynamic actor.
+     * Gets a actor.
      *
-     * @param {string} actor - The id of the actor to destroy
+     * @param {Rivet.Id} actor - The id of the actor to destroy
      * @param {Rivet.actors.ListActorsRequestQuery} request
      * @param {Actors.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -65,14 +65,14 @@ export class Actors {
      * @throws {@link Rivet.BadRequestError}
      *
      * @example
-     *     await client.actors.get("d5e9c84f-c2b2-4bf4-b4b0-7ffd7a9ffc32", {
+     *     await client.actors.get("string", {
      *         project: "string",
      *         environment: "string",
      *         endpointType: "hostname"
      *     })
      */
     public async get(
-        actor: string,
+        actor: Rivet.Id,
         request: Rivet.actors.ListActorsRequestQuery = {},
         requestOptions?: Actors.RequestOptions,
     ): Promise<Rivet.actors.GetActorResponse> {
@@ -97,7 +97,7 @@ export class Actors {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                `/actors/${encodeURIComponent(actor)}`,
+                `/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}`,
             ),
             method: "GET",
             headers: {
@@ -384,7 +384,7 @@ export class Actors {
     }
 
     /**
-     * Create a new dynamic actor.
+     * Create a new actor.
      *
      * @param {Rivet.actors.CreateActorRequestQuery} request
      * @param {Actors.RequestOptions} requestOptions - Request-specific configuration.
@@ -572,9 +572,9 @@ export class Actors {
     }
 
     /**
-     * Destroy a dynamic actor.
+     * Destroy a actor.
      *
-     * @param {string} actor - The id of the actor to destroy
+     * @param {Rivet.Id} actor - The id of the actor to destroy
      * @param {Rivet.actors.DestroyActorRequestQuery} request
      * @param {Actors.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -586,14 +586,14 @@ export class Actors {
      * @throws {@link Rivet.BadRequestError}
      *
      * @example
-     *     await client.actors.destroy("d5e9c84f-c2b2-4bf4-b4b0-7ffd7a9ffc32", {
+     *     await client.actors.destroy("string", {
      *         project: "string",
      *         environment: "string",
      *         overrideKillTimeout: 1000000
      *     })
      */
     public async destroy(
-        actor: string,
+        actor: Rivet.Id,
         request: Rivet.actors.DestroyActorRequestQuery = {},
         requestOptions?: Actors.RequestOptions,
     ): Promise<Rivet.actors.DestroyActorResponse> {
@@ -616,7 +616,7 @@ export class Actors {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                `/actors/${encodeURIComponent(actor)}`,
+                `/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}`,
             ),
             method: "DELETE",
             headers: {
@@ -730,9 +730,9 @@ export class Actors {
     }
 
     /**
-     * Upgrades a dynamic actor.
+     * Upgrades a actor.
      *
-     * @param {string} actor - The id of the actor to upgrade
+     * @param {Rivet.Id} actor - The id of the actor to upgrade
      * @param {Rivet.actors.UpgradeActorRequestQuery} request
      * @param {Actors.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -744,7 +744,7 @@ export class Actors {
      * @throws {@link Rivet.BadRequestError}
      *
      * @example
-     *     await client.actors.upgrade("d5e9c84f-c2b2-4bf4-b4b0-7ffd7a9ffc32", {
+     *     await client.actors.upgrade("string", {
      *         project: "string",
      *         environment: "string",
      *         body: {
@@ -756,7 +756,7 @@ export class Actors {
      *     })
      */
     public async upgrade(
-        actor: string,
+        actor: Rivet.Id,
         request: Rivet.actors.UpgradeActorRequestQuery,
         requestOptions?: Actors.RequestOptions,
     ): Promise<Rivet.actors.UpgradeActorResponse> {
@@ -775,7 +775,7 @@ export class Actors {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                `/actors/${encodeURIComponent(actor)}/upgrade`,
+                `/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}/upgrade`,
             ),
             method: "POST",
             headers: {
@@ -890,7 +890,7 @@ export class Actors {
     }
 
     /**
-     * Upgrades a dynamic actor.
+     * Upgrades all actors matching the given tags.
      *
      * @param {Rivet.actors.UpgradeAllActorsRequestQuery} request
      * @param {Actors.RequestOptions} requestOptions - Request-specific configuration.

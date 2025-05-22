@@ -188,21 +188,23 @@ pub(crate) async fn clear_ports_and_resources(
 ) -> Result<(), fdb::FdbBindingError> {
 	// Remove all allocated ingress ports
 	for (protocol, port) in ingress_ports {
-		let ingress_port_key = keys::port::IngressKey::new(
-			GameGuardProtocol::from_repr(
-				usize::try_from(protocol)
-					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+		let protocol = GameGuardProtocol::from_repr(
+			usize::try_from(protocol).map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+		)
+		.ok_or_else(|| {
+			fdb::FdbBindingError::CustomError(
+				format!("invalid protocol variant: {protocol}").into(),
 			)
-			.ok_or_else(|| {
-				fdb::FdbBindingError::CustomError(
-					format!("invalid protocol variant: {protocol}").into(),
-				)
-			})?,
-			u16::try_from(port).map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
-			actor_id,
-		);
+		})?;
+		let port = u16::try_from(port).map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+		let ingress_port_key = keys::port::IngressKey::new(protocol, port, actor_id);
 
 		tx.clear(&keys::subspace().pack(&ingress_port_key));
+
+		let ingress_port_key2 = keys::port::IngressKey::new(protocol, port, actor_id.into());
+
+		tx.clear(&keys::subspace().pack(&ingress_port_key2));
 	}
 
 	// Remove proxied ports
@@ -345,7 +347,7 @@ pub(crate) async fn kill(
 ) -> GlobalResult<()> {
 	if kill_timeout_ms != 0 {
 		ctx.signal(protocol::Command::SignalActor {
-			actor_id,
+			actor_id: actor_id.into(),
 			generation,
 			signal: Signal::SIGTERM as i32,
 			persist_storage,
@@ -359,7 +361,7 @@ pub(crate) async fn kill(
 	}
 
 	ctx.signal(protocol::Command::SignalActor {
-		actor_id,
+		actor_id: actor_id.into(),
 		generation,
 		signal: Signal::SIGKILL as i32,
 		persist_storage,

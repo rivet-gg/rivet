@@ -56,7 +56,7 @@ pub(crate) struct PortProxied {
 }
 
 struct ActorData {
-	actor_id: Uuid,
+	actor_id: util::Id,
 	row: ActorRow,
 	port_ingress_rows: Vec<PortIngress>,
 	port_host_rows: Vec<PortHost>,
@@ -65,7 +65,7 @@ struct ActorData {
 
 #[derive(Debug)]
 pub struct Input {
-	pub actor_ids: Vec<Uuid>,
+	pub actor_ids: Vec<util::Id>,
 
 	/// If null, will fall back to the default endpoint type for the datacenter.
 	///
@@ -91,18 +91,35 @@ pub async fn pegboard_actor_get(ctx: &OperationCtx, input: &Input) -> GlobalResu
 				.map(|actor_id| {
 					let tx = tx.clone();
 					async move {
-						let workflow_id_key = keys::actor::WorkflowIdKey::new(actor_id);
-						let workflow_id_entry = tx
-							.get(&keys::subspace().pack(&workflow_id_key), SERIALIZABLE)
-							.await?;
+						let workflow_id = if let Some(actor_id) = actor_id.as_v0() {
+							let workflow_id_key = keys::actor::WorkflowIdKey::new(actor_id);
 
-						let Some(workflow_id_entry) = workflow_id_entry else {
-							return Ok(None);
+							let workflow_id_entry = tx
+								.get(&keys::subspace().pack(&workflow_id_key), SERIALIZABLE)
+								.await?;
+
+							let Some(workflow_id_entry) = workflow_id_entry else {
+								return Ok(None);
+							};
+
+							workflow_id_key
+								.deserialize(&workflow_id_entry)
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?
+						} else {
+							let workflow_id_key = keys::actor2::WorkflowIdKey::new(actor_id);
+
+							let workflow_id_entry = tx
+								.get(&keys::subspace().pack(&workflow_id_key), SERIALIZABLE)
+								.await?;
+
+							let Some(workflow_id_entry) = workflow_id_entry else {
+								return Ok(None);
+							};
+
+							workflow_id_key
+								.deserialize(&workflow_id_entry)
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?
 						};
-
-						let workflow_id = workflow_id_key
-							.deserialize(&workflow_id_entry)
-							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
 						Ok(Some((actor_id, workflow_id)))
 					}
@@ -311,7 +328,7 @@ pub async fn pegboard_actor_get(ctx: &OperationCtx, input: &Input) -> GlobalResu
 }
 
 pub(crate) fn create_port_ingress(
-	actor_id: Uuid,
+	actor_id: util::Id,
 	port: &PortIngress,
 	protocol: GameGuardProtocol,
 	endpoint_type: EndpointType,

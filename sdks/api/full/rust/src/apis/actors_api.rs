@@ -174,7 +174,7 @@ pub async fn actors_create(
 	}
 }
 
-/// Destroy a dynamic actor.
+/// Destroy a actor.
 pub async fn actors_destroy(
 	configuration: &configuration::Configuration,
 	actor: &str,
@@ -234,7 +234,7 @@ pub async fn actors_destroy(
 	}
 }
 
-/// Gets a dynamic actor.
+/// Gets a actor.
 pub async fn actors_get(
 	configuration: &configuration::Configuration,
 	actor: &str,
@@ -481,7 +481,7 @@ pub async fn actors_upgrade(
 	}
 }
 
-/// Upgrades a dynamic actor.
+/// Upgrades all actors matching the given tags.
 pub async fn actors_upgrade_all(
 	configuration: &configuration::Configuration,
 	actors_upgrade_all_actors_request: crate::models::ActorsUpgradeAllActorsRequest,

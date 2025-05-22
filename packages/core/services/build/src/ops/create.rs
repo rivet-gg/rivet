@@ -63,14 +63,14 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 				BUILD_INVALID,
 				reason = "`resources` can only be specified if `allocation_type` = `multi`"
 			);
-		},
+		}
 		BuildAllocationType::Single => {
 			ensure_with!(
 				input.resources.is_none(),
 				BUILD_INVALID,
 				reason = "builds with `allocation_type` = `single` cannot have `resources`"
 			);
-		},
+		}
 		BuildAllocationType::Multi => {
 			ensure_with!(
 				input.resources.is_some(),

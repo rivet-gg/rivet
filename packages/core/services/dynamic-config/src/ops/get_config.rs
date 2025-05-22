@@ -42,7 +42,6 @@ pub async fn get_config(ctx: &OperationCtx, input: &Input) -> GlobalResult<Outpu
 				SELECT rivet_instance_id 
 				FROM db_dynamic_config.config
 				WHERE NOT EXISTS (SELECT 1 FROM new_row)
-
 				",
 				default_instance_id
 			)

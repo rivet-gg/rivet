@@ -137,15 +137,15 @@ pub async fn get_logs(
 	};
 
 	// Build actor_ids map for lookup
-	let mut actor_id_to_index: std::collections::HashMap<Uuid, i32> =
+	let mut actor_id_to_index: std::collections::HashMap<String, i32> =
 		std::collections::HashMap::new();
 	let mut unique_actor_ids: Vec<String> = Vec::new();
 
 	// Collect unique actor IDs and map them to indices
 	for entry in &logs_res.entries {
 		if !actor_id_to_index.contains_key(&entry.actor_id) {
-			actor_id_to_index.insert(entry.actor_id, unique_actor_ids.len() as i32);
-			unique_actor_ids.push(entry.actor_id.to_string());
+			actor_id_to_index.insert(entry.actor_id.clone(), unique_actor_ids.len() as i32);
+			unique_actor_ids.push(entry.actor_id.clone());
 		}
 	}
 

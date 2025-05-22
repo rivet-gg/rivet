@@ -83,13 +83,13 @@ pub struct CommandWrapper {
 #[serde(rename_all = "snake_case")]
 pub enum Command {
 	StartActor {
-		actor_id: Uuid,
+		actor_id: util::Id,
 		#[serde(default)]
 		generation: u32,
 		config: Box<ActorConfig>,
 	},
 	SignalActor {
-		actor_id: Uuid,
+		actor_id: util::Id,
 		#[serde(default)]
 		generation: u32,
 		// See nix::sys::signal::Signal
@@ -246,7 +246,7 @@ pub struct ActorMetadata {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash)]
 pub struct ActorMetadataActor {
-	pub actor_id: Uuid,
+	pub actor_id: util::Id,
 	pub tags: HashableMap<String, String>,
 	pub create_ts: i64,
 }
@@ -324,7 +324,7 @@ pub struct EventWrapper {
 #[serde(rename_all = "snake_case")]
 pub enum Event {
 	ActorStateUpdate {
-		actor_id: Uuid,
+		actor_id: util::Id,
 		#[serde(default)]
 		generation: u32,
 		state: ActorState,

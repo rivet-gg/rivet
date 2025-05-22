@@ -7,7 +7,7 @@ use crate::auth::Auth;
 /// Validates that an actor belongs to the given game ID.
 pub async fn actor_for_env(
 	ctx: &Ctx<Auth>,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	_game_id: Uuid,
 	env_id: Uuid,
 	endpoint_type: Option<EndpointType>,

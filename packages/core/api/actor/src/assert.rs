@@ -80,7 +80,7 @@ impl FromRedisValue for ActorValidationData {
 struct ActorValidationCacheKey {
 	game_id: Uuid,
 	env_id: Uuid,
-	actor_id: Uuid,
+	actor_id: util::Id,
 }
 
 // Implement CacheKey trait for ActorValidationCacheKey
@@ -104,19 +104,16 @@ impl CacheKey for ActorValidationCacheKey {
 /// 4. For actors not in cache:
 ///    a. Retrieves cluster and datacenter information
 ///    b. Filters for valid datacenters with worker/guard pools
-///    c. Concurrently validates each actor against multiple datacenters
+///    c. Validate each actor against its datacenter
 ///    d. Stores validation results in cache
 /// 5. Returns only the actor IDs that were successfully validated
-///
-/// The validation uses a distributed approach, checking each actor across
-/// multiple datacenters until it's found or all datacenters are exhausted.
 pub async fn actor_for_env(
 	ctx: &Ctx<Auth>,
-	actor_ids: &[Uuid],
+	actor_ids: &[util::Id],
 	game_id: Uuid,
 	env_id: Uuid,
 	_error_code: Option<&'static str>,
-) -> GlobalResult<Vec<Uuid>> {
+) -> GlobalResult<Vec<util::Id>> {
 	if actor_ids.is_empty() {
 		return Ok(Vec::new());
 	}
@@ -273,18 +270,29 @@ pub async fn actor_for_env(
 						return Ok(cache);
 					}
 
-					// Track validation results for each actor
-					let validation_results = Arc::new(Mutex::new(HashMap::<Uuid, bool>::new()));
+					// Track validation results for each actor. This is done instead of collecting the results
+					// from the stream so that we can skip validation tasks.
+					let validation_results = Arc::new(Mutex::new(HashMap::<util::Id, bool>::new()));
 
 					// Create a stream of all datacenter + actor_id combinations
 					let mut validation_tasks =
-						stream::iter(filtered_datacenters.into_iter().flat_map(|dc| {
-							let dc_clone = dc.clone();
-							let ids = actor_ids_to_validate.clone();
-							ids.into_iter()
-								.map(move |actor_id| (dc_clone.clone(), actor_id))
+						stream::iter(actor_ids_to_validate.into_iter().flat_map(|actor_id| {
+							// If the actor has the datacenter label in its id, use that instead of all dcs
+							if let Some(label) = actor_id.label() {
+								filtered_datacenters
+									.iter()
+									.find(|dc| dc.label() == label)
+									.iter()
+									.map(|dc| (dc.name_id.clone(), actor_id))
+									.collect::<Vec<_>>()
+							} else {
+								filtered_datacenters
+									.iter()
+									.map(|dc| (dc.name_id.clone(), actor_id))
+									.collect::<Vec<_>>()
+							}
 						}))
-						.map(|(dc, actor_id)| {
+						.map(|(dc_name_id, actor_id)| {
 							let validation_results = validation_results.clone();
 							let game_name_id = game_name_id.clone();
 							let env_name_id = env_name_id.clone();
@@ -304,7 +312,7 @@ pub async fn actor_for_env(
 										.config()
 										.server()?
 										.rivet
-										.edge_api_url_str(&dc.name_id)?,
+										.edge_api_url_str(&dc_name_id)?,
 									bearer_access_token: ctx.auth().api_token.clone(),
 									..Default::default()
 								};

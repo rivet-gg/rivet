@@ -9,7 +9,7 @@ import API_SCHEMA from './../spec.json';
 # actors.destroy
 
 ## Description
-Destroy a dynamic actor.
+Destroy a actor.
 
 ## Code Examples
 
@@ -33,5 +33,5 @@ await RIVET.actors.destroy({
 </CodeGroup>
 
 ## Schema
-<JsonSchemaPreview className='not-prose mt-4' title='Request Parameters' schema={{"type":"object","properties":{"actor":{"in":"path","type":"string","format":"uuid"},"project":{"in":"query","type":"string"},"environment":{"in":"query","type":"string"},"override_kill_timeout":{"in":"query","type":"integer","format":"int64"}},"required":["actor"]}} defs={API_SCHEMA.definitions}/>
+<JsonSchemaPreview className='not-prose mt-4' title='Request Parameters' schema={{"type":"object","properties":{"actor":{"in":"path","$ref":"#/components/schemas/Id"},"project":{"in":"query","type":"string"},"environment":{"in":"query","type":"string"},"override_kill_timeout":{"in":"query","type":"integer","format":"int64"}},"required":["actor"]}} defs={API_SCHEMA.definitions}/>
 <JsonSchemaPreview className='not-prose mt-4' title='Response' schema={{"$ref":"#/components/schemas/ActorsDestroyActorResponse"}} defs={API_SCHEMA.definitions}/>

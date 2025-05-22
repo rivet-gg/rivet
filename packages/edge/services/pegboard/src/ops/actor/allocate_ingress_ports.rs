@@ -10,9 +10,9 @@ use rand::Rng;
 use crate::{keys, types::GameGuardProtocol};
 
 /// Allocates X ingress ports per given protocol uniquely in the global FDB index.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(crate) struct Input {
-	pub actor_id: Uuid,
+	pub actor_id: util::Id,
 	/// How many ports of each protocol are needed.
 	pub ports: Vec<(GameGuardProtocol, usize)>,
 }
@@ -65,11 +65,11 @@ pub(crate) async fn pegboard_actor_allocate_ingress_ports(
 
 				// Build start and end keys for ingress ports subspace
 				let start_key = keys::subspace()
-					.subspace(&keys::port::IngressKey::subspace(*protocol, start))
+					.subspace(&keys::port::IngressKey2::subspace(*protocol, start))
 					.range()
 					.0;
 				let end_key = keys::subspace()
-					.subspace(&keys::port::IngressKey::subspace(
+					.subspace(&keys::port::IngressKey2::subspace(
 						*protocol,
 						*port_range.end(),
 					))
@@ -98,7 +98,7 @@ pub(crate) async fn pegboard_actor_allocate_ingress_ports(
 										start = *port_range.start();
 
 										let start_key = keys::subspace()
-											.subspace(&keys::port::IngressKey::subspace(
+											.subspace(&keys::port::IngressKey2::subspace(
 												*protocol, start,
 											))
 											.range()
@@ -129,7 +129,7 @@ pub(crate) async fn pegboard_actor_allocate_ingress_ports(
 						};
 
 						let key = keys::subspace()
-							.unpack::<keys::port::IngressKey>(entry.key())
+							.unpack::<keys::port::IngressKey2>(entry.key())
 							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 						let current_port = key.port;
 
@@ -150,7 +150,7 @@ pub(crate) async fn pegboard_actor_allocate_ingress_ports(
 					};
 
 					let ingress_port_key =
-						keys::port::IngressKey::new(*protocol, port, input.actor_id);
+						keys::port::IngressKey2::new(*protocol, port, input.actor_id);
 					let ingress_port_key_buf = keys::subspace().pack(&ingress_port_key);
 
 					// Add read conflict only for this key

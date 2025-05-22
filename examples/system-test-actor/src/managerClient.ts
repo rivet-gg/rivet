@@ -20,7 +20,7 @@ export function connectToManager() {
 
 		let message = {
 			init: {
-				runner_id: process.env.RIVET_RUNNER_ID
+				access_token: process.env.RIVET_ACCESS_TOKEN
 			}
 		};
 		let buffer = Buffer.from(JSON.stringify(message));

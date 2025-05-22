@@ -5,7 +5,7 @@ use std::{
 	process::Stdio,
 	result::Result::{Err, Ok},
 	sync::Arc,
-	time::Instant,
+	time::{Duration, Instant},
 };
 
 use anyhow::*;
@@ -26,7 +26,14 @@ use tokio::{
 use uuid::Uuid;
 
 use super::{oci_config, Runner};
-use crate::{ctx::Ctx, utils};
+use crate::{
+	claims::{Claims, Entitlement},
+	ctx::Ctx,
+	utils,
+};
+
+/// How long an access token given to a runner lasts. 1 Year.
+const ACCESS_TOKEN_TTL: Duration = Duration::from_secs(60 * 60 * 24 * 365);
 
 #[derive(Hash, Debug, Clone, Copy, PartialEq, Eq, FromRepr)]
 pub enum Comms {
@@ -254,12 +261,19 @@ impl Runner {
 			runner_id=?self.runner_id,
 			"building environment variables",
 		);
+		let access_token = Claims::new(
+			Entitlement::Runner {
+				runner_id: self.runner_id,
+			},
+			ACCESS_TOKEN_TTL,
+		)
+		.encode(ctx.secret())?;
 		let env = user_config
 			.process
 			.env
 			.into_iter()
 			.chain(
-				self.build_default_env(ctx, &ports)
+				self.build_default_env(ctx, &ports, &access_token)
 					.into_iter()
 					.map(|(k, v)| format!("{k}={v}")),
 			)
@@ -785,6 +799,7 @@ impl Runner {
 		&self,
 		ctx: &Ctx,
 		ports: &protocol::HashableMap<String, protocol::ProxiedPort>,
+		access_token: &str,
 	) -> HashMap<String, String> {
 		self.config
 			.env
@@ -810,8 +825,7 @@ impl Runner {
 					"RIVET_API_ENDPOINT".to_string(),
 					ctx.config().cluster.api_endpoint.to_string(),
 				),
-				// TODO: Replace with auth token
-				("RIVET_RUNNER_ID".to_string(), self.runner_id.to_string()),
+				("RIVET_ACCESS_TOKEN".to_string(), access_token.to_string()),
 			])
 			.collect()
 	}
