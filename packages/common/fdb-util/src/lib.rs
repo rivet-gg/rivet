@@ -11,11 +11,12 @@ use foundationdb::{
 	self as fdb,
 	future::FdbValue,
 	options::DatabaseOption,
-	tuple::{self, PackResult, TuplePack, TupleUnpack},
+	tuple::{self, PackResult, PackError, TuplePack, TupleUnpack},
 	KeySelector, RangeOption,
 };
 
 pub mod keys;
+pub mod codes;
 mod metrics;
 
 /// Makes the code blatantly obvious if its using a snapshot read.
@@ -187,6 +188,39 @@ pub fn end_of_key_range(key: &[u8]) -> Vec<u8> {
 	end_key.extend_from_slice(key);
 	end_key.push(0);
 	end_key
+}
+
+// Copied from foundationdb crate
+#[inline]
+pub fn parse_bytes(input: &[u8], num: usize) -> PackResult<(&[u8], &[u8])> {
+    if input.len() < num {
+        Err(PackError::MissingBytes)
+    } else {
+        Ok((&input[num..], &input[..num]))
+    }
+}
+
+// Copied from foundationdb crate
+#[inline]
+pub fn parse_byte(input: &[u8]) -> PackResult<(&[u8], u8)> {
+    if input.is_empty() {
+        Err(PackError::MissingBytes)
+    } else {
+        Ok((&input[1..], input[0]))
+    }
+}
+
+// Copied from foundationdb crate
+pub fn parse_code(input: &[u8], expected: u8) -> PackResult<&[u8]> {
+    let (input, found) = parse_byte(input)?;
+    if found == expected {
+        Ok(input)
+    } else {
+        Err(PackError::BadCode {
+            found,
+            expected: Some(expected),
+        })
+    }
 }
 
 pub mod prelude {

@@ -32,7 +32,7 @@ async fn client_rebuild_state() {
 	let (close_tx, mut close_rx) = tokio::sync::watch::channel(());
 	let close_tx = Arc::new(close_tx);
 
-	let actor_id = Uuid::new_v4();
+	let actor_id = rivet_util::Id::new_v1(0);
 	let first_client = Arc::new(AtomicBool::new(true));
 
 	let port = portpicker::pick_unused_port().expect("no free ports");
@@ -69,7 +69,7 @@ async fn handle_connection(
 	ctx_wrapper: Arc<Mutex<Option<Arc<Ctx>>>>,
 	close_tx: Arc<tokio::sync::watch::Sender<()>>,
 	raw_stream: TcpStream,
-	actor_id: Uuid,
+	actor_id: rivet_util::Id,
 	first_client: Arc<AtomicBool>,
 ) {
 	tokio::spawn(async move {

@@ -20,6 +20,7 @@ pub enum SimpleTupleValue {
 	I64(i64),
 	F64(f64),
 	Uuid(Uuid),
+	Id(rivet_util::Id),
 	String(String),
 	Bytes(Vec<u8>),
 	Unknown(Vec<u8>),
@@ -48,6 +49,7 @@ impl fmt::Display for SimpleTupleValue {
 			SimpleTupleValue::I64(v) => write!(f, "{}", style(v).magenta()),
 			SimpleTupleValue::F64(v) => write!(f, "{}", style(v).red()),
 			SimpleTupleValue::Uuid(v) => write!(f, "{}", style(v).blue()),
+			SimpleTupleValue::Id(v) => write!(f, "{}", style(v).blue()),
 			SimpleTupleValue::String(v) => {
 				if v.is_empty() {
 					write!(f, "{}", style("<empty>").dim())
@@ -106,6 +108,7 @@ impl TuplePack for SimpleTupleValue {
 			SimpleTupleValue::I64(v) => v.pack(w, tuple_depth),
 			SimpleTupleValue::F64(v) => v.pack(w, tuple_depth),
 			SimpleTupleValue::Uuid(v) => v.pack(w, tuple_depth),
+			SimpleTupleValue::Id(v) => v.pack(w, tuple_depth),
 			SimpleTupleValue::String(v) => v.pack(w, tuple_depth),
 			SimpleTupleValue::Bytes(v) => v.pack(w, tuple_depth),
 			SimpleTupleValue::Unknown(v) => {
@@ -129,6 +132,9 @@ impl<'de> TupleUnpack<'de> for SimpleTupleValue {
 			Ok((input, v))
 		} else if let Ok((input, v)) = <Uuid>::unpack(input, tuple_depth) {
 			let v = SimpleTupleValue::Uuid(v);
+			Ok((input, v))
+		} else if let Ok((input, v)) = <rivet_util::Id>::unpack(input, tuple_depth) {
+			let v = SimpleTupleValue::Id(v);
 			Ok((input, v))
 		} else if let Ok((input, v)) = <String>::unpack(input, tuple_depth) {
 			let v = SimpleTupleValue::String(v);
@@ -327,6 +333,7 @@ impl From<SimpleTupleValue> for SimpleValue {
 			SimpleTupleValue::I64(v) => SimpleValue::I64(v),
 			SimpleTupleValue::F64(v) => SimpleValue::F64(v),
 			SimpleTupleValue::Uuid(v) => SimpleValue::Uuid(v),
+			SimpleTupleValue::Id(v) => SimpleValue::Bytes(v.as_bytes()),
 			SimpleTupleValue::String(v) => SimpleValue::String(v),
 			SimpleTupleValue::Bytes(v) | SimpleTupleValue::Unknown(v) => SimpleValue::Bytes(v),
 		}
@@ -356,6 +363,9 @@ impl SimpleTupleSegment {
 			Some("uuid") => Uuid::from_str(value)
 				.map(SimpleTupleValue::Uuid)
 				.with_context(|| format!("Could not parse `{value}` as UUID"))?,
+			Some("id") => rivet_util::Id::from_str(value)
+				.map(SimpleTupleValue::Id)
+				.with_context(|| format!("Could not parse `{value}` as ID"))?,
 			Some("bytes") | Some("b") => {
 				let bytes = hex::decode(value.as_bytes())
 					.with_context(|| format!("Could not parse `{value}` as hex encoded bytes"))?;
