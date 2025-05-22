@@ -49,7 +49,7 @@ pub async fn get_logs(
 		.await?;
 
 	// Parse actor IDs from the JSON string
-	let actor_ids: Vec<Uuid> = unwrap_with!(
+	let actor_ids: Vec<util::Id> = unwrap_with!(
 		serde_json::from_str(&query.actor_ids_json).ok(),
 		ACTOR_LOGS_INVALID_ACTOR_IDS
 	);
@@ -81,8 +81,8 @@ pub async fn get_logs(
 	// Handle anchor
 	let logs_res = if let Some(anchor) = watch_index.as_i64()? {
 		let query_start = tokio::time::Instant::now();
-		let stream_types_clone = stream_types.clone(); // Clone here to use in the loop
-		let actor_ids_clone = actor_ids.clone(); // Clone here to use in the loop
+		let stream_types_clone = stream_types.clone();
+		let actor_ids_clone = actor_ids.clone();
 
 		// Poll for new logs
 		let logs_res = loop {
@@ -149,15 +149,15 @@ pub async fn get_logs(
 	};
 
 	// Build actor_ids map for lookup
-	let mut actor_id_to_index: std::collections::HashMap<Uuid, i32> =
+	let mut actor_id_to_index: std::collections::HashMap<String, i32> =
 		std::collections::HashMap::new();
 	let mut unique_actor_ids: Vec<String> = Vec::new();
 
 	// Collect unique actor IDs and map them to indices
 	for entry in &logs_res.entries {
 		if !actor_id_to_index.contains_key(&entry.actor_id) {
-			actor_id_to_index.insert(entry.actor_id, unique_actor_ids.len() as i32);
-			unique_actor_ids.push(entry.actor_id.to_string());
+			actor_id_to_index.insert(entry.actor_id.clone(), unique_actor_ids.len() as i32);
+			unique_actor_ids.push(entry.actor_id.clone());
 		}
 	}
 

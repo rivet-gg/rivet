@@ -43,8 +43,8 @@ pub(crate) mod setup;
 const PID_POLL_INTERVAL: Duration = Duration::from_millis(1000);
 /// How long before killing a runner with a socket if it has not pinged.
 const PING_TIMEOUT: Duration = Duration::from_secs(5);
-/// How long to wait when waiting for the socket to become ready before timing out.
-const SOCKET_READY_TIMEOUT: Duration = Duration::from_secs(3);
+/// How long to wait for the runner socket to become ready before timing out.
+const SOCKET_READY_TIMEOUT: Duration = Duration::from_secs(5);
 /// How long to wait when getting the PID before timing out.
 const GET_PID_TIMEOUT: Duration = Duration::from_secs(256);
 
@@ -73,7 +73,7 @@ pub struct Runner {
 	/// Used instead of polling loops for faster updates.
 	bump_channel: broadcast::Sender<()>,
 
-	actor_observer_tx: broadcast::Sender<(Uuid, u32, runner_protocol::ActorState)>,
+	actor_observer_tx: broadcast::Sender<(rivet_util::Id, u32, runner_protocol::ActorState)>,
 }
 
 impl Runner {
@@ -110,6 +110,7 @@ impl Runner {
 
 	pub async fn attach_socket(
 		self: &Arc<Self>,
+		ctx: &Arc<Ctx>,
 		ws_stream: WebSocketStream<TcpStream>,
 	) -> Result<()> {
 		match &self.comms {
@@ -143,8 +144,9 @@ impl Runner {
 
 				// Spawn a new thread to handle incoming messages
 				let self2 = self.clone();
+				let ctx2 = ctx.clone();
 				tokio::task::spawn(async move {
-					if let Err(err) = self2.receive_messages(ws_rx).await {
+					if let Err(err) = self2.receive_messages(&ctx2, ws_rx).await {
 						tracing::error!(runner_id=?self2.runner_id, ?err, "socket error, killing runner");
 
 						if let Err(err) = self2.signal(Signal::SIGKILL).await {
@@ -160,6 +162,7 @@ impl Runner {
 
 	async fn receive_messages(
 		&self,
+		ctx: &Ctx,
 		mut ws_rx: SplitStream<WebSocketStream<TcpStream>>,
 	) -> Result<()> {
 		loop {
@@ -175,17 +178,17 @@ impl Runner {
 					Some(Ok(Message::Binary(buf))) => {
 						let packet = serde_json::from_slice::<runner_protocol::ToManager>(&buf)?;
 
-						self.process_packet(packet).await?;
+						self.process_packet(ctx, packet).await?;
 					}
 					Some(Ok(packet)) => bail!("runner socket unexpected packet: {packet:?}"),
 					Some(Err(err)) => break Err(err).context("runner socket error"),
 				},
-				Err(_) => bail!("socket timed out"),
+				Err(_) => bail!("socket ping timed out"),
 			}
 		}
 	}
 
-	async fn process_packet(&self, packet: runner_protocol::ToManager) -> Result<()> {
+	async fn process_packet(&self, ctx: &Ctx, packet: runner_protocol::ToManager) -> Result<()> {
 		tracing::debug!(?packet, "runner received packet");
 
 		match packet {
@@ -195,6 +198,8 @@ impl Runner {
 				generation,
 				state,
 			} => {
+				// NOTE: We don't have to verify if the actor id given here is valid because only valid actors
+				// are listening to this runner's `actor_observer_tx`. This means invalid messages are ignored.
 				// NOTE: No receivers is not an error
 				let _ = self.actor_observer_tx.send((actor_id, generation, state));
 			}
@@ -252,7 +257,7 @@ impl Runner {
 	pub async fn start(
 		self: &Arc<Self>,
 		ctx: &Arc<Ctx>,
-		actor_id: Option<Uuid>,
+		actor_id: Option<rivet_util::Id>,
 	) -> Result<protocol::HashableMap<String, protocol::ProxiedPort>> {
 		tracing::info!(runner_id=?self.runner_id, "starting");
 
@@ -447,7 +452,7 @@ impl Runner {
 		Ok(exit_code)
 	}
 
-	pub fn new_actor_observer(&self, actor_id: Uuid, generation: u32) -> ActorObserver {
+	pub fn new_actor_observer(&self, actor_id: rivet_util::Id, generation: u32) -> ActorObserver {
 		ActorObserver::new(actor_id, generation, self.actor_observer_tx.subscribe())
 	}
 
@@ -630,16 +635,16 @@ impl Comms {
 }
 
 pub struct ActorObserver {
-	actor_id: Uuid,
+	actor_id: rivet_util::Id,
 	generation: u32,
-	sub: broadcast::Receiver<(Uuid, u32, runner_protocol::ActorState)>,
+	sub: broadcast::Receiver<(rivet_util::Id, u32, runner_protocol::ActorState)>,
 }
 
 impl ActorObserver {
 	fn new(
-		actor_id: Uuid,
+		actor_id: rivet_util::Id,
 		generation: u32,
-		sub: broadcast::Receiver<(Uuid, u32, runner_protocol::ActorState)>,
+		sub: broadcast::Receiver<(rivet_util::Id, u32, runner_protocol::ActorState)>,
 	) -> Self {
 		ActorObserver {
 			actor_id,

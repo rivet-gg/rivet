@@ -3,7 +3,7 @@ extern crate proc_macro;
 use std::iter::FromIterator;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Literal, TokenStream as TokenStream2, TokenTree};
+use proc_macro2::{Literal, Spacing, TokenStream as TokenStream2, TokenTree};
 use proc_macro_error::{emit_warning, proc_macro_error};
 use quote::{format_ident, quote, ToTokens};
 use syn::{
@@ -454,6 +454,22 @@ impl Parse for Endpoint {
 			while let Some((tt, next)) = rest.token_tree() {
 				match &tt {
 					TokenTree::Punct(punct) if punct.as_char() == ':' => {
+						// Check for path separator (::)
+						if punct.spacing() == Spacing::Joint {
+							if let Some((tt2, next)) = next.token_tree() {
+								match &tt2 {
+									TokenTree::Punct(punct) if punct.as_char() == ':' => {
+										tts.push(tt);
+										tts.push(tt2);
+										rest = next;
+
+										continue;
+									}
+									_ => {}
+								}
+							}
+						}
+
 						return Ok((tts.into_iter().collect::<TokenStream2>(), next));
 					}
 					_ => {

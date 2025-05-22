@@ -115,6 +115,9 @@ func (g *GlobalEventNotification) String() string {
 	return fmt.Sprintf("%#v", g)
 }
 
+// Can be a UUID or base36 encoded binary data.
+type Id = string
+
 // A human readable short identifier used to references resources. Different than a `uuid` because this is intended to be human readable. Different than `DisplayName` because this should not include special characters and be short.
 type Identifier = string
 

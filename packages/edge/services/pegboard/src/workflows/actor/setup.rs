@@ -335,7 +335,7 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 	// - UDP: random
 	let ingress_ports_res = ctx
 		.op(crate::ops::actor::allocate_ingress_ports::Input {
-			actor_id: input.actor_id,
+			actor_id: input.actor_id.into(),
 			ports: port_counts,
 		})
 		.await?;

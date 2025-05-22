@@ -4,7 +4,7 @@ use crate::types::LogsStreamType;
 
 #[derive(Debug)]
 pub struct Input {
-	pub actor_ids: Vec<Uuid>,
+	pub actor_ids: Vec<util::Id>,
 	pub stream_types: Vec<LogsStreamType>,
 	pub count: i64,
 	pub order_by: Order,
@@ -34,21 +34,12 @@ pub struct Output {
 }
 
 #[derive(Debug, clickhouse::Row, serde::Deserialize)]
-pub struct LogEntryRow {
-	/// In nanoseconds.
-	pub ts: i64,
-	pub message: Vec<u8>,
-	pub stream_type: u8,
-	pub actor_id_str: String,
-}
-
-#[derive(Debug)]
 pub struct LogEntry {
 	/// In nanoseconds.
 	pub ts: i64,
 	pub message: Vec<u8>,
 	pub stream_type: u8,
-	pub actor_id: Uuid,
+	pub actor_id: String,
 }
 
 #[operation]
@@ -141,8 +132,7 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 			)
 		-- Use dynamic direction directly in the ORDER BY clause
 		ORDER BY ts {order_direction}
-		LIMIT
-			?
+		LIMIT ?
 		"
 	);
 
@@ -153,7 +143,7 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 	let query_builder = clickhouse
 		.query(&query)
 		.bind(&actor_id_strings)
-		.bind(stream_type_values)
+		.bind(&stream_type_values)
 		// Query type parameters
 		.bind(is_all)
 		.bind(is_before)
@@ -167,30 +157,17 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 		// Search parameters
 		.bind(apply_search)
 		.bind(enable_regex)
-		.bind(regex_text)
+		.bind(&regex_text)
 		.bind(case_sensitive)
 		.bind(search_text)
 		.bind(search_text.to_lowercase())
 		// Limit
 		.bind(input.count);
 
-	let entries = query_builder
-		.fetch_all::<LogEntryRow>()
-		.await
-		.map_err(|err| GlobalError::from(err))?
-		.into_iter()
-		.map(|x| {
-			Ok(LogEntry {
-				ts: x.ts,
-				message: x.message,
-				stream_type: x.stream_type,
-				actor_id: unwrap!(
-					Uuid::parse_str(&x.actor_id_str).ok(),
-					"invalid actor log entry uuid"
-				),
-			})
-		})
-		.collect::<GlobalResult<Vec<_>>>()?;
+	let entries = query_builder.fetch_all::<LogEntry>().await?;
 
-	Ok(Output { entries })
+	// New actors first
+	Ok(Output {
+		entries,
+	})
 }

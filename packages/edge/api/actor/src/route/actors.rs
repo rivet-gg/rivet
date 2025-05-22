@@ -27,7 +27,7 @@ pub struct GlobalEndpointTypeQuery {
 #[tracing::instrument(skip_all)]
 pub async fn get(
 	ctx: Ctx<Auth>,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	watch_index: WatchIndexQuery,
 	query: GlobalEndpointTypeQuery,
 ) -> GlobalResult<models::ActorsGetActorResponse> {
@@ -36,7 +36,7 @@ pub async fn get(
 
 async fn get_inner(
 	ctx: &Ctx<Auth>,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	_watch_index: WatchIndexQuery,
 	query: GlobalEndpointTypeQuery,
 ) -> GlobalResult<models::ActorsGetActorResponse> {
@@ -119,7 +119,6 @@ pub async fn create(
 		error = "`tags` must be `Map<String, String>`"
 	);
 
-	let actor_id = Uuid::new_v4();
 	let network = body.network.unwrap_or_default();
 	let endpoint_type = body
 		.runtime
@@ -128,9 +127,10 @@ pub async fn create(
 		.map(|n| n.endpoint_type)
 		.map(ApiInto::api_into);
 
-	tracing::info!(?actor_id, ?tags, "creating actor with tags");
+	let actor_id = if let build::types::BuildAllocationType::None = build.allocation_type {
+		let actor_id = Uuid::new_v4();
+		tracing::info!(?actor_id, ?tags, "creating actor with tags");
 
-	if let build::types::BuildAllocationType::None = build.allocation_type {
 		let resources = match build.kind {
 			build::types::BuildKind::DockerImage | build::types::BuildKind::OciBundle => {
 				let resources = unwrap_with!(
@@ -138,7 +138,7 @@ pub async fn create(
 					API_BAD_BODY,
 					error = "`resources` must be set for actors using Docker builds"
 				);
-	
+
 				(*resources).api_into()
 			}
 			build::types::BuildKind::JavaScript => {
@@ -147,7 +147,7 @@ pub async fn create(
 					API_BAD_BODY,
 					error = "actors using JavaScript builds cannot set `resources`"
 				);
-	
+
 				pegboard::types::ActorResources::default_isolate()
 			}
 		};
@@ -252,7 +252,12 @@ pub async fn create(
 				bail_with!(ACTOR_FAILED_TO_CREATE, error = "Actor failed before reaching a ready state.");
 			}
 		}
+
+		util::Id::from(actor_id)
 	} else {
+		let actor_id = util::Id::new_v1(ctx.config().server()?.rivet.edge()?.datacenter_label());
+		tracing::info!(?actor_id, ?tags, "creating actor with tags");
+
 		let allocated_fut = if network.wait_ready.unwrap_or_default() {
 			std::future::pending().boxed()
 		} else {
@@ -354,7 +359,9 @@ pub async fn create(
 				bail_with!(ACTOR_FAILED_TO_CREATE, error = "Actor failed before reaching a ready state.");
 			}
 		}
-	}
+
+		actor_id
+	};
 
 	let actors_res = ctx
 		.op(pegboard::ops::actor::get::Input {
@@ -389,7 +396,7 @@ pub struct DeleteQuery {
 #[tracing::instrument(skip_all)]
 pub async fn destroy(
 	ctx: Ctx<Auth>,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	query: DeleteQuery,
 ) -> GlobalResult<serde_json::Value> {
 	let CheckOutput { game_id, env_id } = ctx
@@ -446,7 +453,7 @@ pub async fn destroy(
 #[tracing::instrument(skip_all)]
 pub async fn upgrade(
 	ctx: Ctx<Auth>,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	body: models::ActorsUpgradeActorRequest,
 	query: GlobalQuery,
 ) -> GlobalResult<serde_json::Value> {

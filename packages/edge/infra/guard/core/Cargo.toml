@@ -25,6 +25,7 @@ uuid = { version = "1.16.0", features = ["v4", "serde"] }
 rivet-metrics.workspace = true
 prometheus = "0.13.3"
 rivet-config.workspace = true
+rivet-util.workspace = true
 rand = "0.8.5"
 cluster.workspace = true
 moka = { version = "0.12", features = ["future"] }

@@ -5,12 +5,14 @@ use std::{
 };
 
 use anyhow::*;
+use base64::{engine::general_purpose, Engine};
 use indoc::indoc;
 use notify::{
 	event::{AccessKind, AccessMode},
 	Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
 };
 use pegboard_config::Config;
+use ring::rand::{SecureRandom, SystemRandom};
 use sql::SqlitePoolExt;
 use sqlx::{
 	migrate::MigrateDatabase,
@@ -19,6 +21,7 @@ use sqlx::{
 };
 use tokio::{
 	fs,
+	io::AsyncWriteExt,
 	sync::mpsc::{channel, Receiver},
 };
 
@@ -87,6 +90,32 @@ pub async fn init_sqlite_db(config: &Config) -> Result<SqlitePool> {
 	init_sqlite_schema(&pool).await?;
 
 	Ok(pool)
+}
+
+pub async fn load_secret(config: &Config) -> Result<Vec<u8>> {
+	let secret_path = config.client.data_dir().join("secret.key");
+
+	// If the file doesn't exist, generate and persist it
+	if fs::metadata(&secret_path).await.is_err() {
+		// Generate new key
+		let rng = SystemRandom::new();
+		let mut key = [0u8; 32];
+		rng.fill(&mut key)?;
+		let b64 = general_purpose::STANDARD.encode(&key);
+
+		let mut file = fs::File::create(&secret_path).await?;
+		file.write_all(b64.as_bytes()).await?;
+		file.flush().await?;
+
+		Ok(key.into())
+	} else {
+		let b64 = fs::read_to_string(&secret_path).await?;
+		let key = general_purpose::STANDARD.decode(b64.trim())?;
+
+		ensure!(key.len() == 32, "Invalid key length");
+
+		Ok(key)
+	}
 }
 
 async fn build_sqlite_pool(db_url: &str) -> Result<SqlitePool> {
@@ -210,9 +239,11 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 	sqlx::query(indoc!(
 		"
 		CREATE TABLE IF NOT EXISTS actors (
-			actor_id BLOB NOT NULL, -- UUID
+			actor_id BLOB NOT NULL, -- rivet_util::Id
 			generation INTEGER NOT NULL,
 			config BLOB NOT NULL,
+
+			runner_id NOT NULL, -- Already exists in `config`, set here for ease of querying
 
 			start_ts INTEGER NOT NULL,
 			running_ts INTEGER,
@@ -259,7 +290,7 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 
 	sqlx::query(indoc!(
 		"
-		CREATE INDEX IF NOT EXISTS runner_ports_id_idx
+		CREATE INDEX IF NOT EXISTS runner_ports_runner_id_idx
 		ON runner_ports(runner_id)
 		",
 	))

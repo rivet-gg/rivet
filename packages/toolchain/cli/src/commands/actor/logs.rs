@@ -1,7 +1,6 @@
 use anyhow::*;
 use clap::Parser;
 use toolchain::errors;
-use uuid::Uuid;
 
 /// Stream logs from a specific actor
 #[derive(Parser)]
@@ -33,9 +32,6 @@ impl Opts {
 
 		let env = crate::util::env::get_or_select(&ctx, self.environment.as_ref()).await?;
 
-		let actor_id =
-			Uuid::parse_str(&self.id).map_err(|_| errors::UserError::new("invalid id uuid"))?;
-
 		let print_type = if self.no_timestamps {
 			toolchain::util::actor::logs::PrintType::Print
 		} else {
@@ -45,7 +41,7 @@ impl Opts {
 			&ctx,
 			toolchain::util::actor::logs::TailOpts {
 				environment: &env,
-				actor_id,
+				actor_id: self.id.clone(),
 				stream: self
 					.stream
 					.clone()

@@ -329,6 +329,87 @@ impl TuplePack for ActorSubspaceKey {
 }
 
 #[derive(Debug)]
+pub struct Actor2Key {
+	client_id: Uuid,
+	pub actor_id: util::Id,
+}
+
+impl Actor2Key {
+	pub fn new(client_id: Uuid, actor_id: util::Id) -> Self {
+		Actor2Key {
+			client_id,
+			actor_id,
+		}
+	}
+
+	pub fn subspace(client_id: Uuid) -> Actor2SubspaceKey {
+		Actor2SubspaceKey::new(client_id)
+	}
+}
+
+impl FormalKey for Actor2Key {
+	/// Generation.
+	type Value = u32;
+
+	fn deserialize(&self, raw: &[u8]) -> Result<Self::Value> {
+		if raw.is_empty() {
+			Ok(0)
+		} else {
+			Ok(u32::from_be_bytes(raw.try_into()?))
+		}
+	}
+
+	fn serialize(&self, value: Self::Value) -> Result<Vec<u8>> {
+		Ok(value.to_be_bytes().to_vec())
+	}
+}
+
+impl TuplePack for Actor2Key {
+	fn pack<W: std::io::Write>(
+		&self,
+		w: &mut W,
+		tuple_depth: TupleDepth,
+	) -> std::io::Result<VersionstampOffset> {
+		let t = (CLIENT, ACTOR2, self.client_id, self.actor_id);
+		t.pack(w, tuple_depth)
+	}
+}
+
+impl<'de> TupleUnpack<'de> for Actor2Key {
+	fn unpack(input: &[u8], tuple_depth: TupleDepth) -> PackResult<(&[u8], Self)> {
+		let (input, (_, _, client_id, actor_id)) =
+			<(usize, usize, Uuid, util::Id)>::unpack(input, tuple_depth)?;
+		let v = Actor2Key {
+			client_id,
+			actor_id,
+		};
+
+		Ok((input, v))
+	}
+}
+
+pub struct Actor2SubspaceKey {
+	client_id: Uuid,
+}
+
+impl Actor2SubspaceKey {
+	fn new(client_id: Uuid) -> Self {
+		Actor2SubspaceKey { client_id }
+	}
+}
+
+impl TuplePack for Actor2SubspaceKey {
+	fn pack<W: std::io::Write>(
+		&self,
+		w: &mut W,
+		tuple_depth: TupleDepth,
+	) -> std::io::Result<VersionstampOffset> {
+		let t = (CLIENT, ACTOR2, self.client_id);
+		t.pack(w, tuple_depth)
+	}
+}
+
+#[derive(Debug)]
 pub struct WorkflowIdKey {
 	client_id: Uuid,
 }

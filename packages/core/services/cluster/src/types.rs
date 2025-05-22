@@ -34,6 +34,15 @@ pub struct Datacenter {
 	pub guard_public_hostname: GuardPublicHostname,
 }
 
+impl Datacenter {
+	/// u16 used in the `Id` type for actors
+	pub fn label(&self) -> u16 {
+		// Read first 2 bytes
+		let bytes = self.datacenter_id.as_bytes();
+		u16::from_be_bytes([bytes[0], bytes[1]])
+	}
+}
+
 #[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq, FromRepr)]
 pub enum Provider {
 	/// Servers are manually provisioned and connected.

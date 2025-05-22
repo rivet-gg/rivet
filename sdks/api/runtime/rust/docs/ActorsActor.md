@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**id** | [**uuid::Uuid**](uuid::Uuid.md) |  | 
+**id** | **String** | Can be a UUID or base36 encoded binary data. | 
 **region** | **String** |  | 
 **tags** | Option<[**serde_json::Value**](.md)> |  | 
 **runtime** | [**crate::models::ActorsRuntime**](ActorsRuntime.md) |  | 
