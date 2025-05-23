@@ -4,7 +4,7 @@ use crate::types::LogsStreamType;
 
 #[derive(Debug)]
 pub struct Input {
-	pub actor_ids: Vec<Uuid>,
+	pub actor_ids: Vec<util::Id>,
 	pub stream_types: Vec<LogsStreamType>,
 	pub count: i64,
 	pub order_by: Order,
@@ -34,21 +34,12 @@ pub struct Output {
 }
 
 #[derive(Debug, clickhouse::Row, serde::Deserialize)]
-pub struct LogEntryRow {
-	/// In nanoseconds.
-	pub ts: i64,
-	pub message: Vec<u8>,
-	pub stream_type: u8,
-	pub actor_id_str: String,
-}
-
-#[derive(Debug)]
 pub struct LogEntry {
 	/// In nanoseconds.
 	pub ts: i64,
 	pub message: Vec<u8>,
 	pub stream_type: u8,
-	pub actor_id: Uuid,
+	pub actor_id: String,
 }
 
 #[operation]
@@ -85,6 +76,20 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 		Order::Desc => "DESC",
 	};
 
+	// Separate old actors from new actors
+	let (actor_ids_v0, actor_ids_v1) = input
+		.actor_ids
+		.iter()
+		.partition::<Vec<util::Id>, _>(|actor_id| actor_id.as_v0().is_some());
+	let actor_ids_v0 = actor_ids_v0
+		.into_iter()
+		.flat_map(|x| x.as_v0())
+		.collect::<Vec<_>>();
+	let actor_ids_v1 = actor_ids_v1
+		.into_iter()
+		.map(|x| x.to_string())
+		.collect::<Vec<_>>();
+
 	// ?? = escaped ?
 	let query = formatdoc!(
 		"
@@ -92,7 +97,7 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 			ts,
 			message,
 			stream_type,
-			toString(actor_id) as actor_id_str
+			actor_id
 		FROM
 			db_pegboard_actor_log.actor_logs
 		WHERE
@@ -126,16 +131,59 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 			)
 		-- Use dynamic direction directly in the ORDER BY clause
 		ORDER BY ts {order_direction}
-		LIMIT
-			?
+		LIMIT ?
+		"
+	);
+
+	let query2 = formatdoc!(
+		"
+		SELECT
+			ts,
+			message,
+			stream_type,
+			actor_id
+		FROM
+			db_pegboard_runner_log.runner_logs
+		WHERE
+			actor_id IN ?
+			AND stream_type IN ?
+			-- Apply timestamp filtering based on query type
+			AND (
+				? -- is_all
+				OR (? AND ts < fromUnixTimestamp64Nano(?)) -- is_before
+				OR (? AND ts > fromUnixTimestamp64Nano(?)) -- is_after
+				OR (? AND ? AND 
+					ts > fromUnixTimestamp64Nano(?) AND 
+					ts < fromUnixTimestamp64Nano(?)) -- is_range
+			)
+			-- Search filtering with conditional logic
+			AND (
+				NOT ? -- NOT apply_search (always true when search not applied)
+				OR (
+					CASE 
+						WHEN ? THEN -- enable_regex
+							-- Using pre-formatted regex string
+							match(message, ?)
+						ELSE 
+							-- Toggle for case sensitivity without regex
+							CASE 
+								WHEN ? THEN position(message, ?) > 0
+								ELSE positionCaseInsensitive(message, ?) > 0
+							END
+					END
+				)
+			)
+		-- Use dynamic direction directly in the ORDER BY clause
+		ORDER BY ts {order_direction}
+		LIMIT ?
 		"
 	);
 
 	// Build query with all parameters and safety restrictions
 	let query_builder = clickhouse
 		.query(&query)
-		.bind(&input.actor_ids)
-		.bind(stream_type_values)
+		.bind(&actor_ids_v0)
+		.bind(&stream_type_values)
 		// Query type parameters
 		.bind(is_all)
 		.bind(is_before)
@@ -149,30 +197,43 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 		// Search parameters
 		.bind(apply_search)
 		.bind(enable_regex)
-		.bind(regex_text)
+		.bind(&regex_text)
+		.bind(case_sensitive)
+		.bind(search_text)
+		.bind(search_text.to_lowercase())
+		// Limit
+		.bind(input.count);
+	let query_builder2 = clickhouse
+		.query(&query2)
+		.bind(&actor_ids_v1)
+		.bind(&stream_type_values)
+		// Query type parameters
+		.bind(is_all)
+		.bind(is_before)
+		.bind(before_nts.unwrap_or(0))
+		.bind(is_after)
+		.bind(after_nts.unwrap_or(0))
+		.bind(is_before) // First part of AND condition for range
+		.bind(is_after) // Second part of AND condition for range
+		.bind(after_nts.unwrap_or(0))
+		.bind(before_nts.unwrap_or(0))
+		// Search parameters
+		.bind(apply_search)
+		.bind(enable_regex)
+		.bind(&regex_text)
 		.bind(case_sensitive)
 		.bind(search_text)
 		.bind(search_text.to_lowercase())
 		// Limit
 		.bind(input.count);
 
-	let entries = query_builder
-		.fetch_all::<LogEntryRow>()
-		.await
-		.map_err(|err| GlobalError::from(err))?
-		.into_iter()
-		.map(|x| {
-			Ok(LogEntry {
-				ts: x.ts,
-				message: x.message,
-				stream_type: x.stream_type,
-				actor_id: unwrap!(
-					Uuid::parse_str(&x.actor_id_str).ok(),
-					"invalid actor log entry uuid"
-				),
-			})
-		})
-		.collect::<GlobalResult<Vec<_>>>()?;
+	let (entries, entries2) = tokio::try_join!(
+		query_builder.fetch_all::<LogEntry>(),
+		query_builder2.fetch_all::<LogEntry>(),
+	)?;
 
-	Ok(Output { entries })
+	// New actors first
+	Ok(Output {
+		entries: entries2.into_iter().chain(entries.into_iter()).collect(),
+	})
 }

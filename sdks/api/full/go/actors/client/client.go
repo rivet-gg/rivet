@@ -8,7 +8,6 @@ import (
 	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
-	uuid "github.com/google/uuid"
 	io "io"
 	http "net/http"
 	url "net/url"
@@ -39,10 +38,10 @@ func NewClient(opts ...core.ClientOption) *Client {
 	}
 }
 
-// Gets a dynamic actor.
+// Gets a actor.
 //
 // The id of the actor to destroy
-func (c *Client) Get(ctx context.Context, actor uuid.UUID, request *actors.ListActorsRequestQuery) (*actors.GetActorResponse, error) {
+func (c *Client) Get(ctx context.Context, actor sdk.Id, request *actors.ListActorsRequestQuery) (*actors.GetActorResponse, error) {
 	baseURL := "https://api.rivet.gg"
 	if c.baseURL != "" {
 		baseURL = c.baseURL
@@ -234,7 +233,7 @@ func (c *Client) List(ctx context.Context, request *actors.GetActorsRequestQuery
 	return response, nil
 }
 
-// Create a new dynamic actor.
+// Create a new actor.
 func (c *Client) Create(ctx context.Context, request *actors.CreateActorRequestQuery) (*actors.CreateActorResponse, error) {
 	baseURL := "https://api.rivet.gg"
 	if c.baseURL != "" {
@@ -327,10 +326,10 @@ func (c *Client) Create(ctx context.Context, request *actors.CreateActorRequestQ
 	return response, nil
 }
 
-// Destroy a dynamic actor.
+// Destroy a actor.
 //
 // The id of the actor to destroy
-func (c *Client) Destroy(ctx context.Context, actor uuid.UUID, request *actors.DestroyActorRequestQuery) (*actors.DestroyActorResponse, error) {
+func (c *Client) Destroy(ctx context.Context, actor sdk.Id, request *actors.DestroyActorRequestQuery) (*actors.DestroyActorResponse, error) {
 	baseURL := "https://api.rivet.gg"
 	if c.baseURL != "" {
 		baseURL = c.baseURL
@@ -421,10 +420,10 @@ func (c *Client) Destroy(ctx context.Context, actor uuid.UUID, request *actors.D
 	return response, nil
 }
 
-// Upgrades a dynamic actor.
+// Upgrades a actor.
 //
 // The id of the actor to upgrade
-func (c *Client) Upgrade(ctx context.Context, actor uuid.UUID, request *actors.UpgradeActorRequestQuery) (*actors.UpgradeActorResponse, error) {
+func (c *Client) Upgrade(ctx context.Context, actor sdk.Id, request *actors.UpgradeActorRequestQuery) (*actors.UpgradeActorResponse, error) {
 	baseURL := "https://api.rivet.gg"
 	if c.baseURL != "" {
 		baseURL = c.baseURL
@@ -513,7 +512,7 @@ func (c *Client) Upgrade(ctx context.Context, actor uuid.UUID, request *actors.U
 	return response, nil
 }
 
-// Upgrades a dynamic actor.
+// Upgrades all actors matching the given tags.
 func (c *Client) UpgradeAll(ctx context.Context, request *actors.UpgradeAllActorsRequestQuery) (*actors.UpgradeAllActorsResponse, error) {
 	baseURL := "https://api.rivet.gg"
 	if c.baseURL != "" {

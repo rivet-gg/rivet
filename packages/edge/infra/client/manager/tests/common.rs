@@ -67,8 +67,7 @@ pub async fn send_init_packet(tx: &mut SplitSink<WebSocketStream<tokio::net::Tcp
 
 pub async fn start_echo_actor(
 	tx: &mut SplitSink<WebSocketStream<tokio::net::TcpStream>, Message>,
-	actor_id: Uuid,
-	port: u16,
+	actor_id: rivet_util::Id,
 ) {
 	let cmd = protocol::Command::StartActor {
 		actor_id,
@@ -275,6 +274,8 @@ pub async fn start_client(
 ) {
 	let system = system_info::fetch().await.unwrap();
 
+	let secret = utils::load_secret(&config).await.unwrap();
+
 	let pool = utils::init_sqlite_db(&config).await.unwrap();
 
 	// Build WS connection URL
@@ -295,7 +296,7 @@ pub async fn start_client(
 
 	tracing::info!("connected");
 
-	let ctx = Ctx::new(config, system, pool, tx);
+	let ctx = Ctx::new(config, system, secret, pool, tx);
 
 	// Share reference
 	{

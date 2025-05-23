@@ -29,7 +29,7 @@ const ACTOR_EXIT_THRESHOLD_MS: i64 = util::duration::seconds(5);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Input {
-	pub actor_id: Uuid,
+	pub actor_id: util::Id,
 	pub env_id: Uuid,
 	pub tags: HashMap<String, String>,
 	pub resources: Option<ActorResources>,

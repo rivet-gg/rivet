@@ -33,7 +33,7 @@ const X_FORWARDED_FOR: HeaderName = HeaderName::from_static("x-forwarded-for");
 // Routing types
 #[derive(Clone, Debug)]
 pub struct RouteTarget {
-	pub actor_id: Option<Uuid>,
+	pub actor_id: Option<rivet_util::Id>,
 	pub server_id: Option<Uuid>,
 	pub host: String,
 	pub port: u16,
@@ -147,7 +147,9 @@ pub enum MiddlewareResponse {
 }
 
 pub type MiddlewareFn = Arc<
-	dyn for<'a> Fn(&'a Uuid) -> futures::future::BoxFuture<'a, GlobalResult<MiddlewareResponse>>
+	dyn for<'a> Fn(
+			&'a rivet_util::Id,
+		) -> futures::future::BoxFuture<'a, GlobalResult<MiddlewareResponse>>
 		+ Send
 		+ Sync,
 >;
@@ -253,8 +255,8 @@ pub struct ProxyState {
 	routing_fn: RoutingFn,
 	middleware_fn: MiddlewareFn,
 	route_cache: RouteCache,
-	rate_limiters: SccHashMap<Uuid, RateLimiter>,
-	in_flight_counters: SccHashMap<Uuid, InFlightCounter>,
+	rate_limiters: SccHashMap<rivet_util::Id, RateLimiter>,
+	in_flight_counters: SccHashMap<rivet_util::Id, InFlightCounter>,
 	port_type: PortType,
 }
 
@@ -395,7 +397,10 @@ impl ProxyState {
 	}
 
 	#[tracing::instrument(skip_all)]
-	async fn get_middleware_config(&self, actor_id: &Uuid) -> GlobalResult<MiddlewareConfig> {
+	async fn get_middleware_config(
+		&self,
+		actor_id: &rivet_util::Id,
+	) -> GlobalResult<MiddlewareConfig> {
 		// Call the middleware function with a timeout
 		let default_timeout = Duration::from_secs(5); // Default 5 seconds
 
@@ -447,7 +452,7 @@ impl ProxyState {
 	}
 
 	#[tracing::instrument(skip_all)]
-	async fn check_rate_limit(&self, actor_id: &Option<Uuid>) -> GlobalResult<bool> {
+	async fn check_rate_limit(&self, actor_id: &Option<rivet_util::Id>) -> GlobalResult<bool> {
 		match actor_id {
 			Some(id) => {
 				let middleware_config = self.get_middleware_config(id).await?;
@@ -480,7 +485,7 @@ impl ProxyState {
 	}
 
 	#[tracing::instrument(skip_all)]
-	async fn acquire_in_flight(&self, actor_id: &Option<Uuid>) -> GlobalResult<bool> {
+	async fn acquire_in_flight(&self, actor_id: &Option<rivet_util::Id>) -> GlobalResult<bool> {
 		match actor_id {
 			Some(id) => {
 				let middleware_config = self.get_middleware_config(id).await?;
@@ -510,7 +515,7 @@ impl ProxyState {
 	}
 
 	#[tracing::instrument(skip_all)]
-	async fn release_in_flight(&self, actor_id: &Option<Uuid>) {
+	async fn release_in_flight(&self, actor_id: &Option<rivet_util::Id>) {
 		if let Some(id) = actor_id {
 			if let Some(mut counter) = self
 				.in_flight_counters

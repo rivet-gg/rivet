@@ -91,7 +91,7 @@ pub enum ActorsUpgradeAllError {
 	UnknownValue(serde_json::Value),
 }
 
-/// Create a new dynamic actor.
+/// Create a new actor.
 pub async fn actors_create(
 	configuration: &configuration::Configuration,
 	actors_create_actor_request: crate::models::ActorsCreateActorRequest,
@@ -148,7 +148,7 @@ pub async fn actors_create(
 	}
 }
 
-/// Destroy a dynamic actor.
+/// Destroy a actor.
 pub async fn actors_destroy(
 	configuration: &configuration::Configuration,
 	actor: &str,
@@ -208,7 +208,7 @@ pub async fn actors_destroy(
 	}
 }
 
-/// Gets a dynamic actor.
+/// Gets a actor.
 pub async fn actors_get(
 	configuration: &configuration::Configuration,
 	actor: &str,
@@ -338,7 +338,7 @@ pub async fn actors_list(
 	}
 }
 
-/// Upgrades a dynamic actor.
+/// Upgrades a actor.
 pub async fn actors_upgrade(
 	configuration: &configuration::Configuration,
 	actor: &str,
@@ -395,7 +395,7 @@ pub async fn actors_upgrade(
 	}
 }
 
-/// Upgrades a dynamic actor.
+/// Upgrades all actors matching the given tags.
 pub async fn actors_upgrade_all(
 	configuration: &configuration::Configuration,
 	actors_upgrade_all_actors_request: crate::models::ActorsUpgradeAllActorsRequest,
