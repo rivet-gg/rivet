@@ -57,7 +57,7 @@ async fn get_dcs(ctx: OperationCtx, labels: Vec<u16>) -> GlobalResult<Vec<Datace
 		FROM db_cluster.datacenters@datacenter_label_idx
 		WHERE label = ANY($1)
 		",
-		labels.into_iter().map(|x| x as i64).collect::<Vec<_>>(),
+		labels.into_iter().map(|x| x.to_be_bytes()).collect::<Vec<_>>(),
 	)
 	.await?;
 
