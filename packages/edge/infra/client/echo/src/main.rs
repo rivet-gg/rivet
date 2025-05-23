@@ -1,10 +1,12 @@
-use std::{env, net::SocketAddr, sync::Arc, time::Duration};
+use std::{env, io::Cursor, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
+use anyhow::*;
+use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
+use serde::{de::DeserializeOwned, Serialize};
 use serde_json::json;
-use tokio::sync::Mutex;
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use uuid::Uuid;
+use tokio::{net::UnixStream, sync::Mutex};
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use warp::Filter;
 
 const PING_INTERVAL: Duration = Duration::from_secs(1);
@@ -18,9 +20,9 @@ async fn main() {
 	}
 
 	// Get manager connection details from env vars
-	let manager_ip = env::var("RIVET_MANAGER_IP").expect("RIVET_MANAGER_IP not set");
-	let manager_port = env::var("RIVET_MANAGER_PORT").expect("RIVET_MANAGER_PORT not set");
-	let manager_addr = format!("ws://{}:{}", manager_ip, manager_port);
+	let manager_socket_path = PathBuf::from(
+		env::var("RIVET_MANAGER_SOCKET_PATH").expect("RIVET_MANAGER_SOCKET_PATH not set"),
+	);
 
 	// Get HTTP server port from env var or use default
 	let http_port = env::var("PORT_MAIN")
@@ -28,10 +30,10 @@ async fn main() {
 		.parse::<u16>()
 		.expect("bad PORT_MAIN");
 
-	// Spawn the WebSocket client
+	// Spawn the unix socket client
 	tokio::spawn(async move {
-		if let Err(e) = run_websocket_client(&manager_addr).await {
-			eprintln!("WebSocket client error: {}", e);
+		if let Err(e) = run_socket_client(manager_socket_path).await {
+			eprintln!("Socket client error: {}", e);
 		}
 	});
 
@@ -53,25 +55,28 @@ async fn main() {
 	warp::serve(echo).run(http_addr).await;
 }
 
-async fn run_websocket_client(url: &str) -> Result<(), Box<dyn std::error::Error>> {
-	println!("Connecting to WebSocket at {}", url);
+async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
+	println!("Connecting to socket at {}", socket_path.display());
 
-	// Connect to the WebSocket server
-	let (ws_stream, _) = connect_async(url).await?;
-	println!("WebSocket connection established");
+	// Connect to the socket server
+	let stream = UnixStream::connect(socket_path).await?;
+	println!("Socket connection established");
+
+	let codec = LengthDelimitedCodec::builder()
+		.length_field_type::<u32>()
+		.length_field_length(4)
+		// No offset
+		.length_field_offset(0)
+		// Header length is not included in the length calculation
+		.length_adjustment(4)
+		// header is included in the returned bytes
+		.num_skip(0)
+		.new_codec();
+
+	let framed = Framed::new(stream, codec);
 
 	// Split the stream
-	let (mut write, mut read) = ws_stream.split();
-
-	let payload = json!({
-		"init": {
-			"access_token": env::var("RIVET_ACCESS_TOKEN").expect("RIVET_ACCESS_TOKEN not set"),
-		},
-	});
-
-	let data = serde_json::to_vec(&payload)?;
-	write.send(Message::Binary(data)).await?;
-	println!("Sent init message");
+	let (write, mut read) = framed.split();
 
 	// Ping thread
 	let write = Arc::new(Mutex::new(write));
@@ -80,10 +85,14 @@ async fn run_websocket_client(url: &str) -> Result<(), Box<dyn std::error::Error
 		loop {
 			tokio::time::sleep(PING_INTERVAL).await;
 
+			let payload = json!({
+				"ping": {}
+			});
+
 			if write2
 				.lock()
 				.await
-				.send(Message::Ping(Vec::new()))
+				.send(encode_frame(&payload).unwrap())
 				.await
 				.is_err()
 			{
@@ -93,53 +102,61 @@ async fn run_websocket_client(url: &str) -> Result<(), Box<dyn std::error::Error
 	});
 
 	// Process incoming messages
-	while let Some(message) = read.next().await {
-		match message {
-			Ok(msg) => match msg {
-				Message::Pong(_) => {}
-				Message::Binary(buf) => {
-					let packet = serde_json::from_slice::<serde_json::Value>(&buf)?;
-					println!("Received packet: {packet:?}");
+	while let Some(frame) = read.next().await.transpose()? {
+		let (_, packet) = decode_frame::<serde_json::Value>(&frame.freeze())?;
+		println!("Received packet: {packet:?}");
 
-					if let Some(packet) = packet.get("start_actor") {
-						let payload = json!({
-							"actor_state_update": {
-								"actor_id": packet["actor_id"],
-								"generation": packet["generation"],
-								"state": {
-									"running": null,
-								},
-							},
-						});
+		if let Some(packet) = packet.get("start_actor") {
+			let payload = json!({
+				"actor_state_update": {
+					"actor_id": packet["actor_id"],
+					"generation": packet["generation"],
+					"state": {
+						"running": null,
+					},
+				},
+			});
 
-						let data = serde_json::to_vec(&payload)?;
-						write.lock().await.send(Message::Binary(data)).await?;
-					} else if let Some(packet) = packet.get("signal_actor") {
-						let payload = json!({
-							"actor_state_update": {
-								"actor_id": packet["actor_id"],
-								"generation": packet["generation"],
-								"state": {
-									"exited": {
-										"exit_code": null,
-									},
-								},
-							},
-						});
+			write.lock().await.send(encode_frame(&payload)?).await?;
+		} else if let Some(packet) = packet.get("signal_actor") {
+			let payload = json!({
+				"actor_state_update": {
+					"actor_id": packet["actor_id"],
+					"generation": packet["generation"],
+					"state": {
+						"exited": {
+							"exit_code": null,
+						},
+					},
+				},
+			});
 
-						let data = serde_json::to_vec(&payload)?;
-						write.lock().await.send(Message::Binary(data)).await?;
-					}
-				}
-				msg => eprintln!("Unexpected message: {msg:?}"),
-			},
-			Err(e) => {
-				eprintln!("Error reading message: {}", e);
-				break;
-			}
+			write.lock().await.send(encode_frame(&payload)?).await?;
 		}
 	}
 
-	println!("WebSocket connection closed");
+	println!("Socket connection closed");
 	Ok(())
+}
+
+fn decode_frame<T: DeserializeOwned>(frame: &Bytes) -> Result<([u8; 4], T)> {
+	ensure!(frame.len() >= 4, "Frame too short");
+
+	// Extract the header (first 4 bytes)
+	let header = [frame[0], frame[1], frame[2], frame[3]];
+
+	// Deserialize the rest of the frame (payload after the header)
+	let payload = serde_json::from_slice(&frame[4..])?;
+
+	Ok((header, payload))
+}
+
+fn encode_frame<T: Serialize>(payload: &T) -> Result<Bytes> {
+	let mut buf = Vec::with_capacity(4);
+	buf.extend_from_slice(&[0u8; 4]); // header (currently unused)
+
+	let mut cursor = Cursor::new(&mut buf);
+	serde_json::to_writer(&mut cursor, payload)?;
+
+	Ok(buf.into())
 }
