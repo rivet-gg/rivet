@@ -127,18 +127,12 @@ async fn build_sqlite_pool(db_url: &str) -> Result<SqlitePool> {
 		.busy_timeout(Duration::from_secs(5))
 		// Enable foreign key constraint enforcement
 		.foreign_keys(true)
+		// Increases write performance
+		.journal_mode(SqliteJournalMode::Wal)
 		// Enable auto vacuuming and set it to incremental mode for gradual space reclaiming
 		.auto_vacuum(SqliteAutoVacuum::Incremental);
 
 	let pool = SqlitePoolOptions::new()
-		.after_connect(|conn, _meta| {
-			Box::pin(async move {
-				// NOTE: sqlx doesn't seem to have a WAL2 option so we set it with a PRAGMA query
-				conn.execute("PRAGMA journal_mode = WAL2").await?;
-
-				Ok(())
-			})
-		})
 		// Open connection immediately on startup
 		.min_connections(1)
 		.connect_with(opts)
@@ -243,7 +237,8 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 			generation INTEGER NOT NULL,
 			config BLOB NOT NULL,
 
-			runner_id NOT NULL, -- Already exists in `config`, set here for ease of querying
+			-- Already exists in `config`, set here for ease of querying
+			runner_id BLOB NOT NULL, -- UUID
 
 			start_ts INTEGER NOT NULL,
 			running_ts INTEGER,
