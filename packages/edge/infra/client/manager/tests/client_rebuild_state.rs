@@ -108,7 +108,7 @@ async fn handle_connection(
 								let actors = ctx.actors().read().await;
 
 								assert!(
-									actors.contains_key(&actor_id),
+									actors.contains_key(&(actor_id, 0)),
 									"actor not in client memory"
 								);
 
@@ -119,9 +119,9 @@ async fn handle_connection(
 									&mut tx,
 									protocol::Command::SignalActor {
 										actor_id,
+										generation: 0,
 										signal: Signal::SIGKILL as i32,
 										persist_storage: false,
-										ignore_future_state: false,
 									},
 								)
 								.await;
@@ -146,7 +146,7 @@ async fn handle_connection(
 										// Verify client state
 										let actors = ctx.actors().read().await;
 										assert!(
-											!actors.contains_key(&actor_id),
+											!actors.contains_key(&(actor_id, 0)),
 											"actor still in client memory"
 										);
 
@@ -159,6 +159,7 @@ async fn handle_connection(
 								}
 							}
 						}
+						protocol::ToServer::AckCommands { .. } => {}
 					}
 				}
 				Message::Close(_) => {
