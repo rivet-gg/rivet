@@ -128,6 +128,8 @@ async fn build_sqlite_pool(db_url: &str) -> Result<SqlitePool> {
 		.busy_timeout(Duration::from_secs(5))
 		// Enable foreign key constraint enforcement
 		.foreign_keys(true)
+		// Increases write performance
+		.journal_mode(SqliteJournalMode::Wal)
 		// Enable auto vacuuming and set it to incremental mode for gradual space reclaiming
 		.auto_vacuum(SqliteAutoVacuum::Incremental)
 		// Set synchronous mode to NORMAL for performance and data safety balance
@@ -241,7 +243,8 @@ async fn init_sqlite_schema(pool: &SqlitePool) -> Result<()> {
 			generation INTEGER NOT NULL,
 			config BLOB NOT NULL, -- JSONB
 
-			runner_id NOT NULL, -- Already exists in `config`, set here for ease of querying
+			-- Already exists in `config`, set here for ease of querying
+			runner_id BLOB NOT NULL, -- UUID
 
 			start_ts INTEGER NOT NULL,
 			running_ts INTEGER,

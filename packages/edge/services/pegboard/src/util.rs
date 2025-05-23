@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::types::{EndpointType, GameGuardProtocol};
 
 // Constants for regex patterns
-const UUID_PATTERN: &str = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const ID_PATTERN: &str = r"[a-zA-Z0-9-]+";
 const PORT_NAME_PATTERN: &str = r"[a-zA-Z0-9-_]+";
 
 pub fn build_actor_hostname_and_path(
@@ -59,7 +59,7 @@ pub fn build_actor_hostname_and_path_regex(
 		// server in the subdomain is a convenience
 		(EndpointType::Hostname, GuardPublicHostname::DnsParent(dns_parent)) => {
 			let hostname_regex = Regex::new(&format!(
-				r"^(?P<actor_id>{UUID_PATTERN})-(?P<port_name>{PORT_NAME_PATTERN})\.actor\.{}$",
+				r"^(?P<actor_id>{ID_PATTERN})-(?P<port_name>{PORT_NAME_PATTERN})\.actor\.{}$",
 				regex::escape(dns_parent.as_str())
 			))?;
 			Ok(Some((hostname_regex, None)))
@@ -81,7 +81,7 @@ pub fn build_actor_hostname_and_path_regex(
 			))?;
 
 			let path_regex = Regex::new(&format!(
-				r"^/(?P<actor_id>{UUID_PATTERN})-(?P<port_name>{PORT_NAME_PATTERN})(?:/.*)?$"
+				r"^/(?P<actor_id>{ID_PATTERN})-(?P<port_name>{PORT_NAME_PATTERN})(?:/.*)?$"
 			))?;
 
 			Ok(Some((hostname_regex, Some(path_regex))))
@@ -91,7 +91,7 @@ pub fn build_actor_hostname_and_path_regex(
 			let hostname_regex = Regex::new(&format!(r"^{}$", regex::escape(static_.as_str())))?;
 
 			let path_regex = Regex::new(&format!(
-				r"^/(?P<actor_id>{UUID_PATTERN})-(?P<port_name>{PORT_NAME_PATTERN})(?:/.*)?$"
+				r"^/(?P<actor_id>{ID_PATTERN})-(?P<port_name>{PORT_NAME_PATTERN})(?:/.*)?$"
 			))?;
 
 			Ok(Some((hostname_regex, Some(path_regex))))
