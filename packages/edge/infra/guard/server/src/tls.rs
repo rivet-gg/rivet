@@ -157,14 +157,11 @@ pub async fn create_cert_resolver(
 			}
 			Ok(None) => {
 				tracing::warn!(
-				"Could not build dynamic hostname actor routing regex - pattern will be skipped"
-			);
+					"Could not build dynamic hostname actor routing regex - pattern will be skipped"
+				);
 				None
 			}
-			Err(err) => bail!(
-				"Failed to build dynamic hostname actor routing regex: {}",
-				err
-			),
+			Err(e) => bail!("Failed to build dynamic hostname actor routing regex: {}", e),
 		};
 	let actor_hostname_regex_static =
 		match build_actor_hostname_and_path_regex(EndpointType::Path, guard_hostname) {
@@ -178,9 +175,7 @@ pub async fn create_cert_resolver(
 				);
 				None
 			}
-			Err(e) => {
-				bail!("Failed to build static path actor routing regex: {}", e);
-			}
+			Err(e) => bail!("Failed to build static path actor routing regex: {}", e),
 		};
 
 	// Create resolver function that matches the routing logic
