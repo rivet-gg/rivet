@@ -83,7 +83,6 @@ pub async fn gen_install(
 		}
 		PoolType::Guard => {
 			script.push(components::otel_collector::install(pool_type)?);
-			script.push(components::ok_server::install(initialize_immediately));
 			script.push(components::rivet::guard::install(config)?);
 		}
 	}
