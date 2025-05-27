@@ -8,7 +8,6 @@ use indoc::indoc;
 use nix::{sys::signal::Signal, unistd::Pid};
 use pegboard::protocol;
 use pegboard_config::runner_protocol;
-use uuid::Uuid;
 
 use crate::{ctx::Ctx, runner, utils};
 
@@ -55,10 +54,9 @@ impl Actor {
 					generation,
 					runner_id,
 					config,
-					start_ts,
-					image_id
+					start_ts
 				)
-				VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+				VALUES (?1, ?2, ?3, ?4, ?5)
 				ON CONFLICT (actor_id, generation) DO NOTHING
 				",
 			))
@@ -67,7 +65,6 @@ impl Actor {
 			.bind(runner_id)
 			.bind(&config_json)
 			.bind(utils::now())
-			.bind(self.config.image.id)
 			.execute(&mut *ctx.sql().await?)
 			.await
 		})
@@ -261,17 +258,14 @@ impl Actor {
 			}
 			// Send signal
 			else {
-				self.runner.signal(signal).await?;
+				self.runner.signal(ctx, signal).await?;
 			}
 		}
 
 		// Update stop_ts
 		if matches!(signal, Signal::SIGTERM | Signal::SIGKILL) || !has_pid {
 			let stop_ts_set = utils::sql::query(|| async {
-				let mut conn = ctx.sql().await?;
-				let mut tx = conn.begin().await?;
-
-				let res = sqlx::query_as::<_, (bool,)>(indoc!(
+				sqlx::query_as::<_, (bool,)>(indoc!(
 					"
 					UPDATE actors
 					SET stop_ts = ?3
@@ -285,27 +279,11 @@ impl Actor {
 				.bind(self.actor_id)
 				.bind(self.generation as i64)
 				.bind(utils::now())
-				.fetch_optional(&mut *tx)
-				.await?;
-
-				// Update LRU cache
-				sqlx::query(indoc!(
-					"
-					UPDATE images_cache
-					SET last_used_ts = ?2
-					WHERE image_id = ?1
-					",
-				))
-				.bind(self.config.image.id)
-				.bind(utils::now())
-				.execute(&mut *tx)
-				.await?;
-
-				tx.commit().await?;
-
-				Ok(res.is_some())
+				.fetch_optional(&mut *ctx.sql().await?)
+				.await
 			})
-			.await?;
+			.await?
+			.is_some();
 
 			// Emit event if not stopped before
 			if stop_ts_set {

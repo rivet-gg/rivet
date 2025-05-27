@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::*;
+use bytes::Bytes;
 use futures_util::{
 	stream::{FuturesUnordered, SplitSink, SplitStream},
 	FutureExt, SinkExt, StreamExt,
@@ -18,18 +19,13 @@ use nix::{
 };
 use pegboard::protocol;
 use pegboard_config::runner_protocol;
+use sqlx::Acquire;
 use tokio::{
 	fs,
-	net::TcpStream,
+	net::UnixStream,
 	sync::{broadcast, Mutex, RwLock},
 };
-use tokio_tungstenite::{
-	tungstenite::protocol::{
-		frame::{coding::CloseCode, CloseFrame},
-		Message,
-	},
-	WebSocketStream,
-};
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use uuid::Uuid;
 
 use crate::{ctx::Ctx, utils};
@@ -108,11 +104,7 @@ impl Runner {
 		let _ = self.bump_channel.send(());
 	}
 
-	pub async fn attach_socket(
-		self: &Arc<Self>,
-		ctx: &Arc<Ctx>,
-		ws_stream: WebSocketStream<TcpStream>,
-	) -> Result<()> {
+	pub async fn attach_socket(self: &Arc<Self>, ctx: &Arc<Ctx>, stream: UnixStream) -> Result<()> {
 		match &self.comms {
 			Comms::Basic => bail!("attempt to attach socket to basic runner"),
 			Comms::Socket(tx) => {
@@ -120,36 +112,39 @@ impl Runner {
 
 				let mut guard = tx.lock().await;
 
-				if let Some(existing_ws_tx) = &mut *guard {
+				if let Some(existing_tx) = &mut *guard {
 					tracing::info!(runner_id=?self.runner_id, "runner received another socket, closing old one");
 
 					// Close the old socket
-					let close_frame = CloseFrame {
-						code: CloseCode::Error,
-						reason: "replacing with new socket".into(),
+					let buf = runner_protocol::encode_frame(&runner_protocol::ToRunner::Close {
+						reason: Some("replacing with new socket".into()),
+					})?;
+
+					if let Err(err) = existing_tx.send(buf.into()).await {
+						tracing::error!(runner_id=?self.runner_id, ?err, "failed to close old socket");
 					};
-					existing_ws_tx
-						.send(Message::Close(Some(close_frame)))
-						.await?;
 
 					tracing::info!(runner_id=?self.runner_id, "socket replaced");
 				} else {
 					tracing::info!(runner_id=?self.runner_id, "socket attached");
 				}
 
-				let (ws_tx, ws_rx) = ws_stream.split();
+				// Wrap the stream in a framed transport
+				let framed = Framed::new(stream, runner_protocol::codec());
+				let (tx, rx) = framed.split();
 
-				*guard = Some(ws_tx);
+				*guard = Some(tx);
 				self.bump();
 
+				// TODO: need to kill old handler thread
 				// Spawn a new thread to handle incoming messages
 				let self2 = self.clone();
 				let ctx2 = ctx.clone();
 				tokio::task::spawn(async move {
-					if let Err(err) = self2.receive_messages(&ctx2, ws_rx).await {
+					if let Err(err) = self2.receive_frames(&ctx2, rx).await {
 						tracing::error!(runner_id=?self2.runner_id, ?err, "socket error, killing runner");
 
-						if let Err(err) = self2.signal(Signal::SIGKILL).await {
+						if let Err(err) = self2.signal(&ctx2, Signal::SIGKILL).await {
 							tracing::error!(runner_id=?self2.runner_id, %err, "failed to kill runner");
 						}
 					}
@@ -160,52 +155,49 @@ impl Runner {
 		Ok(())
 	}
 
-	async fn receive_messages(
+	async fn receive_frames(
 		&self,
-		ctx: &Ctx,
-		mut ws_rx: SplitStream<WebSocketStream<TcpStream>>,
+		_ctx: &Ctx,
+		mut ws_rx: SplitStream<Framed<UnixStream, LengthDelimitedCodec>>,
 	) -> Result<()> {
 		loop {
-			match tokio::time::timeout(PING_TIMEOUT, ws_rx.next()).await {
-				Ok(msg) => match msg {
-					Some(Ok(Message::Ping(_))) => {
-						// Pongs are sent automatically
-					}
-					Some(Ok(Message::Close(_))) | None => {
-						tracing::debug!(runner_id=?self.runner_id, "runner socket closed");
-						break Ok(());
-					}
-					Some(Ok(Message::Binary(buf))) => {
-						let packet = serde_json::from_slice::<runner_protocol::ToManager>(&buf)?;
+			let Ok(frame) = tokio::time::timeout(PING_TIMEOUT, ws_rx.next()).await else {
+				bail!("runner socket ping timed out");
+			};
 
-						self.process_packet(ctx, packet).await?;
+			let Some(buf) = frame else {
+				tracing::debug!(runner_id=?self.runner_id, "runner socket closed");
+				break Ok(());
+			};
+
+			let (_, packet) = runner_protocol::decode_frame::<runner_protocol::ToManager>(&buf?).context("failed to decode frame")?;
+
+			tracing::debug!(?packet, "runner received packet");
+
+			match packet {
+				runner_protocol::ToManager::Ping { .. } => {
+					// TODO: Rate limit?
+					self.send(&runner_protocol::ToRunner::Pong).await?;
+				}
+				runner_protocol::ToManager::ActorStateUpdate {
+					actor_id,
+					generation,
+					state,
+				} => {
+					match self.config.image.allocation_type {
+						protocol::ImageAllocationType::Single => {
+							tracing::debug!("unexpected state update from non-multi runner");
+						}
+						protocol::ImageAllocationType::Multi => {
+							// NOTE: We don't have to verify if the actor id given here is valid because only valid actors
+							// are listening to this runner's `actor_observer_tx`. This means invalid messages are ignored.
+							// NOTE: No receivers is not an error
+							let _ = self.actor_observer_tx.send((actor_id, generation, state));
+						}
 					}
-					Some(Ok(packet)) => bail!("runner socket unexpected packet: {packet:?}"),
-					Some(Err(err)) => break Err(err).context("runner socket error"),
-				},
-				Err(_) => bail!("socket ping timed out"),
+				}
 			}
 		}
-	}
-
-	async fn process_packet(&self, ctx: &Ctx, packet: runner_protocol::ToManager) -> Result<()> {
-		tracing::debug!(?packet, "runner received packet");
-
-		match packet {
-			runner_protocol::ToManager::Init { .. } => bail!("unexpected second init packet"),
-			runner_protocol::ToManager::ActorStateUpdate {
-				actor_id,
-				generation,
-				state,
-			} => {
-				// NOTE: We don't have to verify if the actor id given here is valid because only valid actors
-				// are listening to this runner's `actor_observer_tx`. This means invalid messages are ignored.
-				// NOTE: No receivers is not an error
-				let _ = self.actor_observer_tx.send((actor_id, generation, state));
-			}
-		}
-
-		Ok(())
 	}
 
 	pub async fn send(&self, packet: &runner_protocol::ToRunner) -> Result<()> {
@@ -241,9 +233,9 @@ impl Runner {
 				})??;
 
 				let socket = guard.as_mut().expect("should exist");
-				let buf = serde_json::to_vec(packet)?;
+				let buf = runner_protocol::encode_frame(packet).context("failed to encode frame")?;
 				socket
-					.send(Message::Binary(buf))
+					.send(buf.into())
 					.await
 					.context("failed to send packet to socket")?;
 			}
@@ -272,9 +264,10 @@ impl Runner {
 					runner_id,
 					comms,
 					config,
+					image_id,
 					start_ts
 				)
-				VALUES (?1, ?2, ?3, ?4)
+				VALUES (?1, ?2, ?3, ?4, ?5)
 				ON CONFLICT (runner_id) DO NOTHING
 				",
 			))
@@ -285,6 +278,7 @@ impl Runner {
 				setup::Comms::Basic
 			} as i32)
 			.bind(&config_json)
+			.bind(self.config.image.id)
 			.bind(utils::now())
 			.execute(&mut *ctx.sql().await?)
 			.await
@@ -330,7 +324,7 @@ impl Runner {
 		Ok(proxied_ports)
 	}
 
-	async fn run(&self, ctx: &Ctx) -> Result<()> {
+	async fn run(&self, ctx: &Ctx, actor_id: Option<rivet_util::Id>) -> Result<()> {
 		// NOTE: This is the env that goes to the container-runner process, NOT the env that is inserted into
 		// the container.
 		let mut runner_env = vec![
@@ -345,6 +339,10 @@ impl Runner {
 			),
 			("RUNNER_ID", self.runner_id.to_string()),
 		];
+
+		if let Some(actor_id) = actor_id {
+			runner_env.push(("ACTOR_ID", actor_id.to_string()));
+		}
 
 		if let Some(vector) = &ctx.config().vector {
 			runner_env.push(("VECTOR_SOCKET_ADDR", vector.address.to_string()));
@@ -456,7 +454,7 @@ impl Runner {
 		ActorObserver::new(actor_id, generation, self.actor_observer_tx.subscribe())
 	}
 
-	pub async fn signal(&self, signal: Signal) -> Result<()> {
+	pub async fn signal(&self, ctx: &Ctx, signal: Signal) -> Result<()> {
 		// https://pubs.opengroup.org/onlinepubs/9699919799/functions/kill.html
 		if (signal as i32) < 1 {
 			bail!("signals < 1 not allowed");
@@ -471,6 +469,45 @@ impl Runner {
 			}
 			Err(err) => return Err(err.into()),
 		}
+
+		// Update DB
+		utils::sql::query(|| async {
+			let mut conn = ctx.sql().await?;
+			let mut tx = conn.begin().await?;
+
+			sqlx::query(indoc!(
+				"
+				UPDATE runners
+				SET
+					stop_ts = ?2
+				WHERE
+					runner_id = ?1 AND
+					stop_ts IS NULL
+				",
+			))
+			.bind(self.runner_id)
+			.bind(utils::now())
+			.execute(&mut *tx)
+			.await?;
+
+			// Update LRU cache
+			sqlx::query(indoc!(
+				"
+				UPDATE images_cache
+				SET last_used_ts = ?2
+				WHERE image_id = ?1
+				",
+			))
+			.bind(self.config.image.id)
+			.bind(utils::now())
+			.execute(&mut *tx)
+			.await?;
+
+			tx.commit().await?;
+
+			Ok(())
+		})
+		.await?;
 
 		Ok(())
 	}
@@ -625,7 +662,7 @@ impl Runner {
 
 pub enum Comms {
 	Basic,
-	Socket(Mutex<Option<SplitSink<WebSocketStream<TcpStream>, Message>>>),
+	Socket(Mutex<Option<SplitSink<Framed<UnixStream, LengthDelimitedCodec>, Bytes>>>),
 }
 
 impl Comms {

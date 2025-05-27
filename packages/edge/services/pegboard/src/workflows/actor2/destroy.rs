@@ -4,7 +4,7 @@ use fdb_util::{end_of_key_range, FormalKey, SERIALIZABLE};
 use foundationdb::{self as fdb, options::ConflictRangeType};
 use nix::sys::signal::Signal;
 
-use super::{DestroyComplete, DestroyStarted};
+use super::{analytics::InsertClickHouseInput, DestroyComplete, DestroyStarted};
 use crate::{keys, protocol, types::GameGuardProtocol};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,6 +74,13 @@ pub(crate) async fn pegboard_actor_destroy(
 			.await?;
 		}
 	}
+
+	// Update ClickHouse analytics with destroyed timestamp
+	ctx.v(2)
+		.activity(InsertClickHouseInput {
+			actor_id: input.actor_id,
+		})
+		.await?;
 
 	ctx.msg(DestroyComplete {})
 		.tag("actor_id", input.actor_id)

@@ -1,4 +1,4 @@
-use std::{env, io::Cursor, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
+use std::{env, io::{Write, Cursor}, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::*;
 use bytes::Bytes;
@@ -69,8 +69,8 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 		.length_field_offset(0)
 		// Header length is not included in the length calculation
 		.length_adjustment(4)
-		// header is included in the returned bytes
-		.num_skip(0)
+		// Skip length, but header is included in the returned bytes
+		.num_skip(4)
 		.new_codec();
 
 	let framed = Framed::new(stream, codec);
@@ -86,7 +86,7 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 			tokio::time::sleep(PING_INTERVAL).await;
 
 			let payload = json!({
-				"ping": {}
+				"ping": null
 			});
 
 			if write2
@@ -103,7 +103,7 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 
 	// Process incoming messages
 	while let Some(frame) = read.next().await.transpose()? {
-		let (_, packet) = decode_frame::<serde_json::Value>(&frame.freeze())?;
+		let (_, packet) = decode_frame::<serde_json::Value>(&frame.freeze()).context("failed to decode frame")?;
 		println!("Received packet: {packet:?}");
 
 		if let Some(packet) = packet.get("start_actor") {
@@ -117,7 +117,7 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 				},
 			});
 
-			write.lock().await.send(encode_frame(&payload)?).await?;
+			write.lock().await.send(encode_frame(&payload).context("failed to encode frame")?).await?;
 		} else if let Some(packet) = packet.get("signal_actor") {
 			let payload = json!({
 				"actor_state_update": {
@@ -139,6 +139,19 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 	Ok(())
 }
 
+fn encode_frame<T: Serialize>(payload: &T) -> Result<Bytes> {
+	let mut buf = Vec::with_capacity(4);
+	let mut cursor = Cursor::new(&mut buf);
+
+	cursor.write(&[0u8; 4]); // header (currently unused)
+
+	serde_json::to_writer(&mut cursor, payload)?;
+
+	cursor.flush()?;
+	
+	Ok(buf.into())
+}
+
 fn decode_frame<T: DeserializeOwned>(frame: &Bytes) -> Result<([u8; 4], T)> {
 	ensure!(frame.len() >= 4, "Frame too short");
 
@@ -149,14 +162,4 @@ fn decode_frame<T: DeserializeOwned>(frame: &Bytes) -> Result<([u8; 4], T)> {
 	let payload = serde_json::from_slice(&frame[4..])?;
 
 	Ok((header, payload))
-}
-
-fn encode_frame<T: Serialize>(payload: &T) -> Result<Bytes> {
-	let mut buf = Vec::with_capacity(4);
-	buf.extend_from_slice(&[0u8; 4]); // header (currently unused)
-
-	let mut cursor = Cursor::new(&mut buf);
-	serde_json::to_writer(&mut cursor, payload)?;
-
-	Ok(buf.into())
 }

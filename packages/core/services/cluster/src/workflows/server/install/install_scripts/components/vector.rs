@@ -81,7 +81,7 @@ pub fn configure(namespace: &str, config: &Config, pool_type: PoolType) -> Globa
 		}
 	});
 
-	// Add pegboard manager and runner logs
+	// Add pegboard manager and actor logs
 	match pool_type {
 		PoolType::Pegboard | PoolType::PegboardIsolate => {
 			config_json["sources"]["pegboard_manager"] = json!({

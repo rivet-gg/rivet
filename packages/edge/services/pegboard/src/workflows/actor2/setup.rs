@@ -1,10 +1,14 @@
 use build::types::{BuildAllocationType, BuildCompression, BuildKind, BuildResources};
 use chirp_workflow::prelude::*;
 use cluster::types::BuildDeliveryMethod;
-use fdb_util::FormalKey;
-use foundationdb as fdb;
+use fdb_util::{end_of_key_range, FormalKey, SNAPSHOT};
+use foundationdb::{
+	self as fdb,
+	options::{ConflictRangeType, StreamingMode},
+};
+use futures_util::TryStreamExt;
+use rand::Rng;
 use sqlx::Acquire;
-use util::serde::AsHashableExt;
 
 use super::{Input, Port};
 use crate::{
@@ -291,18 +295,15 @@ struct InsertDbInput {
 	args: Vec<String>,
 	network_mode: NetworkMode,
 	environment: util::serde::HashableMap<String, String>,
-	network_ports: util::serde::HashableMap<String, Port>,
 }
 
 #[activity(InsertDb)]
 async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64> {
 	let pool = ctx.sqlite().await?;
-	let mut conn = pool.conn().await?;
-	let mut tx = conn.begin().await?;
 	let create_ts = ctx.ts();
 
 	sql_execute!(
-		[ctx, @tx &mut tx]
+		[ctx, &pool]
 		"
 		INSERT INTO state (
 			env_id,
@@ -333,6 +334,25 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 	)
 	.await?;
 
+	Ok(create_ts)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+struct AllocateIngressPortsInput {
+	actor_id: util::Id,
+	network_ports: util::serde::HashableMap<String, Port>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AllocateIngressPortsOutput {
+	ports: Vec<(GameGuardProtocol, Vec<u16>)>,
+}
+
+#[activity(AllocateIngressPorts)]
+async fn allocate_ingress_ports(
+	ctx: &ActivityCtx,
+	input: &AllocateIngressPortsInput,
+) -> GlobalResult<AllocateIngressPortsOutput> {
 	// Count up ports per protocol
 	let mut port_counts = Vec::new();
 	for (_, port) in &input.network_ports {
@@ -353,7 +373,8 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 		}
 	}
 
-	// TODO: Move this from an op to an activity, and move the sql queries after to their own activity
+	let gg_config = &ctx.config().server()?.rivet.guard;
+
 	// Choose which port to assign for a job's ingress port.
 	// This is required because TCP and UDP do not have a `Host` header and thus cannot be re-routed by hostname.
 	//
@@ -362,19 +383,189 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 	// - HTTPS: 443
 	// - TCP/TLS: random
 	// - UDP: random
-	let ingress_ports_res = ctx
-		.op(crate::ops::actor::allocate_ingress_ports::Input {
-			actor_id: input.actor_id,
-			ports: port_counts,
+	let ports = ctx
+		.fdb()
+		.await?
+		.run(|tx, _mc| {
+			let port_counts = port_counts.clone();
+			async move {
+				let mut results = Vec::new();
+
+				// TODO: Parallelize
+				for (protocol, count) in &port_counts {
+					// Determine port range per protocol
+					let port_range = match protocol {
+						GameGuardProtocol::Http | GameGuardProtocol::Https => {
+							return Err(fdb::FdbBindingError::CustomError(
+								"Dynamic allocation not implemented for http/https ports".into(),
+							));
+						}
+						GameGuardProtocol::Tcp | GameGuardProtocol::TcpTls => {
+							gg_config.min_ingress_port_tcp()..=gg_config.max_ingress_port_tcp()
+						}
+						GameGuardProtocol::Udp => {
+							gg_config.min_ingress_port_udp()..=gg_config.max_ingress_port_udp()
+						}
+					};
+
+					let mut last_port = None;
+					let mut ports = Vec::new();
+
+					// Choose a random starting port for better spread and less cache hits
+					let mut start = {
+						// It is important that we don't start at the end of the range so that the logic with
+						// `last_port` works correctly
+						let exclusive_port_range = *port_range.start()..*port_range.end();
+						rand::thread_rng().gen_range(exclusive_port_range)
+					};
+
+					// Build start and end keys for ingress ports subspace
+					let start_key = keys::subspace()
+						.subspace(&keys::port::IngressKey2::subspace(*protocol, start))
+						.range()
+						.0;
+					let end_key = keys::subspace()
+						.subspace(&keys::port::IngressKey2::subspace(
+							*protocol,
+							*port_range.end(),
+						))
+						.range()
+						.1;
+					let mut stream = tx.get_ranges_keyvalues(
+						fdb::RangeOption {
+							mode: StreamingMode::Iterator,
+							..(start_key, end_key.clone()).into()
+						},
+						// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys,
+						// just the one we choose
+						SNAPSHOT,
+					);
+
+					// Continue iterating over the same stream until all of the required ports are found
+					for _ in 0..*count {
+						// Iterate through the subspace range until a port is found
+						let port = loop {
+							let Some(entry) = stream.try_next().await? else {
+								match last_port {
+									Some(port) if port == *port_range.end() => {
+										// End of range reached, start a new range read from the beginning (wrap around)
+										if start != *port_range.start() {
+											last_port = None;
+
+											let old_start = start;
+											start = *port_range.start();
+
+											let start_key = keys::subspace()
+												.subspace(&keys::port::IngressKey2::subspace(
+													*protocol, start,
+												))
+												.range()
+												.0;
+											stream = tx.get_ranges_keyvalues(
+												fdb::RangeOption {
+													mode: StreamingMode::Iterator,
+													limit: Some(old_start as usize),
+													..(start_key, end_key.clone()).into()
+												},
+												// NOTE: This is not SERIALIZABLE because we don't want to conflict
+												// with all of the keys, just the one we choose
+												SNAPSHOT,
+											);
+
+											continue;
+										} else {
+											break None;
+										}
+									}
+									// Return port after last port
+									Some(last_port) => {
+										break Some(last_port + 1);
+									}
+									// No ports were returned (range is empty)
+									None => {
+										break Some(start);
+									}
+								}
+							};
+
+							let key = keys::subspace()
+								.unpack::<keys::port::IngressKey2>(entry.key())
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+							let current_port = key.port;
+
+							if let Some(last_port) = last_port {
+								// Gap found
+								if current_port != last_port + 1 {
+									break Some(last_port + 1);
+								}
+							}
+
+							last_port = Some(current_port);
+						};
+
+						let Some(port) = port else {
+							return Err(fdb::FdbBindingError::CustomError(
+								format!("not enough {protocol} ports available").into(),
+							));
+						};
+
+						let ingress_port_key =
+							keys::port::IngressKey2::new(*protocol, port, input.actor_id);
+						let ingress_port_key_buf = keys::subspace().pack(&ingress_port_key);
+
+						// Add read conflict only for this key
+						tx.add_conflict_range(
+							&ingress_port_key_buf,
+							&end_of_key_range(&ingress_port_key_buf),
+							ConflictRangeType::Read,
+						)?;
+
+						// Set key
+						tx.set(
+							&ingress_port_key_buf,
+							&ingress_port_key
+								.serialize(())
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
+
+						ports.push(port);
+					}
+
+					results.push((*protocol, ports));
+				}
+
+				Ok(results)
+			}
 		})
+		.custom_instrument(tracing::info_span!("allocate_ingress_ports_tx"))
 		.await?;
-	let mut ingress_ports = ingress_ports_res
-		.ports
-		.into_iter()
-		.map(|(protocol, ports)| (protocol, ports.into_iter()))
-		.collect::<Vec<_>>();
+
+	Ok(AllocateIngressPortsOutput { ports })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+struct InsertIngressPortsInput {
+	actor_id: util::Id,
+	network_ports: util::serde::HashableMap<String, Port>,
+	ingress_ports: Vec<(GameGuardProtocol, Vec<u16>)>,
+}
+
+#[activity(InsertIngressPorts)]
+async fn insert_ingress_ports(
+	ctx: &ActivityCtx,
+	input: &InsertIngressPortsInput,
+) -> GlobalResult<()> {
+	let pool = ctx.sqlite().await?;
+	let mut conn = pool.conn().await?;
+	let mut tx = conn.begin().await?;
 
 	let gg_config = &ctx.config().server()?.rivet.guard;
+	let mut ingress_ports = input
+		.ingress_ports
+		.iter()
+		.map(|(protocol, ports)| (protocol, ports.clone().into_iter()))
+		.collect::<Vec<_>>();
+
 	for (name, port) in input.network_ports.iter() {
 		match port.routing {
 			Routing::GameGuard { protocol } => {
@@ -397,7 +588,7 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 						GameGuardProtocol::Https => gg_config.https_port(),
 						GameGuardProtocol::Tcp | GameGuardProtocol::TcpTls | GameGuardProtocol::Udp => {
 							let (_, ports_iter) = unwrap!(
-								ingress_ports.iter_mut().find(|(p, _)| &protocol == p)
+								ingress_ports.iter_mut().find(|(p, _)| &&protocol == p)
 							);
 							unwrap!(ports_iter.next(), "missing ingress port")
 						},
@@ -427,7 +618,7 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 
 	tx.commit().await?;
 
-	Ok(create_ts)
+	Ok(())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
@@ -548,6 +739,38 @@ async fn get_meta(ctx: &ActivityCtx, input: &GetMetaInput) -> GlobalResult<GetMe
 	})
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+struct InsertMetaInput {
+	project_id: Uuid,
+	build_kind: BuildKind,
+	build_compression: BuildCompression,
+	root_user_enabled: bool,
+}
+
+#[activity(InsertMeta)]
+async fn insert_meta(ctx: &ActivityCtx, input: &InsertMetaInput) -> GlobalResult<()> {
+	let pool = ctx.sqlite().await?;
+
+	sql_execute!(
+		[ctx, pool]
+		"
+		UPDATE state
+		SET
+			project_id = ?,
+			build_kind = ?,
+			build_compression = ?,
+			root_user_enabled = ?
+		",
+		input.project_id,
+		input.build_kind as i64,
+		input.build_compression as i64,
+		input.root_user_enabled,
+	)
+	.await?;
+
+	Ok(())
+}
+
 pub enum SetupCtx {
 	Init {
 		network_ports: util::serde::HashableMap<String, Port>,
@@ -563,7 +786,9 @@ pub struct ActorSetupCtx {
 	pub meta: GetMetaOutput,
 	pub resources: protocol::Resources,
 	pub artifact_url_stub: String,
-	pub fallback_artifact_url: Option<String>,
+	pub fallback_artifact_url: String,
+	/// Bytes.
+	pub artifact_size: u64,
 }
 
 pub async fn setup(
@@ -573,7 +798,7 @@ pub async fn setup(
 ) -> GlobalResult<ActorSetupCtx> {
 	let image_id = match setup {
 		SetupCtx::Init { network_ports } => {
-			let tags = input.tags.as_hashable();
+			let tags = input.tags.clone();
 			let create_ts = ctx
 				.activity(InsertDbInput {
 					actor_id: input.actor_id,
@@ -584,10 +809,23 @@ pub async fn setup(
 					image_id: input.image_id,
 					args: input.args.clone(),
 					network_mode: input.network_mode,
-					environment: input.environment.as_hashable(),
-					network_ports,
+					environment: input.environment.clone(),
 				})
 				.await?;
+
+			let ingress_ports_res = ctx
+				.activity(AllocateIngressPortsInput {
+					actor_id: input.actor_id,
+					network_ports: network_ports.clone(),
+				})
+				.await?;
+
+			ctx.activity(InsertIngressPortsInput {
+				actor_id: input.actor_id,
+				network_ports,
+				ingress_ports: ingress_ports_res.ports,
+			})
+			.await?;
 
 			ctx.activity(InsertFdbInput {
 				actor_id: input.actor_id,
@@ -606,6 +844,15 @@ pub async fn setup(
 		.activity(GetMetaInput {
 			env_id: input.env_id,
 			image_id,
+		})
+		.await?;
+
+	ctx.v(2)
+		.activity(InsertMetaInput {
+			project_id: meta.project_id,
+			build_kind: meta.build_kind,
+			build_compression: meta.build_compression,
+			root_user_enabled: input.root_user_enabled,
 		})
 		.await?;
 
@@ -647,6 +894,7 @@ pub async fn setup(
 		resources,
 		artifact_url_stub: artifacts_res.artifact_url_stub,
 		fallback_artifact_url: artifacts_res.fallback_artifact_url,
+		artifact_size: artifacts_res.artifact_size,
 	})
 }
 
@@ -723,7 +971,9 @@ struct ResolveArtifactsInput {
 #[derive(Debug, Serialize, Deserialize, Hash)]
 struct ResolveArtifactsOutput {
 	artifact_url_stub: String,
-	fallback_artifact_url: Option<String>,
+	fallback_artifact_url: String,
+	/// Bytes.
+	artifact_size: u64,
 }
 
 #[activity(ResolveArtifacts)]
@@ -731,40 +981,45 @@ async fn resolve_artifacts(
 	ctx: &ActivityCtx,
 	input: &ResolveArtifactsInput,
 ) -> GlobalResult<ResolveArtifactsOutput> {
-	let fallback_artifact_url =
-		if let BuildDeliveryMethod::S3Direct = input.dc_build_delivery_method {
-			tracing::debug!("using s3 direct delivery");
+	// Get the fallback URL
+	let fallback_artifact_url = {
+		tracing::debug!("using s3 direct delivery");
 
-			// Build client
-			let s3_client = s3_util::Client::with_bucket_and_endpoint(
-				ctx.config(),
-				"bucket-build",
-				s3_util::EndpointKind::EdgeInternal,
+		// Build client
+		let s3_client = s3_util::Client::with_bucket_and_endpoint(
+			ctx.config(),
+			"bucket-build",
+			s3_util::EndpointKind::EdgeInternal,
+		)
+		.await?;
+
+		let presigned_req = s3_client
+			.get_object()
+			.bucket(s3_client.bucket())
+			.key(format!(
+				"{upload_id}/{file_name}",
+				upload_id = input.build_upload_id,
+				file_name = input.build_file_name,
+			))
+			.presigned(
+				s3_util::aws_sdk_s3::presigning::PresigningConfig::builder()
+					.expires_in(std::time::Duration::from_secs(15 * 60))
+					.build()?,
 			)
 			.await?;
 
-			let presigned_req = s3_client
-				.get_object()
-				.bucket(s3_client.bucket())
-				.key(format!(
-					"{upload_id}/{file_name}",
-					upload_id = input.build_upload_id,
-					file_name = input.build_file_name,
-				))
-				.presigned(
-					s3_util::aws_sdk_s3::presigning::PresigningConfig::builder()
-						.expires_in(std::time::Duration::from_secs(15 * 60))
-						.build()?,
-				)
-				.await?;
+		let addr_str = presigned_req.uri().to_string();
+		tracing::debug!(addr = %addr_str, "resolved artifact s3 presigned request");
 
-			let addr_str = presigned_req.uri().to_string();
-			tracing::debug!(addr = %addr_str, "resolved artifact s3 presigned request");
+		addr_str
+	};
 
-			Some(addr_str)
-		} else {
-			None
-		};
+	// Get the artifact size
+	let uploads_res = op!([ctx] upload_get {
+		upload_ids: vec![input.build_upload_id.into()],
+	})
+	.await?;
+	let upload = unwrap!(uploads_res.uploads.first());
 
 	Ok(ResolveArtifactsOutput {
 		artifact_url_stub: crate::util::image_artifact_url_stub(
@@ -773,5 +1028,6 @@ async fn resolve_artifacts(
 			&input.build_file_name,
 		)?,
 		fallback_artifact_url,
+		artifact_size: upload.content_length,
 	})
 }

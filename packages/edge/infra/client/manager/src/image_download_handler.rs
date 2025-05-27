@@ -113,14 +113,14 @@ impl ImageDownloadHandler {
 
 				// Prune images
 				//
-				// HACK: The artifact_size_bytes here is somewhat misleading because its only the size of the
+				// HACK: The artifact_size here is somewhat misleading because its only the size of the
 				// downloaded archive and not the total disk usage after it is unpacked. However, this is size
 				// is recalculated later once decompressed, so this will only ever exceed the cache
 				// size limit in edge cases by `actual size - compressed size`. In this situation,
-				// that extra difference is already reserved on the file system by the actor
+				// that extra difference is already reserved on the file system by the runner
 				// itself.
 				let (removed_count, removed_bytes) = if images_dir_size as u64
-					+ image_config.artifact_size_bytes
+					+ image_config.artifact_size
 					> ctx.config().images.max_cache_size()
 				{
 					// Fetch as many images as it takes to clear up enough space for this new image.
@@ -137,15 +137,15 @@ impl ImageDownloadHandler {
 										OVER (ORDER BY ic.last_used_ts ROWS UNBOUNDED PRECEDING)
 										AS running_total
 								FROM images_cache AS ic
-								LEFT JOIN actors AS a
-								-- Filter out images that are currently in use by actors
+								LEFT JOIN runners AS r
+								-- Filter out images that are currently in use by runners
 								ON
-									ic.image_id = a.image_id AND
-									a.stop_ts IS NULL
+									ic.image_id = r.image_id AND
+									r.stop_ts IS NULL
 								WHERE
 									-- Filter out current image, will be upserted
 									ic.image_id != ?1 AND
-									a.image_id IS NULL
+									r.image_id IS NULL
 								ORDER BY ic.last_used_ts
 							)
 						SELECT image_id, size
@@ -157,7 +157,7 @@ impl ImageDownloadHandler {
 					.bind(image_config.id)
 					.bind(
 						(images_dir_size as u64)
-							.saturating_add(image_config.artifact_size_bytes)
+							.saturating_add(image_config.artifact_size)
 							.saturating_sub(ctx.config().images.max_cache_size()) as i64,
 					)
 					.fetch_all(&mut *tx)
@@ -202,7 +202,7 @@ impl ImageDownloadHandler {
 
 				metrics::IMAGE_CACHE_COUNT.set(cache_count + 1 - removed_count);
 				metrics::IMAGE_CACHE_SIZE
-					.set(images_dir_size + image_config.artifact_size_bytes as i64 - removed_bytes);
+					.set(images_dir_size + image_config.artifact_size as i64 - removed_bytes);
 
 				sqlx::query(indoc!(
 					"
