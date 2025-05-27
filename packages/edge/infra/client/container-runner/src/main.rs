@@ -58,7 +58,17 @@ fn main() -> Result<()> {
 
 	// Run the container
 	let exit_code = match container::run(msg_tx.clone(), &actor_path, root_user_enabled) {
-		Result::Ok(exit_code) => exit_code,
+		Result::Ok(exit_code) => {
+			eprintln!("run container exited: {exit_code}");
+			container::send_message(
+				&msg_tx,
+				None,
+				log_shipper::StreamType::StdErr,
+				format!("Exited with exit code {exit_code}"),
+			);
+
+			exit_code
+		}
 		Err(err) => {
 			eprintln!("run container failed: {err:?}");
 			container::send_message(
