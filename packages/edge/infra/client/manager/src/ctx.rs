@@ -220,44 +220,6 @@ impl Ctx {
 
 		self.receive_init(&mut rx).await?;
 
-		// Start runner socket and attaches incoming connections to their corresponding runner
-		let self2 = self.clone();
-		let runner_socket: tokio::task::JoinHandle<Result<()>> = tokio::spawn(async move {
-			tracing::info!(port=%self2.config().runner.port(), "listening for runner sockets");
-
-			let listener =
-				TcpListener::bind((self2.config().runner.ip(), self2.config().runner.port()))
-					.await
-					.map_err(RuntimeError::RunnerSocketListenFailed)?;
-
-			loop {
-				match listener.accept().await {
-					Ok((stream, _)) => {
-						let mut ws_stream = Some(tokio_tungstenite::accept_async(stream).await?);
-
-						tracing::info!("received new socket");
-
-						if let Err(err) = self2.receive_runner_init_message(&mut ws_stream).await {
-							tracing::error!(
-								?err,
-								"failed to receive init message from runner socket"
-							);
-						}
-
-						// Close stream
-						if let Some(mut ws_stream) = ws_stream {
-							let close_frame = CloseFrame {
-								code: CloseCode::Error,
-								reason: "init failed".into(),
-							};
-							ws_stream.send(Message::Close(Some(close_frame))).await?;
-						}
-					}
-					Err(err) => tracing::error!(?err, "failed to connect websocket"),
-				}
-			}
-		});
-
 		// Start ping thread after init packet is received because ping denotes this client as "ready"
 		let self2 = self.clone();
 		let ping_thread: tokio::task::JoinHandle<Result<()>> = tokio::spawn(async move {
@@ -549,63 +511,6 @@ impl Ctx {
 		Ok(())
 	}
 
-	async fn receive_runner_init_message(
-		self: &Arc<Self>,
-		ws_stream: &mut Option<WebSocketStream<TcpStream>>,
-	) -> Result<()> {
-		match tokio::time::timeout(
-			RUNNER_INIT_TIMEOUT,
-			ws_stream.as_mut().context("ws_stream should exist")?.next(),
-		)
-		.await
-		{
-			Ok(msg) => match msg {
-				Some(Ok(Message::Close(_))) | None => {
-					tracing::debug!("runner socket closed");
-					Ok(())
-				}
-				Some(Ok(Message::Binary(buf))) => {
-					match serde_json::from_slice::<runner_protocol::ToManager>(&buf) {
-						Ok(runner_protocol::ToManager::Init { access_token }) => {
-							let claims = Claims::decode(&access_token, self.secret())
-								.context("could not decode access token from init packet")?;
-
-							// Read runner id from claims
-							let runner_id = 'ent: {
-								for ent in claims.ent() {
-									#[allow(irrefutable_let_patterns)]
-									if let Entitlement::Runner { runner_id } = ent {
-										break 'ent runner_id;
-									}
-								}
-
-								bail!("no runner entitlement");
-							};
-
-							if let Some(runner) = self.runners.read().await.get(&runner_id) {
-								runner
-									.attach_socket(
-										self,
-										ws_stream.take().context("ws_stream should exist")?,
-									)
-									.await?;
-
-								Ok(())
-							} else {
-								bail!("killing unknown runner: {runner_id}");
-							}
-						}
-						Ok(packet) => bail!("invalid init packet from runner: {packet:?}"),
-						Err(err) => Err(err).context("invalid init packet from runner"),
-					}
-				}
-				Some(Ok(packet)) => bail!("invalid init packet from runner: {packet:?}"),
-				Some(Err(err)) => Err(err).context("runner socket error"),
-			},
-			Err(_) => bail!("runner socket init timed out"),
-		}
-	}
-
 	/// Returns None if the runner could not be found in the runners map on time.
 	async fn get_or_create_runner(
 		&self,
@@ -892,6 +797,10 @@ impl Ctx {
 			let runner = runner.clone();
 			let self2 = self.clone();
 			tokio::spawn(async move {
+				// The socket file already exists, this will reconnect and spawn the appropriate task to
+				// handle the connection
+				runner.start_socket(&self2).await?;
+
 				if let Err(err) = runner.observe(&self2, false).await {
 					tracing::error!(?runner_id, ?err, "observe failed");
 				}

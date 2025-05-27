@@ -175,7 +175,7 @@ pub async fn gen_initialize(
 				"pegboard".into(),
 				components::vector::PrometheusTarget {
 					// Should match port from pb manager config
-					endpoint: "http://127.0.0.1:6090".into(),
+					endpoint: "http://127.0.0.1:8091".into(),
 					scrape_interval: 15,
 				},
 			);
@@ -190,7 +190,7 @@ pub async fn gen_initialize(
 				"pegboard".into(),
 				components::vector::PrometheusTarget {
 					// Should match port from pb manager config
-					endpoint: "http://127.0.0.1:6090".into(),
+					endpoint: "http://127.0.0.1:8091".into(),
 					scrape_interval: 15,
 				},
 			);

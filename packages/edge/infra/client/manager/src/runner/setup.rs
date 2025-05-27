@@ -59,7 +59,7 @@ impl Runner {
 		tracing::info!(runner_id=?self.runner_id, "starting setup tasks");
 		let tasks_start_instant = Instant::now();
 
-		let (_, ports) = tokio::try_join!(
+		let (_, ports, _) = tokio::try_join!(
 			async {
 				self.make_fs(&ctx).await?;
 				self.download_image(&ctx).await?;
@@ -75,6 +75,13 @@ impl Runner {
 
 				Ok(ports)
 			},
+			async {
+				if is_multi {
+					self.start_socket(&ctx).await?;
+				}
+
+				Ok(())
+			}
 		)?;
 
 		crate::metrics::SETUP_PARALLEL_TASKS_DURATION
@@ -298,6 +305,34 @@ impl Runner {
 			.unwrap_or_else(|| anyhow!("failed to download image from any available URL")))
 	}
 
+	async fn start_socket(self: &Arc<Self>, ctx: &Ctx) -> Result<()> {
+		tracing::info!(runner_id=?self.runner_id, "starting socket");
+
+		let runner_path = ctx.runner_path(self.runner_id);
+		let socket_path = runner_path.join("manager.sock"); // Should match path in oci_config.rs
+
+		// Bind the listener (creates the socket file or reconnects if it already exists)
+		let listener = UnixListener::bind(&socket_path)?;
+
+		// NOTE: This task and listener do not have to be cleaned up manually because they will stop when the
+		// socket file is deleted (upon `cleanup_setup` call).
+		let self2 = self.clone();
+		tokio::task::spawn(async move {
+			loop {
+				if let Err(err) = self2.handle_socket(&listener).await {
+					tracing::error!(runner_id=?self2.runner_id, "socket listener failed");
+					self2.cleanup().await?;
+				}
+			}
+		});
+	}
+
+	async fn handle_socket(&self, listener: u32) -> Result<()> {
+		let (stream, _) = listener.accept().await?;
+
+		self.attach_socket(stream).await
+	}
+
 	pub async fn setup_oci_bundle(
 		&self,
 		ctx: &Ctx,
@@ -425,6 +460,7 @@ impl Runner {
 			cpu: self.config.resources.cpu,
 			memory: self.config.resources.memory,
 			memory_max: self.config.resources.memory_max,
+			mount_socket: is_multi,
 		})?;
 		// Parallelize file writes for better performance
 		// Prepare content for all files before writing
@@ -895,24 +931,13 @@ impl Runner {
 		}
 	}
 
-	// Path to the created namespace
-	fn netns_path(&self) -> PathBuf {
-		if let protocol::NetworkMode::Host = self.config.network_mode {
-			// Host network
-			Path::new("/proc/1/ns/net").to_path_buf()
-		} else {
-			// CNI network that will be created
-			Path::new("/var/run/netns").join(self.runner_id.to_string())
-		}
-	}
-
 	fn build_default_env(
 		&self,
 		ctx: &Ctx,
 		ports: &protocol::HashableMap<String, protocol::ProxiedPort>,
 		access_token: &str,
 	) -> HashMap<String, String> {
-		self.config
+		let iter = self.config
 			.env
 			.iter()
 			.map(|(k, v)| (k.clone(), v.clone()))
@@ -938,7 +963,34 @@ impl Runner {
 				),
 				("RIVET_ACCESS_TOKEN".to_string(), access_token.to_string()),
 			])
+			// Add socket path env var only if needed
+			.chain([
+				if is_multi {
+					Some((
+						"RIVET_MANAGER_SOCKET_PATH",
+						oci_config::socket_mount_dest_path()
+							.to_str()
+							.expect("invalid `socket_mount_dest_path`")
+							.to_string(),
+					))
+				} else {
+					None
+				}
+			].into_iter().flatten())
 			.collect()
+	}
+}
+
+impl Runner {
+	// Path to the created namespace
+	fn netns_path(&self) -> PathBuf {
+		if let protocol::NetworkMode::Host = self.config.network_mode {
+			// Host network
+			Path::new("/proc/1/ns/net").to_path_buf()
+		} else {
+			// CNI network that will be created
+			Path::new("/var/run/netns").join(self.runner_id.to_string())
+		}
 	}
 }
 
