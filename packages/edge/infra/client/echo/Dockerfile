@@ -17,16 +17,20 @@ RUN useradd -m -d /home/nonroot -s /bin/sh nonroot
 RUN grep nonroot /etc/passwd > /passwd && \
     grep nonroot /etc/group > /group
 
-# Create an empty image and copy binaries into it to minimize the size of the image
-FROM scratch
-
-# Copy passwd and group files
-COPY --from=rust /passwd /etc/passwd
-COPY --from=rust /group /etc/group
-
-COPY --from=rust /app/dist/ /
-
-# Switch to the non-root user
 USER nonroot
 
-CMD ["/pegboard-echo-server"]
+CMD ["/app/dist/pegboard-echo-server"]
+
+# # Create an empty image and copy binaries into it to minimize the size of the image
+# FROM scratch
+
+# # Copy passwd and group files
+# COPY --from=rust /passwd /etc/passwd
+# COPY --from=rust /group /etc/group
+
+# COPY --from=rust /app/dist/ /
+
+# # Switch to the non-root user
+# USER nonroot
+
+# CMD ["/pegboard-echo-server"]

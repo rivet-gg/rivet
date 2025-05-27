@@ -402,36 +402,6 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
-struct InsertMetaInput {
-	meta: GetMetaOutput,
-	root_user_enabled: bool,
-}
-
-#[activity(InsertMeta)]
-async fn insert_meta(ctx: &ActivityCtx, input: &InsertMetaInput) -> GlobalResult<()> {
-	let pool = ctx.sqlite().await?;
-
-	sql_execute!(
-		[ctx, pool]
-		"
-		UPDATE state
-		SET
-			project_id = ?,
-			build_kind = ?,
-			build_compression = ?,
-			root_user_enabled = ?
-		",
-		input.meta.project_id,
-		input.meta.build_kind as i64,
-		input.meta.build_compression as i64,
-		input.root_user_enabled,
-	)
-	.await?;
-
-	Ok(())
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 struct InsertFdbInput {
 	actor_id: Uuid,
 	env_id: Uuid,
@@ -543,6 +513,36 @@ pub async fn get_meta(ctx: &ActivityCtx, input: &GetMetaInput) -> GlobalResult<G
 	})
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+struct InsertMetaInput {
+	meta: GetMetaOutput,
+	root_user_enabled: bool,
+}
+
+#[activity(InsertMeta)]
+async fn insert_meta(ctx: &ActivityCtx, input: &InsertMetaInput) -> GlobalResult<()> {
+	let pool = ctx.sqlite().await?;
+
+	sql_execute!(
+		[ctx, pool]
+		"
+		UPDATE state
+		SET
+			project_id = ?,
+			build_kind = ?,
+			build_compression = ?,
+			root_user_enabled = ?
+		",
+		input.meta.project_id,
+		input.meta.build_kind as i64,
+		input.meta.build_compression as i64,
+		input.root_user_enabled,
+	)
+	.await?;
+
+	Ok(())
+}
+
 pub enum SetupCtx {
 	Init {
 		network_ports: util::serde::HashableMap<String, Port>,
@@ -559,7 +559,6 @@ pub struct ActorSetupCtx {
 	pub resources: protocol::Resources,
 	pub artifact_url_stub: String,
 	pub fallback_artifact_url: Option<String>,
-	pub artifact_size_bytes: u64,
 }
 
 pub async fn setup(
@@ -631,7 +630,6 @@ pub async fn setup(
 		resources,
 		artifact_url_stub: artifacts_res.artifact_url_stub,
 		fallback_artifact_url: artifacts_res.fallback_artifact_url,
-		artifact_size_bytes: artifacts_res.artifact_size_bytes,
 	})
 }
 
@@ -710,7 +708,7 @@ struct ResolveArtifactsOutput {
 	artifact_url_stub: String,
 	fallback_artifact_url: Option<String>,
 	#[serde(default)]
-	artifact_size_bytes: u64,
+	artifact_size: u64,
 }
 
 #[activity(ResolveArtifacts)]
@@ -748,7 +746,7 @@ async fn resolve_artifacts(
 		let addr_str = presigned_req.uri().to_string();
 		tracing::debug!(addr = %addr_str, "resolved artifact s3 presigned request");
 
-		Some(addr_str)
+		addr_str
 	};
 
 	// Get the artifact size
@@ -757,7 +755,6 @@ async fn resolve_artifacts(
 	})
 	.await?;
 	let upload = unwrap!(uploads_res.uploads.first());
-	let artifact_size_bytes = upload.content_length;
 
 	Ok(ResolveArtifactsOutput {
 		artifact_url_stub: crate::util::image_artifact_url_stub(
@@ -765,7 +762,7 @@ async fn resolve_artifacts(
 			input.build_upload_id,
 			&input.build_file_name,
 		)?,
-		fallback_artifact_url,
-		artifact_size_bytes,
+		fallback_artifact_url: Some(fallback_artifact_url),
+		artifact_size: upload.content_length,
 	})
 }

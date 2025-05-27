@@ -345,6 +345,10 @@ impl Actor2Key {
 	pub fn subspace(client_id: Uuid) -> Actor2SubspaceKey {
 		Actor2SubspaceKey::new(client_id)
 	}
+
+	pub fn entire_subspace() -> ActorSubspaceKey {
+		ActorSubspaceKey::entire()
+	}
 }
 
 impl FormalKey for Actor2Key {
@@ -389,12 +393,18 @@ impl<'de> TupleUnpack<'de> for Actor2Key {
 }
 
 pub struct Actor2SubspaceKey {
-	client_id: Uuid,
+	client_id: Option<Uuid>,
 }
 
 impl Actor2SubspaceKey {
 	fn new(client_id: Uuid) -> Self {
-		Actor2SubspaceKey { client_id }
+		Actor2SubspaceKey {
+			client_id: Some(client_id),
+		}
+	}
+
+	fn entire() -> Self {
+		Actor2SubspaceKey { client_id: None }
 	}
 }
 
@@ -404,8 +414,16 @@ impl TuplePack for Actor2SubspaceKey {
 		w: &mut W,
 		tuple_depth: TupleDepth,
 	) -> std::io::Result<VersionstampOffset> {
-		let t = (CLIENT, ACTOR2, self.client_id);
-		t.pack(w, tuple_depth)
+		let mut offset = VersionstampOffset::None { size: 0 };
+
+		let t = (CLIENT, ACTOR2);
+		offset += t.pack(w, tuple_depth)?;
+
+		if let Some(client_id) = &self.client_id {
+			offset += client_id.pack(w, tuple_depth)?;
+		}
+
+		Ok(offset)
 	}
 }
 
