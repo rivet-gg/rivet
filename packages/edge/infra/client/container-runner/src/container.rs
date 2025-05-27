@@ -22,17 +22,17 @@ const MAX_PREVIEW_LINES: usize = 128;
 /// Returns the exit code of the container that will be passed to the parent
 pub fn run(
 	msg_tx: Option<mpsc::SyncSender<log_shipper::ReceivedMessage>>,
-	actor_path: &Path,
+	runner_path: &Path,
 	root_user_enabled: bool,
 ) -> Result<i32> {
-	// Extract actor id from path
-	let actor_id = actor_path
+	// Extract runner id from path
+	let runner_id = runner_path
 		.iter()
 		.last()
-		.context("empty `actor_path`")?
+		.context("empty `runner_path`")?
 		.to_string_lossy()
 		.to_string();
-	let fs_path = actor_path.join("fs");
+	let fs_path = runner_path.join("fs");
 	let oci_bundle_config_json = fs_path.join("config.json");
 
 	// Validate OCI bundle
@@ -65,12 +65,12 @@ pub fn run(
 	// Spawn runc container
 	println!(
 		"Starting container {} with OCI bundle {}",
-		actor_id,
+		runner_id,
 		fs_path.display()
 	);
 	let mut runc_child = Command::new("runc")
 		.arg("run")
-		.arg(&actor_id)
+		.arg(&runner_id)
 		.arg("-b")
 		.arg(fs_path)
 		.stdout(Stdio::piped())
@@ -87,11 +87,11 @@ pub fn run(
 	let mut signals = Signals::new(&[SIGTERM])?;
 	thread::spawn(move || {
 		for _ in signals.forever() {
-			println!("Received SIGTERM, forwarding to runc container {actor_id}");
+			println!("Received SIGTERM, forwarding to runc container {runner_id}");
 			let status = Command::new("runc")
 				.arg("kill")
 				.arg("--all")
-				.arg(&actor_id)
+				.arg(&runner_id)
 				.arg("SIGTERM")
 				.stdout(Stdio::null())
 				.stderr(Stdio::null())

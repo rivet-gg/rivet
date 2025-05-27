@@ -5,7 +5,6 @@ use std::{
 	time::Duration,
 };
 
-use pegboard::protocol;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -83,20 +82,26 @@ pub struct Cluster {
 #[derive(Clone, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct Runner {
-	pub flavor: protocol::ClientFlavor,
 	/// Whether or not to use a mount for actor file systems.
 	pub use_mounts: Option<bool>,
 
-	/// WebSocket Port for runners on this machine to connect to.
+	/// Address of the WebSocket server for runners. Should exist on a network interface that both the host
+	/// and containers can access.
+	pub ip: Option<IpAddr>,
+
+	/// WebSocket port for runners on this machine to connect to.
 	pub port: Option<u16>,
 
 	pub container_runner_binary_path: Option<PathBuf>,
-	pub isolate_runner_binary_path: Option<PathBuf>,
 }
 
 impl Runner {
 	pub fn use_mounts(&self) -> bool {
 		self.use_mounts.unwrap_or(true)
+	}
+
+	pub fn ip(&self) -> IpAddr {
+		self.ip.unwrap_or(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)))
 	}
 
 	pub fn port(&self) -> u16 {
@@ -107,12 +112,6 @@ impl Runner {
 		self.container_runner_binary_path
 			.clone()
 			.unwrap_or_else(|| Path::new("/usr/local/bin/rivet-container-runner").into())
-	}
-
-	pub fn isolate_runner_binary_path(&self) -> PathBuf {
-		self.isolate_runner_binary_path
-			.clone()
-			.unwrap_or_else(|| Path::new("/usr/local/bin/rivet-isolate-v8-runner").into())
 	}
 }
 
