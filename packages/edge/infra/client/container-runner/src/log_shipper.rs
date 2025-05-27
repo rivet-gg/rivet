@@ -90,8 +90,8 @@ impl LogShipper {
 		println!("Log shipper connected");
 
 		while let Result::Ok(message) = self.msg_rx.recv() {
-			let vector_message = VectorMessage::Runners {
-				runner_id: self.runner_id.as_str(),
+			let vector_message = VectorMessage::Actors {
+				// runner_id: self.runner_id.as_str(),
 				actor_id: self.actor_id.as_ref().map(|x| x.as_str()),
 				stream_type: message.stream_type as u8,
 				ts: message.ts,
@@ -112,9 +112,9 @@ impl LogShipper {
 #[derive(Serialize)]
 #[serde(tag = "source")]
 enum VectorMessage<'a> {
-	#[serde(rename = "runners")]
-	Runners {
-		runner_id: &'a str,
+	#[serde(rename = "actors")]
+	Actors {
+		// runner_id: &'a str,
 		actor_id: Option<&'a str>,
 		stream_type: u8,
 		ts: u64,

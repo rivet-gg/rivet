@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use global_error::prelude::*;
 use hyper::{
 	header::CONTENT_TYPE,
@@ -5,7 +7,6 @@ use hyper::{
 	Body, Request, Response, Server,
 };
 use prometheus::{Encoder, TextEncoder};
-use std::net::SocketAddr;
 
 // TODO: Record extra labels
 

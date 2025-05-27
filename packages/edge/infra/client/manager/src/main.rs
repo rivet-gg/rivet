@@ -20,7 +20,6 @@ use tracing_subscriber::{prelude::*, EnvFilter};
 use url::Url;
 
 mod actor;
-mod claims;
 mod ctx;
 mod event_sender;
 mod image_download_handler;
@@ -36,7 +35,6 @@ const PROTOCOL_VERSION: u16 = 2;
 struct Init {
 	config: Config,
 	system: SystemInfo,
-	secret: Vec<u8>,
 	pool: SqlitePool,
 }
 
@@ -150,15 +148,12 @@ async fn init() -> Result<Init> {
 	// Init project directories
 	utils::init_dir(&config).await?;
 
-	let secret = utils::load_secret(&config).await?;
-
 	// Init sqlite db
 	let pool = utils::init_sqlite_db(&config).await?;
 
 	Ok(Init {
 		config,
 		system,
-		secret,
 		pool,
 	})
 }
@@ -176,7 +171,7 @@ async fn run(init: Init, first: bool) -> Result<()> {
 	}
 
 	// Start metrics server
-	let metrics_thread = tokio::spawn(metrics::run_standalone(init.config.client.metrics.port()));
+	let metrics_task = tokio::spawn(metrics::run_standalone(init.config.client.metrics.port()));
 
 	let url = build_ws_url(&init.config).await?;
 	tracing::info!("connecting to pegboard ws: {}", &url);
@@ -192,10 +187,10 @@ async fn run(init: Init, first: bool) -> Result<()> {
 
 	tracing::info!("connected to pegboard ws");
 
-	let ctx = Ctx::new(init.config, init.system, init.secret, init.pool, tx);
+	let ctx = Ctx::new(init.config, init.system, init.pool, tx);
 
 	tokio::try_join!(
-		async { metrics_thread.await?.map_err(Into::into) },
+		async { metrics_task.await.map_err(Into::<anyhow::Error>::into) },
 		ctx.run(rx),
 	)?;
 
