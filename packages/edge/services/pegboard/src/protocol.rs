@@ -130,8 +130,8 @@ pub struct Image {
 	pub artifact_url_stub: String,
 	/// Direct S3 url to download the image from without ATS.
 	pub fallback_artifact_url: Option<String>,
-	/// Size in bytes of the artfiact.
-	pub artifact_size_bytes: u64,
+	/// Size in bytes of the artifact.
+	pub artifact_size: u64,
 	pub kind: ImageKind,
 	pub compression: ImageCompression,
 	pub allocation_type: ImageAllocationType,
@@ -146,13 +146,13 @@ pub enum ImageKind {
 }
 
 impl From<build::types::BuildKind> for ImageKind {
-    fn from(kind: build::types::BuildKind) -> Self {
-        match kind {
-            build::types::BuildKind::DockerImage => ImageKind::DockerImage,
-            build::types::BuildKind::OciBundle => ImageKind::OciBundle,
-            build::types::BuildKind::JavaScript => ImageKind::JavaScript,
-        }
-    }
+	fn from(value: build::types::BuildKind) -> Self {
+		match value {
+			build::types::BuildKind::DockerImage => ImageKind::DockerImage,
+			build::types::BuildKind::OciBundle => ImageKind::OciBundle,
+			build::types::BuildKind::JavaScript => ImageKind::JavaScript,
+		}
+	}
 }
 
 #[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq)]
@@ -170,12 +170,12 @@ pub enum ImageCompression {
 }
 
 impl From<build::types::BuildCompression> for ImageCompression {
-    fn from(compression: build::types::BuildCompression) -> Self {
-        match compression {
-            build::types::BuildCompression::None => ImageCompression::None,
-            build::types::BuildCompression::Lz4 => ImageCompression::Lz4,
-        }
-    }
+	fn from(value: build::types::BuildCompression) -> Self {
+		match value {
+			build::types::BuildCompression::None => ImageCompression::None,
+			build::types::BuildCompression::Lz4 => ImageCompression::Lz4,
+		}
+	}
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Hash)]
