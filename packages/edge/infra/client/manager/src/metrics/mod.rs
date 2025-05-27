@@ -80,6 +80,13 @@ lazy_static::lazy_static! {
 		*REGISTRY,
 	).unwrap();
 
+	pub static ref DOWNLOAD_IMAGE_DURATION: Histogram = register_histogram_with_registry!(
+		"download_image_duration",
+		"Duration of image download",
+		BUCKETS.to_vec(),
+		*REGISTRY,
+	).unwrap();
+
 	pub static ref IMAGE_DOWNLOAD_REQUEST_TOTAL: IntCounter = register_int_counter_with_registry!(
 		"image_download_request_total",
 		"Total number of download requests.",

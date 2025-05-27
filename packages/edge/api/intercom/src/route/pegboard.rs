@@ -83,7 +83,7 @@ pub async fn prewarm_image(
 	})
 	.await?;
 	let upload = unwrap!(uploads_res.uploads.first());
-	let artifact_size_bytes = upload.content_length;
+	let artifact_size = upload.content_length;
 
 	let res = ctx
 		.signal(pegboard::workflows::client::PrewarmImage2 {
@@ -97,9 +97,20 @@ pub async fn prewarm_image(
 				// We will never need to fall back to fetching directly from S3. This short
 				// circuits earlier in the fn.
 				fallback_artifact_url: None,
-				artifact_size_bytes,
+				artifact_size,
 				kind: build.kind.into(),
 				compression: build.compression.into(),
+				allocation_type: match build.allocation_type {
+					build::types::BuildAllocationType::None => {
+						protocol::ImageAllocationType::Single
+					}
+					build::types::BuildAllocationType::Single => {
+						protocol::ImageAllocationType::Single
+					}
+					build::types::BuildAllocationType::Multi => {
+						protocol::ImageAllocationType::Multi
+					}
+				},
 			},
 		})
 		.to_workflow::<pegboard::workflows::client::Workflow>()

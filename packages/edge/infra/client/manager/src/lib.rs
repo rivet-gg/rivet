@@ -3,8 +3,6 @@
 #[cfg(feature = "test")]
 mod actor;
 #[cfg(feature = "test")]
-mod claims;
-#[cfg(feature = "test")]
 mod ctx;
 #[cfg(feature = "test")]
 pub mod event_sender;

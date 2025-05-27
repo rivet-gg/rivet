@@ -67,7 +67,7 @@ pub struct RequestContext {
 	pub service_response_http_expires: Option<String>,
 	pub service_response_http_last_modified: Option<String>,
 	pub service_response_status: Option<u16>,
-	pub service_actor_id: Option<Uuid>,
+	pub service_actor_id: Option<rivet_util::Id>,
 	pub service_server_id: Option<Uuid>,
 
 	// ClickHouse inserter handle
@@ -191,7 +191,7 @@ impl RequestContext {
 				.clone()
 				.unwrap_or_default(),
 			service_response_status: self.service_response_status.unwrap_or_default(),
-			service_actor_id: self.service_actor_id.unwrap_or_default().to_string(),
+			service_actor_id: self.service_actor_id.map(|x| x.to_string()).unwrap_or_default(),
 			service_server_id: self.service_server_id.unwrap_or_default(),
 		};
 
