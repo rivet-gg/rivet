@@ -117,27 +117,6 @@ pub async fn create(
 		error = "`tags` must be `Map<String, String>`"
 	);
 
-	let resources = match build.kind {
-		build::types::BuildKind::DockerImage | build::types::BuildKind::OciBundle => {
-			let resources = unwrap_with!(
-				body.resources,
-				API_BAD_BODY,
-				error = "`resources` must be set for actors using Docker builds"
-			);
-
-			(*resources).api_into()
-		}
-		build::types::BuildKind::JavaScript => {
-			ensure_with!(
-				body.resources.is_none(),
-				API_BAD_BODY,
-				error = "actors using JavaScript builds cannot set `resources`"
-			);
-
-			pegboard::types::ActorResources::default_isolate()
-		}
-	};
-
 	let actor_id = Uuid::new_v4();
 	let network = body.network.unwrap_or_default();
 	let endpoint_type = body
@@ -149,15 +128,35 @@ pub async fn create(
 
 	tracing::info!(?actor_id, ?tags, "creating actor with tags");
 
-	
 	if let build::types::BuildAllocationType::None = build.allocation_type {
+		let resources = match build.kind {
+			build::types::BuildKind::DockerImage | build::types::BuildKind::OciBundle => {
+				let resources = unwrap_with!(
+					body.resources,
+					API_BAD_BODY,
+					error = "`resources` must be set for actors using Docker builds"
+				);
+	
+				(*resources).api_into()
+			}
+			build::types::BuildKind::JavaScript => {
+				ensure_with!(
+					body.resources.is_none(),
+					API_BAD_BODY,
+					error = "actors using JavaScript builds cannot set `resources`"
+				);
+	
+				pegboard::types::ActorResources::default_isolate()
+			}
+		};
+
 		let create_fut = if network.wait_ready.unwrap_or_default() {
 			std::future::pending().boxed()
 		} else {
 			let mut create_sub = ctx
 				.subscribe::<pegboard::workflows::actor::CreateComplete>(("actor_id", actor_id))
 				.await?;
-	
+
 			async move { create_sub.next().await }.boxed()
 		};
 		let mut ready_sub = ctx
@@ -238,7 +237,7 @@ pub async fn create(
 		.tag("actor_id", actor_id)
 		.dispatch()
 		.await?;
-		
+
 		// Wait for create/ready, fail, or destroy
 		tokio::select! {
 			res = create_fut => { res?; },
@@ -259,7 +258,7 @@ pub async fn create(
 			let mut create_sub = ctx
 				.subscribe::<pegboard::workflows::actor2::CreateComplete>(("actor_id", actor_id))
 				.await?;
-	
+
 			async move { create_sub.next().await }.boxed()
 		};
 		let mut ready_sub = ctx
@@ -276,7 +275,7 @@ pub async fn create(
 			actor_id,
 			env_id,
 			tags,
-			resources,
+			resources: body.resources.map(|x| (*x).api_into()),
 			lifecycle: body.lifecycle.map(|x| (*x).api_into()).unwrap_or_else(|| {
 				pegboard::types::ActorLifecycle {
 					kill_timeout_ms: 0,
@@ -340,7 +339,7 @@ pub async fn create(
 		.tag("actor_id", actor_id)
 		.dispatch()
 		.await?;
-		
+
 		// Wait for create/ready, fail, or destroy
 		tokio::select! {
 			res = create_fut => { res?; },

@@ -20,8 +20,14 @@ pub struct ClusterProvision {
 	/// The URL for the container runner binary.
 	pub container_runner_binary_url: Url,
 
-	/// The URL for the isolate runner binary.
-	pub isolate_runner_binary_url: Url,
+	/// The URL for the actors v1 manager binary.
+	pub old_manager_binary_url: Url,
+
+	/// The URL for the actors v1 container runner binary.
+	pub old_container_runner_binary_url: Url,
+
+	/// The URL for the deprecated isolate runner binary.
+	pub old_isolate_runner_binary_url: Url,
 
 	// The URL for the rivet edge server binary.
 	pub edge_server_binary_url: Url,

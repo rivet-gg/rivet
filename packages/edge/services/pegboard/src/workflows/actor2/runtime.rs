@@ -55,13 +55,17 @@ pub struct LifecycleRes {
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
-struct UpdateClientInput {
+struct UpdateClientAndRunnerInput {
 	client_id: Uuid,
 	client_workflow_id: Uuid,
+	runner_id: Uuid,
 }
 
-#[activity(UpdateClient)]
-async fn update_client(ctx: &ActivityCtx, input: &UpdateClientInput) -> GlobalResult<()> {
+#[activity(UpdateClientAndRunner)]
+async fn update_client_and_runner(
+	ctx: &ActivityCtx,
+	input: &UpdateClientAndRunnerInput,
+) -> GlobalResult<()> {
 	let client_pool = ctx.sqlite_for_workflow(input.client_workflow_id).await?;
 	let pool = ctx.sqlite().await?;
 
@@ -79,12 +83,14 @@ async fn update_client(ctx: &ActivityCtx, input: &UpdateClientInput) -> GlobalRe
 		"
 		UPDATE state
 		SET
-			client_id = ?,
-			client_workflow_id = ?,
-			client_wan_hostname = ?
+			client_id = ?1,
+			client_workflow_id = ?2,
+			runner_id = ?3,
+			client_wan_hostname = ?4
 		",
 		input.client_id,
 		input.client_workflow_id,
+		input.runner_id,
 		client_wan_hostname,
 	)
 	.await?;
@@ -254,7 +260,7 @@ async fn allocate_actor(
 			if let BuildAllocationType::Multi = input.build_allocation_type {
 				loop {
 					let Some(entry) = stream.try_next().await? else {
-						return Ok(None);
+						break;
 					};
 
 					let old_runner_allocation_key = keys::subspace()
@@ -423,28 +429,37 @@ async fn allocate_actor(
 						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 				);
 
+				let remaining_slots = input.build_allocation_total_slots.saturating_sub(1);
+				let total_slots = input.build_allocation_total_slots;
+
+				// Insert runner records
+				let remaining_slots_key = keys::runner::RemainingSlotsKey::new(runner_id);
+				tx.set(
+					&keys::subspace().pack(&remaining_slots_key),
+					&remaining_slots_key
+						.serialize(remaining_slots)
+						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+				);
+
+				let total_slots_key = keys::runner::TotalSlotsKey::new(runner_id);
+				tx.set(
+					&keys::subspace().pack(&total_slots_key),
+					&total_slots_key
+						.serialize(total_slots)
+						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+				);
+
+				let image_id_key = keys::runner::ImageIdKey::new(runner_id);
+				tx.set(
+					&keys::subspace().pack(&image_id_key),
+					&image_id_key
+						.serialize(input.image_id)
+						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+				);
+
+				// Insert runner index key if multi. Single allocation per container runners don't need to be
+				// in the alloc idx because they only have 1 slot
 				if let BuildAllocationType::Multi = input.build_allocation_type {
-					let remaining_slots = input.build_allocation_total_slots.saturating_sub(1);
-					let total_slots = input.build_allocation_total_slots;
-
-					// Insert runner records
-					let remaining_slots_key = keys::runner::RemainingSlotsKey::new(runner_id);
-					tx.set(
-						&keys::subspace().pack(&remaining_slots_key),
-						&remaining_slots_key
-							.serialize(remaining_slots)
-							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
-					);
-
-					let total_slots_key = keys::runner::TotalSlotsKey::new(runner_id);
-					tx.set(
-						&keys::subspace().pack(&total_slots_key),
-						&total_slots_key
-							.serialize(total_slots)
-							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
-					);
-
-					// Insert runner index key
 					let runner_idx_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
 						input.image_id,
 						remaining_slots,
@@ -743,9 +758,10 @@ pub async fn spawn_actor(
 
 	let (_, ports_res) = ctx
 		.join((
-			activity(UpdateClientInput {
+			activity(UpdateClientAndRunnerInput {
 				client_id: res.client_id,
 				client_workflow_id: res.client_workflow_id,
+				runner_id: res.runner_id,
 			}),
 			v(2).activity(FetchPortsInput {
 				actor_id: input.actor_id,

@@ -237,6 +237,7 @@ async fn upload_bundle(
 			image_file: Box::new(image_file.prepared),
 			kind: Some(build_kind),
 			compression: Some(build_compression),
+			allocation: None,
 		},
 		Some(&ctx.project.name_id),
 		Some(&push_opts.env.slug),
