@@ -1,11 +1,11 @@
 use std::{
 	collections::HashMap,
-	os::unix::process::CommandExt,
+	os::unix::{fs::PermissionsExt, process::CommandExt},
 	path::{Path, PathBuf},
 	process::Stdio,
 	result::Result::{Err, Ok},
 	sync::Arc,
-	time::{Duration, Instant},
+	time::Instant,
 };
 
 use anyhow::*;
@@ -21,19 +21,13 @@ use sqlx::Acquire;
 use strum::FromRepr;
 use tokio::{
 	fs::{self, File},
+	net::UnixListener,
 	process::Command,
 };
 use uuid::Uuid;
 
 use super::{oci_config, Runner};
-use crate::{
-	claims::{Claims, Entitlement},
-	ctx::Ctx,
-	utils,
-};
-
-/// How long an access token given to a runner lasts. 1 Year.
-const ACCESS_TOKEN_TTL: Duration = Duration::from_secs(60 * 60 * 24 * 365);
+use crate::{ctx::Ctx, utils};
 
 #[derive(Hash, Debug, Clone, Copy, PartialEq, Eq, FromRepr)]
 pub enum Comms {
@@ -61,8 +55,8 @@ impl Runner {
 
 		let (_, ports) = tokio::try_join!(
 			async {
-				self.make_fs(&ctx).await?;
 				self.download_image(&ctx).await?;
+				self.make_fs(&ctx).await?;
 
 				Result::<(), anyhow::Error>::Ok(())
 			},
@@ -83,6 +77,8 @@ impl Runner {
 			runner_id=?self.runner_id,
 			"setup tasks completed"
 		);
+
+		self.start_socket(ctx).await?;
 
 		tracing::info!(runner_id=?self.runner_id, "setting up runtime environment");
 		self.setup_oci_bundle(&ctx, &ports).await?;
@@ -232,6 +228,49 @@ impl Runner {
 		Ok(())
 	}
 
+	pub(crate) async fn start_socket(self: &Arc<Self>, ctx: &Arc<Ctx>) -> Result<()> {
+		tracing::info!(runner_id=?self.runner_id, "starting socket");
+
+		let runner_path = ctx.runner_path(self.runner_id);
+		let socket_path = runner_path.join("manager.sock");
+
+		ensure!(
+			socket_path.as_os_str().len() <= 104,
+			"socket path ({}) length is too long (> 104 bytes aka SUN_LEN)",
+			socket_path.display()
+		);
+
+		// Bind the listener (creates the socket file or reconnects if it already exists)
+		let listener = UnixListener::bind(&socket_path).context("failed to bind unix listener")?;
+
+		// Allow the container process to listen to the socket file
+		fs::set_permissions(&socket_path, std::fs::Permissions::from_mode(0o666))
+			.await
+			.context("failed to set permissions for socket file")?;
+
+		// NOTE: This task and listener do not have to be cleaned up manually because they will stop when the
+		// socket file is deleted (upon `cleanup_setup` call).
+		let self2 = self.clone();
+		let ctx2 = ctx.clone();
+		tokio::task::spawn(async move {
+			if let Err(err) = self2.handle_socket(&ctx2, listener).await {
+				tracing::error!(runner_id=?self2.runner_id, ?err, "socket listener failed");
+
+				if let Err(err) = self2.cleanup(&ctx2).await {
+					tracing::error!(runner_id=?self2.runner_id, ?err, "cleanup failed");
+				}
+			}
+		});
+
+		Ok(())
+	}
+
+	async fn handle_socket(self: &Arc<Self>, ctx: &Arc<Ctx>, listener: UnixListener) -> Result<()> {
+		let (stream, _) = listener.accept().await?;
+
+		self.attach_socket(ctx, stream).await
+	}
+
 	pub async fn setup_oci_bundle(
 		&self,
 		ctx: &Ctx,
@@ -243,6 +282,7 @@ impl Runner {
 		let runner_path = ctx.runner_path(self.runner_id);
 		let fs_path = runner_path.join("fs").join("upper");
 		let netns_path = self.netns_path();
+		let socket_path = runner_path.join("manager.sock");
 
 		// Read the config.json from the user-provided OCI bundle
 		tracing::info!(
@@ -261,19 +301,12 @@ impl Runner {
 			runner_id=?self.runner_id,
 			"building environment variables",
 		);
-		let access_token = Claims::new(
-			Entitlement::Runner {
-				runner_id: self.runner_id,
-			},
-			ACCESS_TOKEN_TTL,
-		)
-		.encode(ctx.secret())?;
 		let env = user_config
 			.process
 			.env
 			.into_iter()
 			.chain(
-				self.build_default_env(ctx, &ports, &access_token)
+				self.build_default_env(ctx, &ports)
 					.into_iter()
 					.map(|(k, v)| format!("{k}={v}")),
 			)
@@ -289,6 +322,7 @@ impl Runner {
 		let config = oci_config::config(oci_config::ConfigOpts {
 			runner_path: &runner_path,
 			netns_path: &netns_path,
+			socket_path: &socket_path,
 			args: user_config.process.args,
 			env,
 			user: user_config.process.user,
@@ -577,6 +611,19 @@ impl Runner {
 						// Disassociate from the parent by creating a new session
 						setsid().context("setsid failed")?;
 
+						// Adjust nice, cpu priority, and OOM score
+						let pid = std::process::id() as i32;
+						utils::libc::set_nice_level(pid, 0).context("failed to set nice level")?;
+						utils::libc::set_oom_score_adj(pid, 0)
+							.context("failed to set oom score adjustment")?;
+						utils::libc::set_scheduling_policy(
+							pid,
+							utils::libc::SchedPolicy::Other,
+							// Must be 0 with SCHED_OTHER
+							0,
+						)
+						.context("failed to set scheduling policy")?;
+
 						// Exit immediately on fail in order to not leak process
 						let err = std::process::Command::new("sh")
 							.args(&runner_args)
@@ -609,15 +656,14 @@ impl Runner {
 		if ctx.config().runner.use_mounts() {
 			match Command::new("umount")
 				.arg("-dl")
-				.arg(actor_path.join("fs").join("upper"))
+				.arg(runner_path.join("fs").join("upper"))
 				.output()
 				.await
 			{
 				Result::Ok(cmd_out) => {
 					if !cmd_out.status.success() {
 						tracing::error!(
-							actor_id=?self.actor_id,
-							generation=?self.generation,
+							runner_id=?self.runner_id,
 							stdout=%std::str::from_utf8(&cmd_out.stdout).unwrap_or("<failed to parse stdout>"),
 							stderr=%std::str::from_utf8(&cmd_out.stderr).unwrap_or("<failed to parse stderr>"),
 							"failed overlay `umount` command",
@@ -626,8 +672,7 @@ impl Runner {
 				}
 				Err(err) => {
 					tracing::error!(
-						actor_id=?self.actor_id,
-						generation=?self.generation,
+						runner_id=?self.runner_id,
 						?err,
 						"failed to run overlay `umount` command",
 					);
@@ -784,22 +829,10 @@ impl Runner {
 		}
 	}
 
-	// Path to the created namespace
-	fn netns_path(&self) -> PathBuf {
-		if let protocol::NetworkMode::Host = self.config.network_mode {
-			// Host network
-			Path::new("/proc/1/ns/net").to_path_buf()
-		} else {
-			// CNI network that will be created
-			Path::new("/var/run/netns").join(self.runner_id.to_string())
-		}
-	}
-
 	fn build_default_env(
 		&self,
 		ctx: &Ctx,
 		ports: &protocol::HashableMap<String, protocol::ProxiedPort>,
-		access_token: &str,
 	) -> HashMap<String, String> {
 		self.config
 			.env
@@ -814,18 +847,16 @@ impl Runner {
 			}))
 			.chain([
 				(
-					"RIVET_MANAGER_IP".to_string(),
-					ctx.config().runner.ip().to_string(),
-				),
-				(
-					"RIVET_MANAGER_PORT".to_string(),
-					ctx.config().runner.port().to_string(),
-				),
-				(
 					"RIVET_API_ENDPOINT".to_string(),
 					ctx.config().cluster.api_endpoint.to_string(),
 				),
-				("RIVET_ACCESS_TOKEN".to_string(), access_token.to_string()),
+				(
+					"RIVET_MANAGER_SOCKET_PATH".to_string(),
+					oci_config::socket_mount_dest_path()
+						.to_str()
+						.expect("invalid `socket_mount_dest_path`")
+						.to_string(),
+				),
 			])
 			.collect()
 	}
@@ -845,6 +876,19 @@ fn build_hosts_content(ctx: &Ctx) -> String {
 	}
 
 	content
+}
+
+impl Runner {
+	// Path to the created namespace
+	fn netns_path(&self) -> PathBuf {
+		if let protocol::NetworkMode::Host = self.config.network_mode {
+			// Host network
+			Path::new("/proc/1/ns/net").to_path_buf()
+		} else {
+			// CNI network that will be created
+			Path::new("/var/run/netns").join(self.runner_id.to_string())
+		}
+	}
 }
 
 async fn bind_ports_inner(

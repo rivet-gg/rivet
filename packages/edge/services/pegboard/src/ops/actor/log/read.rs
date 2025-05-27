@@ -157,7 +157,5 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 	let entries = query_builder.fetch_all::<LogEntry>().await?;
 
 	// New actors first
-	Ok(Output {
-		entries,
-	})
+	Ok(Output { entries })
 }

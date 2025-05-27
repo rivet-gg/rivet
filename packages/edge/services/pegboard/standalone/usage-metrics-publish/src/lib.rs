@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use build::types::BuildKind;
+use build::types::{BuildAllocationType, BuildKind};
 use chirp_workflow::prelude::*;
 use fdb_util::SNAPSHOT;
 use foundationdb::{self as fdb, options::StreamingMode};
@@ -57,22 +57,37 @@ pub async fn run_from_env(
 		.run(|tx, _mc| async move {
 			let actor_subspace =
 				keys::subspace().subspace(&keys::client::ActorKey::entire_subspace());
+			let actor2_subspace =
+				keys::subspace().subspace(&keys::client::Actor2Key::entire_subspace());
 
 			tx.get_ranges_keyvalues(
+				fdb::RangeOption {
+					mode: StreamingMode::WantAll,
+					..(&actor2_subspace).into()
+				},
+				// Not serializable because we don't want to interfere with normal operations
+				SNAPSHOT,
+			)
+			.chain(tx.get_ranges_keyvalues(
 				fdb::RangeOption {
 					mode: StreamingMode::WantAll,
 					..(&actor_subspace).into()
 				},
 				// Not serializable because we don't want to interfere with normal operations
 				SNAPSHOT,
-			)
+			))
 			.map(|res| match res {
 				Ok(entry) => {
-					let key = keys::subspace()
-						.unpack::<keys::client::ActorKey>(entry.key())
-						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+					if let Ok(key) = keys::subspace().unpack::<keys::client::Actor2Key>(entry.key())
+					{
+						Ok(key.actor_id)
+					} else {
+						let key = keys::subspace()
+							.unpack::<keys::client::ActorKey>(entry.key())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
-					Ok(key.actor_id)
+						Ok(util::Id::from(key.actor_id))
+					}
 				}
 				Err(err) => Err(Into::<fdb::FdbBindingError>::into(err)),
 			})
@@ -117,17 +132,36 @@ pub async fn run_from_env(
 			continue;
 		};
 
-		let client_flavor = match build.kind {
-			BuildKind::DockerImage | BuildKind::OciBundle => protocol::ClientFlavor::Container,
-			BuildKind::JavaScript => protocol::ClientFlavor::Isolate,
+		let client_flavor = match build.allocation_type {
+			BuildAllocationType::None => match build.kind {
+				BuildKind::DockerImage | BuildKind::OciBundle => protocol::ClientFlavor::Container,
+				BuildKind::JavaScript => protocol::ClientFlavor::Isolate,
+			},
+			BuildAllocationType::Single | BuildAllocationType::Multi => {
+				protocol::ClientFlavor::Multi
+			}
 		};
 
 		let env_usage = usage_by_env_and_flavor
 			.entry((actor.env_id, client_flavor))
 			.or_insert(Usage { cpu: 0, memory: 0 });
 
-		env_usage.cpu += actor.resources.cpu_millicores as u64;
-		env_usage.memory += actor.resources.memory_mib as u64;
+		let resources = match build.allocation_type {
+			BuildAllocationType::None | BuildAllocationType::Single => {
+				if let Some(resources) = &actor.resources {
+					env_usage.cpu += resources.cpu_millicores as u64;
+					env_usage.memory += resources.memory_mib as u64;
+				}
+			}
+			BuildAllocationType::Multi => {
+				// TODO: This calculates multi runner metrics wrong, it should only add this for the runner
+				// not for each actor in the runner
+				// if let Some(resources) = build.resources {
+				// 	env_usage.cpu += build_resources.cpu_millicores as u64;
+				// 	env_usage.memory += build_resources.memory_mib as u64;
+				// }
+			}
+		};
 	}
 
 	// Clear old metrics because they will never be set to 0 (due to no actors being present and thus no

@@ -131,8 +131,7 @@ pub struct Image {
 	/// Direct S3 url to download the image from without ATS.
 	pub fallback_artifact_url: Option<String>,
 	/// Size in bytes of the artifact.
-	#[serde(default)]
-	pub artifact_size_bytes: u64,
+	pub artifact_size: u64,
 	pub kind: ImageKind,
 	pub compression: ImageCompression,
 	pub allocation_type: ImageAllocationType,
@@ -147,8 +146,8 @@ pub enum ImageKind {
 }
 
 impl From<build::types::BuildKind> for ImageKind {
-	fn from(kind: build::types::BuildKind) -> Self {
-		match kind {
+	fn from(value: build::types::BuildKind) -> Self {
+		match value {
 			build::types::BuildKind::DockerImage => ImageKind::DockerImage,
 			build::types::BuildKind::OciBundle => ImageKind::OciBundle,
 			build::types::BuildKind::JavaScript => ImageKind::JavaScript,
@@ -171,8 +170,8 @@ pub enum ImageCompression {
 }
 
 impl From<build::types::BuildCompression> for ImageCompression {
-	fn from(compression: build::types::BuildCompression) -> Self {
-		match compression {
+	fn from(value: build::types::BuildCompression) -> Self {
+		match value {
 			build::types::BuildCompression::None => ImageCompression::None,
 			build::types::BuildCompression::Lz4 => ImageCompression::Lz4,
 		}

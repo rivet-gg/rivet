@@ -116,60 +116,28 @@ impl ImageDownloadHandler {
 		let mut conn = ctx.sql().await?;
 		let mut tx = conn.begin().await?;
 
-		let ((cache_count, images_dir_size), image_download_size) = tokio::try_join!(
-			async {
-				// Get total size of images directory. Note that it doesn't matter if this doesn't
-				// match the actual fs size because it should either be exactly at or below actual fs
-				// size. Also calculating fs size manually is expensive.
+		// Get total size of images directory. Note that it doesn't matter if this doesn't
+			// match the actual fs size because it should either be exactly at or below actual fs
+			// size. Also calculating fs size manually is expensive.
+			let (cache_count, images_dir_size) =
 				sqlx::query_as::<_, (i64, i64)>(indoc!(
 					"
 					SELECT COUNT(size), COALESCE(SUM(size), 0) FROM images_cache
 					",
 				))
 				.fetch_one(&mut *tx)
-				.await
-				.map_err(Into::<anyhow::Error>::into)
-			},
-			// NOTE: The image size here is somewhat misleading because its only the size of the
-			// downloaded archive and not the total disk usage after it is unpacked. However, this is
-			// good enough
-			self.fetch_image_download_size(ctx, image_config),
-		)?;
-
-		let rows = sqlx::query_as::<_, (Uuid, i64, Option<i64>, i64)>(indoc!(
-			"
-				SELECT
-					ic.image_id,
-					ic.size,
-					ic.last_used_ts,
-					SUM(ic.size)
-						OVER (ORDER BY ic.last_used_ts ROWS UNBOUNDED PRECEDING)
-						AS running_total
-				FROM images_cache AS ic
-				LEFT JOIN actors AS a
-				-- Filter out images that are currently in use by actors
-				ON
-					ic.image_id = a.image_id AND
-					a.stop_ts IS NULL AND
-					a.exit_ts IS NULL
-				WHERE
-					-- Filter out current image, will be upserted
-					ic.image_id != ?1 AND
-					a.image_id IS NULL
-				ORDER BY ic.last_used_ts
-				",
-		))
-		.bind(image_config.id)
-		.bind(
-			(images_dir_size as u64)
-				.saturating_add(image_download_size)
-				.saturating_sub(ctx.config().images.max_cache_size()) as i64,
-		)
-		.fetch_all(&mut *tx)
-		.await?;
+				.await?;
 
 		// Prune images
-		let (removed_count, removed_bytes) = if images_dir_size as u64 + image_download_size
+		//
+		// HACK: The artifact_size here is somewhat misleading because its only the size of the
+		// downloaded archive and not the total disk usage after it is unpacked. However, this is size
+		// is recalculated later once decompressed, so this will only ever exceed the cache
+		// size limit in edge cases by `actual size - compressed size`. In this situation,
+		// that extra difference is already reserved on the file system by the runner
+		// itself.
+		let (removed_count, removed_bytes) = if images_dir_size as u64
+			+ image_config.artifact_size
 			> ctx.config().images.max_cache_size()
 		{
 			// Fetch as many images as it takes to clear up enough space for this new image.
@@ -253,7 +221,7 @@ impl ImageDownloadHandler {
 		};
 
 		metrics::IMAGE_CACHE_COUNT.set(cache_count + 1 - removed_count);
-		metrics::IMAGE_CACHE_SIZE.set(images_dir_size + image_download_size as i64 - removed_bytes);
+		metrics::IMAGE_CACHE_SIZE.set(images_dir_size + image_config.artifact_size as i64 - removed_bytes);
 
 		sqlx::query(indoc!(
 			"

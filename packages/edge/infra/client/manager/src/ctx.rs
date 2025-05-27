@@ -18,18 +18,15 @@ use nix::{
 	unistd::Pid,
 };
 use pegboard::{protocol, system_info::SystemInfo};
-use pegboard_config::{runner_protocol, Client, Config};
+use pegboard_config::{Client, Config};
 use sqlx::{pool::PoolConnection, Acquire, Sqlite, SqlitePool};
 use tokio::{
 	fs,
-	net::{TcpListener, TcpStream},
+	net::TcpStream,
 	sync::{Mutex, RwLock},
 };
 use tokio_tungstenite::{
-	tungstenite::protocol::{
-		frame::{coding::CloseCode, CloseFrame},
-		Message,
-	},
+	tungstenite::protocol::{frame::coding::CloseCode, Message},
 	MaybeTlsStream, WebSocketStream,
 };
 use url::Url;
@@ -37,7 +34,6 @@ use uuid::Uuid;
 
 use crate::{
 	actor::Actor,
-	claims::{Claims, Entitlement},
 	event_sender::EventSender,
 	image_download_handler::ImageDownloadHandler,
 	metrics,
@@ -47,8 +43,6 @@ use crate::{
 
 const PING_INTERVAL: Duration = Duration::from_secs(1);
 const ACK_INTERVAL: Duration = Duration::from_secs(60 * 5);
-/// How long before killing a runner that hasn't sent an init packet.
-const RUNNER_INIT_TIMEOUT: Duration = Duration::from_secs(5);
 /// How often to check for the actor's runner to start.
 const GET_RUNNER_INTERVAL: Duration = std::time::Duration::from_millis(250);
 /// How many times to check for the actor's runner to start.
@@ -63,8 +57,6 @@ pub enum RuntimeError {
 	},
 	#[error("ws failed: {0}")]
 	SocketFailed(tokio_tungstenite::tungstenite::Error),
-	#[error("runner socket failed: {0}")]
-	RunnerSocketListenFailed(std::io::Error),
 	#[error("socket closed: {0}, {1}")]
 	SocketClosed(CloseCode, String),
 	#[error("stream closed")]
@@ -89,7 +81,6 @@ struct RunnerRow {
 pub struct Ctx {
 	config: Config,
 	system: SystemInfo,
-	secret: Vec<u8>,
 
 	// This requires a RwLock because of the reset functionality which reinitialized the entire database. It
 	// should never be written to besides that.
@@ -106,14 +97,12 @@ impl Ctx {
 	pub fn new(
 		config: Config,
 		system: SystemInfo,
-		secret: Vec<u8>,
 		pool: SqlitePool,
 		tx: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
 	) -> Arc<Self> {
 		Arc::new(Ctx {
 			config,
 			system,
-			secret,
 
 			pool: RwLock::new(pool),
 			tx: Mutex::new(tx),
@@ -220,44 +209,6 @@ impl Ctx {
 
 		self.receive_init(&mut rx).await?;
 
-		// Start runner socket and attaches incoming connections to their corresponding runner
-		let self2 = self.clone();
-		let runner_socket: tokio::task::JoinHandle<Result<()>> = tokio::spawn(async move {
-			tracing::info!(port=%self2.config().runner.port(), "listening for runner sockets");
-
-			let listener =
-				TcpListener::bind((self2.config().runner.ip(), self2.config().runner.port()))
-					.await
-					.map_err(RuntimeError::RunnerSocketListenFailed)?;
-
-			loop {
-				match listener.accept().await {
-					Ok((stream, _)) => {
-						let mut ws_stream = Some(tokio_tungstenite::accept_async(stream).await?);
-
-						tracing::info!("received new socket");
-
-						if let Err(err) = self2.receive_runner_init_message(&mut ws_stream).await {
-							tracing::error!(
-								?err,
-								"failed to receive init message from runner socket"
-							);
-						}
-
-						// Close stream
-						if let Some(mut ws_stream) = ws_stream {
-							let close_frame = CloseFrame {
-								code: CloseCode::Error,
-								reason: "init failed".into(),
-							};
-							ws_stream.send(Message::Close(Some(close_frame))).await?;
-						}
-					}
-					Err(err) => tracing::error!(?err, "failed to connect websocket"),
-				}
-			}
-		});
-
 		// Start ping thread after init packet is received because ping denotes this client as "ready"
 		let self2 = self.clone();
 		let ping_thread: tokio::task::JoinHandle<Result<()>> = tokio::spawn(async move {
@@ -298,7 +249,6 @@ impl Ctx {
 		});
 
 		tokio::try_join!(
-			async { runner_socket.await? },
 			async { ping_thread.await? },
 			async { ack_thread.await? },
 			self.receive_messages(rx),
@@ -496,7 +446,7 @@ impl Ctx {
 			}
 			protocol::Command::SignalRunner { runner_id, signal } => {
 				if let Some(runner) = self.runners.read().await.get(&runner_id) {
-					runner.signal(signal.try_into()?).await?;
+					runner.signal(self, signal.try_into()?).await?;
 				} else {
 					tracing::warn!(
 						?runner_id,
@@ -854,8 +804,14 @@ impl Ctx {
 			let runner = runner.clone();
 			let self2 = self.clone();
 			tokio::spawn(async move {
-				if let Err(err) = runner.observe(&self2, false).await {
-					tracing::error!(?runner_id, ?err, "observe failed");
+				// The socket file already exists, this will reconnect and spawn the appropriate task to
+				// handle the connection
+				if let Err(err) = runner.start_socket(&self2).await {
+					tracing::error!(?runner_id, ?err, "start socket failed");
+
+					if let Err(err) = runner.observe(&self2, false).await {
+						tracing::error!(?runner_id, ?err, "observe failed");
+					}
 				}
 
 				if let Err(err) = runner.cleanup(&self2).await {
@@ -993,10 +949,6 @@ impl Ctx {
 		&self.config.client
 	}
 
-	pub fn secret(&self) -> &[u8] {
-		&self.secret
-	}
-
 	pub fn runners_path(&self) -> PathBuf {
 		self.config().data_dir().join("runners")
 	}
@@ -1011,10 +963,6 @@ impl Ctx {
 
 	pub fn image_path(&self, image_id: Uuid) -> PathBuf {
 		self.images_path().join(image_id.to_string())
-	}
-
-	pub fn isolate_runner_path(&self) -> PathBuf {
-		self.config().data_dir().join("runner")
 	}
 }
 

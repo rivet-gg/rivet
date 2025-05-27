@@ -327,8 +327,8 @@ pub struct ProxyState {
 	routing_fn: RoutingFn,
 	middleware_fn: MiddlewareFn,
 	route_cache: RouteCache,
-	rate_limiters: Cache<(Uuid, std::net::IpAddr), Arc<Mutex<RateLimiter>>>,
-	in_flight_counters: Cache<(Uuid, std::net::IpAddr), Arc<Mutex<InFlightCounter>>>,
+	rate_limiters: Cache<(rivet_util::Id, std::net::IpAddr), Arc<Mutex<RateLimiter>>>,
+	in_flight_counters: Cache<(rivet_util::Id, std::net::IpAddr), Arc<Mutex<InFlightCounter>>>,
 	port_type: PortType,
 	clickhouse_inserter: Option<clickhouse_inserter::ClickHouseInserterHandle>,
 }
@@ -536,7 +536,7 @@ impl ProxyState {
 	async fn check_rate_limit(
 		&self,
 		ip_addr: std::net::IpAddr,
-		actor_id: &Option<Uuid>,
+		actor_id: &Option<rivet_util::Id>,
 	) -> GlobalResult<bool> {
 		let Some(actor_id) = *actor_id else {
 			// No rate limiting when actor_id is None
@@ -576,7 +576,7 @@ impl ProxyState {
 	async fn acquire_in_flight(
 		&self,
 		ip_addr: std::net::IpAddr,
-		actor_id: &Option<Uuid>,
+		actor_id: &Option<rivet_util::Id>,
 	) -> GlobalResult<bool> {
 		let Some(actor_id) = *actor_id else {
 			// No in-flight limiting when actor_id is None
@@ -613,7 +613,7 @@ impl ProxyState {
 	}
 
 	#[tracing::instrument(skip_all)]
-	async fn release_in_flight(&self, ip_addr: std::net::IpAddr, actor_id: &Option<Uuid>) {
+	async fn release_in_flight(&self, ip_addr: std::net::IpAddr, actor_id: &Option<rivet_util::Id>) {
 		// Skip if actor_id is None (no in-flight tracking)
 		let actor_id = match actor_id {
 			Some(id) => *id,
