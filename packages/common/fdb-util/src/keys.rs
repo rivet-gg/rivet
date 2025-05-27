@@ -51,6 +51,7 @@ pub const RUNNERS_BY_REMAINING_SLOTS: usize = 49;
 pub const REMAINING_SLOTS: usize = 50;
 pub const TOTAL_SLOTS: usize = 51;
 pub const IMAGE_ID: usize = 52;
+pub const ACTOR2: usize = 53;
 
 // Directories with fdbrs must use string paths instead of tuples
 pub mod dir {
@@ -114,6 +115,7 @@ pub fn key_from_str(key: &str) -> Option<usize> {
 		"remaining_slots" => Some(REMAINING_SLOTS),
 		"total_slots" => Some(TOTAL_SLOTS),
 		"image_id" => Some(IMAGE_ID),
+		"actor2" => Some(ACTOR2),
 		_ => None,
 	}
 }

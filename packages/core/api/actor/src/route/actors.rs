@@ -33,7 +33,7 @@ pub struct GlobalEndpointTypeQuery {
 #[tracing::instrument(skip_all)]
 pub async fn get(
 	ctx: Ctx<Auth>,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	watch_index: WatchIndexQuery,
 	query: GlobalEndpointTypeQuery,
 ) -> GlobalResult<models::ActorsGetActorResponse> {
@@ -42,7 +42,7 @@ pub async fn get(
 
 async fn get_inner(
 	ctx: &Ctx<Auth>,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	_watch_index: WatchIndexQuery,
 	query: GlobalEndpointTypeQuery,
 ) -> GlobalResult<models::ActorsGetActorResponse> {
@@ -58,28 +58,35 @@ async fn get_inner(
 		)
 		.await?;
 
-	// Fetch all datacenters
-	let clusters_res = ctx
-		.op(cluster::ops::get_for_game::Input {
-			game_ids: vec![game_id],
+	let dcs = if let Some(label) = actor_id.label() {
+		ctx.op(cluster::ops::datacenter::get_for_label::Input {
+			labels: vec![label],
 		})
-		.await?;
-	let cluster_id = unwrap!(clusters_res.games.first()).cluster_id;
-	let dc_list_res = ctx
-		.op(cluster::ops::datacenter::list::Input {
-			cluster_ids: vec![cluster_id],
-		})
-		.await?;
-	let cluster = unwrap!(dc_list_res.clusters.into_iter().next());
-	let dcs_res = ctx
-		.op(cluster::ops::datacenter::get::Input {
+		.await?
+		.datacenters
+	} else {
+		// Fetch all datacenters
+		let clusters_res = ctx
+			.op(cluster::ops::get_for_game::Input {
+				game_ids: vec![game_id],
+			})
+			.await?;
+		let cluster_id = unwrap!(clusters_res.games.first()).cluster_id;
+		let dc_list_res = ctx
+			.op(cluster::ops::datacenter::list::Input {
+				cluster_ids: vec![cluster_id],
+			})
+			.await?;
+		let cluster = unwrap!(dc_list_res.clusters.into_iter().next());
+		ctx.op(cluster::ops::datacenter::get::Input {
 			datacenter_ids: cluster.datacenter_ids,
 		})
-		.await?;
+		.await?
+		.datacenters
+	};
 
 	// Filter the datacenters that can be contacted
-	let filtered_datacenters = dcs_res
-		.datacenters
+	let filtered_datacenters = dcs
 		.into_iter()
 		.filter(|dc| crate::utils::filter_edge_dc(ctx.config(), dc).unwrap_or(false))
 		.collect::<Vec<_>>();
@@ -153,7 +160,7 @@ pub async fn get_deprecated(
 	let global = build_global_query_compat(&ctx, game_id, env_id).await?;
 	let get_res = get_inner(
 		&ctx,
-		actor_id,
+		actor_id.into(),
 		watch_index,
 		GlobalEndpointTypeQuery {
 			global,
@@ -360,7 +367,7 @@ pub struct DeleteQuery {
 #[tracing::instrument(skip_all)]
 pub async fn destroy(
 	ctx: Ctx<Auth>,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	query: DeleteQuery,
 ) -> GlobalResult<serde_json::Value> {
 	let CheckOutput { game_id, .. } = ctx
@@ -375,28 +382,35 @@ pub async fn destroy(
 		)
 		.await?;
 
-	// Fetch all datacenters
-	let clusters_res = ctx
-		.op(cluster::ops::get_for_game::Input {
-			game_ids: vec![game_id],
+	let dcs = if let Some(label) = actor_id.label() {
+		ctx.op(cluster::ops::datacenter::get_for_label::Input {
+			labels: vec![label],
 		})
-		.await?;
-	let cluster_id = unwrap!(clusters_res.games.first()).cluster_id;
-	let dc_list_res = ctx
-		.op(cluster::ops::datacenter::list::Input {
-			cluster_ids: vec![cluster_id],
-		})
-		.await?;
-	let cluster = unwrap!(dc_list_res.clusters.into_iter().next());
-	let dcs_res = ctx
-		.op(cluster::ops::datacenter::get::Input {
+		.await?
+		.datacenters
+	} else {
+		// Fetch all datacenters
+		let clusters_res = ctx
+			.op(cluster::ops::get_for_game::Input {
+				game_ids: vec![game_id],
+			})
+			.await?;
+		let cluster_id = unwrap!(clusters_res.games.first()).cluster_id;
+		let dc_list_res = ctx
+			.op(cluster::ops::datacenter::list::Input {
+				cluster_ids: vec![cluster_id],
+			})
+			.await?;
+		let cluster = unwrap!(dc_list_res.clusters.into_iter().next());
+		ctx.op(cluster::ops::datacenter::get::Input {
 			datacenter_ids: cluster.datacenter_ids,
 		})
-		.await?;
+		.await?
+		.datacenters
+	};
 
 	// Filter the datacenters that can be contacted
-	let filtered_datacenters = dcs_res
-		.datacenters
+	let filtered_datacenters = dcs
 		.into_iter()
 		.filter(|dc| crate::utils::filter_edge_dc(ctx.config(), dc).unwrap_or(false))
 		.collect::<Vec<_>>();
@@ -480,7 +494,7 @@ pub async fn destroy_deprecated(
 	let global = build_global_query_compat(&ctx, game_id, env_id).await?;
 	destroy(
 		ctx,
-		actor_id,
+		actor_id.into(),
 		DeleteQuery {
 			global,
 			override_kill_timeout: query.override_kill_timeout,
@@ -493,7 +507,7 @@ pub async fn destroy_deprecated(
 #[tracing::instrument(skip_all)]
 pub async fn upgrade(
 	ctx: Ctx<Auth>,
-	actor_id: Uuid,
+	actor_id: util::Id,
 	body: models::ActorsUpgradeActorRequest,
 	query: GlobalQuery,
 ) -> GlobalResult<serde_json::Value> {
@@ -509,28 +523,35 @@ pub async fn upgrade(
 		)
 		.await?;
 
-	// Fetch all datacenters
-	let clusters_res = ctx
-		.op(cluster::ops::get_for_game::Input {
-			game_ids: vec![game_id],
+	let dcs = if let Some(label) = actor_id.label() {
+		ctx.op(cluster::ops::datacenter::get_for_label::Input {
+			labels: vec![label],
 		})
-		.await?;
-	let cluster_id = unwrap!(clusters_res.games.first()).cluster_id;
-	let dc_list_res = ctx
-		.op(cluster::ops::datacenter::list::Input {
-			cluster_ids: vec![cluster_id],
-		})
-		.await?;
-	let cluster = unwrap!(dc_list_res.clusters.into_iter().next());
-	let dcs_res = ctx
-		.op(cluster::ops::datacenter::get::Input {
+		.await?
+		.datacenters
+	} else {
+		// Fetch all datacenters
+		let clusters_res = ctx
+			.op(cluster::ops::get_for_game::Input {
+				game_ids: vec![game_id],
+			})
+			.await?;
+		let cluster_id = unwrap!(clusters_res.games.first()).cluster_id;
+		let dc_list_res = ctx
+			.op(cluster::ops::datacenter::list::Input {
+				cluster_ids: vec![cluster_id],
+			})
+			.await?;
+		let cluster = unwrap!(dc_list_res.clusters.into_iter().next());
+		ctx.op(cluster::ops::datacenter::get::Input {
 			datacenter_ids: cluster.datacenter_ids,
 		})
-		.await?;
+		.await?
+		.datacenters
+	};
 
 	// Filter the datacenters that can be contacted
-	let filtered_datacenters = dcs_res
-		.datacenters
+	let filtered_datacenters = dcs
 		.into_iter()
 		.filter(|dc| crate::utils::filter_edge_dc(ctx.config(), dc).unwrap_or(false))
 		.collect::<Vec<_>>();
@@ -1034,7 +1055,8 @@ fn legacy_convert_actor_to_server(
 			})
 			.transpose()?,
 		environment: Uuid::nil(),
-		id: a.id,
+		// New ids are not supported by old servers
+		id: util::Id::parse(&a.id)?.as_v0().unwrap_or_else(Uuid::nil),
 		lifecycle: Box::new(models::ServersLifecycle {
 			kill_timeout: a.lifecycle.kill_timeout,
 		}),

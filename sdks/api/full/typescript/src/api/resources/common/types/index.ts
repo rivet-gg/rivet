@@ -1,3 +1,4 @@
+export * from "./Id";
 export * from "./Identifier";
 export * from "./Bio";
 export * from "./Email";

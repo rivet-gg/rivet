@@ -1,6 +1,7 @@
 use fdb_util::prelude::*;
 
 pub mod actor;
+pub mod actor2;
 pub mod client;
 pub mod datacenter;
 pub mod env;

@@ -282,7 +282,7 @@ pub async fn disable_tls_ports(
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 struct InsertDbInput {
-	actor_id: Uuid,
+	actor_id: util::Id,
 	env_id: Uuid,
 	tags: util::serde::HashableMap<String, String>,
 	resources: Option<ActorResources>,
@@ -432,7 +432,7 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 struct InsertFdbInput {
-	actor_id: Uuid,
+	actor_id: util::Id,
 	env_id: Uuid,
 	tags: util::serde::HashableMap<String, String>,
 	create_ts: i64,
@@ -443,7 +443,7 @@ async fn insert_fdb(ctx: &ActivityCtx, input: &InsertFdbInput) -> GlobalResult<(
 	ctx.fdb()
 		.await?
 		.run(|tx, _mc| async move {
-			let create_ts_key = keys::actor::CreateTsKey::new(input.actor_id);
+			let create_ts_key = keys::actor2::CreateTsKey::new(input.actor_id);
 			tx.set(
 				&keys::subspace().pack(&create_ts_key),
 				&create_ts_key
@@ -451,7 +451,7 @@ async fn insert_fdb(ctx: &ActivityCtx, input: &InsertFdbInput) -> GlobalResult<(
 					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 			);
 
-			let workflow_id_key = keys::actor::WorkflowIdKey::new(input.actor_id);
+			let workflow_id_key = keys::actor2::WorkflowIdKey::new(input.actor_id);
 			tx.set(
 				&keys::subspace().pack(&workflow_id_key),
 				&workflow_id_key
@@ -461,8 +461,8 @@ async fn insert_fdb(ctx: &ActivityCtx, input: &InsertFdbInput) -> GlobalResult<(
 
 			// Add env index key
 			let env_actor_key =
-				keys::env::ActorKey::new(input.env_id, input.create_ts, input.actor_id);
-			let data = keys::env::ActorKeyData {
+				keys::env::Actor2Key::new(input.env_id, input.create_ts, input.actor_id);
+			let data = keys::env::Actor2KeyData {
 				is_destroyed: false,
 				tags: input.tags.clone().into_iter().collect(),
 			};
