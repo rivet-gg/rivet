@@ -83,6 +83,14 @@ impl Worker {
 		loop {
 			tokio::select! {
 				_ = tick_interval.tick() => {},
+				res = wake_sub.next() => {
+					if res.is_none() {
+						return Err(WorkflowError::SubscriptionUnsubscribed.into());
+					}
+
+					tick_interval.reset();
+				},
+
 				res = &mut gc_handle => {
 					tracing::error!(?res, "metrics task unexpectedly stopped");
 					break;
@@ -90,13 +98,6 @@ impl Worker {
 				res = &mut metrics_handle => {
 					tracing::error!(?res, "metrics task unexpectedly stopped");
 					break;
-				},
-				res = wake_sub.next() => {
-					if res.is_none() {
-						return Err(WorkflowError::SubscriptionUnsubscribed.into());
-					}
-
-					tick_interval.reset();
 				},
 				_ = ctrl_c() => break,
 				_ = sigterm.recv() => break,

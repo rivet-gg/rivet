@@ -14,4 +14,4 @@ scrape_configs:
   - job_name: rivet-client
     static_configs:
       - targets:
-        - rivet-client:6090
+        - rivet-client:8091

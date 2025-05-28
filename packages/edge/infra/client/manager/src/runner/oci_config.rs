@@ -14,6 +14,7 @@ pub struct ConfigOpts<'a> {
 	pub cpu: u64,
 	pub memory: u64,
 	pub memory_max: u64,
+	pub mount_socket: bool,
 }
 
 /// Generates base config.json for an OCI bundle.
@@ -160,7 +161,7 @@ fn capabilities() -> Vec<&'static str> {
 }
 
 fn mounts(opts: &ConfigOpts) -> Result<serde_json::Value> {
-	Ok(json!([
+	let mut mounts = json!([
 		{
 			"destination": "/proc",
 			"type": "proc",
@@ -245,7 +246,18 @@ fn mounts(opts: &ConfigOpts) -> Result<serde_json::Value> {
 			"source": opts.runner_path.join("resolv.conf").to_str().context("resolv.conf path")?,
 			"options": ["rbind", "rprivate"]
 		},
-	]))
+	]);
+
+	if let Some(socket_path) = opts.mount_socket {
+		mounts.as_array().unwrap().push(json!({
+			"destination": socket_mount_dest_path().to_str().context("manager.sock dest path")?,
+			"type": "bind",
+			"source": opts.runner_path.join("manager.sock").to_str().context("manager.sock source path")?,
+			"options": ["rbind", "ro"]
+		},));
+	}
+
+	Ok()
 }
 
 fn linux_resources_devices() -> serde_json::Value {
@@ -321,4 +333,9 @@ fn linux_resources_devices() -> serde_json::Value {
 		"access": "rwm"
 		}
 	])
+}
+
+/// Mounting path of the manager socket inside of the container.
+pub fn socket_mount_dest_path() -> Path {
+	Path::new("/srv/sockets/manager.sock")
 }

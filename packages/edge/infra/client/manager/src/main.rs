@@ -175,7 +175,7 @@ async fn run(init: Init, first: bool) -> Result<()> {
 	}
 
 	// Start metrics server
-	let metrics_thread = tokio::spawn(metrics::run_standalone(init.config.client.metrics.port()));
+	let metrics_task = tokio::spawn(metrics::run_standalone(init.config.client.metrics.port()));
 
 	let url = build_ws_url(&init.config).await?;
 	tracing::info!("connecting to pegboard ws: {}", &url);
@@ -194,7 +194,7 @@ async fn run(init: Init, first: bool) -> Result<()> {
 	let ctx = Ctx::new(init.config, init.system, init.secret, init.pool, tx);
 
 	tokio::try_join!(
-		async { metrics_thread.await?.map_err(Into::into) },
+		metrics_task,
 		ctx.run(rx),
 	)?;
 

@@ -103,7 +103,7 @@ const services: Service[] = [
 		rootUser: true,
 		ports: {
 			runner: 6080,
-			metrics: 6090,
+			metrics: 8091,
 		},
 	},
 
