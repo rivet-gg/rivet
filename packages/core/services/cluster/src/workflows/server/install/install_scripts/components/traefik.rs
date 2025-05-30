@@ -311,34 +311,35 @@ pub async fn gg_static_config(config: &rivet_config::Config) -> GlobalResult<Str
 		"#
 	);
 
-	// TCP ports
-	for port in gg_config.min_ingress_port_tcp()..=gg_config.max_ingress_port_tcp() {
-		config.push_str(&formatdoc!(
-			r#"
-			[entryPoints.lb-{port}-tcp]
-				address = ":{port}/tcp"
-
-			[entryPoints.lb-{port}-tcp.transport.respondingTimeouts]
-				readTimeout = "12h"
-				writeTimeout = "12h"
-				idleTimeout = "30s"
-
-			"#
-		));
-	}
-
-	// UDP ports
-	for port in gg_config.min_ingress_port_udp()..=gg_config.max_ingress_port_udp() {
-		config.push_str(&formatdoc!(
-			r#"
-			[entryPoints.lb-{port}-udp]
-				address = ":{port}/udp"
-
-			[entryPoints.lb-{port}-udp.udp]
-				timeout = "15s"
-			"#
-		));
-	}
+    // Disable in order to be able to run on less memory
+	// // TCP ports
+	// for port in gg_config.min_ingress_port_tcp()..=gg_config.max_ingress_port_tcp() {
+	// 	config.push_str(&formatdoc!(
+	// 		r#"
+	// 		[entryPoints.lb-{port}-tcp]
+	// 			address = ":{port}/tcp"
+	//
+	// 		[entryPoints.lb-{port}-tcp.transport.respondingTimeouts]
+	// 			readTimeout = "12h"
+	// 			writeTimeout = "12h"
+	// 			idleTimeout = "30s"
+	//
+	// 		"#
+	// 	));
+	// }
+	//
+	// // UDP ports
+	// for port in gg_config.min_ingress_port_udp()..=gg_config.max_ingress_port_udp() {
+	// 	config.push_str(&formatdoc!(
+	// 		r#"
+	// 		[entryPoints.lb-{port}-udp]
+	// 			address = ":{port}/udp"
+	//
+	// 		[entryPoints.lb-{port}-udp.udp]
+	// 			timeout = "15s"
+	// 		"#
+	// 	));
+	// }
 
 	Ok(config)
 }
