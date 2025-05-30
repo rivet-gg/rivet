@@ -83,20 +83,8 @@ pub fn config() -> serde_json::Value {
 			},
 			{
 				"names": [
-					"ptrace"
-				],
-				"action": "SCMP_ACT_ALLOW"
-			},
-			{
-				"names": [
 					"arch_prctl",
 					"modify_ldt"
-				],
-				"action": "SCMP_ACT_ALLOW"
-			},
-			{
-				"names": [
-					"chroot"
 				],
 				"action": "SCMP_ACT_ALLOW"
 			},
@@ -108,7 +96,7 @@ pub fn config() -> serde_json::Value {
 				"args": [
 					{
 						"index": 0,
-						"value": 2114060288,
+						"value": 4096,
 						"op": "SCMP_CMP_MASKED_EQ"
 					}
 				]
@@ -129,18 +117,14 @@ fn syscall_names() -> Vec<&'static str> {
 		"accept",
 		"accept4",
 		"access",
-		"adjtimex",
 		"alarm",
 		"bind",
 		"brk",
 		"capget",
-		"capset",
 		"chdir",
 		"chmod",
 		"chown",
 		"chown32",
-		"clock_adjtime",
-		"clock_adjtime64",
 		"clock_getres",
 		"clock_getres_time64",
 		"clock_gettime",
