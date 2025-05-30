@@ -65,6 +65,26 @@ pub fn config(opts: ConfigOpts) -> Result<serde_json::Value> {
 					"type": "RLIMIT_NOFILE",
 					"hard": 1024,
 					"soft": 1024
+				},
+				{
+					"type": "RLIMIT_CPU",
+					"hard": 300,
+					"soft": 300
+				},
+				{
+					"type": "RLIMIT_NPROC",
+					"hard": 256,
+					"soft": 256
+				},
+				{
+					"type": "RLIMIT_MEMLOCK",
+					"hard": 65536,
+					"soft": 65536
+				},
+				{
+					"type": "RLIMIT_FSIZE",
+					"hard": 1073741824,
+					"soft": 1073741824
 				}
 			],
 			"noNewPrivileges": true
@@ -103,10 +123,31 @@ pub fn config(opts: ConfigOpts) -> Result<serde_json::Value> {
 					"limit": opts.memory_max,
 				},
 
-				// TODO: network
-				// TODO: pids
-				// TODO: hugepageLimits
-				// TODO: blockIO
+				"pids": {
+					"limit": 256
+				},
+				"blockIO": {
+					"weight": 500,
+					"weightDevice": [],
+					"throttleReadBpsDevice": [
+						{
+							"major": 259,
+							"minor": 0,
+							"rate": 10485760
+						}
+					],
+					"throttleWriteBpsDevice": [
+						{
+							"major": 259,
+							"minor": 0,
+							"rate": 10485760
+						}
+					]
+				},
+				"network": {
+					"classID": 1048577,
+					"priorities": []
+				}
 			},
 			"namespaces": [
 				{ "type": "pid" },
@@ -114,6 +155,8 @@ pub fn config(opts: ConfigOpts) -> Result<serde_json::Value> {
 				{ "type": "uts" },
 				{ "type": "mount" },
 				{ "type": "network", "path": opts.netns_path.to_str().context("netns_path")? },
+				{ "type": "user" },
+				{ "type": "cgroup" }
 			],
 			"maskedPaths": [
 				"/proc/acpi",
@@ -142,20 +185,10 @@ pub fn config(opts: ConfigOpts) -> Result<serde_json::Value> {
 // Default Docker capabilities: https://github.com/moby/moby/blob/777e9f271095685543f30df0ff7a12397676f938/oci/caps/defaults.go#L4
 fn capabilities() -> Vec<&'static str> {
 	vec![
-		"CAP_CHOWN",
-		"CAP_DAC_OVERRIDE",
-		"CAP_FSETID",
-		"CAP_FOWNER",
-		"CAP_MKNOD",
-		"CAP_NET_RAW",
 		"CAP_SETGID",
 		"CAP_SETUID",
-		"CAP_SETFCAP",
-		"CAP_SETPCAP",
 		"CAP_NET_BIND_SERVICE",
-		"CAP_SYS_CHROOT",
 		"CAP_KILL",
-		"CAP_AUDIT_WRITE",
 	]
 }
 
