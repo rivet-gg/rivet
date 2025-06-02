@@ -1,6 +1,7 @@
 import { RivetClient } from "@rivet-gg/api";
 import WebSocket from "ws";
-import dgram from 'dgram';
+import dgram from "dgram";
+import readline from "node:readline";
 
 // Can be opt since they're not required for dev
 const RIVET_ENDPOINT = process.env.RIVET_ENDPOINT;
@@ -26,10 +27,10 @@ const client = new RivetClient({
 	token: RIVET_SERVICE_TOKEN,
 });
 
-async function run() {
+async function run(runIdx: number) {
 	let actorId: string | undefined;
 	try {
-		console.time(`create actor`);
+		console.time(`create actor ${runIdx}`);
 		console.log("Creating actor", { region });
 		const { actor } = await client.actor.create({
 			project: RIVET_PROJECT,
@@ -40,6 +41,11 @@ async function run() {
 					name: BUILD_NAME,
 				},
 				buildTags: { name: BUILD_NAME, current: "true" },
+				runtime: {
+					environment: process.env.NOWAIT
+						? {}
+						: { SKIP_TIMEOUT: "1" },
+				},
 				network: {
 					ports: {
 						http: {
@@ -60,49 +66,33 @@ async function run() {
 				},
 				lifecycle: {
 					durable: false,
+					killTimeout: 10 * 1000,
 				},
 				...(BUILD_NAME === "ws-container"
 					? {
-						resources: {
-							cpu: 100,
-							memory: 100,
-						},
-					}
+							resources: {
+								cpu: 100,
+								memory: 100,
+							},
+						}
 					: {}),
 			},
 		});
 		actorId = actor.id;
-
-		console.timeEnd(`create actor`);
+		console.timeEnd(`create actor ${runIdx}`);
 
 		const port = actor.network.ports.http;
 
 		const actorOrigin = `${port.protocol}://${port.hostname}:${port.port}${port.path ?? ""}`;
 		console.log("Created actor at", actorOrigin);
 
-		//await new Promise((resolve) => setTimeout(resolve, 300));
-
-		//console.time(`ready-${actorId}`);
-		//while (true) {
-		//	// Check HTTP health of service
-		//	const response = await fetch(`${actorOrigin}/health`);
-		//	if (!response.ok) {
-		//		await new Promise(resolve => setTimeout(resolve, 100));
-		//		continue;
-		//	}
-		//	console.timeEnd(`ready-${actorId}`);
-		//	break;
-		//}
-
 		// Retry loop for HTTP health check
-		console.time(`ready ${actorId}`);
-		while (true) {
+		console.time(`ready ${runIdx} ${actorId}`);
+		if (process.env.CONNECT_HTTP) {
 			try {
 				const response = await fetch(`${actorOrigin}/health`);
 				if (response.ok) {
 					console.log("Health check passed");
-					console.timeEnd(`ready ${actorId}`);
-					break;
 				} else {
 					console.error(
 						`Health check failed with status: ${response.status}, retrying...`,
@@ -111,91 +101,102 @@ async function run() {
 			} catch (error) {
 				console.error("Health check request error:", error);
 			}
-			await new Promise((resolve) => setTimeout(resolve, 100));
 		}
+		console.timeEnd(`ready ${runIdx} ${actorId}`);
 
 		// WS
-		await new Promise((resolve, reject) => {
-			// Open a WebSocket to that endpoint
-			const ws = new WebSocket(`${actorOrigin}/ws`);
+		if (process.env.CONNECT_WS) {
+			console.time(`ws ${runIdx} ${actorId}`);
+			await new Promise((resolve, reject) => {
+				// Open a WebSocket to that endpoint
+				const ws = new WebSocket(`${actorOrigin}/ws`);
 
-			ws.onmessage = (evt) => {
-				const [type, body] = JSON.parse(evt.data as any);
-				if (type === "init") {
-					console.log("Init event data:", body);
-				} else if (type === "pong") {
-					console.log("Pong");
-					ws.close();
-					resolve(undefined);
-				} else {
-					console.warn("unknown message type", type);
-				}
-			};
+				ws.onmessage = (evt) => {
+					const [type, body] = JSON.parse(evt.data as any);
+					if (type === "init") {
+						console.log("Init event data:", body);
+					} else if (type === "pong") {
+						console.log("Pong");
+						ws.close();
+						resolve(undefined);
+					} else {
+						console.warn("unknown message type", type);
+					}
+				};
 
-			ws.onopen = () => {
-				console.log("Ping");
-				ws.send(JSON.stringify(["ping", 123]));
-			};
+				ws.onopen = () => {
+					console.log("Ping");
+					ws.send(JSON.stringify(["ping", 123]));
+				};
 
-			ws.onclose = (ev) => {
-				if (ev.wasClean) {
-					console.log("WebSocket connection closed");
-				} else {
-					reject(
-						`WebSocket did not close cleanly: ${ev.reason} ${ev.code}`,
-					);
-				}
-			};
+				ws.onclose = (ev) => {
+					if (ev.wasClean) {
+						console.log("WebSocket connection closed");
+					} else {
+						reject(
+							`WebSocket did not close cleanly: ${ev.reason} ${ev.code}`,
+						);
+					}
+				};
 
-			ws.onerror = (err) => {
-				console.error("WS error", err);
-				reject("ws error");
-			};
-		});
+				ws.onerror = (err) => {
+					console.error("WS error", err);
+					reject("ws error");
+				};
+			});
+			console.timeEnd(`ws ${runIdx} ${actorId}`);
+		}
 
 		// UDP
-		let res = await client.actor.get(actor.id, {
-			project: RIVET_PROJECT,
-			environment: RIVET_ENVIRONMENT,
-		});
+		if (process.env.CONNECT_UDP) {
+			console.time(`udp ${runIdx} ${actorId}`);
+			let res = await client.actor.get(actor.id, {
+				project: RIVET_PROJECT,
+				environment: RIVET_ENVIRONMENT,
+			});
 
-		console.log("Connecting to UDP echo server...");
-		const udpPort = res.actor.network.ports.udp;
-		const udpServer = `${udpPort.hostname}:${udpPort.port}`;
-		console.log("UDP server address:", udpServer);
+			console.log("Connecting to UDP echo server...");
+			const udpPort = res.actor.network.ports.udp;
+			const udpServer = `${udpPort.hostname}:${udpPort.port}`;
+			console.log("UDP server address:", udpServer);
 
-		// Create a UDP socket
-		const udpClient = dgram.createSocket('udp4');
+			// Create a UDP socket
+			const udpClient = dgram.createSocket("udp4");
 
-		// Send a message to the UDP echo server
-		const message = Buffer.from('Hello UDP server!');
-		udpClient.send(message, udpPort.port, udpPort.hostname, (err) => {
-			if (err) {
-				console.error("Error sending UDP message:", err);
+			// Send a message to the UDP echo server
+			const message = Buffer.from("Hello UDP server!");
+			udpClient.send(message, udpPort.port, udpPort.hostname, (err) => {
+				if (err) {
+					console.error("Error sending UDP message:", err);
+					udpClient.close();
+				} else {
+					console.log("UDP message sent");
+				}
+			});
+
+			// Listen for a response
+			udpClient.on("message", (msg, rinfo) => {
+				console.log(`UDP message received: ${msg.toString()}`);
+				console.log(`From: ${rinfo.address}:${rinfo.port}`);
 				udpClient.close();
-			} else {
-				console.log("UDP message sent");
-			}
-		});
+			});
 
-		// Listen for a response
-		udpClient.on('message', (msg, rinfo) => {
-			console.log(`UDP message received: ${msg.toString()}`);
-			console.log(`From: ${rinfo.address}:${rinfo.port}`);
-			udpClient.close();
-		});
+			udpClient.on("error", (err) => {
+				console.error("UDP client error:", err);
+				udpClient.close();
+			});
 
-		udpClient.on('error', (err) => {
-			console.error("UDP client error:", err);
-			udpClient.close();
-		});
+			udpClient.on("close", () => {
+				console.log("UDP connection closed");
+			});
+			console.time(`timend ${runIdx} ${actorId}`);
+		}
 
-		udpClient.on('close', () => {
-			console.log("UDP connection closed");
-		});
-
-		console.log("Sleeping forever so you can debug");
-		await new Promise((resolve) => setTimeout(resolve, 100_000_000));
+		// Wait
+		if (!process.env.NOWAIT) {
+			console.log("Press any key to continue");
+			await waitForKeypress();
+		}
 	} catch (error) {
 		console.error("Error:", error);
 	} finally {
@@ -209,9 +210,9 @@ async function run() {
 	}
 }
 
-async function runLoop() {
+async function runLoop(runIdx: number) {
 	while (true) {
-		await run();
+		await run(runIdx);
 		await new Promise((resolve) =>
 			setTimeout(resolve, Math.random() * 250),
 		);
@@ -220,8 +221,27 @@ async function runLoop() {
 
 // Run loop without top-level await
 (async () => {
-	for (let i = 0; i < 1; i++) {
+	const count = process.env.COUNT ? parseInt(process.env.COUNT) : 1;
+	console.log(`Starting ${count} actor`);
+	for (let i = 0; i < count; i++) {
 		await new Promise((resolve) => setTimeout(resolve, 100));
-		runLoop();
+		runLoop(i);
 	}
 })();
+
+function waitForKeypress() {
+	return new Promise((resolve) => {
+		// Configure terminal
+		process.stdin.setRawMode(true);
+		process.stdin.resume();
+
+		// Listen for the keypress event
+		process.stdin.once("data", () => {
+			// Reset terminal mode
+			process.stdin.setRawMode(false);
+			process.stdin.pause();
+			console.log(); // Add a newline
+			resolve(undefined);
+		});
+	});
+}

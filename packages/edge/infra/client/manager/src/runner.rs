@@ -326,7 +326,7 @@ impl Handle {
 				}
 			}
 		} else {
-			tracing::warn!(pid=?self.pid, "process died before exit code file was written");
+			tracing::info!(pid=?self.pid, "process died before exit code file was written, was likely SIGKILL'd");
 
 			None
 		};
