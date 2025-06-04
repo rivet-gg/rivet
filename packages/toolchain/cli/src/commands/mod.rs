@@ -4,6 +4,7 @@ pub mod config;
 pub mod deno;
 pub mod deploy;
 pub mod environment;
+pub mod function;
 pub mod login;
 pub mod logout;
 pub mod metadata;
@@ -58,6 +59,14 @@ pub enum SubCommand {
 		#[clap(subcommand)]
 		subcommand: region::SubCommand,
 	},
+	/// Commands for managing routes
+	#[clap(alias = "f", alias = "func", alias = "route")]
+	Function {
+		#[clap(subcommand)]
+		subcommand: function::SubCommand,
+	},
+	/// Get information about a specific route endpoint
+	Endpoint(function::endpoint::Opts),
 	/// Commands for managing Rivet configuration
 	Config {
 		#[clap(subcommand)]
@@ -95,6 +104,8 @@ impl SubCommand {
 			SubCommand::Actor { subcommand } => subcommand.execute().await,
 			SubCommand::Build { subcommand } => subcommand.execute().await,
 			SubCommand::Region { subcommand } => subcommand.execute().await,
+			SubCommand::Function { subcommand } => subcommand.execute().await,
+			SubCommand::Endpoint(opts) => opts.execute().await,
 			SubCommand::Config { subcommand } => subcommand.execute().await,
 			SubCommand::Metadata { subcommand } => subcommand.execute().await,
 			SubCommand::Deno(opts) => opts.execute().await,
