@@ -379,7 +379,7 @@ impl WorkflowCtx {
 
 	/// Creates a new workflow run with one more depth in the location.
 	/// - **Not to be used directly by workflow users. For implementation uses only.**
-	/// - **Remember to validate history after this branch is used.**
+	/// - **Remember to validate latent history after this branch is used.**
 	#[tracing::instrument(skip_all)]
 	pub(crate) async fn branch(&mut self) -> WorkflowResult<Self> {
 		self.custom_branch(self.input.clone(), self.version).await
@@ -400,7 +400,7 @@ impl WorkflowCtx {
 				.commit_workflow_branch_event(
 					self.workflow_id,
 					&location,
-					self.version,
+					version,
 					self.loop_location.as_ref(),
 				)
 				.await?;
@@ -409,6 +409,7 @@ impl WorkflowCtx {
 		Ok(self.branch_inner(input, version, location))
 	}
 
+	/// `custom_branch` with no history validation.
 	pub(crate) fn branch_inner(
 		&mut self,
 		input: Arc<Box<serde_json::value::RawValue>>,
