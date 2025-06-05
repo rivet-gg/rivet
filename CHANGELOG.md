@@ -5,6 +5,120 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [25.4.2](https://github.com/rivet-gg/rivet/compare/v25.4.1...v25.4.2) (2025-06-05)
+
+
+### Features
+
+* add pb usage metrics, server state ([#2503](https://github.com/rivet-gg/rivet/issues/2503)) ([961149a](https://github.com/rivet-gg/rivet/commit/961149abe80432b94a21ef210c8ca33c4923e024))
+* **guard:** add http ping endpoint to edge api hosts ([#2506](https://github.com/rivet-gg/rivet/issues/2506)) ([c33d254](https://github.com/rivet-gg/rivet/commit/c33d25498a90b85d0eb61c3788e3e13385970851))
+* **hub:** add actors billing preview ([#2466](https://github.com/rivet-gg/rivet/issues/2466)) ([6728f28](https://github.com/rivet-gg/rivet/commit/6728f286aee921e8456853c68d4cdbf01be1a714))
+* **hub:** add loading indicator to actors and containers ([#2486](https://github.com/rivet-gg/rivet/issues/2486)) ([480e721](https://github.com/rivet-gg/rivet/commit/480e721009f0cadab87d9608251f2e5b9c7dc8be))
+* **hub:** improve get started guide ([#2496](https://github.com/rivet-gg/rivet/issues/2496)) ([509b929](https://github.com/rivet-gg/rivet/commit/509b929db4c81245708de8efd85500c6fd293819))
+* **hub:** truncate actor tags when in a table ([#2497](https://github.com/rivet-gg/rivet/issues/2497)) ([e349d6e](https://github.com/rivet-gg/rivet/commit/e349d6ed45fcdb91ba59f0a21ebd16ec30aa04a5))
+
+
+### Bug Fixes
+
+* add future/fdb metrics ([#2377](https://github.com/rivet-gg/rivet/issues/2377)) ([37250d5](https://github.com/rivet-gg/rivet/commit/37250d5e3dc7897fdd31d8f21ef6597b07abb15b))
+* add logs to ws ([#2412](https://github.com/rivet-gg/rivet/issues/2412)) ([0ab685a](https://github.com/rivet-gg/rivet/commit/0ab685ae5ebef7310f48f519a3789d6c708b8bd6))
+* add metrics to ops and guard ([#2429](https://github.com/rivet-gg/rivet/issues/2429)) ([9cd808a](https://github.com/rivet-gg/rivet/commit/9cd808aed6ef45a0250d2c3b167c9965e035b755))
+* add otel collector tail sampler ([#2411](https://github.com/rivet-gg/rivet/issues/2411)) ([026e21b](https://github.com/rivet-gg/rivet/commit/026e21b74bbc50dddc6014a658fe00a1a755be09))
+* add udp test to system test ([#2417](https://github.com/rivet-gg/rivet/issues/2417)) ([91d820a](https://github.com/rivet-gg/rivet/commit/91d820a30cc87a9de90989f2c2a75a28f821167e))
+* allow custom project for status monitor ([#2415](https://github.com/rivet-gg/rivet/issues/2415)) ([9f6a5a7](https://github.com/rivet-gg/rivet/commit/9f6a5a7950f07d1110bb36fc584d539c5133446b))
+* **cache:** add traces ([#2489](https://github.com/rivet-gg/rivet/issues/2489)) ([b316d41](https://github.com/rivet-gg/rivet/commit/b316d41f2b3ae876e499273ba3c3aecdca27456b))
+* **cli:** internal_port u8 -&gt; u16 ([#2424](https://github.com/rivet-gg/rivet/issues/2424)) ([6d024f5](https://github.com/rivet-gg/rivet/commit/6d024f5066e0293554a221e1f72fd01e7aa7b1e6))
+* **container-runner:** fix leaked pipes ([#2473](https://github.com/rivet-gg/rivet/issues/2473)) ([121a4a4](https://github.com/rivet-gg/rivet/commit/121a4a4953e7978902417579a437b9e0bc22c157))
+* correct memory safety vs correctness guarantees in blog post ([#2534](https://github.com/rivet-gg/rivet/issues/2534)) ([4f0663b](https://github.com/rivet-gg/rivet/commit/4f0663baceffd1c757100192f48716bc816016c8))
+* disambiguate cluster_id &lt;-&gt; instance_id ([#2472](https://github.com/rivet-gg/rivet/issues/2472)) ([6fccebb](https://github.com/rivet-gg/rivet/commit/6fccebb9b140d666af84eb088b4f5a14e4bf304c))
+* fix client leaked pipes ([#2474](https://github.com/rivet-gg/rivet/issues/2474)) ([39220d3](https://github.com/rivet-gg/rivet/commit/39220d35a182aa99f401646169a61e96d8d89293))
+* fix copy pasta typo in route propegation rip ([#2536](https://github.com/rivet-gg/rivet/issues/2536)) ([639afa9](https://github.com/rivet-gg/rivet/commit/639afa977761b38efbac9e836da788069f452610))
+* fix fdb cli, wf pulling ([#2418](https://github.com/rivet-gg/rivet/issues/2418)) ([a8d5b7a](https://github.com/rivet-gg/rivet/commit/a8d5b7a1747245c9ecd5cbe46d0680a7095b3e17))
+* fix metrics ([#2416](https://github.com/rivet-gg/rivet/issues/2416)) ([b2f092d](https://github.com/rivet-gg/rivet/commit/b2f092d96dc385cebb77c4e585f6764ca3ad96fc))
+* fix pb metrics standalone ([#2518](https://github.com/rivet-gg/rivet/issues/2518)) ([eeb9b08](https://github.com/rivet-gg/rivet/commit/eeb9b08ab5c587dd4d480162396e573a4208a71e))
+* **guard:** add cache clearing to ws retry, increase ws retries ([#2448](https://github.com/rivet-gg/rivet/issues/2448)) ([65aa627](https://github.com/rivet-gg/rivet/commit/65aa627a5b62205e8d97bcc6a2acc3c042c466f0))
+* **guard:** add metrics ([#2480](https://github.com/rivet-gg/rivet/issues/2480)) ([3cee110](https://github.com/rivet-gg/rivet/commit/3cee11016f4dabd74651e294952dafd270add2bc))
+* **guard:** add more tokio runtime metrics, remove labels from metrics ([#2485](https://github.com/rivet-gg/rivet/issues/2485)) ([5b84ccc](https://github.com/rivet-gg/rivet/commit/5b84ccc942d01ef77867e26d2036f145ca564b49))
+* **guard:** allow routing to path-based endpoints via any hostname for dev clusters ([#2469](https://github.com/rivet-gg/rivet/issues/2469)) ([ba7a88d](https://github.com/rivet-gg/rivet/commit/ba7a88dc3f4afac48d9addeae3c7726e894a4ee9))
+* **guard:** replace internal caches with moka ([#2481](https://github.com/rivet-gg/rivet/issues/2481)) ([c88362c](https://github.com/rivet-gg/rivet/commit/c88362c16c318bde3c905a4d03fb7270b505ccfd))
+* **hub:** close modal after creating a team ([#2498](https://github.com/rivet-gg/rivet/issues/2498)) ([85a5c84](https://github.com/rivet-gg/rivet/commit/85a5c84d2702b56ec8ed4ecdef2a383c325ed7bc))
+* **hub:** containers screen overflow issues ([#2545](https://github.com/rivet-gg/rivet/issues/2545)) ([5ba15dd](https://github.com/rivet-gg/rivet/commit/5ba15dd483fcae4d826f8b1d57e58effdb9e474b))
+* **hub:** do not force users to go through onboarding when they already have projects created ([#2499](https://github.com/rivet-gg/rivet/issues/2499)) ([1135677](https://github.com/rivet-gg/rivet/commit/1135677382e34690722ec15abdf334b994983e28))
+* **hub:** generate stripe sessions links aot ([#2494](https://github.com/rivet-gg/rivet/issues/2494)) ([e3f8c7f](https://github.com/rivet-gg/rivet/commit/e3f8c7f4d1fa13bb8b716e9287501afa964b0e35))
+* **hub:** invalidate billing calculation after chagning the billing plan ([#2547](https://github.com/rivet-gg/rivet/issues/2547)) ([c3a8a1e](https://github.com/rivet-gg/rivet/commit/c3a8a1eba531bcd9c4d550a0f3eef9765ad073fa))
+* **hub:** make sure kill timeout is properly displayed ([#2488](https://github.com/rivet-gg/rivet/issues/2488)) ([d8b1a65](https://github.com/rivet-gg/rivet/commit/d8b1a650a25ea9ea6d65165761b21a9708746e6b))
+* **hub:** minor fixes to filters and sidebar ([#2439](https://github.com/rivet-gg/rivet/issues/2439)) ([a2aeafd](https://github.com/rivet-gg/rivet/commit/a2aeafd1ec75836cc386d35bc27bf7c8da2908e1))
+* **hub:** minor polishing ([#2444](https://github.com/rivet-gg/rivet/issues/2444)) ([b2e5f8f](https://github.com/rivet-gg/rivet/commit/b2e5f8fe65a2575f7322cb801d26543f3c1e4a7e))
+* **hub:** missing message in logs txt file ([#2555](https://github.com/rivet-gg/rivet/issues/2555)) ([f26f599](https://github.com/rivet-gg/rivet/commit/f26f599b0bd17d8c9e4f909958917adc0396ef33))
+* **hub:** missing message in logs txt file ([#2557](https://github.com/rivet-gg/rivet/issues/2557)) ([34d6973](https://github.com/rivet-gg/rivet/commit/34d697306b8a9ab0180e9f2553a0a8a56c779ef2))
+* **hub:** two cmd+k pannels is too much ([#2491](https://github.com/rivet-gg/rivet/issues/2491)) ([dc35946](https://github.com/rivet-gg/rivet/commit/dc35946be370e360a79fda5edad05510706c899f))
+* **hub:** use proper logo in footer ([#2495](https://github.com/rivet-gg/rivet/issues/2495)) ([be885f6](https://github.com/rivet-gg/rivet/commit/be885f69680eac431f5e08743b44008ff83612a0))
+* **pb:** fix actor reschedule with wrong image ([#2428](https://github.com/rivet-gg/rivet/issues/2428)) ([ad8ea6b](https://github.com/rivet-gg/rivet/commit/ad8ea6b9fba62a534a2e6905f57165072e7f990d))
+* **pegboard:** continue exporting metrics even if fetching actor fails ([#2520](https://github.com/rivet-gg/rivet/issues/2520)) ([9ca20cf](https://github.com/rivet-gg/rivet/commit/9ca20cf8f2b2167cdfcbf500d9d09e4a16089c6c))
+* **pegboard:** fix collecting metrics for actors without workflows ([#2519](https://github.com/rivet-gg/rivet/issues/2519)) ([9af8aa1](https://github.com/rivet-gg/rivet/commit/9af8aa149e9af3796b065429bb1f7730ff5db4f8))
+* **pegboard:** fix netns path bug ([#2431](https://github.com/rivet-gg/rivet/issues/2431)) ([36252ec](https://github.com/rivet-gg/rivet/commit/36252ec8694939c3b50cdcbc96c9379816f89484))
+* **pegboard:** fix prewarm logic ([#2409](https://github.com/rivet-gg/rivet/issues/2409)) ([abdda32](https://github.com/rivet-gg/rivet/commit/abdda32dce8bf514cc98f076ccd266441d2a60a3))
+* remove iptables filter after CNI ([#2421](https://github.com/rivet-gg/rivet/issues/2421)) ([631965b](https://github.com/rivet-gg/rivet/commit/631965b1b219e6224c0bf616caeb94bc81492398))
+* **site:** broken sales / missing support page ([#2559](https://github.com/rivet-gg/rivet/issues/2559)) ([db6b40b](https://github.com/rivet-gg/rivet/commit/db6b40b652573b4c471fa4d790c35586a6ffcb05))
+* **site:** broken sales / missing support page ([#2561](https://github.com/rivet-gg/rivet/issues/2561)) ([3b81ca3](https://github.com/rivet-gg/rivet/commit/3b81ca3a51341fef691e90b0d5218eb380e43f2a))
+* **studio:** items flows incorreclty on getting started screen ([#2542](https://github.com/rivet-gg/rivet/issues/2542)) ([d6bc547](https://github.com/rivet-gg/rivet/commit/d6bc54706d4549ea51e9079c0a04783c1aaee25a))
+* swap status monitor dns resolver with native resolver ([#2432](https://github.com/rivet-gg/rivet/issues/2432)) ([d450f12](https://github.com/rivet-gg/rivet/commit/d450f1256077bd0528e950b9551d8c5919f5771d))
+* use real errors for actor logs ([#2410](https://github.com/rivet-gg/rivet/issues/2410)) ([6134113](https://github.com/rivet-gg/rivet/commit/61341130281fbf6eb6e012757ebb3ec797e07749))
+
+
+### Documentation
+
+* add linear-agent-starter example ([#2482](https://github.com/rivet-gg/rivet/issues/2482)) ([e13e6e9](https://github.com/rivet-gg/rivet/commit/e13e6e95c56ea63bc73312fa7d01a647412ac507))
+* update code for functions example ([c103001](https://github.com/rivet-gg/rivet/commit/c103001087ec87b8286bed1a909b44bab6228ebc))
+
+
+### Code Refactoring
+
+* **hub:** increase level of error reporting to catch cancelled errors ([#2492](https://github.com/rivet-gg/rivet/issues/2492)) ([2cc1e6e](https://github.com/rivet-gg/rivet/commit/2cc1e6e11f2da6fe97e022a67ded35a49f76a69e))
+* **hub:** make sure user can create actors when manager is present ([#2493](https://github.com/rivet-gg/rivet/issues/2493)) ([2eb6885](https://github.com/rivet-gg/rivet/commit/2eb688553bf7998e99f251556d2ceae918ef4ff8))
+* **hub:** polishing ([#2420](https://github.com/rivet-gg/rivet/issues/2420)) ([677643e](https://github.com/rivet-gg/rivet/commit/677643ecea49a1363355bcde6f7261f300ce4ac4))
+* **hub:** remove instance count for functions ([#2541](https://github.com/rivet-gg/rivet/issues/2541)) ([fa5deef](https://github.com/rivet-gg/rivet/commit/fa5deefd70cb473f6be397598ee7cb8947209eb9))
+* **hub:** responsive actors table ([#2468](https://github.com/rivet-gg/rivet/issues/2468)) ([6549759](https://github.com/rivet-gg/rivet/commit/65497594024d3adce86d628fced9ed27eddec471))
+* **hub:** sugar coat config tab ([#2490](https://github.com/rivet-gg/rivet/issues/2490)) ([97d6d62](https://github.com/rivet-gg/rivet/commit/97d6d62be4e979560269562da70704978c83f6d4))
+* replace unsafe File::from_raw_fd with safe File::from ([#2479](https://github.com/rivet-gg/rivet/issues/2479)) ([5c87dae](https://github.com/rivet-gg/rivet/commit/5c87daeb6d548e25d9815054410106a9d313db78))
+
+
+### Chores
+
+* add open-source durable objects to landing page ([#2514](https://github.com/rivet-gg/rivet/issues/2514)) ([941b6ac](https://github.com/rivet-gg/rivet/commit/941b6ace404cabecfd41277917dd86d0657f4c63))
+* add standalone toolchain build scripts ([#2400](https://github.com/rivet-gg/rivet/issues/2400)) ([7e3b07e](https://github.com/rivet-gg/rivet/commit/7e3b07ec2c41e00006d105b7e0e56d898e70338f))
+* change otel collector policies ([#2436](https://github.com/rivet-gg/rivet/issues/2436)) ([bb8ccd5](https://github.com/rivet-gg/rivet/commit/bb8ccd548353180820ade4253ac7a8d249bc7aff))
+* **cli:** allow RIVET_CLI_VERSION override for installed CLI version ([#2426](https://github.com/rivet-gg/rivet/issues/2426)) ([ecdd6c8](https://github.com/rivet-gg/rivet/commit/ecdd6c8bce5d7d4ab364dae2a18ccb5b0a52e7e9))
+* disable OTEL by default in guard service ([#2522](https://github.com/rivet-gg/rivet/issues/2522)) ([1e6fef3](https://github.com/rivet-gg/rivet/commit/1e6fef392aac4fcad481d3914379827fa10b6e8e))
+* expose namespace in otel attributes ([#2501](https://github.com/rivet-gg/rivet/issues/2501)) ([b208feb](https://github.com/rivet-gg/rivet/commit/b208febfc829ff14295f56d0014b015515e930b5))
+* fill out remaining content for landing page ([#2413](https://github.com/rivet-gg/rivet/issues/2413)) ([e0fecf1](https://github.com/rivet-gg/rivet/commit/e0fecf12fc3064626798de9c34b055d69f3476df))
+* fix broadcast req error logs ([#2419](https://github.com/rivet-gg/rivet/issues/2419)) ([5f2cfaa](https://github.com/rivet-gg/rivet/commit/5f2cfaa0db51009c6029737fe4be679795732763))
+* fix guard metrics ([#2504](https://github.com/rivet-gg/rivet/issues/2504)) ([fa2f84f](https://github.com/rivet-gg/rivet/commit/fa2f84f0ea29cbd0d1295da2ec14368380117b1b))
+* fix landing page links ([#2452](https://github.com/rivet-gg/rivet/issues/2452)) ([24a03dc](https://github.com/rivet-gg/rivet/commit/24a03dc2929ad1058bec72bc0e214862a68dfd28))
+* fix links in linear agent blog post ([f0ce79f](https://github.com/rivet-gg/rivet/commit/f0ce79f261c0632296b6b4c01463b479ccc207e8))
+* fix typo ([#2516](https://github.com/rivet-gg/rivet/issues/2516)) ([9fdd868](https://github.com/rivet-gg/rivet/commit/9fdd86826def1803b2ebb5fd5166aa6237b1fe01))
+* fixes to pricing page ([#2459](https://github.com/rivet-gg/rivet/issues/2459)) ([a207c1f](https://github.com/rivet-gg/rivet/commit/a207c1fc5976532fd0a1346fb883f8fa79da2d89))
+* increase file watch limit for rivet guard ([#2521](https://github.com/rivet-gg/rivet/issues/2521)) ([38528db](https://github.com/rivet-gg/rivet/commit/38528dbbc7658f767d7343c7dbe1f5b5233ef964))
+* new landing page ([#2369](https://github.com/rivet-gg/rivet/issues/2369)) ([cd66a6d](https://github.com/rivet-gg/rivet/commit/cd66a6d6f7ebe99aa52403b646952ea1a0b78fbe))
+* new og image ([#2450](https://github.com/rivet-gg/rivet/issues/2450)) ([14c45eb](https://github.com/rivet-gg/rivet/commit/14c45ebabf0e7da3edabfcca7315f6137273272f))
+* pricing update ([#2455](https://github.com/rivet-gg/rivet/issues/2455)) ([efcd3fd](https://github.com/rivet-gg/rivet/commit/efcd3fdaa1618c55e57a5fa394ac10af7019a72e))
+* release 25.4.2 ([3924250](https://github.com/rivet-gg/rivet/commit/392425013fac42001fdc4f5176e393ca593e68c1))
+* release 25.4.2 ([dc4c2cf](https://github.com/rivet-gg/rivet/commit/dc4c2cfd908503d046635bd45cc918e4f0e9c7fa))
+* **release:** update version to 25.4.2 ([e6a665f](https://github.com/rivet-gg/rivet/commit/e6a665fca65f8593f9e59ccb409146f4ba5d3013))
+* **release:** update version to 25.4.2 ([89d12ce](https://github.com/rivet-gg/rivet/commit/89d12ce6fdf6a9f404d9dd271adc9e58904b2752))
+* remove old references to matchmaker on website for seo ([#2511](https://github.com/rivet-gg/rivet/issues/2511)) ([8ccd8a1](https://github.com/rivet-gg/rivet/commit/8ccd8a1f357b5cc63aad94741ac3ab555ce9c9c6))
+* revert billing ([#2549](https://github.com/rivet-gg/rivet/issues/2549)) ([afbbfe3](https://github.com/rivet-gg/rivet/commit/afbbfe352de2c3076eff5cc67913ef859c6712df))
+* testing ci ([13a989c](https://github.com/rivet-gg/rivet/commit/13a989c811a7f14dbc4c8d1f4c1a421970186971))
+* tweak wording for containers ([7ab4538](https://github.com/rivet-gg/rivet/commit/7ab45380f78d18e22d8aeae000b85da929b3fde9))
+* update deno to fix outgoing websockets ([#2446](https://github.com/rivet-gg/rivet/issues/2446)) ([a050f1e](https://github.com/rivet-gg/rivet/commit/a050f1ee4e1b02b9caf9605d3eb37ee9e4bf5150))
+* update examples ([#2461](https://github.com/rivet-gg/rivet/issues/2461)) ([d3916f3](https://github.com/rivet-gg/rivet/commit/d3916f31050ab4842aa224be41bf13fc018079c6))
+* update pricing buttons ([#2524](https://github.com/rivet-gg/rivet/issues/2524)) ([fe5fde3](https://github.com/rivet-gg/rivet/commit/fe5fde36e9c92c6282a2ebd5cb4fc4645e19354b))
+* update styling on sales ([#2463](https://github.com/rivet-gg/rivet/issues/2463)) ([7855096](https://github.com/rivet-gg/rivet/commit/7855096e3d4cc6f31b8925794facc49e651211ce))
+* update workspace ([#2505](https://github.com/rivet-gg/rivet/issues/2505)) ([a3cb3ec](https://github.com/rivet-gg/rivet/commit/a3cb3ecf120c2a08243813c0af17990fed3415c1))
+* updated graphics for new landing page ([#2398](https://github.com/rivet-gg/rivet/issues/2398)) ([e657b90](https://github.com/rivet-gg/rivet/commit/e657b90e51e04a1630bb9d3ac9c2c64c905b7673))
+* updated scenarios Pricing ([#2457](https://github.com/rivet-gg/rivet/issues/2457)) ([9fe7c47](https://github.com/rivet-gg/rivet/commit/9fe7c47701d5863819ee201b2953648e51854007))
+* writing rivet guard blog post ([#2509](https://github.com/rivet-gg/rivet/issues/2509)) ([1c35f83](https://github.com/rivet-gg/rivet/commit/1c35f8345d50c66c854c7509b17dd85b248ce09b))
+
 ## [25.4.1](https://github.com/rivet-gg/rivet/compare/v25.4.0...v25.4.1) (2025-04-26)
 
 
