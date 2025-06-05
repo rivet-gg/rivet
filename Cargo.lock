@@ -3274,6 +3274,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cityhash-rs"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93a719913643003b84bd13022b4b7e703c09342cd03b679c4641c7d2e50dc34d"
+
+[[package]]
 name = "cjson"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3345,19 +3351,44 @@ checksum = "a0875e527e299fc5f4faba42870bf199a39ab0bb2dbba1b8aef0a2151451130f"
 dependencies = [
  "bstr",
  "bytes",
- "clickhouse-derive",
+ "clickhouse-derive 0.1.1",
  "clickhouse-rs-cityhash-sys",
  "futures",
  "hyper 0.14.31",
  "hyper-tls 0.5.0",
  "lz4",
- "sealed",
+ "sealed 0.4.0",
  "serde",
  "static_assertions",
  "thiserror 1.0.69",
  "tokio",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "clickhouse"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3093f817c4f81c8bd174ed8dd30eac785821a8a7eef27a7dcb7f8cd0d0f6548"
+dependencies = [
+ "bstr",
+ "bytes",
+ "cityhash-rs",
+ "clickhouse-derive 0.2.0",
+ "futures",
+ "futures-channel",
+ "http-body-util",
+ "hyper 1.6.0",
+ "hyper-util",
+ "lz4_flex",
+ "replace_with",
+ "sealed 0.5.0",
+ "serde",
+ "static_assertions",
+ "thiserror 1.0.69",
+ "tokio",
+ "url",
 ]
 
 [[package]]
@@ -3370,6 +3401,18 @@ dependencies = [
  "quote",
  "serde_derive_internals 0.26.0",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "clickhouse-derive"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d70f3e2893f7d3e017eeacdc9a708fbc29a10488e3ebca21f9df6a5d2b616dbb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_derive_internals 0.29.1",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -3400,9 +3443,9 @@ dependencies = [
 
 [[package]]
 name = "clickhouse-user-query"
-version = "25.5.2"
+version = "25.4.2"
 dependencies = [
- "clickhouse",
+ "clickhouse 0.12.2",
  "serde",
  "serde_json",
  "testcontainers 0.24.0",
@@ -8356,7 +8399,7 @@ dependencies = [
  "chirp-client",
  "chirp-worker",
  "chrono",
- "clickhouse",
+ "clickhouse 0.11.6",
  "prost 0.10.4",
  "rivet-operation",
  "serde",
@@ -8368,7 +8411,7 @@ version = "25.5.2"
 dependencies = [
  "chirp-client",
  "chirp-worker",
- "clickhouse",
+ "clickhouse 0.11.6",
  "reqwest 0.11.27",
  "rivet-config",
  "rivet-health-checks",
@@ -12071,6 +12114,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "replace_with"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51743d3e274e2b18df81c4dc6caf8a5b8e15dbe799e0dca05c7617380094e884"
+
+[[package]]
 name = "reqwest"
 version = "0.11.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12840,7 +12889,7 @@ version = "25.5.2"
 dependencies = [
  "anyhow",
  "async-nats",
- "clickhouse",
+ "clickhouse 0.11.6",
  "clickhouse-inserter",
  "dirs",
  "divan",
@@ -13755,6 +13804,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "sealed"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4a8caec23b7800fb97971a1c6ae365b6239aaeddfb934d6265f8505e795699d"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.90",
 ]
 
 [[package]]
