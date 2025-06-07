@@ -17,8 +17,19 @@ pub struct Opts {
 	#[clap(long)]
 	extra_tags: Option<String>,
 
-	#[clap(long, help = "Override the automatically generated version name")]
+	/// Override the automatically generated version name
+	#[clap(long)]
 	version: Option<String>,
+
+	#[clap(long)]
+	skip_route_creation: Option<bool>,
+
+	#[clap(long)]
+	keep_existing_routes: Option<bool>,
+
+	/// Run in non-interactive mode (no prompts)
+	#[clap(long)]
+	non_interactive: bool,
 }
 
 impl Opts {
@@ -47,6 +58,9 @@ impl Opts {
 			filter_tags: filter_tags,
 			build_tags: build_tags,
 			version: self.version.clone(),
+			skip_route_creation: self.skip_route_creation,
+			keep_existing_routes: self.keep_existing_routes,
+			non_interactive: self.non_interactive,
 		})
 		.await?;
 
