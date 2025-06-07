@@ -1,7 +1,16 @@
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { createAndStartServer } from "../shared/server.js";
-import dgram from 'dgram';
+import dgram from "dgram";
+
+process.on("SIGTERM", () => {
+	console.log("SIGTERM received, going to try to live forever");
+
+	let aliveTick = 0;
+	setInterval(() => {
+		console.error("still alive", aliveTick++);
+	}, 1000);
+});
 
 let injectWebSocket: any;
 const { app, port } = createAndStartServer((app) => {
@@ -14,7 +23,6 @@ const { app, port } = createAndStartServer((app) => {
 const server = serve({ fetch: app.fetch, port });
 injectWebSocket(server);
 
-
 // Get port from environment
 const portEnv =
 	typeof Deno !== "undefined"
@@ -23,24 +31,25 @@ const portEnv =
 
 if (portEnv) {
 	// Create a UDP socket
-	const udpServer = dgram.createSocket('udp4');
+	const udpServer = dgram.createSocket("udp4");
 
 	// Listen for incoming messages
-	udpServer.on('message', (msg, rinfo) => {
-		console.log(`UDP server received: ${msg} from ${rinfo.address}:${rinfo.port}`);
+	udpServer.on("message", (msg, rinfo) => {
+		console.log(
+			`UDP server received: ${msg} from ${rinfo.address}:${rinfo.port}`,
+		);
 
 		// Echo the message back to the sender
 		udpServer.send(msg, rinfo.port, rinfo.address, (err) => {
-			if (err) console.error('Failed to send UDP response:', err);
+			if (err) console.error("Failed to send UDP response:", err);
 		});
 	});
 
 	// Handle errors
-	udpServer.on('error', (err) => {
-		console.error('UDP server error:', err);
+	udpServer.on("error", (err) => {
+		console.error("UDP server error:", err);
 		udpServer.close();
 	});
-
 
 	const port2 = Number.parseInt(portEnv);
 
