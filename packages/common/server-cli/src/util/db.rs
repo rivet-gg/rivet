@@ -1,6 +1,8 @@
+use std::{path::Path, str::FromStr};
+
 use anyhow::*;
 use serde_json::json;
-use std::path::Path;
+use uuid::Uuid;
 
 pub struct ShellQuery {
 	pub svc: String,
@@ -172,6 +174,57 @@ pub async fn clickhouse_shell(
 		}
 
 		cmd.status()?;
+	}
+
+	Ok(())
+}
+
+pub async fn wf_sqlite_shell(
+	config: rivet_config::Config,
+	shell_ctx: ShellContext<'_>,
+	internal: bool,
+) -> Result<()> {
+	let ShellContext { queries, .. } = shell_ctx;
+
+	let pools = rivet_pools::Pools::new(config.clone()).await?;
+
+	// Combine all queries into one command
+	for ShellQuery {
+		svc: workflow_id,
+		query,
+	} in queries
+	{
+		let workflow_id = Uuid::from_str(workflow_id).context("could not parse input as UUID")?;
+		let key = if internal {
+			chirp_workflow::db::sqlite_db_name_internal(workflow_id)
+		} else {
+			chirp_workflow::db::sqlite_db_name_data(workflow_id)
+		};
+
+		rivet_term::status::warn(
+			"WARNING",
+			"Database opened in WRITE mode. Modifications made will only be committed after the shell closes. This may cause changes made outside of this shell to be overwritten."
+		);
+		println!();
+
+		tracing::info!(?key, "connecting to sqlite");
+		let pool = pools.sqlite(key, false).await?;
+
+		// Close the pool since we are going to be using the CLI
+		pool.close().await;
+
+		let mut cmd = std::process::Command::new("/root/go/bin/usql");
+		cmd.arg(format!("sqlite:{}", pool.db_path().display()));
+
+		if let Some(query) = query {
+			cmd.args(["-c", query]);
+		}
+
+		cmd.status().context("failed running usql")?;
+
+		rivet_term::status::progress("Evicting database", "");
+		pool.evict().await.map_err(|x| anyhow!("{x}"))?;
+		rivet_term::status::success("Evicted", "");
 	}
 
 	Ok(())

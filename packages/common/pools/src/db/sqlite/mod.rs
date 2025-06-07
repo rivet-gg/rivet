@@ -893,6 +893,7 @@ impl SqlitePoolInner {
 }
 
 impl SqlitePoolInner {
+	// TODO: Doesn't need a result type
 	#[tracing::instrument(name = "sqlite_pool_snapshot", skip_all)]
 	pub async fn snapshot(&self, vacuum: bool) -> GlobalResult<bool> {
 		match self
@@ -910,9 +911,21 @@ impl SqlitePoolInner {
 			}
 		}
 	}
+
+	#[tracing::instrument(name = "sqlite_pool_evict", skip_all)]
+	pub async fn evict(&self) -> GlobalResult<()> {
+		self
+			.manager
+			.evict_with_key(&[self.key_packed.clone()])
+			.await
+	}
 }
 
 impl SqlitePoolInner {
+	pub fn db_path(&self) -> &Path {
+		&self.db_path
+	}
+
 	#[tracing::instrument(skip_all)]
 	pub async fn conn(&self) -> Result<PoolConnection<Sqlite>, sqlx::Error> {
 		// Attempt to use an existing connection
