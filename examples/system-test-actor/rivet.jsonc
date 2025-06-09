@@ -4,7 +4,10 @@
 			"script": "src/isolate/main.ts"
 		},
 		"ws-container": {
-			"dockerfile": "Dockerfile"
+			"dockerfile": "Dockerfile",
+			"unstable": {
+				"build_method": "remote"
+			}
 		}
 	}
 }
