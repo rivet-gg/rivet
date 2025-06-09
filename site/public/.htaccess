@@ -1,0 +1,17 @@
+# Rivet SEO Fixes - Redirect www to non-www
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Redirect www to non-www
+RewriteCond %{HTTP_HOST} ^www\.rivet\.gg$ [NC]
+RewriteRule ^(.*)$ https://rivet.gg/$1 [R=301,L]
+
+# Optional: Add security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
