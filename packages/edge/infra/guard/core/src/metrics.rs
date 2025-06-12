@@ -1,10 +1,10 @@
 use lazy_static::lazy_static;
-use rivet_metrics::{prometheus::*, REGISTRY, BUCKETS};
+use rivet_metrics::{prometheus::*, BUCKETS, REGISTRY};
 
 lazy_static! {
 	// MARK: Internal
-	pub static ref ROUTE_CACHE_SIZE: IntGauge = register_int_gauge_with_registry!(
-		"guard_route_cache_size",
+	pub static ref ROUTE_CACHE_COUNT: IntGauge = register_int_gauge_with_registry!(
+		"guard_route_cache_count",
 		"Number of entries in the route cache",
 		*REGISTRY,
 	).unwrap();
