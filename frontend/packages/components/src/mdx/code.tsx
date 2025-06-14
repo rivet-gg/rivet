@@ -180,6 +180,7 @@ export const code = ({
 	}
 	return (
 		<code
+			className="whitespace-pre-wrap break-all"
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: it's generated from markdown
 			dangerouslySetInnerHTML={{ __html: escapeHTML(children as string) }}
 		/>
