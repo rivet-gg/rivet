@@ -233,7 +233,7 @@ async fn read_packet(
 			return Ok(Packet::None);
 		}
 		Some(Ok(Message::Pong(_))) => {
-			tracing::debug!("received pong");
+			tracing::trace!("received pong");
 			return Ok(Packet::Pong);
 		}
 		Some(Ok(msg)) => bail!("unexpected message: {msg:?}"),
