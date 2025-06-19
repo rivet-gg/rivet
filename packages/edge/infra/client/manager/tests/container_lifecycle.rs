@@ -8,6 +8,7 @@ use pegboard::protocol;
 use pegboard_manager::Ctx;
 use tokio::{net::TcpStream, sync::Mutex};
 use tokio_tungstenite::tungstenite::protocol::Message;
+use uuid::Uuid;
 
 mod common;
 use common::*;
@@ -183,6 +184,16 @@ async fn handle_connection(
 												"invalid prior state: {actor_state:?} -> {state:?}"
 											);
 										}
+
+										// Stop actor
+										send_command(
+											&mut tx,
+											protocol::Command::SignalRunner {
+												runner_id: Uuid::nil(),
+												signal: Signal::SIGKILL as i32,
+											},
+										)
+										.await;
 
 										tokio::time::sleep(Duration::from_millis(1000)).await;
 
