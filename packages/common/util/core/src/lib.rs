@@ -1,6 +1,7 @@
-pub use id::Id;
 use rand::Rng;
 pub use rivet_util_macros as macros;
+pub use rivet_util_id as id;
+pub use id::Id;
 use tokio::time::{Duration, Instant};
 
 pub mod billing;
@@ -13,7 +14,6 @@ pub mod format;
 pub mod future;
 pub mod geo;
 pub mod glob;
-pub mod id;
 pub mod math;
 pub mod req;
 pub mod route;
