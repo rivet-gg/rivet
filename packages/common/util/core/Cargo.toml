@@ -13,7 +13,6 @@ macros = []
 async-trait = "0.1"
 bcrypt = "0.13.0"
 chrono = "0.4"
-fdb-util.workspace = true
 formatted-error = { workspace = true, optional = true }
 futures-util = "0.3"
 global-error.workspace = true
@@ -25,6 +24,7 @@ regex = "1.4"
 reqwest = { version = "0.12", default-features = false }
 rivet-config.workspace = true
 rivet-metrics.workspace = true
+rivet-util-id = { workspace = true }
 rivet-util-macros.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }

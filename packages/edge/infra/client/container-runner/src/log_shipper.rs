@@ -90,9 +90,39 @@ impl LogShipper {
 		println!("Log shipper connected");
 
 		while let Result::Ok(message) = self.msg_rx.recv() {
+			// // If actor id is not provided, extract from logs
+			// let actor_id = if self.actor_id.is_some() {
+			// 	self.actor_id.as_deref()
+			// } else {
+			// 	if let Some(start_idx) = message.message.find("actor_") {
+			// 		let start_idx = start_idx + 6;
+
+			// 		// Look for next non alphanum (end of actor id)
+			// 		let end_idx = if let Some(end_idx) =
+			// 			message.message[start_idx..].find(|c: char| !c.is_ascii_alphanumeric())
+			// 		{
+			// 			start_idx + end_idx
+			// 		} else {
+			// 			message.message.len()
+			// 		};
+
+			// 		let actor_id = &message.message[start_idx..end_idx];
+
+			// 		// Check if valid id
+			// 		rivet_util::Id::parse(actor_id).is_ok().then_some(actor_id)
+			// 	} else {
+			// 		None
+			// 	}
+			// };
+
+			// // Cannot determine actor id, ignore log
+			// let Some(actor_id) = actor_id else {
+			// 	continue;
+			// };
+
 			let vector_message = VectorMessage::Actors {
-				// runner_id: self.runner_id.as_str(),
-				actor_id: self.actor_id.as_ref().map(|x| x.as_str()),
+				runner_id: self.runner_id.as_str(),
+				actor_id: self.actor_id.as_deref(),
 				stream_type: message.stream_type as u8,
 				ts: message.ts,
 				message: message.message.as_str(),
@@ -114,7 +144,7 @@ impl LogShipper {
 enum VectorMessage<'a> {
 	#[serde(rename = "actors")]
 	Actors {
-		// runner_id: &'a str,
+		runner_id: &'a str,
 		actor_id: Option<&'a str>,
 		stream_type: u8,
 		ts: u64,

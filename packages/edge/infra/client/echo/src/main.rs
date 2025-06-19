@@ -143,7 +143,7 @@ fn encode_frame<T: Serialize>(payload: &T) -> Result<Bytes> {
 	let mut buf = Vec::with_capacity(4);
 	let mut cursor = Cursor::new(&mut buf);
 
-	cursor.write(&[0u8; 4]); // header (currently unused)
+	cursor.write(&[0u8; 4])?; // header (currently unused)
 
 	serde_json::to_writer(&mut cursor, payload)?;
 
