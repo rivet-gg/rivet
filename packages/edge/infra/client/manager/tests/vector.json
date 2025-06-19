@@ -34,7 +34,7 @@
 			"inputs": [
 				"actors"
 			],
-			"source": ".message, err = \"\u001b[2m\" + \"actor_id=\" + .actor_id + \"\u001b[0m \" + .message"
+			"source": ".message, err = \"\u001b[2m\" + \"runner_id=\" + .runner_id + \"\u001b[0m \" + .message"
 		}
 	},
 	"sinks": {
