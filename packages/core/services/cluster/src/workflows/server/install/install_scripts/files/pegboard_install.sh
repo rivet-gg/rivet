@@ -19,12 +19,6 @@ if [ "__FLAVOR__" = "container" ]; then
 	chmod +x /usr/local/bin/rivet-container-runner
 fi
 
-if [ "__FLAVOR__" = "isolate" ]; then
-	echo 'Downloading pegboard isolate runner'
-	curl -Lf -o /usr/local/bin/rivet-isolate-v8-runner "__ISOLATE_V8_RUNNER_BINARY_URL__"
-	chmod +x /usr/local/bin/rivet-isolate-v8-runner
-fi
-
 # For clarity
 FDB_VERSION="__FDB_VERSION__"
 
