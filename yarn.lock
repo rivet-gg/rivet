@@ -8169,9 +8169,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"actor-core@portal:../../actor-core/packages/actor-core::locator=rivet%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "actor-core@portal:../../actor-core/packages/actor-core::locator=rivet%40workspace%3A."
+"actor-core@npm:0.9.0-rc.1":
+  version: 0.9.0-rc.1
+  resolution: "actor-core@npm:0.9.0-rc.1"
   dependencies:
     "@hono/zod-openapi": "npm:^0.19.6"
     cbor-x: "npm:^1.6.0"
