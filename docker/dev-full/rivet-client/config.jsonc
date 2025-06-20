@@ -1,7 +1,6 @@
 {
 	"client": {
 		"runner": {
-			"flavor": "container",
 			// Resource constraints are not supported in Docker
 			// TODO: Needs further investigation in to why nested cgroups v2 resource constraints aren't working
 			"use_resource_constraints": false,

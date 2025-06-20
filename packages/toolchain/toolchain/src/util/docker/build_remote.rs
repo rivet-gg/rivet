@@ -655,7 +655,7 @@ async fn poll_build_status(
 									&ctx,
 									crate::util::actor::logs::TailOpts {
 										environment: CI_ENVIRONMENT_ID,
-										actor_id,
+										actor_id: actor_id.to_string(),
 										stream: crate::util::actor::logs::LogStream::All,
 										follow: true,
 										print_type: crate::util::actor::logs::PrintType::Custom(
