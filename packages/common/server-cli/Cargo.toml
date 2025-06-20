@@ -28,6 +28,7 @@ rivet-pools.workspace = true
 rivet-runtime.workspace = true
 rivet-service-manager.workspace = true
 rivet-term.workspace = true
+rivet-util.workspace = true
 rustyline = "15.0.0"
 s3-util.workspace = true
 serde = { version = "1.0.210", features = ["derive"] }

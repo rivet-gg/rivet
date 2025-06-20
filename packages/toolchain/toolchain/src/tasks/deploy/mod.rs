@@ -216,7 +216,7 @@ async fn create_edge_function_actors(
 
 		for actor in &actors_res.actors {
 			existing_regions.insert(actor.region.clone());
-			existing_actors.insert(actor.region.clone(), actor.id);
+			existing_actors.insert(actor.region.clone(), actor.id.clone());
 		}
 
 		// Create or upgrade actors for each region

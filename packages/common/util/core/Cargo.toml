@@ -13,6 +13,7 @@ macros = []
 async-trait = "0.1"
 bcrypt = "0.13.0"
 chrono = "0.4"
+fdb-util.workspace = true
 formatted-error = { workspace = true, optional = true }
 futures-util = "0.3"
 global-error.workspace = true

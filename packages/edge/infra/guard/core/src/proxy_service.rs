@@ -37,7 +37,7 @@ const PROXY_STATE_CACHE_TTL: Duration = Duration::from_secs(60 * 60); // 1 hour
 // Routing types
 #[derive(Clone, Debug)]
 pub struct RouteTarget {
-	pub actor_id: Option<Uuid>,
+	pub actor_id: Option<rivet_util::Id>,
 	pub server_id: Option<Uuid>,
 	pub host: String,
 	pub port: u16,
@@ -151,7 +151,9 @@ pub enum MiddlewareResponse {
 }
 
 pub type MiddlewareFn = Arc<
-	dyn for<'a> Fn(&'a Uuid) -> futures::future::BoxFuture<'a, GlobalResult<MiddlewareResponse>>
+	dyn for<'a> Fn(
+			&'a rivet_util::Id,
+		) -> futures::future::BoxFuture<'a, GlobalResult<MiddlewareResponse>>
 		+ Send
 		+ Sync,
 >;
@@ -414,7 +416,10 @@ impl ProxyState {
 	}
 
 	#[tracing::instrument(skip_all)]
-	async fn get_middleware_config(&self, actor_id: &Uuid) -> GlobalResult<MiddlewareConfig> {
+	async fn get_middleware_config(
+		&self,
+		actor_id: &rivet_util::Id,
+	) -> GlobalResult<MiddlewareConfig> {
 		// Call the middleware function with a timeout
 		let default_timeout = Duration::from_secs(5); // Default 5 seconds
 
