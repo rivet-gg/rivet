@@ -44,13 +44,13 @@ async function run() {
 								guard: {},
 							},
 						},
-						udp: {
-							protocol: "udp",
-							// internalPort: 80,
-							routing: {
-								host: {},
-							},
-						},
+						// udp: {
+						// 	protocol: "udp",
+						// 	// internalPort: 80,
+						// 	routing: {
+						// 		host: {},
+						// 	},
+						// },
 					},
 				},
 				runtime: {
