@@ -544,16 +544,16 @@ async fn allocate_ingress_ports(
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
-struct InsertIngressPortsInput {
+struct InsertPortsInput {
 	actor_id: util::Id,
 	network_ports: util::serde::HashableMap<String, Port>,
 	ingress_ports: Vec<(GameGuardProtocol, Vec<u16>)>,
 }
 
-#[activity(InsertIngressPorts)]
-async fn insert_ingress_ports(
+#[activity(InsertPorts)]
+async fn insert_ports(
 	ctx: &ActivityCtx,
-	input: &InsertIngressPortsInput,
+	input: &InsertPortsInput,
 ) -> GlobalResult<()> {
 	let pool = ctx.sqlite().await?;
 	let mut conn = pool.conn().await?;
@@ -820,7 +820,7 @@ pub async fn setup(
 				})
 				.await?;
 
-			ctx.activity(InsertIngressPortsInput {
+			ctx.activity(InsertPortsInput {
 				actor_id: input.actor_id,
 				network_ports,
 				ingress_ports: ingress_ports_res.ports,

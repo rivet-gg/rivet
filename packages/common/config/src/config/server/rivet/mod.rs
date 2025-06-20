@@ -841,7 +841,8 @@ pub struct Edge {
 	pub cluster_id: Uuid,
 	pub datacenter_id: Uuid,
 	pub server_id: Uuid,
-	pub intercom_endpoint: Url,
+	/// Url of the core cluster.
+	pub intercom_address: Url,
 	/// This API address will be used if there are no worker servers listed in the cluster package
 	#[serde(default)]
 	pub api_lan_address: Option<(String, u16)>,

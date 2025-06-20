@@ -259,7 +259,11 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 								protocol::ActorState::Starting => {
 									state.gc_timeout_ts = None;
 
-									ctx.activity(runtime::SetStartedInput {}).await?;
+									ctx.activity(runtime::SetStartedInput {
+										actor_id: input.actor_id,
+										generation: state.generation,
+									})
+									.await?;
 								}
 								protocol::ActorState::Running { ports, .. } => {
 									ctx.join((

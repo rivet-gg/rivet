@@ -12,8 +12,8 @@ mod utils;
 const MAX_LINE_BYTES: usize = 1024;
 /// Maximum number of bytes to buffer before dropping logs
 const MAX_BUFFER_BYTES: usize = 1024 * 1024;
-// 7 day logs retention
-const LOGS_RETENTION: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+// 1 day logs retention
+const LOGS_RETENTION: Duration = Duration::from_secs(1 * 24 * 60 * 60);
 
 fn main() -> Result<()> {
 	let runner_path = std::env::args()
@@ -37,8 +37,6 @@ fn main() -> Result<()> {
 		.transpose()
 		.context("failed to parse vector socket addr")?;
 	let runner_id = var("RUNNER_ID")?;
-	// Only set if this is a single allocation runner (one actor running on it)
-	let actor_id = var("ACTOR_ID").ok();
 
 	let (shutdown_tx, shutdown_rx) = mpsc::sync_channel(1);
 
@@ -51,7 +49,6 @@ fn main() -> Result<()> {
 			msg_rx,
 			vector_socket_addr,
 			runner_id,
-			actor_id,
 		};
 		let log_shipper_thread = log_shipper.spawn();
 		(Some(msg_tx), Some(log_shipper_thread))
