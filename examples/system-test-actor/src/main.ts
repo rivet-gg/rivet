@@ -20,3 +20,23 @@ createAndStartUdpServer();
 if (process.env.MULTI) {
 	connectToManager();
 }
+
+// TOOD: move this cleaner plac
+// async function contactApi() {
+// 	console.log('Contacting', process.env.RIVET_API_ENDPOINT);
+// 	const res = await fetch(process.env.RIVET_API_ENDPOINT!);
+// 	console.log('API response', res.ok, res.status);
+// }
+//
+// contactApi();
+
+// TODO: Move this cleaner place
+// Print hosts file contents before starting
+// try {
+// 	const hostsContent = fs.readFileSync('/etc/hosts', 'utf8');
+// 	console.log('=== /etc/hosts contents ===');
+// 	console.log(hostsContent);
+// 	console.log('=== End of /etc/hosts ===');
+// } catch (err) {
+// 	console.error('Failed to read /etc/hosts:', err);
+// }
