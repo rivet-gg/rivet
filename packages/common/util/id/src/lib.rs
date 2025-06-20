@@ -36,8 +36,6 @@ pub enum Id {
 	V1([u8; 18]),
 }
 
-
-
 impl Id {
 	/// Construct V0 from uuid.
 	pub fn new_v0() -> Self {
@@ -241,20 +239,41 @@ impl TuplePack for Id {
 		w: &mut W,
 		tuple_depth: TupleDepth,
 	) -> std::io::Result<VersionstampOffset> {
+		let mut size = 1;
+
 		w.write_all(&[fdb_util::codes::ID])?;
+		
+		// IMPORTANT: While the normal bytes representation of a v0 ID doesn't include the version, we write
+		// it here so that we can unpack without a terminating NIL.
+		if let Id::V0(_) = self {
+			w.write_all(&[0])?;
+			size += 1;
+		}
+
 		let bytes = self.as_bytes();
+
 		let len = u32::try_from(bytes.len())
 			.map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err))?;
+		size += len;
+
 		w.write_all(&bytes)?;
 
-		Ok(VersionstampOffset::None { size: 1 + len })
+		Ok(VersionstampOffset::None { size })
 	}
 }
 
 impl<'de> TupleUnpack<'de> for Id {
 	fn unpack(input: &[u8], tuple_depth: TupleDepth) -> PackResult<(&[u8], Self)> {
 		let input = fdb_util::parse_code(input, fdb_util::codes::ID)?;
-		let (input, slice) = fdb_util::parse_bytes(input, 16)?;
+		let (input2, version) = fdb_util::parse_byte(input)?;
+
+		let (input, slice) = if version == 0 {
+			// Parse 16 bytes after version
+			fdb_util::parse_bytes(input2, 16)?
+		} else {
+			// Parse 19 bytes including version
+			fdb_util::parse_bytes(input, 19)?
+		};
 
 		let v = Id::from_bytes(slice)
 			.map_err(|err| PackError::Message(format!("bad id format: {err}").into()))?;

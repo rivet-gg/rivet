@@ -38,7 +38,6 @@ pub struct LogShipper {
 	pub vector_socket_addr: String,
 
 	pub runner_id: String,
-	pub actor_id: Option<String>,
 
 	pub env_id: Uuid,
 }
@@ -93,39 +92,8 @@ impl LogShipper {
 		println!("Log shipper connected");
 
 		while let Result::Ok(message) = self.msg_rx.recv() {
-			// // If actor id is not provided, extract from logs
-			// let actor_id = if self.actor_id.is_some() {
-			// 	self.actor_id.as_deref()
-			// } else {
-			// 	if let Some(start_idx) = message.message.find("actor_") {
-			// 		let start_idx = start_idx + 6;
-
-			// 		// Look for next non alphanum (end of actor id)
-			// 		let end_idx = if let Some(end_idx) =
-			// 			message.message[start_idx..].find(|c: char| !c.is_ascii_alphanumeric())
-			// 		{
-			// 			start_idx + end_idx
-			// 		} else {
-			// 			message.message.len()
-			// 		};
-
-			// 		let actor_id = &message.message[start_idx..end_idx];
-
-			// 		// Check if valid id
-			// 		rivet_util::Id::parse(actor_id).is_ok().then_some(actor_id)
-			// 	} else {
-			// 		None
-			// 	}
-			// };
-
-			// // Cannot determine actor id, ignore log
-			// let Some(actor_id) = actor_id else {
-			// 	continue;
-			// };
-
-			let vector_message = VectorMessage::Actors {
+			let vector_message = VectorMessage::Runners {
 				runner_id: self.runner_id.as_str(),
-				actor_id: self.actor_id.as_deref(),
 				env_id: self.env_id,
 				stream_type: message.stream_type as u8,
 				ts: message.ts,
@@ -146,10 +114,9 @@ impl LogShipper {
 #[derive(Serialize)]
 #[serde(tag = "source")]
 enum VectorMessage<'a> {
-	#[serde(rename = "actors")]
-	Actors {
+	#[serde(rename = "runners")]
+	Runners {
 		runner_id: &'a str,
-		actor_id: Option<&'a str>,
 		env_id: Uuid,
 		stream_type: u8,
 		ts: u64,

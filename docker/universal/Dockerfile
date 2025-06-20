@@ -67,7 +67,9 @@ RUN apt-get update -y && \
     redis-tools  \
     postgresql-client \
     gpg \
-    dirmngr && \
+    dirmngr \
+    gcc \
+    wget && \
     curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' | gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main" | tee /etc/apt/sources.list.d/clickhouse.list && \
     apt-get update -y && \
@@ -76,7 +78,13 @@ RUN apt-get update -y && \
     mv migrate /usr/local/bin/migrate && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    curl -Lf -o /lib/libfdb_c.so "https://github.com/apple/foundationdb/releases/download/7.1.60/libfdb_c.x86_64.so"
+    curl -Lf -o /lib/libfdb_c.so "https://github.com/apple/foundationdb/releases/download/7.1.60/libfdb_c.x86_64.so" && \
+    # Install go and usql
+    wget https://go.dev/dl/go1.24.4.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.24.4.linux-amd64.tar.gz && \
+    export PATH=$PATH:/usr/local/go/bin && \
+    export PATH="$PATH:$(go env GOPATH)/bin" && \
+    go install github.com/xo/usql@latest
 
 # MARK: Server (Full)
 FROM server-full-base AS server-full

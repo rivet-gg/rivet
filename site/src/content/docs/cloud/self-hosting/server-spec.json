@@ -1045,7 +1045,7 @@
       "required": [
         "cluster_id",
         "datacenter_id",
-        "intercom_endpoint",
+        "intercom_address",
         "server_id"
       ],
       "properties": {
@@ -1074,7 +1074,7 @@
           "type": "string",
           "format": "uuid"
         },
-        "intercom_endpoint": {
+        "intercom_address": {
           "type": "string",
           "format": "uri"
         },

@@ -190,7 +190,7 @@ async fn run(init: Init, first: bool) -> Result<()> {
 	let ctx = Ctx::new(init.config, init.system, init.pool, tx);
 
 	tokio::try_join!(
-		async { metrics_task.await.map_err(Into::<anyhow::Error>::into) },
+		async { metrics_task.await.map_err(Into::<anyhow::Error>::into)? },
 		ctx.run(rx),
 	)?;
 
