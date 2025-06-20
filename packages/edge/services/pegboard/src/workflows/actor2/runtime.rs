@@ -92,19 +92,20 @@ async fn update_client_and_runner(
 	.await?;
 
 	sql_execute!(
-		[ctx, pool]
+		[ctx, &pool]
 		"
 		UPDATE state
 		SET
 			client_id = ?1,
 			client_workflow_id = ?2,
-			runner_id = ?3,
-			client_wan_hostname = ?4
+			client_wan_hostname = ?3,
+			runner_id = ?4,
+			old_runner_id = runner_id
 		",
 		input.client_id,
 		input.client_workflow_id,
-		input.runner_id,
 		&client_wan_hostname,
+		input.runner_id,
 	)
 	.await?;
 
@@ -576,27 +577,76 @@ pub async fn update_image(ctx: &ActivityCtx, input: &UpdateImageInput) -> Global
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
-pub struct SetStartedInput {}
+pub struct SetStartedInput {
+	pub actor_id: util::Id,
+	pub generation: u32,
+}
+
+#[derive(Serialize)]
+pub struct ActorRunnerClickhouseRow {
+	actor_id: String,
+	generation: u32,
+	runner_id: Uuid,
+	started_at: i64,
+	finished_at: i64,
+}
 
 #[activity(SetStarted)]
 pub async fn set_started(ctx: &ActivityCtx, input: &SetStartedInput) -> GlobalResult<()> {
 	let pool = ctx.sqlite().await?;
 	let start_ts = util::timestamp::now();
 
-	let row = sql_fetch_optional!(
-		[ctx, (i64,), pool]
+	let (create_ts, old_start_ts, runner_id, old_runner_id) = sql_fetch_one!(
+		[ctx, (i64, Option<i64>, Uuid, Option<Uuid>), &pool]
 		"
-		UPDATE state
-		SET start_ts = ?
-		WHERE start_ts IS NULL
-		RETURNING create_ts
+		SELECT create_ts, start_ts, runner_id, old_runner_id
+		FROM state
 		",
 		start_ts,
 	)
 	.await?;
 
-	// Add start duration if this is the first start
-	if let Some((create_ts,)) = row {
+	sql_execute!(
+		[ctx, &pool]
+		"
+		UPDATE state SET start_ts = ?1
+		",
+		start_ts,
+	)
+	.await?;
+
+	let inserter = ctx.clickhouse_inserter().await?;
+
+	// Set old alloc as finished
+	if let (Some(old_start_ts), Some(old_runner_id)) = (old_start_ts, old_runner_id) {
+		inserter.insert(
+			"db_pegboard_runner",
+			"actor_runners",
+			ActorRunnerClickhouseRow {
+				actor_id: input.actor_id.to_string(),
+				generation: input.generation,
+				runner_id: old_runner_id,
+				started_at: old_start_ts * 1_000_000, // Convert ms to ns for ClickHouse DateTime64(9)
+				finished_at: start_ts * 1_000_000,
+			},
+		)?;
+	}
+
+	// Insert new alloc
+	inserter.insert(
+		"db_pegboard_runner",
+		"actor_runners",
+		ActorRunnerClickhouseRow {
+			actor_id: input.actor_id.to_string(),
+			generation: input.generation,
+			runner_id,
+			started_at: start_ts * 1_000_000, // Convert ms to ns for ClickHouse DateTime64(9)
+			finished_at: 0,
+		},
+	)?;
+
+	// Add start metric for first start
+	if old_start_ts.is_none() {
 		let dt = (start_ts - create_ts) as f64 / 1000.0;
 		metrics::ACTOR_START_DURATION
 			.with_label_values(&[])

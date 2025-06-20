@@ -10,9 +10,6 @@ use service_discovery::ServiceDiscovery;
 use url::Url;
 use uuid::Uuid;
 
-// TODO: Copied from cluster/src/workflows/server/install/install_scripts/components/rivet/mod.rs
-const TUNNEL_API_EDGE_PORT: u16 = 5010;
-
 /// Route requests to the API service
 #[tracing::instrument(skip_all)]
 pub async fn route_api_request(
@@ -46,7 +43,8 @@ pub async fn route_api_request(
 
 	// NOTE: We use service discovery instead of server::list or datacenter::server_discovery because cache is not
 	// shared between edge-edge or edge-core. SD requests the core which has a single cache.
-	let url = Url::parse(&format!("http://127.0.0.1:{TUNNEL_API_EDGE_PORT}/provision/datacenters/{dc_id}/servers?pools=worker"))?;
+	let edge = ctx.config().server()?.rivet.edge()?;
+	let url = Url::parse(&format!("{}provision/datacenters/{dc_id}/servers?pools=worker", edge.intercom_address))?;
 	let sd = ServiceDiscovery::new(url);
 	let servers = sd.fetch().await?;
 

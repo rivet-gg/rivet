@@ -346,8 +346,8 @@ impl Actor2Key {
 		Actor2SubspaceKey::new(client_id)
 	}
 
-	pub fn entire_subspace() -> ActorSubspaceKey {
-		ActorSubspaceKey::entire()
+	pub fn entire_subspace() -> Actor2SubspaceKey {
+		Actor2SubspaceKey::entire()
 	}
 }
 
