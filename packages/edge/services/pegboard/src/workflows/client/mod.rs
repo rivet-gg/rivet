@@ -528,7 +528,7 @@ async fn publish_registered(ctx: &ActivityCtx, input: &PublishRegisteredInput) -
 
 	let config = Configuration {
 		client: rivet_pools::reqwest::client().await?,
-		base_path: util::url::to_string_without_slash(&edge.intercom_endpoint),
+		base_path: util::url::to_string_without_slash(&edge.intercom_address),
 		bearer_access_token: Some(token),
 		..Default::default()
 	};
