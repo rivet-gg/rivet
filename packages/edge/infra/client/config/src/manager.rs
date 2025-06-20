@@ -94,9 +94,6 @@ pub struct Runner {
 	/// ````
 	pub use_resource_constraints: Option<bool>,
 
-	/// WebSocket Port for runners on this machine to connect to.
-	pub port: Option<u16>,
-
 	pub container_runner_binary_path: Option<PathBuf>,
 	
 	/// Custom host entries to append to /etc/hosts in actor containers.
@@ -111,10 +108,6 @@ impl Runner {
 
 	pub fn use_resource_constraints(&self) -> bool {
 		self.use_resource_constraints.unwrap_or(true)
-	}
-
-	pub fn port(&self) -> u16 {
-		self.port.unwrap_or(6080)
 	}
 
 	pub fn container_runner_binary_path(&self) -> PathBuf {
@@ -267,7 +260,7 @@ pub struct Metrics {
 
 impl Metrics {
 	pub fn port(&self) -> u16 {
-		self.port.unwrap_or(6090)
+		self.port.unwrap_or(8091)
 	}
 }
 
