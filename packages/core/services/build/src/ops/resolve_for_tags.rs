@@ -71,7 +71,9 @@ async fn get_builds(
 			create_ts,
 			kind,
 			compression,
-			tags
+			tags,
+			allocation_type,
+			allocation_total_slots
 		FROM db_build.builds
 		WHERE env_id = $1 AND tags @> $2
 		",

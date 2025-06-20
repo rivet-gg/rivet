@@ -361,6 +361,8 @@ pub async fn create_build(
 				.compression
 				.map(ApiInto::api_into)
 				.unwrap_or(build::types::BuildCompression::None),
+			allocation_type: build::types::BuildAllocationType::Single,
+			allocation_total_slots: 1,
 		})
 		.await?;
 

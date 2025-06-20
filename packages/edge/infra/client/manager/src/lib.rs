@@ -1,5 +1,3 @@
-// TODO: Make tests work without this
-
 // Test exports
 
 #[cfg(feature = "test")]
