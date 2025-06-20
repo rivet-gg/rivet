@@ -132,8 +132,10 @@ type PrepareBuildRequest struct {
 	// A tag given to the project build.
 	ImageTag    *string             `json:"image_tag,omitempty"`
 	ImageFile   *upload.PrepareFile `json:"image_file,omitempty"`
-	Kind        *BuildKind          `json:"kind,omitempty"`
-	Compression *BuildCompression   `json:"compression,omitempty"`
+	Kind        *Kind               `json:"kind,omitempty"`
+	Compression *Compression        `json:"compression,omitempty"`
+	Allocation  *Allocation         `json:"allocation,omitempty"`
+	Resources   *Resources          `json:"resources,omitempty"`
 
 	_rawJSON json.RawMessage
 }

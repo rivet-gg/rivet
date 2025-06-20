@@ -9,7 +9,7 @@ Name | Type | Description | Notes
 **tags** | Option<[**serde_json::Value**](.md)> |  | 
 **runtime** | [**crate::models::ActorsRuntime**](ActorsRuntime.md) |  | 
 **network** | [**crate::models::ActorsNetwork**](ActorsNetwork.md) |  | 
-**resources** | [**crate::models::ActorsResources**](ActorsResources.md) |  | 
+**resources** | Option<[**crate::models::ActorsResources**](ActorsResources.md)> |  | [optional]
 **lifecycle** | [**crate::models::ActorsLifecycle**](ActorsLifecycle.md) |  | 
 **created_at** | **String** | RFC3339 timestamp | 
 **started_at** | Option<**String**> | RFC3339 timestamp | [optional]

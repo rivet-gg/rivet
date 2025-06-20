@@ -868,6 +868,7 @@ impl TuplePack for ByNameAndTagKey {
 			&self.v,
 			self.workflow_id,
 		);
+
 		t.pack(w, tuple_depth)
 	}
 }
@@ -887,6 +888,7 @@ impl<'de> TupleUnpack<'de> for ByNameAndTagKey {
 	}
 }
 
+#[derive(Debug)]
 pub struct ByNameAndTagSubspaceKey {
 	workflow_name: String,
 	k: String,
@@ -924,6 +926,7 @@ impl TuplePack for ByNameAndTagSubspaceKey {
 			&self.k,
 			&self.v,
 		);
+		tracing::info!(?t, "---------------------");
 		t.pack(w, tuple_depth)
 	}
 }
