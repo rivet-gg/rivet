@@ -132,7 +132,7 @@ pub fn configure(namespace: &str, config: &Config, pool_type: PoolType) -> Globa
 
 			config_json["sources"]["pegboard_container_runners"] = json!({
 				"type": "file",
-				"include": ["/var/lib/rivet-client/runners/*/logs/*"]
+				"include": ["/var/lib/rivet-client/actors/*/logs/*"]
 			});
 
 			config_json["transforms"]["pegboard_container_runner_add_meta"] = json!({
@@ -141,7 +141,7 @@ pub fn configure(namespace: &str, config: &Config, pool_type: PoolType) -> Globa
 				"source": formatdoc!(
 					r#"
 					.source = "pegboard_container_runner"
-					.runner_id = parse_regex!(.file, r'/var/lib/rivet-client/runners/(?P<runner_id>[0-9a-fA-F-]+)/logs/').runner_id
+					.actor_id = parse_regex!(.file, r'/var/lib/rivet-client/actors/(?P<actor_id>[0-9a-fA-F-]+)/logs/').actor_id
 
 					.namespace = "{namespace}"
 					.client_id = "___SERVER_ID___"
