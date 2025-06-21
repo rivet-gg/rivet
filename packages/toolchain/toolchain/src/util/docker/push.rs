@@ -75,12 +75,16 @@ pub async fn push_tar(
 			compression: Some(build_compression),
 			// TODO: Expose to CLI and config
 			allocation: Some(Box::new(models::BuildsAllocation {
-				single: Some(serde_json::json!({})),
-				multi: None,
-				// single: None,
-				// multi: Some(Box::new(models::BuildsAllocationMulti { slots: 4 })),
+				// single: Some(serde_json::json!({})),
+				// multi: None,
+				single: None,
+				multi: Some(Box::new(models::BuildsAllocationMulti { slots: 4 })),
 			})),
-			resources: None,
+			// resources: None,
+			resources: Some(Box::new(models::BuildsResources {
+				cpu: 128,
+				memory: 128,
+			})),
 		},
 		Some(&ctx.project.name_id),
 		Some(&push_opts.env.slug),

@@ -551,10 +551,7 @@ struct InsertPortsInput {
 }
 
 #[activity(InsertPorts)]
-async fn insert_ports(
-	ctx: &ActivityCtx,
-	input: &InsertPortsInput,
-) -> GlobalResult<()> {
+async fn insert_ports(ctx: &ActivityCtx, input: &InsertPortsInput) -> GlobalResult<()> {
 	let pool = ctx.sqlite().await?;
 	let mut conn = pool.conn().await?;
 	let mut tx = conn.begin().await?;

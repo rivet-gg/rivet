@@ -34,6 +34,15 @@ transforms:
     condition:
       type: vrl
       source: .source == "actors"
+
+  runners:
+    type: filter
+    inputs:
+      - vector
+      - tcp_json
+    condition:
+      type: vrl
+      source: .source == "runners"
   
   job_run:
     type: filter
@@ -112,6 +121,21 @@ sinks:
     database: db_pegboard_actor_log
     endpoint: http://clickhouse:8123
     table: actor_logs2
+    auth:
+      strategy: basic
+      user: vector
+      password: vector
+    batch:
+      timeout_secs: 1.0
+
+  clickhouse_runner_logs:
+    type: clickhouse
+    inputs:
+      - runners
+    compression: gzip
+    database: db_pegboard_runner_log
+    endpoint: http://clickhouse:8123
+    table: runner_logs
     auth:
       strategy: basic
       user: vector
