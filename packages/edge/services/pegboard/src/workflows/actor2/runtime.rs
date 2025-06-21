@@ -57,6 +57,7 @@ impl State {
 
 #[derive(Serialize, Deserialize)]
 pub struct LifecycleRes {
+	pub generation: u32,
 	pub image_id: Uuid,
 	pub kill: Option<KillCtx>,
 }
@@ -583,12 +584,12 @@ pub struct SetStartedInput {
 }
 
 #[derive(Serialize)]
-pub struct ActorRunnerClickhouseRow {
-	actor_id: String,
-	generation: u32,
-	runner_id: Uuid,
-	started_at: i64,
-	finished_at: i64,
+pub(crate) struct ActorRunnerClickhouseRow {
+	pub actor_id: String,
+	pub generation: u32,
+	pub runner_id: Uuid,
+	pub started_at: i64,
+	pub finished_at: i64,
 }
 
 #[activity(SetStarted)]
@@ -627,7 +628,7 @@ pub async fn set_started(ctx: &ActivityCtx, input: &SetStartedInput) -> GlobalRe
 				generation: input.generation,
 				runner_id: old_runner_id,
 				started_at: old_start_ts * 1_000_000, // Convert ms to ns for ClickHouse DateTime64(9)
-				finished_at: start_ts * 1_000_000,
+				finished_at: start_ts * 1_000_000,    // Convert ms to ns for ClickHouse DateTime64(9)
 			},
 		)?;
 	}
