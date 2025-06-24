@@ -1,6 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, PartialEq, ::prost::Message, Serialize)]
+#[derive(Clone, PartialEq, ::prost::Message, Deserialize, Serialize)]
 pub struct Metadata {
 	#[prost(bytes = "vec", tag = "1")]
 	pub kv_version: Vec<u8>,

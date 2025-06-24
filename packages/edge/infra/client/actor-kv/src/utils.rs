@@ -1,7 +1,6 @@
 use std::{collections::HashMap, result::Result::Ok};
 
 use anyhow::*;
-use deno_core::JsBuffer;
 use foundationdb as fdb;
 use futures_util::{FutureExt, TryStreamExt};
 
@@ -90,7 +89,7 @@ pub fn validate_keys(keys: &[Key]) -> Result<()> {
 	Ok(())
 }
 
-pub fn validate_entries(entries: &HashMap<Key, JsBuffer>, total_size: usize) -> Result<()> {
+pub fn validate_entries(entries: &Vec<(Key, Vec<u8>)>, total_size: usize) -> Result<()> {
 	ensure!(
 		entries.len() <= MAX_KEYS,
 		"A maximum of 128 key-value entries is allowed"

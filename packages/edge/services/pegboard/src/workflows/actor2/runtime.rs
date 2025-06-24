@@ -97,6 +97,7 @@ async fn update_client_and_runner(
 		"
 		UPDATE state
 		SET
+			pending_allocation_ts = NULL,
 			client_id = ?1,
 			client_workflow_id = ?2,
 			client_wan_hostname = ?3,

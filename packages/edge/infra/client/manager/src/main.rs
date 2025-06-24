@@ -36,6 +36,7 @@ struct Init {
 	config: Config,
 	system: SystemInfo,
 	pool: SqlitePool,
+	fdb: utils::fdb::FdbPool,
 }
 
 fn main() -> Result<()> {
@@ -151,10 +152,14 @@ async fn init() -> Result<Init> {
 	// Init sqlite db
 	let pool = utils::init_sqlite_db(&config).await?;
 
+	// Init fdb pool handle
+	let fdb = utils::fdb::FdbPool::new(&config).await?;
+
 	Ok(Init {
 		config,
 		system,
 		pool,
+		fdb,
 	})
 }
 
@@ -187,7 +192,7 @@ async fn run(init: Init, first: bool) -> Result<()> {
 
 	tracing::info!("connected to pegboard ws");
 
-	let ctx = Ctx::new(init.config, init.system, init.pool, tx);
+	let ctx = Ctx::new(init.config, init.system, init.pool, init.fdb, tx);
 
 	tokio::try_join!(
 		async { metrics_task.await.map_err(Into::<anyhow::Error>::into)? },

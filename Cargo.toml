@@ -76,14 +76,6 @@ default-features = false
 git = "https://github.com/rivet-gg/serde_array_query"
 rev = "b9f8bfa"
 
-[workspace.dependencies.deno_core]
-git = "https://github.com/rivet-gg/deno_core"
-rev = "8a313913fa73d58f4f9532565b0084e723bc34ad"
-
-[workspace.dependencies.deno_runtime]
-git = "https://github.com/rivet-gg/deno"
-rev = "a6903d67063e07b82836399f63c7a0fa5be8bf56"
-
 [workspace.dependencies.api-helper]
 path = "packages/common/api-helper/build"
 

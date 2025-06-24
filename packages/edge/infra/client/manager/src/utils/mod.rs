@@ -25,6 +25,7 @@ use tokio::{
 	sync::mpsc::{channel, Receiver},
 };
 
+pub mod fdb;
 pub mod libc;
 pub mod sql;
 

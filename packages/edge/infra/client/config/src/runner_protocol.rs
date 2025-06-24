@@ -1,19 +1,23 @@
-use std::io::{Write, Cursor};
+use std::{
+	io::{Cursor, Write},
+};
 
 use anyhow::*;
 use pegboard::protocol;
-use tokio_util::codec::LengthDelimitedCodec;
+use pegboard_actor_kv as kv;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use tokio_util::codec::LengthDelimitedCodec;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum ToManager {
 	ActorStateUpdate {
-		actor_id: rivet_util::Id,
+		actor_id: rivet_util_id::Id,
 		generation: u32,
 		state: ActorState,
 	},
 	Ping,
+	Kv(KvRequest),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -25,17 +29,18 @@ pub enum ToRunner {
 	},
 
 	StartActor {
-		actor_id: rivet_util::Id,
+		actor_id: rivet_util_id::Id,
 		generation: u32,
 		env: protocol::HashableMap<String, String>,
 		metadata: protocol::Raw<protocol::ActorMetadata>,
 	},
 	SignalActor {
-		actor_id: rivet_util::Id,
+		actor_id: rivet_util_id::Id,
 		generation: u32,
 		signal: i32,
 		persist_storage: bool,
 	},
+	Kv(KvResponse),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -43,6 +48,71 @@ pub enum ToRunner {
 pub enum ActorState {
 	Running,
 	Exited { exit_code: Option<i32> },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct KvRequest {
+	pub actor_id: rivet_util_id::Id,
+	// TODO: This shouldn't require generation since all gens share the same kv
+	pub generation: u32,
+	/// Deduplication id.
+	pub request_id: u32,
+	pub data: KvRequestData,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum KvRequestData {
+	Get {
+		keys: Vec<kv::Key>,
+	},
+	List {
+		query: kv::ListQuery,
+		reverse: bool,
+		limit: Option<usize>,
+	},
+	Put {
+		keys: Vec<kv::Key>,
+		values: Vec<Vec<u8>>,
+	},
+	Delete {
+		keys: Vec<kv::Key>,
+	},
+	Drop {},
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KvResponse {
+	/// Deduplication id.
+	pub request_id: u32,
+	pub data: Option<KvResponseData>,
+	pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum KvResponseData {
+	Get {
+		keys: Vec<kv::Key>,
+		values: Vec<kv::Entry>,
+	},
+	List {
+		keys: Vec<kv::Key>,
+		values: Vec<kv::Entry>,
+	},
+	Put {},
+	Delete {},
+	Drop {},
+}
+
+// Small subset of the ToRunner enum that gets proxied to the actor
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum ToActor {
+	StateUpdate {
+		state: ActorState,
+	},
+	Kv(KvRequest),
 }
 
 pub fn codec() -> LengthDelimitedCodec {

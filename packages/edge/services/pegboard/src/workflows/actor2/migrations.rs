@@ -43,6 +43,7 @@ async fn migrate_init(ctx: &ActivityCtx, _input: &MigrateInitInput) -> GlobalRes
 			lifecycle_durable INT NOT NULL DEFAULT false, -- BOOLEAN
 			
 			create_ts INT NOT NULL,
+			pending_allocation_ts INT, -- Set if currently pending alloc
 			start_ts INT,
 			connectable_ts INT,
 			finish_ts INT,

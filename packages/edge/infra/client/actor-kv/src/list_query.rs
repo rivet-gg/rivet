@@ -1,7 +1,7 @@
 use anyhow::*;
 use foundationdb::tuple::Subspace;
 use indexmap::IndexMap;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
 use crate::{
 	entry::EntryBuilder,
@@ -9,8 +9,8 @@ use crate::{
 	MAX_KEY_SIZE,
 };
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ListQuery {
 	All,
 	RangeInclusive(ListKey, Key),

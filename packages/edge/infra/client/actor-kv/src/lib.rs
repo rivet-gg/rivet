@@ -5,20 +5,19 @@ use std::{
 };
 
 use anyhow::*;
-use deno_core::JsBuffer;
 pub use entry::Entry;
 use entry::{EntryBuilder, SubKey};
 use fdb_util::keys::*;
 use foundationdb::{self as fdb, directory::Directory, tuple::Subspace};
 use futures_util::{StreamExt, TryStreamExt};
 use indexmap::IndexMap;
-use key::Key;
+pub use key::Key;
 use list_query::ListLimitReached;
 pub use list_query::ListQuery;
 pub use metadata::Metadata;
 use prost::Message;
+use tokio::sync::Mutex;
 use utils::{validate_entries, validate_keys, TransactionExt};
-use uuid::Uuid;
 
 mod entry;
 pub mod key;
@@ -33,29 +32,35 @@ const MAX_PUT_PAYLOAD_SIZE: usize = 976 * 1024;
 const MAX_STORAGE_SIZE: usize = 1024 * 1024 * 1024; // 1 GiB
 const VALUE_CHUNK_SIZE: usize = 10_000; // 10 KB, not KiB, see https://apple.github.io/foundationdb/blob.html
 
-// Currently designed largely around the Deno runtime. More abstractions can be made later.
 pub struct ActorKv {
 	version: &'static str,
 	db: Arc<fdb::Database>,
-	actor_id: Uuid,
-	subspace: Option<Subspace>,
+	actor_id: rivet_util_id::Id,
+	subspace: Mutex<Option<Subspace>>,
 }
 
 impl ActorKv {
-	pub fn new(db: Arc<fdb::Database>, actor_id: Uuid) -> Self {
+	pub fn new(db: Arc<fdb::Database>, actor_id: rivet_util_id::Id) -> Self {
 		Self {
 			version: env!("CARGO_PKG_VERSION"),
 			db,
 			actor_id,
-			subspace: None,
+			subspace: Mutex::new(None),
 		}
 	}
 
-	/// Initializes actor's KV.
+	/// Initializes actor's KV directory.
 	///
 	/// If FDB is down, this will hang indefinitely until connected.
-	pub async fn init(&mut self) -> Result<()> {
-		tracing::info!("initializing actor KV");
+	async fn init(&self) -> Result<Subspace> {
+		let mut guard = self.subspace.lock().await;
+
+		// Already initialized
+		if let Some(subspace) = &*guard {
+			return Ok(subspace.clone());
+		}
+		
+		tracing::info!(actor_id=?self.actor_id, "initializing actor KV");
 
 		let root = fdb::directory::DirectoryLayer::default();
 
@@ -82,17 +87,16 @@ impl ActorKv {
 			.await
 			.map_err(|err| anyhow!("failed to commit actor kv txn: {err:?}"))?;
 
-		self.subspace = Some(Subspace::from_bytes(
-			kv_dir.bytes().map_err(|err| anyhow!("{err:?}"))?,
-		));
+		let subspace = Subspace::from_bytes(kv_dir.bytes().map_err(|err| anyhow!("{err:?}"))?);
+		*guard = Some(subspace.clone());
 
-		tracing::info!("successfully initialized KV");
+		tracing::info!(actor_id=?self.actor_id, "successfully initialized KV");
 
-		Ok(())
+		Ok(subspace)
 	}
 
 	/// Returns estimated size of the given subspace.
-	pub async fn get_subspace_size(&self, subspace: &Subspace) -> Result<i64> {
+	async fn get_subspace_size(&self, subspace: &Subspace) -> Result<i64> {
 		let (start, end) = subspace.range();
 
 		// This txn does not have to be committed because we are not modifying any data
@@ -104,10 +108,7 @@ impl ActorKv {
 
 	/// Gets keys from the KV store.
 	pub async fn get(&self, keys: Vec<Key>) -> Result<HashMap<Key, Entry>> {
-		let subspace = self
-			.subspace
-			.as_ref()
-			.context("must call `ActorKv::init` before using KV operations")?;
+		let subspace = &self.init().await?;
 
 		validate_keys(&keys)?;
 
@@ -187,10 +188,7 @@ impl ActorKv {
 		reverse: bool,
 		limit: Option<usize>,
 	) -> Result<IndexMap<Key, Entry>> {
-		let subspace = self
-			.subspace
-			.as_ref()
-			.context("must call `ActorKv::init` before using KV operations")?;
+		let subspace = &self.init().await?;
 
 		query.validate()?;
 
@@ -305,18 +303,15 @@ impl ActorKv {
 	}
 
 	/// Puts keys into the KV store.
-	pub async fn put(&self, entries: HashMap<Key, JsBuffer>) -> Result<()> {
-		let subspace = self
-			.subspace
-			.as_ref()
-			.context("must call `ActorKv::init` before using KV operations")?;
+	pub async fn put(&self, entries: Vec<(Key, Vec<u8>)>) -> Result<()> {
+		let subspace = &self.init().await?;
 		let total_size = self.get_subspace_size(subspace).await? as usize;
 
 		validate_entries(&entries, total_size)?;
 
 		self.db
 			.run(|tx, _mc| {
-				// TODO: Potentially costly clone
+				// TODO: Costly clone
 				let entries = entries.clone();
 				let subspace = subspace.clone();
 
@@ -342,7 +337,7 @@ impl ActorKv {
 								// Set metadata
 								tx.set(&key_subspace.pack(&METADATA), &buf);
 
-								// Set data
+								// Set key data in chunks
 								for start in (0..value.len()).step_by(VALUE_CHUNK_SIZE) {
 									let idx = start / VALUE_CHUNK_SIZE;
 									let end = (start + VALUE_CHUNK_SIZE).min(value.len());
@@ -367,12 +362,9 @@ impl ActorKv {
 			.map_err(Into::into)
 	}
 
-	/// Deletes keys from the KV store.
+	/// Deletes keys from the KV store. Cannot be undone.
 	pub async fn delete(&self, keys: Vec<Key>) -> Result<()> {
-		let subspace = self
-			.subspace
-			.as_ref()
-			.context("must call `ActorKv::init` before using KV operations")?;
+		let subspace = &self.init().await?;
 
 		validate_keys(&keys)?;
 
@@ -393,12 +385,9 @@ impl ActorKv {
 			.map_err(Into::into)
 	}
 
-	/// Deletes all keys from the KV store.
+	/// Deletes all keys from the KV store. Cannot be undone.
 	pub async fn delete_all(&self) -> Result<()> {
-		let subspace = self
-			.subspace
-			.as_ref()
-			.context("must call `ActorKv::init` before using KV operations")?;
+		let subspace = &self.init().await?;
 
 		self.db
 			.run(|tx, _mc| async move {

@@ -7,6 +7,7 @@ use anyhow::*;
 use indoc::indoc;
 use nix::{sys::signal::Signal, unistd::Pid};
 use pegboard::protocol;
+use pegboard_actor_kv as kv;
 use pegboard_config::runner_protocol;
 
 use crate::{ctx::Ctx, runner, utils};
@@ -16,10 +17,12 @@ pub struct Actor {
 	generation: u32,
 	config: protocol::ActorConfig,
 	runner: Arc<runner::Runner>,
+	kv: kv::ActorKv,
 }
 
 impl Actor {
 	pub fn new(
+		fdb: &utils::fdb::FdbPool,
 		actor_id: rivet_util::Id,
 		generation: u32,
 		config: protocol::ActorConfig,
@@ -30,6 +33,7 @@ impl Actor {
 			generation,
 			config,
 			runner,
+			kv: kv::ActorKv::new((&**fdb).clone(), actor_id),
 		})
 	}
 
@@ -82,8 +86,8 @@ impl Actor {
 		let ctx2 = ctx.clone();
 		tokio::spawn(async move {
 			match self2.run(&ctx2).await {
-				Ok(observers) => {
-					if let Err(err) = self2.observe(&ctx2, observers).await {
+				Ok(observer) => {
+					if let Err(err) = self2.observe(&ctx2, observer).await {
 						tracing::error!(actor_id=?self2.actor_id, ?err, "observe failed");
 					}
 				}
@@ -101,18 +105,12 @@ impl Actor {
 		Ok(())
 	}
 
-	async fn run(self: &Arc<Self>, ctx: &Arc<Ctx>) -> Result<Option<runner::ActorObserver>> {
+	async fn run(self: &Arc<Self>, ctx: &Arc<Ctx>) -> Result<runner::ActorProxy> {
 		tracing::info!(actor_id=?self.actor_id, generation=?self.generation, "running");
 
-		// NOTE: Create actor observer before sending the start actor message to prevent a race
+		// NOTE: Create actor proxy before sending the start actor message to prevent a race
 		// condition
-		let actor_observer = match self.runner.config().image.allocation_type {
-			protocol::ImageAllocationType::Single => None,
-			protocol::ImageAllocationType::Multi => Some(
-				self.runner
-					.new_actor_observer(self.actor_id, self.generation),
-			),
-		};
+		let actor_proxy = self.runner.new_actor_proxy(self.actor_id, self.generation);
 
 		match self
 			.config
@@ -166,42 +164,120 @@ impl Actor {
 			}
 		}
 
-		Ok(actor_observer)
+		Ok(actor_proxy)
 	}
 
 	// Watch actor for updates
 	pub(crate) async fn observe(
 		&self,
 		ctx: &Arc<Ctx>,
-		actor_observer: Option<runner::ActorObserver>,
+		mut actor_proxy: runner::ActorProxy,
 	) -> Result<()> {
 		tracing::info!(actor_id=?self.actor_id, generation=?self.generation, "observing");
 
-		let exit_code = if let Some(mut actor_observer) = actor_observer {
-			loop {
-				tokio::select! {
-					// We have to check if the shared runner exited or if the actor exited
-					res = self.runner.observe(ctx, true) => break res?,
-					res = actor_observer.next() => match res {
-						Some(runner_protocol::ActorState::Running) => {
-							tracing::info!(actor_id=?self.actor_id, generation=?self.generation, "actor set to running");
+		let exit_code = loop {
+			tokio::select! {
+				// We have to check if the shared runner exited or if the actor exited
+				res = self.runner.observe(ctx, true) => break res?,
+				res = actor_proxy.next() => {
+					let Some(res) = res else {
+						// Channel closed
+						break None;
+					};
 
-							let (pid, ports) = tokio::try_join!(
-								self.runner.pid(),
-								self.runner.ports(ctx),
-							)?;
+					match res {
+						runner_protocol::ToActor::StateUpdate { state } => {
+							match state {
+								runner_protocol::ActorState::Running => {
+									tracing::info!(
+										actor_id=?self.actor_id,
+										generation=?self.generation,
+										"actor set to running"
+									);
 
-							self.set_running(ctx, pid, ports).await?;
-						},
-						Some(runner_protocol::ActorState::Exited {
-							exit_code,
-						}) => break exit_code,
-						None => break None,
-					},
+									let (pid, ports) = tokio::try_join!(
+										self.runner.pid(),
+										self.runner.ports(ctx),
+									)?;
+
+									self.set_running(ctx, pid, ports).await?;
+								},
+								runner_protocol::ActorState::Exited {
+									exit_code,
+								} => break exit_code,
+							}
+						}
+						runner_protocol::ToActor::Kv(req) => {
+							// TODO: Add queue and bg thread for processing kv ops
+							// Run kv operation
+							match req.data {
+								runner_protocol::KvRequestData::Get { keys } => {
+									let res = self.kv.get(keys).await;
+									let error = res.as_ref().err().map(|x| x.to_string());
+
+									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
+										request_id: req.request_id,
+										data: res.ok().map(|entries| {
+											let (keys, values) = entries.into_iter().unzip();
+											runner_protocol::KvResponseData::Get {
+												keys,
+												values,
+											}
+										}),
+										error,
+									})).await?;
+								}
+								runner_protocol::KvRequestData::List { query, reverse, limit } => {
+									let res = self.kv.list(query, reverse, limit).await;
+									let error = res.as_ref().err().map(|x| x.to_string());
+
+									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
+										request_id: req.request_id,
+										data: res.ok().map(|entries| {
+											let (keys, values) = entries.into_iter().unzip();
+											runner_protocol::KvResponseData::List {
+												keys,
+												values,
+											}
+										}),
+										error,
+									})).await?;
+								}
+								runner_protocol::KvRequestData::Put { keys, values } => {
+									let res = self.kv.put(keys.into_iter().zip(values.into_iter()).collect()).await;
+									let error = res.as_ref().err().map(|x| x.to_string());
+
+									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
+										request_id: req.request_id,
+										data: res.ok().map(|_| runner_protocol::KvResponseData::Put {}),
+										error,
+									})).await?;
+								}
+								runner_protocol::KvRequestData::Delete { keys } => {
+									let res = self.kv.delete(keys).await;
+									let error = res.as_ref().err().map(|x| x.to_string());
+
+									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
+										request_id: req.request_id,
+										data: res.ok().map(|_| runner_protocol::KvResponseData::Delete {}),
+										error,
+									})).await?;
+								}
+								runner_protocol::KvRequestData::Drop { } => {
+									let res = self.kv.delete_all().await;
+									let error = res.as_ref().err().map(|x| x.to_string());
+
+									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
+										request_id: req.request_id,
+										data: res.ok().map(|_| runner_protocol::KvResponseData::Drop {}),
+										error,
+									})).await?;
+								}
+							}
+						}
+					}
 				}
 			}
-		} else {
-			self.runner.observe(ctx, true).await?
 		};
 
 		self.set_exit_code(ctx, exit_code).await?;

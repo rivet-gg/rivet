@@ -899,31 +899,49 @@ struct FetchRemainingActorsInput {
 async fn fetch_remaining_actors(
 	ctx: &ActivityCtx,
 	input: &FetchRemainingActorsInput,
-) -> GlobalResult<Vec<(Uuid, u32)>> {
+) -> GlobalResult<Vec<(util::Id, u32)>> {
 	let actor_ids = ctx
 		.fdb()
 		.await?
 		.run(|tx, _mc| async move {
+			let actor2_subspace =
+				keys::subspace().subspace(&keys::client::Actor2Key::subspace(input.client_id));
 			let actor_subspace =
 				keys::subspace().subspace(&keys::client::ActorKey::subspace(input.client_id));
 
 			tx.get_ranges_keyvalues(
 				fdb::RangeOption {
 					mode: StreamingMode::WantAll,
-					..(&actor_subspace).into()
+					..(&actor2_subspace).into()
 				},
 				SERIALIZABLE,
 			)
+			.chain(tx.get_ranges_keyvalues(
+				fdb::RangeOption {
+					mode: StreamingMode::WantAll,
+					..(&actor_subspace).into()
+				},
+				SERIALIZABLE,
+			))
 			.map(|res| match res {
 				Ok(entry) => {
-					let key = keys::subspace()
-						.unpack::<keys::client::ActorKey>(entry.key())
-						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
-					let generation = key
-						.deserialize(entry.value())
-						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+					if let Ok(key) = keys::subspace()
+					.unpack::<keys::client::Actor2Key>(entry.key()) {
+						let generation = key
+							.deserialize(entry.value())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
-					Ok((key.actor_id, generation))
+						Ok((key.actor_id, generation))
+					} else {
+						let key = keys::subspace()
+							.unpack::<keys::client::ActorKey>(entry.key())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+						let generation = key
+							.deserialize(entry.value())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+						Ok((key.actor_id.into(), generation))
+					}
 				}
 				Err(err) => Err(Into::<fdb::FdbBindingError>::into(err)),
 			})

@@ -126,12 +126,12 @@ async fn update_db(
 ) -> GlobalResult<Option<UpdateDbOutput>> {
 	let pool = ctx.sqlite().await?;
 
+	// NOTE: Row might not exist if the workflow failed before insert_db
 	sql_fetch_optional!(
 		[ctx, UpdateDbOutput, pool]
 		"
 		UPDATE state
 		SET destroy_ts = ?
-		WHERE destroy_ts IS NULL
 		RETURNING
 			env_id,
 			selected_resources_memory_mib,

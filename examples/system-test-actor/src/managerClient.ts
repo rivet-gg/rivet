@@ -1,6 +1,7 @@
 import * as net from "net";
 import * as fs from "fs";
 import { setInterval, clearInterval } from "timers";
+import * as util from "util";
 
 export function connectToManager() {
 	const socketPath = process.env.RIVET_MANAGER_SOCKET_PATH;
@@ -31,8 +32,9 @@ export function connectToManager() {
 
 	client.on("data", (data) => {
 		const packets = decodeFrames(data);
-		packets.forEach((packet) => {
-			console.log("Received packet from manager:", packet);
+
+		for (let packet of packets) {
+			console.log("Received packet from manager:", util.inspect(packet, { depth: null }));
 
 			if (packet.start_actor) {
 				const response = {
@@ -45,6 +47,41 @@ export function connectToManager() {
 					},
 				};
 				client.write(encodeFrame(response));
+
+				const kvMessage = {
+					kv: {
+						actor_id: packet.start_actor.actor_id,
+						generation: packet.start_actor.generation,
+						request_id: 1,
+						data: {
+							put: {
+								keys: [
+									[[1, 2, 3], [4, 5, 6]],
+								],
+								values: [
+									[11, 12, 13, 14, 15, 16]
+								],
+							}
+						}
+					}
+				};
+				client.write(encodeFrame(kvMessage));
+
+				const kvMessage2 = {
+					kv: {
+						actor_id: packet.start_actor.actor_id,
+						generation: packet.start_actor.generation,
+						request_id: 2,
+						data: {
+							get: {
+								keys: [
+									[[1, 2, 3], [4, 5, 6]]
+								],
+							}
+						}
+					}
+				};
+				client.write(encodeFrame(kvMessage2));
 			} else if (packet.signal_actor) {
 				const response = {
 					actor_state_update: {
@@ -59,7 +96,7 @@ export function connectToManager() {
 				};
 				client.write(encodeFrame(response));
 			}
-		});
+		}
 	});
 
 	client.on("error", (error) => {
@@ -98,7 +135,7 @@ function decodeFrames(buffer: Buffer): any[] {
 		offset += 4;
 
 		if (buffer.length - offset < payloadLength) break; // Incomplete frame data
-		const json = buffer.slice(offset, offset + payloadLength).toString();
+		const json = buffer.subarray(offset, offset + payloadLength).toString();
 		packets.push(JSON.parse(json));
 		offset += payloadLength;
 	}
