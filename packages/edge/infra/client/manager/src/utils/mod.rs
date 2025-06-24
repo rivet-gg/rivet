@@ -25,6 +25,7 @@ use tokio::{
 	sync::mpsc::{channel, Receiver},
 };
 
+pub mod fdb;
 pub mod libc;
 pub mod sql;
 
@@ -369,4 +370,3 @@ pub async fn copy_dir_all<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> Res
 
 	Ok(())
 }
-

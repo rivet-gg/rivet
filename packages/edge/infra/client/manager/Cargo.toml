@@ -16,13 +16,16 @@ test = []
 [dependencies]
 anyhow.workspace = true
 bytes = "1.0"
+foundationdb.workspace = true
 futures-util = { version = "0.3" }
+fdb-util.workspace = true
 hyper = { version = "0.14", features = ["server", "http1", "tcp", "stream"] }
 indoc = "2.0"
 json5.workspace = true
 lazy_static = "1.4"
 nix.workspace = true
 notify = { version = "6.1.1", default-features = false, features = ["serde", "fsevent-sys"] }
+pegboard-actor-kv.workspace = true
 pegboard-config.workspace = true
 pegboard.workspace = true
 prometheus = "0.13"

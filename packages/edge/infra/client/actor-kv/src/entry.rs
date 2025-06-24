@@ -1,7 +1,7 @@
 use anyhow::*;
 use foundationdb as fdb;
 use prost::Message;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{key::Key, metadata::Metadata};
 
@@ -49,7 +49,7 @@ impl EntryBuilder {
 }
 
 /// Represents a Rivet KV value.
-#[derive(Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Entry {
 	pub metadata: Metadata,
 	pub value: Vec<u8>,
