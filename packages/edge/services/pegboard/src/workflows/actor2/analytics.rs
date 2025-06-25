@@ -45,6 +45,8 @@ pub struct ActorClickHouseRow {
 	/// 0 = not set
 	started_at: i64,
 	/// See `started_at`.
+	pending_allocation_at: i64,
+	/// See `started_at`.
 	connectable_at: i64,
 	/// See `started_at`.
 	finished_at: i64,
@@ -100,6 +102,7 @@ struct StateRow {
 	lifecycle_kill_timeout_ms: i64,
 	lifecycle_durable: bool,
 	create_ts: i64,
+	pending_allocation_ts: Option<i64>,
 	start_ts: Option<i64>,
 	connectable_ts: Option<i64>,
 	finish_ts: Option<i64>,
@@ -148,6 +151,7 @@ pub async fn insert_clickhouse(
 			lifecycle_kill_timeout_ms,
 			lifecycle_durable,
 			create_ts,
+			pending_allocation_ts,
 			start_ts,
 			connectable_ts,
 			finish_ts,
@@ -291,6 +295,10 @@ pub async fn insert_clickhouse(
 			cpu_millicores: state_row.resources_cpu_millicores,
 			memory_mib: state_row.resources_memory_mib,
 			created_at: state_row.create_ts * 1_000_000, // Convert ms to ns for ClickHouse DateTime64(9)
+			pending_allocation_at: state_row
+				.pending_allocation_ts
+				.map(|ts| ts * 1_000_000)
+				.unwrap_or_default(),
 			started_at: state_row
 				.start_ts
 				.map(|ts| ts * 1_000_000)

@@ -19,7 +19,7 @@ pub struct Input {
 	pub kind: BuildKind,
 	pub compression: BuildCompression,
 	pub allocation_type: BuildAllocationType,
-	pub allocation_total_slots: u64,
+	pub allocation_total_slots: u32,
 	pub resources: Option<BuildResources>,
 }
 
