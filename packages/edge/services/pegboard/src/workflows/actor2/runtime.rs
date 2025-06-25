@@ -2,19 +2,21 @@ use std::time::Instant;
 
 use build::types::{BuildAllocationType, BuildKind};
 use chirp_workflow::prelude::*;
+use cluster::types::BuildDeliveryMethod;
 use fdb_util::{end_of_key_range, FormalKey, SERIALIZABLE, SNAPSHOT};
 use foundationdb::{
 	self as fdb,
 	options::{ConflictRangeType, StreamingMode},
 };
+use futures_util::StreamExt;
 use futures_util::{FutureExt, TryStreamExt};
 use nix::sys::signal::Signal;
 use sqlx::Acquire;
 
 use super::{
 	destroy::{self, KillCtx},
-	setup, Destroy, Input, ACTOR_START_THRESHOLD_MS, BASE_RETRY_TIMEOUT_MS,
-	RETRY_RESET_DURATION_MS,
+	setup, Allocate, Destroy, Input, PendingAllocation, ACTOR_START_THRESHOLD_MS,
+	BASE_RETRY_TIMEOUT_MS, RETRY_RESET_DURATION_MS,
 };
 use crate::{
 	keys, metrics,
@@ -112,6 +114,77 @@ async fn update_client_and_runner(
 	.await?;
 
 	Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize, Hash)]
+struct ResolveArtifactsInput {
+	build_upload_id: Uuid,
+	build_file_name: String,
+	dc_build_delivery_method: BuildDeliveryMethod,
+}
+
+#[derive(Debug, Serialize, Deserialize, Hash)]
+struct ResolveArtifactsOutput {
+	artifact_url_stub: String,
+	fallback_artifact_url: String,
+	/// Bytes.
+	artifact_size: u64,
+}
+
+#[activity(ResolveArtifacts)]
+async fn resolve_artifacts(
+	ctx: &ActivityCtx,
+	input: &ResolveArtifactsInput,
+) -> GlobalResult<ResolveArtifactsOutput> {
+	// Get the fallback URL
+	let fallback_artifact_url = {
+		tracing::debug!("using s3 direct delivery");
+
+		// Build client
+		let s3_client = s3_util::Client::with_bucket_and_endpoint(
+			ctx.config(),
+			"bucket-build",
+			s3_util::EndpointKind::EdgeInternal,
+		)
+		.await?;
+
+		let presigned_req = s3_client
+			.get_object()
+			.bucket(s3_client.bucket())
+			.key(format!(
+				"{upload_id}/{file_name}",
+				upload_id = input.build_upload_id,
+				file_name = input.build_file_name,
+			))
+			.presigned(
+				s3_util::aws_sdk_s3::presigning::PresigningConfig::builder()
+					.expires_in(std::time::Duration::from_secs(15 * 60))
+					.build()?,
+			)
+			.await?;
+
+		let addr_str = presigned_req.uri().to_string();
+		tracing::debug!(addr = %addr_str, "resolved artifact s3 presigned request");
+
+		addr_str
+	};
+
+	// Get the artifact size
+	let uploads_res = op!([ctx] upload_get {
+		upload_ids: vec![input.build_upload_id.into()],
+	})
+	.await?;
+	let upload = unwrap!(uploads_res.uploads.first());
+
+	Ok(ResolveArtifactsOutput {
+		artifact_url_stub: crate::util::image_artifact_url_stub(
+			ctx.config(),
+			input.build_upload_id,
+			&input.build_file_name,
+		)?,
+		fallback_artifact_url,
+		artifact_size: upload.content_length,
+	})
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
@@ -221,7 +294,7 @@ struct AllocateActorInput {
 	generation: u32,
 	image_id: Uuid,
 	build_allocation_type: BuildAllocationType,
-	build_allocation_total_slots: u64,
+	build_allocation_total_slots: u32,
 	resources: protocol::Resources,
 }
 
@@ -233,59 +306,218 @@ pub struct AllocateActorOutput {
 	pub client_workflow_id: Uuid,
 }
 
+// If no availability, returns the timestamp of the actor's queue key
 #[activity(AllocateActor)]
 async fn allocate_actor(
 	ctx: &ActivityCtx,
 	input: &AllocateActorInput,
-) -> GlobalResult<Option<AllocateActorOutput>> {
+) -> GlobalResult<Result<AllocateActorOutput, i64>> {
 	let client_flavor = protocol::ClientFlavor::Multi;
 	let memory_mib = input.resources.memory / 1024 / 1024;
 
 	let start_instant = Instant::now();
 
+	// NOTE: This txn should closely resemble the one found in the allocate_pending_actors activity of the
+	// client wf
 	let res = ctx
 		.fdb()
 		.await?
 		.run(|tx, _mc| async move {
-			// Select a range that only includes runners that have enough remaining slots to allocate this actor
-			let start = keys::subspace().pack(
-				&keys::datacenter::RunnersByRemainingSlotsKey::subspace_with_slots(
-					input.image_id,
-					1,
-				),
-			);
-			let runner_allocation_subspace =
-				keys::datacenter::RunnersByRemainingSlotsKey::subspace(input.image_id);
-			let end = keys::subspace()
-				.subspace(&runner_allocation_subspace)
-				.range()
-				.1;
+			// Check for availability amongst existing runners
+			let image_queue_exists = if let BuildAllocationType::Multi = input.build_allocation_type
+			{
+				// Check if a queue for this image exists
+				let pending_actor_by_image_subspace = keys::subspace().subspace(
+					&keys::datacenter::PendingActorByImageIdKey::subspace(input.image_id),
+				);
+				let queue_exists = tx
+					.get_ranges_keyvalues(
+						fdb::RangeOption {
+							mode: StreamingMode::Exact,
+							limit: Some(1),
+							..(&pending_actor_by_image_subspace).into()
+						},
+						// NOTE: This is not SERIALIZABLE because we don't want to conflict with other
+						// inserts/clears to this range
+						// queue
+						SNAPSHOT,
+					)
+					.try_next()
+					.await?
+					.is_some();
 
-			let mut stream = tx.get_ranges_keyvalues(
-				fdb::RangeOption {
-					mode: StreamingMode::Iterator,
-					// Containers bin pack so we reverse the order
-					reverse: true,
-					..(start, end).into()
-				},
-				// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys, just
-				// the one we choose
-				SNAPSHOT,
-			);
+				if !queue_exists {
+					// Select a range that only includes runners that have enough remaining slots to allocate
+					// this actor
+					let start = keys::subspace().pack(
+						&keys::datacenter::RunnersByRemainingSlotsKey::subspace_with_slots(
+							input.image_id,
+							1,
+						),
+					);
+					let runner_allocation_subspace =
+						keys::datacenter::RunnersByRemainingSlotsKey::subspace(input.image_id);
+					let end = keys::subspace()
+						.subspace(&runner_allocation_subspace)
+						.range()
+						.1;
 
-			if let BuildAllocationType::Multi = input.build_allocation_type {
+					let mut stream = tx.get_ranges_keyvalues(
+						fdb::RangeOption {
+							mode: StreamingMode::Iterator,
+							// Containers bin pack so we reverse the order
+							reverse: true,
+							..(start, end).into()
+						},
+						// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys, just
+						// the one we choose
+						SNAPSHOT,
+					);
+
+					loop {
+						let Some(entry) = stream.try_next().await? else {
+							break;
+						};
+
+						let old_runner_allocation_key = keys::subspace()
+							.unpack::<keys::datacenter::RunnersByRemainingSlotsKey>(entry.key())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+						let data = old_runner_allocation_key
+							.deserialize(entry.value())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+						// Add read conflict only for this key
+						tx.add_conflict_range(
+							entry.key(),
+							&end_of_key_range(entry.key()),
+							ConflictRangeType::Read,
+						)?;
+
+						// Clear old entry
+						tx.clear(entry.key());
+
+						let new_remaining_slots =
+							old_runner_allocation_key.remaining_slots.saturating_sub(1);
+
+						// Write new allocation key with 1 less slot
+						let new_allocation_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
+							input.image_id,
+							new_remaining_slots,
+							old_runner_allocation_key.runner_id,
+						);
+						tx.set(&keys::subspace().pack(&new_allocation_key), entry.value());
+
+						// Update runner record
+						let remaining_slots_key = keys::runner::RemainingSlotsKey::new(
+							old_runner_allocation_key.runner_id,
+						);
+						tx.set(
+							&keys::subspace().pack(&remaining_slots_key),
+							&remaining_slots_key
+								.serialize(new_remaining_slots)
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
+
+						// Insert actor index key
+						let client_actor_key =
+							keys::client::Actor2Key::new(data.client_id, input.actor_id);
+						tx.set(
+							&keys::subspace().pack(&client_actor_key),
+							&client_actor_key
+								.serialize(input.generation)
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
+
+						return Ok(Ok(AllocateActorOutput {
+							runner_id: old_runner_allocation_key.runner_id,
+							new_runner: false,
+							client_id: data.client_id,
+							client_workflow_id: data.client_workflow_id,
+						}));
+					}
+				}
+
+				queue_exists
+			} else {
+				false
+			};
+
+			// No available runner found, create a new one
+
+			// Check if a queue exists
+			let pending_actor_subspace =
+				keys::subspace().subspace(&keys::datacenter::PendingActorKey::subspace());
+			let queue_exists = if image_queue_exists {
+				// We don't have to check the range if the image queue exists, its guaranteed that this one
+				// exists too
+				true
+			} else {
+				tx.get_ranges_keyvalues(
+					fdb::RangeOption {
+						mode: StreamingMode::Exact,
+						limit: Some(1),
+						..(&pending_actor_subspace).into()
+					},
+					// NOTE: This is not SERIALIZABLE because we don't want to conflict with other
+					// inserts/clears to this range
+					// queue
+					SNAPSHOT,
+				)
+				.next()
+				.await
+				.is_some()
+			};
+
+			if !queue_exists {
+				let runner_id = Uuid::new_v4();
+
+				let ping_threshold_ts = util::timestamp::now() - CLIENT_ELIGIBLE_THRESHOLD_MS;
+
+				// Select a range that only includes clients that have enough remaining mem to allocate this actor
+				let start = keys::subspace().pack(
+					&keys::datacenter::ClientsByRemainingMemKey::subspace_with_mem(
+						client_flavor,
+						memory_mib,
+					),
+				);
+				let client_allocation_subspace =
+					keys::datacenter::ClientsByRemainingMemKey::subspace(client_flavor);
+				let end = keys::subspace()
+					.subspace(&client_allocation_subspace)
+					.range()
+					.1;
+
+				let mut stream = tx.get_ranges_keyvalues(
+					fdb::RangeOption {
+						mode: StreamingMode::Iterator,
+						// Containers bin pack so we reverse the order
+						reverse: true,
+						..(start, end).into()
+					},
+					// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys, just
+					// the one we choose
+					SNAPSHOT,
+				);
+
 				loop {
 					let Some(entry) = stream.try_next().await? else {
 						break;
 					};
 
-					let old_runner_allocation_key = keys::subspace()
-						.unpack::<keys::datacenter::RunnersByRemainingSlotsKey>(entry.key())
+					let old_client_allocation_key = keys::subspace()
+						.unpack::<keys::datacenter::ClientsByRemainingMemKey>(entry.key())
 						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
-					let data = old_runner_allocation_key
-						.deserialize(entry.value())
-						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+					// Scan by last ping
+					if old_client_allocation_key.last_ping_ts < ping_threshold_ts {
+						continue;
+					}
+
+					let client_workflow_id =
+						old_client_allocation_key
+							.deserialize(entry.value())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
 					// Add read conflict only for this key
 					tx.add_conflict_range(
@@ -297,30 +529,107 @@ async fn allocate_actor(
 					// Clear old entry
 					tx.clear(entry.key());
 
-					let new_remaining_slots =
-						old_runner_allocation_key.remaining_slots.saturating_sub(1);
+					// Read old cpu
+					let remaining_cpu_key =
+						keys::client::RemainingCpuKey::new(old_client_allocation_key.client_id);
+					let remaining_cpu_key_buf = keys::subspace().pack(&remaining_cpu_key);
+					let remaining_cpu_entry = tx.get(&remaining_cpu_key_buf, SERIALIZABLE).await?;
+					let old_remaining_cpu = remaining_cpu_key
+						.deserialize(&remaining_cpu_entry.ok_or(
+							fdb::FdbBindingError::CustomError(
+								format!("key should exist: {remaining_cpu_key:?}").into(),
+							),
+						)?)
+						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
-					// Write new allocation key with 1 less slot
-					let new_allocation_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
-						input.image_id,
-						new_remaining_slots,
-						old_runner_allocation_key.runner_id,
+					// Update allocated amount
+					let new_remaining_mem = old_client_allocation_key.remaining_mem - memory_mib;
+					let new_remaining_cpu = old_remaining_cpu - input.resources.cpu;
+					let new_allocation_key = keys::datacenter::ClientsByRemainingMemKey::new(
+						client_flavor,
+						new_remaining_mem,
+						old_client_allocation_key.last_ping_ts,
+						old_client_allocation_key.client_id,
 					);
 					tx.set(&keys::subspace().pack(&new_allocation_key), entry.value());
 
-					// Update runner record
-					let remaining_slots_key =
-						keys::runner::RemainingSlotsKey::new(old_runner_allocation_key.runner_id);
+					tracing::debug!(
+						old_mem=%old_client_allocation_key.remaining_mem,
+						old_cpu=%old_remaining_cpu,
+						new_mem=%new_remaining_mem,
+						new_cpu=%new_remaining_cpu,
+						"allocating runner resources"
+					);
+
+					// Update client record
+					let remaining_mem_key =
+						keys::client::RemainingMemoryKey::new(old_client_allocation_key.client_id);
 					tx.set(
-						&keys::subspace().pack(&remaining_slots_key),
-						&remaining_slots_key
-							.serialize(new_remaining_slots)
+						&keys::subspace().pack(&remaining_mem_key),
+						&remaining_mem_key
+							.serialize(new_remaining_mem)
 							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 					);
 
+					tx.set(
+						&remaining_cpu_key_buf,
+						&remaining_cpu_key
+							.serialize(new_remaining_cpu)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					let remaining_slots = input.build_allocation_total_slots.saturating_sub(1);
+					let total_slots = input.build_allocation_total_slots;
+
+					// Insert runner records
+					let remaining_slots_key = keys::runner::RemainingSlotsKey::new(runner_id);
+					tx.set(
+						&keys::subspace().pack(&remaining_slots_key),
+						&remaining_slots_key
+							.serialize(remaining_slots)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					let total_slots_key = keys::runner::TotalSlotsKey::new(runner_id);
+					tx.set(
+						&keys::subspace().pack(&total_slots_key),
+						&total_slots_key
+							.serialize(total_slots)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					let image_id_key = keys::runner::ImageIdKey::new(runner_id);
+					tx.set(
+						&keys::subspace().pack(&image_id_key),
+						&image_id_key
+							.serialize(input.image_id)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					// Insert runner index key if multi. Single allocation per container runners don't need to be
+					// in the alloc idx because they only have 1 slot
+					if let BuildAllocationType::Multi = input.build_allocation_type {
+						let runner_idx_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
+							input.image_id,
+							remaining_slots,
+							runner_id,
+						);
+						tx.set(
+							&keys::subspace().pack(&runner_idx_key),
+							&runner_idx_key
+								.serialize(keys::datacenter::RunnersByRemainingSlotsKeyData {
+									client_id: old_client_allocation_key.client_id,
+									client_workflow_id,
+								})
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
+					}
+
 					// Insert actor index key
-					let client_actor_key =
-						keys::client::Actor2Key::new(data.client_id, input.actor_id);
+					let client_actor_key = keys::client::Actor2Key::new(
+						old_client_allocation_key.client_id,
+						input.actor_id,
+					);
 					tx.set(
 						&keys::subspace().pack(&client_actor_key),
 						&client_actor_key
@@ -328,196 +637,75 @@ async fn allocate_actor(
 							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 					);
 
-					return Ok(Some(AllocateActorOutput {
-						runner_id: old_runner_allocation_key.runner_id,
-						new_runner: false,
-						client_id: data.client_id,
-						client_workflow_id: data.client_workflow_id,
+					return Ok(Ok(AllocateActorOutput {
+						runner_id,
+						new_runner: true,
+						client_id: old_client_allocation_key.client_id,
+						client_workflow_id,
 					}));
 				}
 			}
 
-			// No available runner found, create a new one
-			let runner_id = Uuid::new_v4();
+			// At this point in the txn there is no availability. Write the actor to the alloc queue to wait.
 
-			let ping_threshold_ts = util::timestamp::now() - CLIENT_ELIGIBLE_THRESHOLD_MS;
+			let pending_ts = util::timestamp::now();
 
-			// Select a range that only includes clients that have enough remaining mem to allocate this actor
-			let start = keys::subspace().pack(
-				&keys::datacenter::ClientsByRemainingMemKey::subspace_with_mem(
-					client_flavor,
-					memory_mib,
-				),
-			);
-			let client_allocation_subspace =
-				keys::datacenter::ClientsByRemainingMemKey::subspace(client_flavor);
-			let end = keys::subspace()
-				.subspace(&client_allocation_subspace)
-				.range()
-				.1;
-
-			let mut stream = tx.get_ranges_keyvalues(
-				fdb::RangeOption {
-					mode: StreamingMode::Iterator,
-					// Containers bin pack so we reverse the order
-					reverse: true,
-					..(start, end).into()
-				},
-				// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys, just
-				// the one we choose
-				SNAPSHOT,
-			);
-
-			loop {
-				let Some(entry) = stream.try_next().await? else {
-					return Ok(None);
-				};
-
-				let old_client_allocation_key = keys::subspace()
-					.unpack::<keys::datacenter::ClientsByRemainingMemKey>(entry.key())
-					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
-
-				// Scan by last ping
-				if old_client_allocation_key.last_ping_ts < ping_threshold_ts {
-					continue;
-				}
-
-				let client_workflow_id = old_client_allocation_key
-					.deserialize(entry.value())
-					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
-
-				// Add read conflict only for this key
-				tx.add_conflict_range(
-					entry.key(),
-					&end_of_key_range(entry.key()),
-					ConflictRangeType::Read,
-				)?;
-
-				// Clear old entry
-				tx.clear(entry.key());
-
-				// Read old cpu
-				let remaining_cpu_key =
-					keys::client::RemainingCpuKey::new(old_client_allocation_key.client_id);
-				let remaining_cpu_key_buf = keys::subspace().pack(&remaining_cpu_key);
-				let remaining_cpu_entry = tx.get(&remaining_cpu_key_buf, SERIALIZABLE).await?;
-				let old_remaining_cpu = remaining_cpu_key
-					.deserialize(
-						&remaining_cpu_entry.ok_or(fdb::FdbBindingError::CustomError(
-							format!("key should exist: {remaining_cpu_key:?}").into(),
-						))?,
-					)
-					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
-
-				// Update allocated amount
-				let new_remaining_mem = old_client_allocation_key.remaining_mem - memory_mib;
-				let new_remaining_cpu = old_remaining_cpu - input.resources.cpu;
-				let new_allocation_key = keys::datacenter::ClientsByRemainingMemKey::new(
-					client_flavor,
-					new_remaining_mem,
-					old_client_allocation_key.last_ping_ts,
-					old_client_allocation_key.client_id,
-				);
-				tx.set(&keys::subspace().pack(&new_allocation_key), entry.value());
-
-				tracing::debug!(
-					old_mem=%old_client_allocation_key.remaining_mem,
-					old_cpu=%old_remaining_cpu,
-					new_mem=%new_remaining_mem,
-					new_cpu=%new_remaining_cpu,
-					"allocating runner resources"
-				);
-
-				// Update client record
-				let remaining_mem_key =
-					keys::client::RemainingMemoryKey::new(old_client_allocation_key.client_id);
-				tx.set(
-					&keys::subspace().pack(&remaining_mem_key),
-					&remaining_mem_key
-						.serialize(new_remaining_mem)
-						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
-				);
-
-				tx.set(
-					&remaining_cpu_key_buf,
-					&remaining_cpu_key
-						.serialize(new_remaining_cpu)
-						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
-				);
-
-				let remaining_slots = input.build_allocation_total_slots.saturating_sub(1);
-				let total_slots = input.build_allocation_total_slots;
-
-				// Insert runner records
-				let remaining_slots_key = keys::runner::RemainingSlotsKey::new(runner_id);
-				tx.set(
-					&keys::subspace().pack(&remaining_slots_key),
-					&remaining_slots_key
-						.serialize(remaining_slots)
-						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
-				);
-
-				let total_slots_key = keys::runner::TotalSlotsKey::new(runner_id);
-				tx.set(
-					&keys::subspace().pack(&total_slots_key),
-					&total_slots_key
-						.serialize(total_slots)
-						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
-				);
-
-				let image_id_key = keys::runner::ImageIdKey::new(runner_id);
-				tx.set(
-					&keys::subspace().pack(&image_id_key),
-					&image_id_key
-						.serialize(input.image_id)
-						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
-				);
-
-				// Insert runner index key if multi. Single allocation per container runners don't need to be
-				// in the alloc idx because they only have 1 slot
-				if let BuildAllocationType::Multi = input.build_allocation_type {
-					let runner_idx_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
-						input.image_id,
-						remaining_slots,
-						runner_id,
-					);
-					tx.set(
-						&keys::subspace().pack(&runner_idx_key),
-						&runner_idx_key
-							.serialize(keys::datacenter::RunnersByRemainingSlotsKeyData {
-								client_id: old_client_allocation_key.client_id,
-								client_workflow_id,
-							})
-							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
-					);
-				}
-
-				// Insert actor index key
-				let client_actor_key = keys::client::Actor2Key::new(
-					old_client_allocation_key.client_id,
+			// Write self to image alloc queue
+			if let BuildAllocationType::Multi = input.build_allocation_type {
+				let image_pending_alloc_key = keys::datacenter::PendingActorByImageIdKey::new(
+					input.image_id,
+					pending_ts,
 					input.actor_id,
 				);
+				let image_pending_alloc_data = keys::datacenter::PendingActorByImageIdKeyData {
+					generation: input.generation,
+					build_allocation_type: input.build_allocation_type,
+					build_allocation_total_slots: input.build_allocation_total_slots,
+					cpu: input.resources.cpu,
+					memory: input.resources.memory,
+				};
+
+				// NOTE: This will conflict with serializable reads to the alloc queue, which is the behavior we
+				// want. If a client reads from the queue while this is being inserted, one of the two txns will
+				// retry and we ensure the actor does not end up in queue limbo.
 				tx.set(
-					&keys::subspace().pack(&client_actor_key),
-					&client_actor_key
-						.serialize(input.generation)
+					&keys::subspace().pack(&image_pending_alloc_key),
+					&image_pending_alloc_key
+						.serialize(image_pending_alloc_data)
 						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 				);
-
-				return Ok(Some(AllocateActorOutput {
-					runner_id,
-					new_runner: true,
-					client_id: old_client_allocation_key.client_id,
-					client_workflow_id,
-				}));
 			}
+
+			// Write self to global alloc queue
+			let pending_alloc_key =
+				keys::datacenter::PendingActorKey::new(pending_ts, input.actor_id);
+			let pending_alloc_data = keys::datacenter::PendingActorKeyData {
+				generation: input.generation,
+				image_id: input.image_id,
+				build_allocation_type: input.build_allocation_type,
+				build_allocation_total_slots: input.build_allocation_total_slots,
+				cpu: input.resources.cpu,
+				memory: input.resources.memory,
+			};
+
+			// NOTE: This will conflict with serializable reads to the alloc queue, which is the behavior we
+			// want. If a client reads from the queue while this is being inserted, one of the two txns will
+			// retry and we ensure the actor does not end up in queue limbo.
+			tx.set(
+				&keys::subspace().pack(&pending_alloc_key),
+				&pending_alloc_key
+					.serialize(pending_alloc_data)
+					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+			);
+
+			return Ok(Err(pending_ts));
 		})
 		.custom_instrument(tracing::info_span!("actor_allocate_tx"))
 		.await?;
 
 	let dt = start_instant.elapsed().as_secs_f64();
 	metrics::ACTOR_ALLOCATE_DURATION
-		.with_label_values(&[&res.is_some().to_string()])
+		.with_label_values(&[&res.is_ok().to_string()])
 		.observe(dt);
 
 	Ok(res)
@@ -812,14 +1000,15 @@ async fn compare_retry(ctx: &ActivityCtx, input: &CompareRetryInput) -> GlobalRe
 	Ok((now, input.last_retry_ts < now - RETRY_RESET_DURATION_MS))
 }
 
-/// Returns whether or not there was availability to spawn the actor.
+/// Returns None if a destroy signal was received while pending for allocation.
 pub async fn spawn_actor(
 	ctx: &mut WorkflowCtx,
 	input: &Input,
 	actor_setup: &setup::ActorSetupCtx,
 	generation: u32,
 ) -> GlobalResult<Option<AllocateActorOutput>> {
-	let res = ctx
+	// Attempt allocation
+	let allocate_res = ctx
 		.activity(AllocateActorInput {
 			actor_id: input.actor_id,
 			generation,
@@ -830,18 +1019,74 @@ pub async fn spawn_actor(
 		})
 		.await?;
 
-	let Some(res) = res else {
-		return Ok(None);
+	let allocate_res = match allocate_res {
+		Ok(x) => x,
+		Err(pending_allocation_ts) => {
+			tracing::warn!(
+				actor_id=?input.actor_id,
+				"failed to allocate (no availability), waiting for allocation",
+			);
+
+			ctx.activity(SetPendingAllocationInput {
+				pending_allocation_ts,
+			})
+			.await?;
+
+			// If allocation fails, the allocate txn already inserted this actor into the queue. Now we wait for
+			// an `Allocate` signal
+			match ctx.listen::<PendingAllocation>().await? {
+				PendingAllocation::Allocate(sig) => AllocateActorOutput {
+					runner_id: sig.runner_id,
+					new_runner: sig.new_runner,
+					client_id: sig.client_id,
+					client_workflow_id: sig.client_workflow_id,
+				},
+				// We ignore the signal's override_kill_timeout_ms because the actor isn't allocated
+				PendingAllocation::Destroy(_sig) => {
+					tracing::debug!("destroying before actor allocated");
+
+					let cleared = ctx
+						.activity(ClearPendingAllocationInput {
+							actor_id: input.actor_id,
+							pending_allocation_ts,
+						})
+						.await?;
+
+					// If this actor was no longer present in the queue it means it was allocated. We must now
+					// wait for the allocated signal to prevent a race condition.
+					if !cleared {
+						let sig = ctx.listen::<Allocate>().await?;
+
+						ctx.activity(UpdateClientAndRunnerInput {
+							client_id: sig.client_id,
+							client_workflow_id: sig.client_workflow_id,
+							runner_id: sig.runner_id,
+						})
+						.await?;
+					}
+
+					return Ok(None);
+				}
+			}
+		}
 	};
 
-	let (_, ports_res) = ctx
+	let (_, artifacts_res, ports_res) = ctx
 		.join((
 			activity(UpdateClientAndRunnerInput {
-				client_id: res.client_id,
-				client_workflow_id: res.client_workflow_id,
-				runner_id: res.runner_id,
+				client_id: allocate_res.client_id,
+				client_workflow_id: allocate_res.client_workflow_id,
+				runner_id: allocate_res.runner_id,
 			}),
-			v(2).activity(FetchPortsInput {
+			// NOTE: We resolve the artifacts here instead of in setup::setup because we don't know how
+			// long it will be after setup until an actor is allocated so the presigned artifact url might
+			// expire.
+			activity(ResolveArtifactsInput {
+				build_upload_id: actor_setup.meta.build_upload_id,
+				build_file_name: actor_setup.meta.build_file_name.clone(),
+				dc_build_delivery_method: actor_setup.meta.dc_build_delivery_method,
+			}),
+			activity(FetchPortsInput {
 				actor_id: input.actor_id,
 				endpoint_type: input.endpoint_type,
 			}),
@@ -852,9 +1097,9 @@ pub async fn spawn_actor(
 
 	let image = protocol::Image {
 		id: actor_setup.image_id,
-		artifact_url_stub: actor_setup.artifact_url_stub.clone(),
-		fallback_artifact_url: Some(actor_setup.fallback_artifact_url.clone()),
-		artifact_size: actor_setup.artifact_size,
+		artifact_url_stub: artifacts_res.artifact_url_stub.clone(),
+		fallback_artifact_url: Some(artifacts_res.fallback_artifact_url.clone()),
+		artifact_size: artifacts_res.artifact_size,
 		kind: match actor_setup.meta.build_kind {
 			BuildKind::DockerImage => protocol::ImageKind::DockerImage,
 			BuildKind::OciBundle => protocol::ImageKind::OciBundle,
@@ -907,9 +1152,9 @@ pub async fn spawn_actor(
 		actor_id: input.actor_id,
 		generation,
 		config: Box::new(protocol::ActorConfig {
-			runner: if res.new_runner {
+			runner: if allocate_res.new_runner {
 				Some(protocol::ActorRunner::New {
-					runner_id: res.runner_id,
+					runner_id: allocate_res.runner_id,
 					config: protocol::RunnerConfig {
 						image: image.clone(),
 						root_user_enabled: input.root_user_enabled,
@@ -921,7 +1166,7 @@ pub async fn spawn_actor(
 				})
 			} else {
 				Some(protocol::ActorRunner::Existing {
-					runner_id: res.runner_id,
+					runner_id: allocate_res.runner_id,
 				})
 			},
 			env: input.environment.clone(),
@@ -964,19 +1209,20 @@ pub async fn spawn_actor(
 			network_mode,
 		}),
 	})
-	.to_workflow_id(res.client_workflow_id)
+	.to_workflow_id(allocate_res.client_workflow_id)
 	.send()
 	.await?;
 
-	Ok(Some(res))
+	Ok(Some(allocate_res))
 }
 
+/// Returns true if the actor should be destroyed.
 pub async fn reschedule_actor(
 	ctx: &mut WorkflowCtx,
 	input: &Input,
 	state: &mut State,
 	image_id: Uuid,
-) -> GlobalResult<Option<Destroy>> {
+) -> GlobalResult<bool> {
 	tracing::debug!(actor_id=?input.actor_id, "rescheduling actor");
 
 	let res = ctx
@@ -1031,22 +1277,21 @@ pub async fn reschedule_actor(
 					let next = backoff.step().expect("should not have max retry");
 
 					// Sleep for backoff or destroy early
-					if let Some(sig) = ctx
+					if let Some(_sig) = ctx
 						.listen_with_timeout::<Destroy>(Instant::from(next) - Instant::now())
 						.await?
 					{
 						tracing::debug!("destroying before actor start");
 
-						return Ok(Loop::Break(Err(sig)));
+						return Ok(Loop::Break(None));
 					}
 				}
 
 				if let Some(res) = spawn_actor(ctx, &input, &actor_setup, next_generation).await? {
-					Ok(Loop::Break(Ok((state.clone(), res))))
+					Ok(Loop::Break(Some((state.clone(), res))))
 				} else {
-					tracing::debug!(actor_id=?input.actor_id, "failed to reschedule actor, retrying");
-
-					Ok(Loop::Continue)
+					// Destroyed early
+					Ok(Loop::Break(None))
 				}
 			}
 			.boxed()
@@ -1054,23 +1299,79 @@ pub async fn reschedule_actor(
 		.await?;
 
 	// Update loop state
-	match res {
-		Ok((reschedule_state, res)) => {
-			state.generation = next_generation;
-			state.runner_id = res.runner_id;
-			state.client_id = res.client_id;
-			state.client_workflow_id = res.client_workflow_id;
+	if let Some((reschedule_state, res)) = res {
+		state.generation = next_generation;
+		state.runner_id = res.runner_id;
+		state.client_id = res.client_id;
+		state.client_workflow_id = res.client_workflow_id;
 
-			// Save reschedule state in global state
-			state.reschedule_state = reschedule_state;
+		// Save reschedule state in global state
+		state.reschedule_state = reschedule_state;
 
-			// Reset gc timeout once allocated
-			state.gc_timeout_ts = Some(util::timestamp::now() + ACTOR_START_THRESHOLD_MS);
+		// Reset gc timeout once allocated
+		state.gc_timeout_ts = Some(util::timestamp::now() + ACTOR_START_THRESHOLD_MS);
 
-			Ok(None)
-		}
-		Err(sig) => Ok(Some(sig)),
+		Ok(false)
+	} else {
+		Ok(true)
 	}
+}
+
+#[derive(Debug, Serialize, Deserialize, Hash)]
+pub struct SetPendingAllocationInput {
+	pending_allocation_ts: i64,
+}
+
+#[activity(SetPendingAllocation)]
+pub async fn set_pending_allocation(
+	ctx: &ActivityCtx,
+	input: &SetPendingAllocationInput,
+) -> GlobalResult<()> {
+	let pool = ctx.sqlite().await?;
+
+	sql_execute!(
+		[ctx, pool]
+		"
+		UPDATE state
+		SET pending_allocation_ts = ?
+		",
+		input.pending_allocation_ts,
+	)
+	.await?;
+
+	Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize, Hash)]
+pub struct ClearPendingAllocationInput {
+	actor_id: util::Id,
+	pending_allocation_ts: i64,
+}
+
+#[activity(ClearPendingAllocation)]
+pub async fn clear_pending_allocation(
+	ctx: &ActivityCtx,
+	input: &ClearPendingAllocationInput,
+) -> GlobalResult<bool> {
+	// Clear self from alloc queue
+	let cleared = ctx
+		.fdb()
+		.await?
+		.run(|tx, _mc| async move {
+			let pending_alloc_key = keys::subspace().pack(&keys::datacenter::PendingActorKey::new(
+				input.pending_allocation_ts,
+				input.actor_id,
+			));
+
+			let exists = tx.get(&pending_alloc_key, SERIALIZABLE).await?.is_some();
+
+			tx.clear(&pending_alloc_key);
+
+			Ok(exists)
+		})
+		.await?;
+
+	Ok(cleared)
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
