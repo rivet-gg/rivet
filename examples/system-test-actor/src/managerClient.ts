@@ -119,6 +119,7 @@ function encodeFrame(payload: any): Buffer {
 	payloadLength.writeUInt32BE(json.length, 0);
 
 	const header = Buffer.alloc(4); // All zeros for now
+
 	return Buffer.concat([payloadLength, header, Buffer.from(json)]);
 }
 
