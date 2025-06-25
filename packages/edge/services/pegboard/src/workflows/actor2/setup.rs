@@ -685,7 +685,7 @@ pub struct GetMetaOutput {
 	pub build_kind: BuildKind,
 	pub build_compression: BuildCompression,
 	pub build_allocation_type: BuildAllocationType,
-	pub build_allocation_total_slots: u64,
+	pub build_allocation_total_slots: u32,
 	pub build_resources: Option<BuildResources>,
 	pub dc_name_id: String,
 	pub dc_display_name: String,
@@ -782,10 +782,6 @@ pub struct ActorSetupCtx {
 	pub image_id: Uuid,
 	pub meta: GetMetaOutput,
 	pub resources: protocol::Resources,
-	pub artifact_url_stub: String,
-	pub fallback_artifact_url: String,
-	/// Bytes.
-	pub artifact_size: u64,
 }
 
 pub async fn setup(
@@ -871,27 +867,17 @@ pub async fn setup(
 		}
 	};
 
-	let (resources, artifacts_res) = ctx
-		.join((
-			activity(SelectResourcesInput {
-				cpu_millicores: resources.cpu_millicores,
-				memory_mib: resources.memory_mib,
-			}),
-			activity(ResolveArtifactsInput {
-				build_upload_id: meta.build_upload_id,
-				build_file_name: meta.build_file_name.clone(),
-				dc_build_delivery_method: meta.dc_build_delivery_method,
-			}),
-		))
+	let resources = ctx
+		.activity(SelectResourcesInput {
+			cpu_millicores: resources.cpu_millicores,
+			memory_mib: resources.memory_mib,
+		})
 		.await?;
 
 	Ok(ActorSetupCtx {
 		image_id,
 		meta,
 		resources,
-		artifact_url_stub: artifacts_res.artifact_url_stub,
-		fallback_artifact_url: artifacts_res.fallback_artifact_url,
-		artifact_size: artifacts_res.artifact_size,
 	})
 }
 
@@ -955,76 +941,5 @@ async fn select_resources(
 		memory,
 		memory_max,
 		disk: tier.disk,
-	})
-}
-
-#[derive(Debug, Serialize, Deserialize, Hash)]
-struct ResolveArtifactsInput {
-	build_upload_id: Uuid,
-	build_file_name: String,
-	dc_build_delivery_method: BuildDeliveryMethod,
-}
-
-#[derive(Debug, Serialize, Deserialize, Hash)]
-struct ResolveArtifactsOutput {
-	artifact_url_stub: String,
-	fallback_artifact_url: String,
-	/// Bytes.
-	artifact_size: u64,
-}
-
-#[activity(ResolveArtifacts)]
-async fn resolve_artifacts(
-	ctx: &ActivityCtx,
-	input: &ResolveArtifactsInput,
-) -> GlobalResult<ResolveArtifactsOutput> {
-	// Get the fallback URL
-	let fallback_artifact_url = {
-		tracing::debug!("using s3 direct delivery");
-
-		// Build client
-		let s3_client = s3_util::Client::with_bucket_and_endpoint(
-			ctx.config(),
-			"bucket-build",
-			s3_util::EndpointKind::EdgeInternal,
-		)
-		.await?;
-
-		let presigned_req = s3_client
-			.get_object()
-			.bucket(s3_client.bucket())
-			.key(format!(
-				"{upload_id}/{file_name}",
-				upload_id = input.build_upload_id,
-				file_name = input.build_file_name,
-			))
-			.presigned(
-				s3_util::aws_sdk_s3::presigning::PresigningConfig::builder()
-					.expires_in(std::time::Duration::from_secs(15 * 60))
-					.build()?,
-			)
-			.await?;
-
-		let addr_str = presigned_req.uri().to_string();
-		tracing::debug!(addr = %addr_str, "resolved artifact s3 presigned request");
-
-		addr_str
-	};
-
-	// Get the artifact size
-	let uploads_res = op!([ctx] upload_get {
-		upload_ids: vec![input.build_upload_id.into()],
-	})
-	.await?;
-	let upload = unwrap!(uploads_res.uploads.first());
-
-	Ok(ResolveArtifactsOutput {
-		artifact_url_stub: crate::util::image_artifact_url_stub(
-			ctx.config(),
-			input.build_upload_id,
-			&input.build_file_name,
-		)?,
-		fallback_artifact_url,
-		artifact_size: upload.content_length,
 	})
 }

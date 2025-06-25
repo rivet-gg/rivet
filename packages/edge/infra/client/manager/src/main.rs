@@ -128,6 +128,12 @@ async fn init() -> Result<Init> {
 		),
 	};
 
+	// SAFETY: No other task has spawned yet.
+	// Set client_id env var so it can be read by the prometheus registry
+	unsafe {
+		std::env::set_var("CLIENT_ID", config.client.cluster.client_id.to_string());
+	}
+
 	if config.client.logs.redirect_logs() {
 		rivet_logs::Logs::new(
 			config.client.data_dir().join("logs"),
@@ -135,12 +141,6 @@ async fn init() -> Result<Init> {
 		)
 		.start()
 		.await?;
-	}
-
-	// SAFETY: No other task has spawned yet.
-	// Set client_id env var so it can be read by the prometheus registry
-	unsafe {
-		std::env::set_var("CLIENT_ID", config.client.cluster.client_id.to_string());
 	}
 
 	// Read system metrics

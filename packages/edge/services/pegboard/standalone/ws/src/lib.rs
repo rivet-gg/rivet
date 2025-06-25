@@ -350,13 +350,24 @@ async fn update_ping_thread_inner(
 
 			// Only update ping if the workflow is not dead
 			if wf.has_wake_condition {
-				ctx.op(pegboard::ops::client::update_allocation_idx::Input {
-					client_id,
-					client_workflow_id: workflow_id,
-					flavor,
-					action: pegboard::ops::client::update_allocation_idx::Action::UpdatePing,
-				})
-				.await?;
+				let re_eligible = ctx
+					.op(pegboard::ops::client::update_allocation_idx::Input {
+						client_id,
+						client_workflow_id: workflow_id,
+						flavor,
+						action: pegboard::ops::client::update_allocation_idx::Action::UpdatePing,
+					})
+					.await?;
+
+				// If the clients last ping was over the eligibility threshold, tell it to check the pending
+				// actors queue
+				if re_eligible {
+					tracing::debug!(?client_id, "client has become eligible again");
+					ctx.signal(pegboard::workflows::client::CheckQueue {})
+						.to_workflow_id(workflow_id)
+						.send()
+						.await?;
+				}
 			}
 		}
 	}

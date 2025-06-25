@@ -62,10 +62,10 @@ impl RemainingSlotsKey {
 
 impl FormalKey for RemainingSlotsKey {
 	/// Slots.
-	type Value = u64;
+	type Value = u32;
 
 	fn deserialize(&self, raw: &[u8]) -> Result<Self::Value> {
-		Ok(u64::from_be_bytes(raw.try_into()?))
+		Ok(u32::from_be_bytes(raw.try_into()?))
 	}
 
 	fn serialize(&self, value: Self::Value) -> Result<Vec<u8>> {
@@ -106,11 +106,11 @@ impl TotalSlotsKey {
 }
 
 impl FormalKey for TotalSlotsKey {
-	/// MiB.
-	type Value = u64;
+	/// Slots.
+	type Value = u32;
 
 	fn deserialize(&self, raw: &[u8]) -> Result<Self::Value> {
-		Ok(u64::from_be_bytes(raw.try_into()?))
+		Ok(u32::from_be_bytes(raw.try_into()?))
 	}
 
 	fn serialize(&self, value: Self::Value) -> Result<Vec<u8>> {

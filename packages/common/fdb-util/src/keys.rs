@@ -41,17 +41,19 @@ pub const ENV: usize = 39;
 pub const PORT: usize = 40;
 pub const INGRESS: usize = 41;
 pub const PROXIED: usize = 42;
-pub const CLIENTS_BY_REMAINING_MEM: usize = 43;
+pub const CLIENT_BY_REMAINING_MEM: usize = 43;
 pub const SQLITE: usize = 44;
 pub const INTERNAL: usize = 45;
 pub const METADATA: usize = 46;
 pub const COMPRESSED_DATA: usize = 47;
 pub const RUNNER: usize = 48;
-pub const RUNNERS_BY_REMAINING_SLOTS: usize = 49;
+pub const RUNNER_BY_REMAINING_SLOTS: usize = 49;
 pub const REMAINING_SLOTS: usize = 50;
 pub const TOTAL_SLOTS: usize = 51;
 pub const IMAGE_ID: usize = 52;
 pub const ACTOR2: usize = 53;
+pub const PENDING_ACTOR: usize = 54;
+pub const PENDING_ACTOR_BY_IMAGE_ID: usize = 55;
 
 // Directories with fdbrs must use string paths instead of tuples
 pub mod dir {
@@ -105,17 +107,19 @@ pub fn key_from_str(key: &str) -> Option<usize> {
 		"port" => Some(PORT),
 		"ingress" => Some(INGRESS),
 		"proxied" => Some(PROXIED),
-		"clients_by_remaining_mem" => Some(CLIENTS_BY_REMAINING_MEM),
+		"client_by_remaining_mem" => Some(CLIENT_BY_REMAINING_MEM),
 		"sqlite" => Some(SQLITE),
 		"internal" => Some(INTERNAL),
 		"metadata" => Some(METADATA),
 		"compressed_data" => Some(COMPRESSED_DATA),
 		"runner" => Some(RUNNER),
-		"runners_by_remaining_slots" => Some(RUNNERS_BY_REMAINING_SLOTS),
+		"runner_by_remaining_slots" => Some(RUNNER_BY_REMAINING_SLOTS),
 		"remaining_slots" => Some(REMAINING_SLOTS),
 		"total_slots" => Some(TOTAL_SLOTS),
 		"image_id" => Some(IMAGE_ID),
 		"actor2" => Some(ACTOR2),
+		"pending_actor" => Some(PENDING_ACTOR),
+		"pending_actor_by_image_id" => Some(PENDING_ACTOR_BY_IMAGE_ID),
 		_ => None,
 	}
 }

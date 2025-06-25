@@ -6,6 +6,7 @@ use futures_util::FutureExt;
 use crate::{
 	protocol,
 	types::{ActorLifecycle, ActorResources, EndpointType, NetworkMode, Routing},
+	workflows::client::AllocatePendingActorsInput,
 };
 
 mod analytics;
@@ -137,13 +138,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 	let Some(allocate_res) = runtime::spawn_actor(ctx, input, &initial_actor_setup, 0).await?
 	else {
-		ctx.msg(Failed {
-			message: "Failed to allocate (no availability).".into(),
-		})
-		.tag("actor_id", input.actor_id)
-		.send()
-		.await?;
-
+		// Destroyed early
 		ctx.workflow(destroy::Input {
 			actor_id: input.actor_id,
 			generation: 0,
@@ -156,14 +151,6 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 		return Ok(());
 	};
-
-	ctx.v(2)
-		.msg(Allocated {
-			client_id: allocate_res.client_id,
-		})
-		.tag("actor_id", input.actor_id)
-		.send()
-		.await?;
 
 	let lifecycle_res = ctx
 		.loope(
@@ -198,18 +185,14 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 							)
 							.await?;
 
-							if let Some(sig) =
-								runtime::reschedule_actor(ctx, &input, state, state.image_id)
-									.await?
+							if runtime::reschedule_actor(ctx, &input, state, state.image_id).await?
 							{
 								// Destroyed early
 								return Ok(Loop::Break(runtime::LifecycleRes {
 									generation: state.generation,
 									image_id: state.image_id,
 									kill: Some(KillCtx {
-										kill_timeout_ms: sig
-											.override_kill_timeout_ms
-											.unwrap_or(input.lifecycle.kill_timeout_ms),
+										kill_timeout_ms: input.lifecycle.kill_timeout_ms,
 									}),
 								}));
 							} else {
@@ -349,7 +332,6 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 											state.image_id,
 										)
 										.await?
-										.is_some()
 										{
 											// Destroyed early
 											return Ok(Loop::Break(runtime::LifecycleRes {
@@ -411,18 +393,14 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 							.await?;
 							state.image_id = sig.image_id;
 
-							if let Some(sig) =
-								runtime::reschedule_actor(ctx, &input, state, state.image_id)
-									.await?
+							if runtime::reschedule_actor(ctx, &input, state, state.image_id).await?
 							{
 								// Destroyed early
 								return Ok(Loop::Break(runtime::LifecycleRes {
 									generation: state.generation,
 									image_id: input.image_id,
 									kill: Some(KillCtx {
-										kill_timeout_ms: sig
-											.override_kill_timeout_ms
-											.unwrap_or(input.lifecycle.kill_timeout_ms),
+										kill_timeout_ms: input.lifecycle.kill_timeout_ms,
 									}),
 								}));
 							}
@@ -471,16 +449,26 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 	.output()
 	.await?;
 
+	// NOTE: The reason we allocate other actors from this actor workflow is because if we instead sent a
+	// signal to the client wf here it would incur a heavy throughput hit and we need the client wf to be as
+	// lightweight as possible; processing as few signals that aren't events/commands as possible
+	// Allocate other pending actors from queue
+	let res = ctx.activity(AllocatePendingActorsInput {}).await?;
+
+	// Dispatch pending allocs
+	for alloc in res.allocations {
+		ctx.signal(alloc.signal)
+			.to_workflow::<crate::workflows::actor2::Workflow>()
+			.tag("actor_id", alloc.actor_id)
+			.send()
+			.await?;
+	}
+
 	Ok(())
 }
 
 #[message("pegboard_actor_create_complete")]
 pub struct CreateComplete {}
-
-#[message("pegboard_actor_allocated")]
-pub struct Allocated {
-	pub client_id: Uuid,
-}
 
 #[message("pegboard_actor_failed")]
 pub struct Failed {
@@ -489,6 +477,15 @@ pub struct Failed {
 
 #[message("pegboard_actor_ready")]
 pub struct Ready {}
+
+#[signal("pegboard_actor_allocate")]
+#[derive(Debug)]
+pub struct Allocate {
+	pub runner_id: Uuid,
+	pub new_runner: bool,
+	pub client_id: Uuid,
+	pub client_workflow_id: Uuid,
+}
 
 #[signal("pegboard_actor_destroy")]
 pub struct Destroy {
@@ -526,6 +523,12 @@ pub struct UpgradeStarted {}
 
 #[message("pegboard_actor_upgrade_complete")]
 pub struct UpgradeComplete {}
+
+join_signal!(PendingAllocation {
+	Allocate,
+	Destroy,
+	//
+});
 
 join_signal!(Main {
 	StateUpdate,

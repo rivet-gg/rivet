@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use api_helper::{anchor::WatchIndexQuery, ctx::Ctx};
+use chirp_workflow::prelude::*;
 use futures_util::{FutureExt, StreamExt, TryStreamExt};
 use rivet_api::models;
 use rivet_convert::{ApiInto, ApiTryInto};
-use rivet_operation::prelude::*;
 use serde::Deserialize;
 use serde_json::json;
 use util::serde::AsHashableExt;
@@ -152,14 +152,14 @@ pub async fn create(
 			}
 		};
 
-		let allocated_fut = if network.wait_ready.unwrap_or_default() {
+		let created_fut = if network.wait_ready.unwrap_or_default() {
 			std::future::pending().boxed()
 		} else {
-			let mut allocated_sub = ctx
-				.subscribe::<pegboard::workflows::actor::Allocated>(("actor_id", actor_id))
+			let mut created_sub = ctx
+				.subscribe::<pegboard::workflows::actor::CreateComplete>(("actor_id", actor_id))
 				.await?;
 
-			async move { allocated_sub.next().await }.boxed()
+			async move { created_sub.next().await }.boxed()
 		};
 		let mut ready_sub = ctx
 			.subscribe::<pegboard::workflows::actor::Ready>(("actor_id", actor_id))
@@ -239,9 +239,9 @@ pub async fn create(
 		.tag("actor_id", actor_id)
 		.dispatch()
 		.await?;
-		// Wait for allocated/ready, fail, or destroy
+		// Wait for create/ready, fail, or destroy
 		tokio::select! {
-			res = allocated_fut => { res?; },
+			res = created_fut => { res?; },
 			res = ready_sub.next() => { res?; },
 			res = fail_sub.next() => {
 				let msg = res?;
@@ -258,14 +258,14 @@ pub async fn create(
 		let actor_id = util::Id::new_v1(ctx.config().server()?.rivet.edge()?.datacenter_label());
 		tracing::info!(?actor_id, ?tags, "creating actor with tags");
 
-		let allocated_fut = if network.wait_ready.unwrap_or_default() {
+		let created_fut = if network.wait_ready.unwrap_or_default() {
 			std::future::pending().boxed()
 		} else {
-			let mut allocated_sub = ctx
-				.subscribe::<pegboard::workflows::actor2::Allocated>(("actor_id", actor_id))
+			let mut created_sub = ctx
+				.subscribe::<pegboard::workflows::actor2::CreateComplete>(("actor_id", actor_id))
 				.await?;
 
-			async move { allocated_sub.next().await }.boxed()
+			async move { created_sub.next().await }.boxed()
 		};
 		let mut ready_sub = ctx
 			.subscribe::<pegboard::workflows::actor2::Ready>(("actor_id", actor_id))
@@ -348,7 +348,7 @@ pub async fn create(
 
 		// Wait for create/ready, fail, or destroy
 		tokio::select! {
-			res = allocated_fut => { res?; },
+			res = created_fut => { res?; },
 			res = ready_sub.next() => { res?; },
 			res = fail_sub.next() => {
 				let msg = res?;
@@ -425,6 +425,9 @@ pub async fn destroy(
 	);
 
 	let mut sub = ctx
+		.subscribe::<pegboard::workflows::actor2::DestroyStarted>(("actor_id", actor_id))
+		.await?;
+	let mut old_sub = ctx
 		.subscribe::<pegboard::workflows::actor::DestroyStarted>(("actor_id", actor_id))
 		.await?;
 
@@ -436,15 +439,33 @@ pub async fn destroy(
 		return Ok(json!({}));
 	}
 
-	ctx.signal(pegboard::workflows::actor::Destroy {
-		override_kill_timeout_ms: query.override_kill_timeout,
-	})
-	.to_workflow::<pegboard::workflows::actor::Workflow>()
-	.tag("actor_id", actor_id)
-	.send()
-	.await?;
+	// Try actor2 first
+	let res = ctx
+		.signal(pegboard::workflows::actor2::Destroy {
+			override_kill_timeout_ms: query.override_kill_timeout,
+		})
+		.to_workflow::<pegboard::workflows::actor2::Workflow>()
+		.tag("actor_id", actor_id)
+		.send()
+		.await;
 
-	sub.next().await?;
+	if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
+		// Try old actors
+		ctx
+			.signal(pegboard::workflows::actor::Destroy {
+				override_kill_timeout_ms: query.override_kill_timeout,
+			})
+			.to_workflow::<pegboard::workflows::actor::Workflow>()
+			.tag("actor_id", actor_id)
+			.send()
+			.await?;
+
+		old_sub.next().await?;
+	} else {
+		res?;
+
+		sub.next().await?;
+	}
 
 	Ok(json!({}))
 }
@@ -481,21 +502,29 @@ pub async fn upgrade(
 	)
 	.await?;
 
-	// TODO: Add back once we figure out how to cleanly handle if a wf is already complete when
-	// upgrading
-	// let mut sub = ctx
-	// 	.subscribe::<pegboard::workflows::actor::UpgradeStarted>(("actor_id", actor_id))
-	// 	.await?;
+	// Try actor2 first
+	let res = ctx
+		.signal(pegboard::workflows::actor2::Upgrade {
+			image_id: build.build_id,
+		})
+		.to_workflow::<pegboard::workflows::actor2::Workflow>()
+		.tag("actor_id", actor_id)
+		.send()
+		.await;
 
-	ctx.signal(pegboard::workflows::actor::Upgrade {
-		image_id: build.build_id,
-	})
-	.to_workflow::<pegboard::workflows::actor::Workflow>()
-	.tag("actor_id", actor_id)
-	.send()
-	.await?;
-
-	// sub.next().await?;
+	if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
+		// Try old actors
+		ctx
+			.signal(pegboard::workflows::actor::Upgrade {
+				image_id: build.build_id,
+			})
+			.to_workflow::<pegboard::workflows::actor::Workflow>()
+			.tag("actor_id", actor_id)
+			.send()
+			.await?;
+	} else {
+		res?;
+	}
 
 	Ok(json!({}))
 }
@@ -589,34 +618,41 @@ pub async fn upgrade_all(
 		// cursor of [created_at, actor_id] that we pass to the fdb range
 		created_before = list_res.actors.last().map(|x| x.create_ts - 1);
 
-		// TODO: Add back once we figure out how to cleanly handle if a wf is already complete when
-		// upgrading
-		// let subs = futures_util::stream::iter(list_res.actor_ids.clone())
-		// 	.map(|actor_id| {
-		// 		ctx.subscribe::<pegboard::workflows::actor::UpgradeStarted>(("actor_id", actor_id))
-		// 	})
-		// 	.buffer_unordered(32)
-		// 	.try_collect::<Vec<_>>()
-		// 	.await?;
-
+		let ctx = (*ctx).clone();
 		futures_util::stream::iter(list_res.actors)
 			.map(|actor| {
-				ctx.signal(pegboard::workflows::actor::Upgrade {
-					image_id: build.build_id,
-				})
-				.to_workflow::<pegboard::workflows::actor::Workflow>()
-				.tag("actor_id", actor.actor_id)
-				.send()
+				let ctx = ctx.clone();
+				async move {
+					// Try actor2 first
+					let res = ctx
+						.signal(pegboard::workflows::actor2::Upgrade {
+							image_id: build.build_id,
+						})
+						.to_workflow::<pegboard::workflows::actor2::Workflow>()
+						.tag("actor_id", actor.actor_id)
+						.send()
+						.await;
+
+					if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
+						// Try old actors
+						ctx
+							.signal(pegboard::workflows::actor::Upgrade {
+								image_id: build.build_id,
+							})
+							.to_workflow::<pegboard::workflows::actor::Workflow>()
+							.tag("actor_id", actor.actor_id)
+							.send()
+							.await?;
+					} else {
+						res?;
+					}
+
+					GlobalResult::Ok(())
+				}
 			})
 			.buffer_unordered(32)
 			.try_collect::<Vec<_>>()
 			.await?;
-
-		// futures_util::stream::iter(subs)
-		// 	.map(|mut sub| async move { sub.next().await })
-		// 	.buffer_unordered(32)
-		// 	.try_collect::<Vec<_>>()
-		// 	.await?;
 
 		if count < 10_000 {
 			break;
