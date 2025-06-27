@@ -32,6 +32,7 @@ Class | Method | HTTP request | Description
 *ActorsApi* | [**actors_upgrade**](docs/ActorsApi.md#actors_upgrade) | **POST** /actors/{actor}/upgrade | 
 *ActorsApi* | [**actors_upgrade_all**](docs/ActorsApi.md#actors_upgrade_all) | **POST** /actors/upgrade | 
 *ActorsLogsApi* | [**actors_logs_get**](docs/ActorsLogsApi.md#actors_logs_get) | **GET** /actors/logs | 
+*ActorsMetricsApi* | [**actors_metrics_get**](docs/ActorsMetricsApi.md#actors_metrics_get) | **GET** /actors/metrics/history | 
 *BuildsApi* | [**builds_complete**](docs/BuildsApi.md#builds_complete) | **POST** /builds/{build}/complete | 
 *BuildsApi* | [**builds_get**](docs/BuildsApi.md#builds_get) | **GET** /builds/{build} | 
 *BuildsApi* | [**builds_list**](docs/BuildsApi.md#builds_list) | **GET** /builds | 
@@ -55,6 +56,7 @@ Class | Method | HTTP request | Description
  - [ActorsCreateActorRuntimeRequest](docs/ActorsCreateActorRuntimeRequest.md)
  - [ActorsEndpointType](docs/ActorsEndpointType.md)
  - [ActorsGetActorLogsResponse](docs/ActorsGetActorLogsResponse.md)
+ - [ActorsGetActorMetricsResponse](docs/ActorsGetActorMetricsResponse.md)
  - [ActorsGetActorResponse](docs/ActorsGetActorResponse.md)
  - [ActorsLifecycle](docs/ActorsLifecycle.md)
  - [ActorsListActorsResponse](docs/ActorsListActorsResponse.md)

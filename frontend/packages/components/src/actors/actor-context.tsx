@@ -25,6 +25,7 @@ export type Actor = Omit<
 	lifecycle?: Rivet.actor.Lifecycle;
 	endpoint?: string;
 	logs: LogsAtom;
+	metrics: MetricsAtom;
 	network?: Rivet.actor.Network | null;
 	resources?: Rivet.actor.Resources | null;
 	runtime?: Rivet.actor.Runtime | null;
@@ -43,6 +44,11 @@ export type Logs = {
 	properties: Record<string, unknown>;
 }[];
 
+export type Metrics = {
+	cpu: number | null;
+	memory: number | null;
+};
+
 export type Build = Rivet.actor.Build;
 export type DestroyActor = {
 	isDestroying: boolean;
@@ -52,6 +58,11 @@ export type DestroyActor = {
 export type ActorAtom = Atom<Actor>;
 export type LogsAtom = Atom<{
 	logs: Logs;
+	// query status
+	status: string;
+}>;
+export type MetricsAtom = Atom<{
+	metrics: Metrics;
 	// query status
 	status: string;
 }>;
