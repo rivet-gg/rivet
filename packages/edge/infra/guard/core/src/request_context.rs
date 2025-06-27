@@ -191,7 +191,10 @@ impl RequestContext {
 				.clone()
 				.unwrap_or_default(),
 			service_response_status: self.service_response_status.unwrap_or_default(),
-			service_actor_id: self.service_actor_id.map(|x| x.to_string()).unwrap_or_default(),
+			service_actor_id: self
+				.service_actor_id
+				.map(|x| x.to_string())
+				.unwrap_or_default(),
 			service_server_id: self.service_server_id.unwrap_or_default(),
 		};
 

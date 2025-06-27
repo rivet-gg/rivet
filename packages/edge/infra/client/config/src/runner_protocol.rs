@@ -1,6 +1,4 @@
-use std::{
-	io::{Cursor, Write},
-};
+use std::io::{Cursor, Write};
 
 use anyhow::*;
 use pegboard::protocol;
@@ -109,9 +107,7 @@ pub enum KvResponseData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum ToActor {
-	StateUpdate {
-		state: ActorState,
-	},
+	StateUpdate { state: ActorState },
 	Kv(KvRequest),
 }
 

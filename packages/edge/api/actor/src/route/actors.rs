@@ -451,14 +451,13 @@ pub async fn destroy(
 
 	if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
 		// Try old actors
-		ctx
-			.signal(pegboard::workflows::actor::Destroy {
-				override_kill_timeout_ms: query.override_kill_timeout,
-			})
-			.to_workflow::<pegboard::workflows::actor::Workflow>()
-			.tag("actor_id", actor_id)
-			.send()
-			.await?;
+		ctx.signal(pegboard::workflows::actor::Destroy {
+			override_kill_timeout_ms: query.override_kill_timeout,
+		})
+		.to_workflow::<pegboard::workflows::actor::Workflow>()
+		.tag("actor_id", actor_id)
+		.send()
+		.await?;
 
 		old_sub.next().await?;
 	} else {
@@ -514,14 +513,13 @@ pub async fn upgrade(
 
 	if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
 		// Try old actors
-		ctx
-			.signal(pegboard::workflows::actor::Upgrade {
-				image_id: build.build_id,
-			})
-			.to_workflow::<pegboard::workflows::actor::Workflow>()
-			.tag("actor_id", actor_id)
-			.send()
-			.await?;
+		ctx.signal(pegboard::workflows::actor::Upgrade {
+			image_id: build.build_id,
+		})
+		.to_workflow::<pegboard::workflows::actor::Workflow>()
+		.tag("actor_id", actor_id)
+		.send()
+		.await?;
 	} else {
 		res?;
 	}
@@ -635,14 +633,13 @@ pub async fn upgrade_all(
 
 					if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
 						// Try old actors
-						ctx
-							.signal(pegboard::workflows::actor::Upgrade {
-								image_id: build.build_id,
-							})
-							.to_workflow::<pegboard::workflows::actor::Workflow>()
-							.tag("actor_id", actor.actor_id)
-							.send()
-							.await?;
+						ctx.signal(pegboard::workflows::actor::Upgrade {
+							image_id: build.build_id,
+						})
+						.to_workflow::<pegboard::workflows::actor::Workflow>()
+						.tag("actor_id", actor.actor_id)
+						.send()
+						.await?;
 					} else {
 						res?;
 					}

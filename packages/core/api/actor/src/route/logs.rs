@@ -167,6 +167,11 @@ pub async fn get_logs(
 		.iter()
 		.map(|x| x.stream_type as i32)
 		.collect::<Vec<_>>();
+	let mut foreigns = logs_res
+		.entries
+		.iter()
+		.map(|x| x.foreign)
+		.collect::<Vec<_>>();
 	let mut actor_indices = logs_res
 		.entries
 		.iter()
@@ -177,6 +182,7 @@ pub async fn get_logs(
 	lines.reverse();
 	timestamps.reverse();
 	streams.reverse();
+	foreigns.reverse();
 	actor_indices.reverse();
 
 	let watch_nts = logs_res.entries.first().map_or(before_nts, |x| x.ts);
@@ -185,6 +191,7 @@ pub async fn get_logs(
 		lines,
 		timestamps,
 		streams,
+		foreigns,
 		actor_indices,
 		watch: WatchResponse::new_as_model(watch_nts),
 	})

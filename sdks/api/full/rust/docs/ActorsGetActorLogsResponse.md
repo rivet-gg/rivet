@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **lines** | **Vec<String>** | Sorted old to new. | 
 **timestamps** | **Vec<String>** | Sorted old to new. | 
 **streams** | **Vec<i32>** | Streams the logs came from.  0 = stdout 1 = stderr | 
+**foreigns** | **Vec<bool>** | List of flags denoting if this log is not directly from the actor. | 
 **actor_indices** | **Vec<i32>** | Index of the actor that this log was for. Use this index to look the full ID in `actor_ids`. | 
 **watch** | [**crate::models::WatchResponse**](WatchResponse.md) |  | 
 

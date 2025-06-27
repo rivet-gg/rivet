@@ -11152,7 +11152,7 @@ components:
         actor_ids:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/Id'
           description: >-
             List of actor IDs in these logs. The order of these correspond to
             the index in the log entry.
@@ -11175,6 +11175,11 @@ components:
 
             0 = stdout
             1 = stderr
+        foreigns:
+          type: array
+          items:
+            type: boolean
+          description: List of flags denoting if this log is not directly from the actor.
         actor_indices:
           type: array
           items:
@@ -11189,6 +11194,7 @@ components:
         - lines
         - timestamps
         - streams
+        - foreigns
         - actor_indices
         - watch
     ActorsExportActorLogsResponse:

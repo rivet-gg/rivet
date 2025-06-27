@@ -1,7 +1,7 @@
 use foundationdb::tuple::{
 	Bytes, PackResult, TupleDepth, TuplePack, TupleUnpack, VersionstampOffset,
 };
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // TODO: Custom deser impl that uses arrays instead of objects?
 #[derive(Clone, Serialize, Deserialize)]

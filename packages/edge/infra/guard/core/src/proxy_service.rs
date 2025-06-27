@@ -613,7 +613,11 @@ impl ProxyState {
 	}
 
 	#[tracing::instrument(skip_all)]
-	async fn release_in_flight(&self, ip_addr: std::net::IpAddr, actor_id: &Option<rivet_util::Id>) {
+	async fn release_in_flight(
+		&self,
+		ip_addr: std::net::IpAddr,
+		actor_id: &Option<rivet_util::Id>,
+	) {
 		// Skip if actor_id is None (no in-flight tracking)
 		let actor_id = match actor_id {
 			Some(id) => *id,

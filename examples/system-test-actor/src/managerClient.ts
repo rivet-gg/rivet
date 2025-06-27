@@ -48,6 +48,8 @@ export function connectToManager() {
 				};
 				client.write(encodeFrame(response));
 
+				console.log(`actor_${packet.start_actor.actor_id}`, 'fweh');
+
 				const kvMessage = {
 					kv: {
 						actor_id: packet.start_actor.actor_id,

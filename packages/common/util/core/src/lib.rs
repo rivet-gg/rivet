@@ -1,7 +1,7 @@
-use rand::Rng;
-pub use rivet_util_macros as macros;
-pub use rivet_util_id as id;
 pub use id::Id;
+use rand::Rng;
+pub use rivet_util_id as id;
+pub use rivet_util_macros as macros;
 use tokio::time::{Duration, Instant};
 
 pub mod billing;

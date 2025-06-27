@@ -62,6 +62,9 @@ types:
           0 = stdout
           1 = stderr
         type: list<integer>
+      foreigns:
+        docs: List of flags denoting if this log is not directly from the actor.
+        type: list<boolean>
       actor_indices:
         docs: Index of the actor that this log was for. Use this index to look the full ID in `actor_ids`.
         type: list<integer>

@@ -57,7 +57,7 @@ func (e *ExportActorLogsResponse) String() string {
 
 type GetActorLogsResponse struct {
 	// List of actor IDs in these logs. The order of these correspond to the index in the log entry.
-	ActorIds []string `json:"actor_ids,omitempty"`
+	ActorIds []sdk.Id `json:"actor_ids,omitempty"`
 	// Sorted old to new.
 	Lines []string `json:"lines,omitempty"`
 	// Sorted old to new.
@@ -67,6 +67,8 @@ type GetActorLogsResponse struct {
 	// 0 = stdout
 	// 1 = stderr
 	Streams []int `json:"streams,omitempty"`
+	// List of flags denoting if this log is not directly from the actor.
+	Foreigns []bool `json:"foreigns,omitempty"`
 	// Index of the actor that this log was for. Use this index to look the full ID in `actor_ids`.
 	ActorIndices []int              `json:"actor_indices,omitempty"`
 	Watch        *sdk.WatchResponse `json:"watch,omitempty"`
