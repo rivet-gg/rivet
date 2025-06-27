@@ -40,6 +40,7 @@ pub struct LogEntry {
 	pub ts: i64,
 	pub message: Vec<u8>,
 	pub stream_type: u8,
+	pub foreign: bool,
 	pub actor_id: String,
 }
 
@@ -84,6 +85,7 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 			ts,
 			message,
 			stream_type,
+			0 AS foreign,
 			actor_id as actor_id_str
 		FROM
 			db_pegboard_actor_log.actor_logs3
@@ -121,6 +123,57 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 		-- Use dynamic direction directly in the ORDER BY clause
 		ORDER BY ts {order_direction}
 		LIMIT ?
+
+		UNION ALL
+
+		# actors v2
+
+		SELECT
+			l.ts,
+			l.message,
+			l.stream_type,
+			l.actor_id != ar.actor_id AS foreign,
+			ar.actor_id
+		FROM db_pegboard_runner_log.runner_logs AS l
+		JOIN db_pegboard_runner.actor_runners AS ar
+		ON l.runner_id = ar.runner_id
+		WHERE
+			ar.actor_id IN ?
+			AND l.stream_type IN ?
+			-- Check if the log was created during the time this actor was on this runner
+			AND l.ts >= ar.started_at
+			AND (ar.finished_at IS NULL OR l.ts <= ar.finished_at)
+			-- Apply timestamp filtering based on query type
+			AND (
+				? -- is_all
+				OR (? AND l.ts < fromUnixTimestamp64Nano(?)) -- is_before
+				OR (? AND l.ts > fromUnixTimestamp64Nano(?)) -- is_after
+				OR (? AND ? AND 
+					l.ts > fromUnixTimestamp64Nano(?) AND 
+					l.ts < fromUnixTimestamp64Nano(?)) -- is_range
+			)
+			-- Filter for actor-specific log entries using regex
+			AND (l.actor_id = ar.actor_id OR l.actor_id = '')
+			-- Search filtering with conditional logic
+			AND (
+				NOT ? -- NOT apply_search (always true when search not applied)
+				OR (
+					CASE 
+						WHEN ? THEN -- enable_regex
+							-- Using pre-formatted regex string
+							match(l.message, ?)
+						ELSE 
+							-- Toggle for case sensitivity without regex
+							CASE 
+								WHEN ? THEN position(l.message, ?) > 0
+								ELSE positionCaseInsensitive(l.message, ?) > 0
+							END
+					END
+				)
+			)
+		-- Use dynamic direction directly in the ORDER BY clause
+		ORDER BY l.ts {order_direction}
+		LIMIT ?
 		"
 	);
 
@@ -132,6 +185,28 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 		.query(&query)
 		.bind(&ctx.config().server()?.rivet.namespace)
 		.bind(input.env_id)
+		.bind(&actor_id_strings)
+		.bind(&stream_type_values)
+		// Query type parameters
+		.bind(is_all)
+		.bind(is_before)
+		.bind(before_nts.unwrap_or(0))
+		.bind(is_after)
+		.bind(after_nts.unwrap_or(0))
+		.bind(is_before) // First part of AND condition for range
+		.bind(is_after) // Second part of AND condition for range
+		.bind(after_nts.unwrap_or(0))
+		.bind(before_nts.unwrap_or(0))
+		// Search parameters
+		.bind(apply_search)
+		.bind(enable_regex)
+		.bind(&regex_text)
+		.bind(case_sensitive)
+		.bind(search_text)
+		.bind(search_text.to_lowercase())
+		// Limit
+		.bind(input.count)
+		// Actors v2 (duplicate bindings)
 		.bind(&actor_id_strings)
 		.bind(&stream_type_values)
 		// Query type parameters
