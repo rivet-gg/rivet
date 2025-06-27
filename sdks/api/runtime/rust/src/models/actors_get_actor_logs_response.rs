@@ -25,6 +25,9 @@ pub struct ActorsGetActorLogsResponse {
     /// Streams the logs came from.  0 = stdout 1 = stderr
     #[serde(rename = "streams")]
     pub streams: Vec<i32>,
+    /// List of flags denoting if this log is not directly from the actor.
+    #[serde(rename = "foreigns")]
+    pub foreigns: Vec<bool>,
     /// Index of the actor that this log was for. Use this index to look the full ID in `actor_ids`.
     #[serde(rename = "actor_indices")]
     pub actor_indices: Vec<i32>,
@@ -33,12 +36,13 @@ pub struct ActorsGetActorLogsResponse {
 }
 
 impl ActorsGetActorLogsResponse {
-    pub fn new(actor_ids: Vec<String>, lines: Vec<String>, timestamps: Vec<String>, streams: Vec<i32>, actor_indices: Vec<i32>, watch: crate::models::WatchResponse) -> ActorsGetActorLogsResponse {
+    pub fn new(actor_ids: Vec<String>, lines: Vec<String>, timestamps: Vec<String>, streams: Vec<i32>, foreigns: Vec<bool>, actor_indices: Vec<i32>, watch: crate::models::WatchResponse) -> ActorsGetActorLogsResponse {
         ActorsGetActorLogsResponse {
             actor_ids,
             lines,
             timestamps,
             streams,
+            foreigns,
             actor_indices,
             watch: Box::new(watch),
         }
