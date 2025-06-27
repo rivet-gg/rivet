@@ -10,17 +10,23 @@ sources:
     endpoints:
       - http://rivet-client:8091
     scrape_interval_secs: 15
-  
+
+  cadvisor:
+    type: prometheus_scrape
+    endpoints:
+      - http://cadvisor:8080
+    scrape_interval_secs: 60
+
   dynamic_events_http:
     type: http_server
     address: 0.0.0.0:5022
     encoding: ndjson
-  
+
   pegboard_manager:
     type: file
     include:
       - /var/lib/rivet-client/log
-  
+
   pegboard_container_runners:
     type: file
     include:
@@ -32,7 +38,7 @@ transforms:
     inputs:
       - prometheus_pegboard
     condition: '!starts_with!(.name, "go_") && !starts_with!(.name, "promhttp_")'
-  
+
   metrics_add_meta:
     type: remap
     inputs:
@@ -43,21 +49,39 @@ transforms:
       .tags.cluster_id = "unknown"
       .tags.pool_type = "pegboard"
       .tags.public_ip = "127.0.0.1"
-  
+
+  cadvisor_filter_container_metrics:
+    type: filter
+    inputs:
+      - cadvisor
+    condition: '.name in ["container_cpu_usage_seconds_total", "container_spec_cpu_quota", "container_spec_cpu_period", "container_memory_usage_bytes", "container_spec_memory_limit_bytes"]'
+
+  cadvisor_containers_add_meta:
+    type: remap
+    inputs:
+      - cadvisor_filter_container_metrics
+    source: |
+      .source = "container_metrics"
+      .tags.server_id = "fc67e54e-5d6a-4726-ab23-77b0e54f068f"
+      .tags.datacenter_id = "f288913c-735d-4188-bf9b-2fcf6eac7b9c"
+      .tags.cluster_id = "unknown"
+      .tags.pool_type = "pegboard"
+      .tags.public_ip = "127.0.0.1"
+
   pegboard_manager_add_meta:
     type: remap
     inputs:
       - pegboard_manager
     source: |
       .source = "pegboard_manager"
-      
+
       .client_id = "fc67e54e-5d6a-4726-ab23-77b0e54f068f"
       .server_id = "fc67e54e-5d6a-4726-ab23-77b0e54f068f"
       .datacenter_id = "f288913c-735d-4188-bf9b-2fcf6eac7b9c"
       .tags.cluster_id = "unknown"
       .pool_type = "pegboard"
       .public_ip = "127.0.0.1"
-    
+
   pegboard_container_runner_add_meta:
     type: remap
     inputs:
@@ -65,7 +89,7 @@ transforms:
     source: |
       .source = "pegboard_container_runner"
       .runner_id = parse_regex!(.file, r'/etc/pegboard/runners/(?P<runner_id>[0-9a-fA-F-]+)/log').runner_id
-      
+
       .client_id = "fc67e54e-5d6a-4726-ab23-77b0e54f068f"
       .server_id = "fc67e54e-5d6a-4726-ab23-77b0e54f068f"
       .datacenter_id = "f288913c-735d-4188-bf9b-2fcf6eac7b9c"
@@ -81,6 +105,8 @@ sinks:
       - dynamic_events_http
       - pegboard_manager_add_meta
       - pegboard_container_runner_add_meta
+      - cadvisor_filter_containers
+      - cadvisor_containers_add_meta
     address: vector-server:6000
     healthcheck:
       enabled: false
@@ -89,4 +115,3 @@ sinks:
       type: disk
       max_size: 268435488
       when_full: block
-

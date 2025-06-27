@@ -11,17 +11,17 @@ sources:
   vector:
     type: vector
     address: 0.0.0.0:6000
-  
+
   tcp_json:
     type: socket
     mode: tcp
     address: 0.0.0.0:6100
     decoding:
       codec: json
-  
+
   vector_metrics:
     type: internal_metrics
-  
+
   vector_logs:
     type: internal_logs
 
@@ -43,7 +43,7 @@ transforms:
     condition:
       type: vrl
       source: .source == "runners"
-  
+
   job_run:
     type: filter
     inputs:
@@ -52,7 +52,7 @@ transforms:
     condition:
       type: vrl
       source: .source == "job_run"
-  
+
   pegboard:
     type: filter
     inputs:
@@ -60,7 +60,7 @@ transforms:
     condition:
       type: vrl
       source: .source == "pegboard_manager" || .source == "pegboard_v8_isolate_runner"
-  
+
   pegboard_container_runner:
     type: filter
     inputs:
@@ -68,7 +68,7 @@ transforms:
     condition:
       type: vrl
       source: .source == "pegboard_container_runner"
-      
+
   clickhouse_dynamic_events_filter:
     type: filter
     inputs:
@@ -76,7 +76,7 @@ transforms:
     condition:
       type: vrl
       source: .source == "clickhouse"
-  
+
   clickhouse_dynamic_events_transform:
     type: remap
     inputs:
@@ -86,7 +86,7 @@ transforms:
       __database = .database
       __table = .table
       __columns = .columns
-      
+
       # Create a new object with just the columns data
       . = {
         "__database": __database,
@@ -94,9 +94,17 @@ transforms:
         # By default insert namespace column since most tables include this
         "namespace": "rivet"
       }
-      
+
       # Merge in the column data that should be inserted
       . = merge!(., __columns)
+
+  container_metrics_filter:
+    type: filter
+    inputs:
+      - vector
+    condition:
+      type: vrl
+      source: .source == "container_metrics"
 
 sinks:
   prom_exporter:
@@ -105,14 +113,37 @@ sinks:
       - vector
       - vector_metrics
     address: 0.0.0.0:9598
-  
+
   console:
     type: console
     inputs:
       - vector_logs
     encoding:
       codec: text
-  
+
+  container_usage_metrics:
+    type: http
+    inputs:
+      - container_metric_filter
+    uri: debug_url
+    encoding:
+      codec: text
+
+    # TODO: Create schema and init migrations (find a place to put them)
+    # type: clickhouse
+    # inputs:
+    #   - container_metrics_filter
+    # compression: gzip
+    # database: db_container_usage_metric
+    # endpoint: http://clickhouse:8123
+    # table: usage_metrics
+    # auth:
+    #   strategy: basic
+    #   user: vector
+    #   password: vector
+    # batch:
+    #   timeout_secs: 1.0
+
   clickhouse_actor_logs:
     type: clickhouse
     inputs:
@@ -142,7 +173,7 @@ sinks:
       password: vector
     batch:
       timeout_secs: 1.0
-  
+
   clickhouse_job_run_logs:
     type: clickhouse
     inputs:
@@ -164,14 +195,14 @@ sinks:
     path: "/var/log/vector/pegboard/%Y-%m-%d.log"
     encoding:
       codec: "text"
-    
+
   pegboard_container_runner_logs:
     type: "file"
     inputs: ["pegboard_container_runner"]
     path: "/var/log/vector/pegboard_container_runner/%Y-%m-%d.log"
     encoding:
       codec: "text"
-      
+
   clickhouse_dynamic_events:
     type: clickhouse
     inputs:
@@ -186,4 +217,3 @@ sinks:
       password: vector
     batch:
       timeout_secs: 1.0
-

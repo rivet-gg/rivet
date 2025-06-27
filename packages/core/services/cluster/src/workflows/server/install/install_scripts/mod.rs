@@ -53,6 +53,7 @@ pub async fn gen_install(
 		}
 		PoolType::Pegboard | PoolType::PegboardIsolate => {
 			script.push(components::docker::install());
+			script.push(components::cadvisor_metric_exporter::install());
 			script.push(components::otel_collector::install(pool_type)?);
 			script.push(components::lz4::install());
 			script.push(components::skopeo::install());
@@ -183,6 +184,14 @@ pub async fn gen_initialize(
 					scrape_interval: 15,
 				},
 			);
+			// prometheus_targets.insert(
+			// 	"cadvisor_container_metric".into(),
+			// 	components::vector::PrometheusTarget {
+			// 		// Matching cadvisor_metric_exporter script
+			// 		endpoint: "http://127.0.0.1:8095".into(),
+			// 		scrape_interval: 15,
+			// 	}
+			// );
 		}
 		PoolType::PegboardIsolate => {
 			script.push(components::pegboard::configure(
@@ -198,6 +207,14 @@ pub async fn gen_initialize(
 					scrape_interval: 15,
 				},
 			);
+			// prometheus_targets.insert(
+			// 	"cadvisor_container_metric".into(),
+			// 	components::vector::PrometheusTarget {
+			// 		// Matching cadvisor_metric_exporter script
+			// 		endpoint: "http://127.0.0.1:8095".into(),
+			// 		scrape_interval: 15,
+			// 	}
+			// );
 		}
 		PoolType::Fdb => {
 			script.push(components::fdb::configure());

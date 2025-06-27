@@ -32,6 +32,12 @@ pub mod process_exporter {
 	}
 }
 
+pub mod cadvisor_metric_exporter {
+	pub fn install() -> String {
+		include_str!("../files/cadvisor_metric_exporter.sh").to_string()
+	}
+}
+
 pub mod otel_collector {
 	use chirp_workflow::prelude::*;
 	use serde_json::json;

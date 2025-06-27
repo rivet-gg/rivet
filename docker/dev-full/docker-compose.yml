@@ -274,7 +274,15 @@ services:
       - "9300:9300"
       - "9301:9301"
     healthcheck:
-      test: ["CMD", "clickhouse-client", "--password", "default", "--query", "SELECT 1"]
+      test:
+        [
+          "CMD",
+          "clickhouse-client",
+          "--password",
+          "default",
+          "--query",
+          "SELECT 1",
+        ]
       interval: 2s
       timeout: 10s
       retries: 10
@@ -355,7 +363,7 @@ services:
       - vector-server-data:/var/lib/vector
       - ./vector-server:/etc/vector
     # environment:
-      # - VECTOR_LOG=debug
+    #- VECTOR_LOG=debug
     networks:
       - rivet-network
 
@@ -413,6 +421,30 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+    networks:
+      - rivet-network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /cgroup:/cgroup:ro
+    ports:
+    - "9180:8080"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+      vector-server:
+        condition: service_started
+
     networks:
       - rivet-network
 
