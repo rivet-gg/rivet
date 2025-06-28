@@ -47,10 +47,10 @@ RUN \
     --mount=type=cache,target=/root/.cache,id=universal-user-cache \
     --mount=type=cache,target=/root/.npm,id=universal-user-npm \
     --mount=type=cache,target=/root/.yarn,id=universal-user-yarn \
-    RUSTFLAGS="--cfg tokio_unstable" RIVET_BUILD_HUB=0 cargo build --bin rivet-server --bin rivet-edge-server --bin rivet-guard --bin rivet-client --bin rivet-isolate-v8-runner --bin rivet-container-runner && \
+    RUSTFLAGS="--cfg tokio_unstable" RIVET_BUILD_HUB=0 cargo build --bin rivet-server --bin rivet-edge-server --bin rivet-guard --bin rivet-client --bin rivet-container-runner && \
     # cargo install --locked tokio-console && \
     mkdir /app/dist/ && \
-    cp target/debug/rivet-server target/debug/rivet-edge-server target/debug/rivet-guard target/debug/rivet-client target/debug/rivet-isolate-v8-runner target/debug/rivet-container-runner /app/dist/
+    cp target/debug/rivet-server target/debug/rivet-edge-server target/debug/rivet-guard target/debug/rivet-client target/debug/rivet-container-runner /app/dist/
 
 # MARK: Server (full, base)
 FROM debian:12.9-slim AS server-full-base
@@ -190,7 +190,7 @@ COPY ./docker/monolith/rivet-client /etc/rivet-client
 
 # === Copy Build Artifacts === 
 COPY --from=builder /app/dist/rivet-server /usr/local/bin/
-COPY --from=builder /app/dist/rivet-client /app/dist/rivet-isolate-v8-runner /app/dist/rivet-container-runner /usr/local/bin/
+COPY --from=builder /app/dist/rivet-client /app/dist/rivet-container-runner /usr/local/bin/
 
 VOLUME ["/data"]
 
