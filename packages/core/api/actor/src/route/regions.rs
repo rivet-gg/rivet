@@ -11,7 +11,7 @@ use crate::{
 
 use super::GlobalQuery;
 
-// MARK: GET /regions
+// MARK: GET /v1/regions
 #[tracing::instrument(skip_all)]
 pub async fn list(
 	ctx: Ctx<Auth>,
@@ -124,7 +124,7 @@ pub async fn list_deprecated(
 	Ok(models::ServersListDatacentersResponse { datacenters })
 }
 
-// MARK: GET /regions/recommend
+// MARK: GET /v1/regions/recommend
 #[derive(Debug, Clone, Deserialize)]
 pub struct RecommendQuery {
 	#[serde(flatten)]
