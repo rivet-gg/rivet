@@ -36,6 +36,8 @@ pub enum Id {
 	V1([u8; 18]),
 }
 
+
+
 impl Id {
 	/// Construct V0 from uuid.
 	pub fn new_v0() -> Self {
@@ -310,6 +312,12 @@ where
 impl sqlx::postgres::PgHasArrayType for Id {
 	fn array_type_info() -> sqlx::postgres::PgTypeInfo {
 		sqlx::postgres::PgTypeInfo::with_name("_bytea")
+	}
+}
+
+impl Default for Id {
+	fn default() -> Self {
+		Id::V0(Uuid::new_v4())
 	}
 }
 
