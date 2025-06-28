@@ -24,6 +24,8 @@ pub(crate) struct BuildRow {
 	create_ts: i64,
 	kind: i64,
 	compression: i64,
+	allocation_type: i64,
+	allocation_total_slots: i64,
 	tags: sqlx::types::Json<Box<serde_json::value::RawValue>>,
 }
 
@@ -43,6 +45,10 @@ impl TryInto<types::Build> for BuildRow {
 			compression: unwrap!(types::BuildCompression::from_repr(
 				self.compression.try_into()?
 			)),
+			allocation_type: unwrap!(types::BuildAllocationType::from_repr(
+				self.allocation_type.try_into()?
+			)),
+			allocation_total_slots: self.allocation_total_slots.try_into()?,
 			// Filter out null values on tags
 			tags: serde_json::from_str::<HashMap<String, Option<String>>>(self.tags.0.get())?
 				.into_iter()
@@ -74,6 +80,8 @@ pub async fn build_get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output
 							create_ts,
 							kind,
 							compression,
+							allocation_type,
+							allocation_total_slots,
 							tags
 						FROM db_build.builds
 						WHERE build_id = ANY($1)
