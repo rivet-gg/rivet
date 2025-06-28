@@ -59,7 +59,7 @@ impl ActorKv {
 		if let Some(subspace) = &*guard {
 			return Ok(subspace.clone());
 		}
-		
+
 		tracing::info!(actor_id=?self.actor_id, "initializing actor KV");
 
 		let root = fdb::directory::DirectoryLayer::default();

@@ -181,6 +181,13 @@ The prefix, `"Bearer "`, is required.
 Billing is not enabled.
 
 
+## Build Invalid
+
+<Summary>{`BUILD_INVALID`}</Summary>
+
+Build configuration is invalid.
+
+
 ## Build Not Found
 
 <Summary>{`BUILD_NOT_FOUND`}</Summary>
@@ -456,34 +463,6 @@ The group attempting to be joined does not allow anyone to join it.
 The identity is not a member of the request/related group.
 
 
-## Identity Not Admin
-
-<Summary>{`IDENTITY_NOT_ADMIN`}</Summary>
-
-The identity requesting this endpoint is not an admin.
-
-
-## Identity Not Found
-
-<Summary>{`IDENTITY_NOT_FOUND`}</Summary>
-
-The requested identity does not exist or is not visible to whoever is requesting.
-
-
-## Identity Not Registered
-
-<Summary>{`IDENTITY_NOT_REGISTERED`}</Summary>
-
-The identity that created this request is not registered.
-
-
-## Wrong Identity
-
-<Summary>{`IDENTITY_WRONG_IDENTITY`}</Summary>
-
-The given resource is not available for the current identity.
-
-
 ## Project Not Found
 
 <Summary>{`PROJECT_NOT_FOUND`}</Summary>
@@ -541,7 +520,7 @@ Valid:
 - `api-v1.job.example.com`
 - `my-service-123.job.example.com`
 
-## invalid_name_id
+## Invalid Name ID
 
 <Summary>{`ROUTE_INVALID_NAME_ID`}</Summary>
 
@@ -561,6 +540,7 @@ Make sure your name_id:
 
 Invalid: `UPPERCASE-route`, `route--name`, `-route-name`, `route-name-`
 Valid: `my-route`, `route-123`, `api-v2`
+
 
 ## invalid_path
 

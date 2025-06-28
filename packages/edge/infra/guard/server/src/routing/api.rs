@@ -44,7 +44,10 @@ pub async fn route_api_request(
 	// NOTE: We use service discovery instead of server::list or datacenter::server_discovery because cache is not
 	// shared between edge-edge or edge-core. SD requests the core which has a single cache.
 	let edge = ctx.config().server()?.rivet.edge()?;
-	let url = Url::parse(&format!("{}provision/datacenters/{dc_id}/servers?pools=worker", edge.intercom_address))?;
+	let url = Url::parse(&format!(
+		"{}provision/datacenters/{dc_id}/servers?pools=worker",
+		edge.intercom_address
+	))?;
 	let sd = ServiceDiscovery::new(url);
 	let servers = sd.fetch().await?;
 
