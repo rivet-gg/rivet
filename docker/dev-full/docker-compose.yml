@@ -354,6 +354,8 @@ services:
     volumes:
       - vector-server-data:/var/lib/vector
       - ./vector-server:/etc/vector
+    # environment:
+      # - VECTOR_LOG=debug
     networks:
       - rivet-network
 
