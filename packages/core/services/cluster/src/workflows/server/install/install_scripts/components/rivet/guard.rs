@@ -58,7 +58,7 @@ pub fn configure(config: &rivet_config::Config) -> GlobalResult<String> {
 					datacenter_id: Uuid::nil(),
 					server_id: Uuid::nil(),
 					api_lan_address: None,
-					intercom_endpoint: Url::parse(&format!("http://127.0.0.1:{TUNNEL_API_EDGE_PORT}"))?,
+					intercom_address: Url::parse(&format!("http://127.0.0.1:{TUNNEL_API_EDGE_PORT}"))?,
 					redirect_logs_dir: Some(PathBuf::from("/var/log/rivet-guard")),
 				}),
 				status: server_config.rivet.status.clone(),
