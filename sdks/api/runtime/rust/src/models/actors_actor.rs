@@ -23,8 +23,8 @@ pub struct ActorsActor {
     pub runtime: Box<crate::models::ActorsRuntime>,
     #[serde(rename = "network")]
     pub network: Box<crate::models::ActorsNetwork>,
-    #[serde(rename = "resources")]
-    pub resources: Box<crate::models::ActorsResources>,
+    #[serde(rename = "resources", skip_serializing_if = "Option::is_none")]
+    pub resources: Option<Box<crate::models::ActorsResources>>,
     #[serde(rename = "lifecycle")]
     pub lifecycle: Box<crate::models::ActorsLifecycle>,
     /// RFC3339 timestamp
@@ -39,14 +39,14 @@ pub struct ActorsActor {
 }
 
 impl ActorsActor {
-    pub fn new(id: uuid::Uuid, region: String, tags: Option<serde_json::Value>, runtime: crate::models::ActorsRuntime, network: crate::models::ActorsNetwork, resources: crate::models::ActorsResources, lifecycle: crate::models::ActorsLifecycle, created_at: String) -> ActorsActor {
+    pub fn new(id: uuid::Uuid, region: String, tags: Option<serde_json::Value>, runtime: crate::models::ActorsRuntime, network: crate::models::ActorsNetwork, lifecycle: crate::models::ActorsLifecycle, created_at: String) -> ActorsActor {
         ActorsActor {
             id,
             region,
             tags,
             runtime: Box::new(runtime),
             network: Box::new(network),
-            resources: Box::new(resources),
+            resources: None,
             lifecycle: Box::new(lifecycle),
             created_at,
             started_at: None,

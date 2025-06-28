@@ -6,6 +6,8 @@ import * as serializers from "../../../../../index";
 import * as Rivet from "../../../../../../api/index";
 import * as core from "../../../../../../core";
 import { Timestamp } from "../../../../common/types/Timestamp";
+import { Allocation } from "./Allocation";
+import { Resources } from "./Resources";
 
 export const Build: core.serialization.ObjectSchema<serializers.builds.Build.Raw, Rivet.builds.Build> =
     core.serialization.object({
@@ -13,6 +15,8 @@ export const Build: core.serialization.ObjectSchema<serializers.builds.Build.Raw
         name: core.serialization.string(),
         createdAt: core.serialization.property("created_at", Timestamp),
         contentLength: core.serialization.property("content_length", core.serialization.number()),
+        allocation: Allocation.optional(),
+        resources: Resources.optional(),
         tags: core.serialization.record(core.serialization.string(), core.serialization.string()),
     });
 
@@ -22,6 +26,8 @@ export declare namespace Build {
         name: string;
         created_at: Timestamp.Raw;
         content_length: number;
+        allocation?: Allocation.Raw | null;
+        resources?: Resources.Raw | null;
         tags: Record<string, string>;
     }
 }
