@@ -35,7 +35,7 @@ async function generateRustSdk() {
 	console.log("Running OpenAPI generator");
 
 	// Delete existing directories
-	await Deno.remove(GEN_PATH_RUST, { recursive: true }).catch(() => {});
+	await Deno.remove(GEN_PATH_RUST, { recursive: true }).catch(() => { });
 
 	const dockerCmd = new Deno.Command("docker", {
 		args: [
@@ -72,6 +72,18 @@ async function fixOpenApiBugs() {
 		],
 		"actors_logs_api.rs": [
 			[/ActorsQueryLogStream/g, "crate::models::ActorsQueryLogStream"],
+		],
+		"containers_api.rs": [
+			[/ContainersEndpointType/g, "crate::models::ContainersEndpointType"],
+		],
+		"containers_logs_api.rs": [
+			[/ContainersQueryLogStream/g, "crate::models::ContainersQueryLogStream"],
+		],
+		"actors_v1_api.rs": [
+			[/ActorsV1EndpointType/g, "crate::models::ActorsV1EndpointType"],
+		],
+		"actors_v1_logs_api.rs": [
+			[/ActorsV1QueryLogStream/g, "crate::models::ActorsV1QueryLogStream"],
 		],
 		"servers_logs_api.rs": [
 			[/ServersLogStream/g, "crate::models::ServersLogStream"],

@@ -18,6 +18,7 @@ audiences:
   # API library. All other API endpoints are not essential for
   # using Rivet at runtime (e.g. cloud, identity, etc).
   - runtime
+  - internal
 errors:
   - commons.InternalError
   - commons.RateLimitError

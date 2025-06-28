@@ -543,7 +543,8 @@ impl Runner {
 
 		// Prepare the arguments for the runner
 		let runner_path = ctx.runner_path(self.runner_id);
-		let runner_args = vec![runner_path.to_str().context("bad path")?, self.container_id()];
+		let container_id = self.container_id();
+		let runner_args = vec![runner_path.to_str().context("bad path")?, &container_id];
 
 		// NOTE: Pipes are automatically closed on drop (OwnedFd)
 		// Pipe communication between processes

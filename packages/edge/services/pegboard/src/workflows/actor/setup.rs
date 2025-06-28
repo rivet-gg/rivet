@@ -1,8 +1,13 @@
-use build::types::{BuildCompression, BuildKind};
+use build::types::{BuildAllocationType, BuildCompression, BuildKind, BuildResources};
 use chirp_workflow::prelude::*;
 use cluster::types::BuildDeliveryMethod;
-use fdb_util::FormalKey;
-use foundationdb as fdb;
+use fdb_util::{end_of_key_range, FormalKey, SNAPSHOT};
+use foundationdb::{
+	self as fdb,
+	options::{ConflictRangeType, StreamingMode},
+};
+use futures_util::TryStreamExt;
+use rand::Rng;
 use sqlx::Acquire;
 
 use super::{Input, Port};
@@ -15,7 +20,7 @@ use crate::{
 pub struct ValidateInput {
 	pub env_id: Uuid,
 	pub tags: util::serde::HashableMap<String, String>,
-	pub resources: ActorResources,
+	pub resources: Option<ActorResources>,
 	pub image_id: Uuid,
 	pub root_user_enabled: bool,
 	pub args: Vec<String>,
@@ -24,13 +29,11 @@ pub struct ValidateInput {
 	pub network_ports: util::serde::HashableMap<String, Port>,
 }
 
-// TODO: Redo once a solid global error solution is established so we dont have to have validation all in one
-// place.
 #[activity(Validate)]
 pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<Option<String>> {
 	let dc_id = ctx.config().server()?.rivet.edge()?.datacenter_id;
 
-	let (has_tier, upload_res, game_config_res) = tokio::try_join!(
+	let (tiers, upload_res, game_config_res) = tokio::try_join!(
 		async {
 			let tier_res = ctx
 				.op(tier::ops::list::Input {
@@ -38,13 +41,9 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 					pegboard: true,
 				})
 				.await?;
-			let tier_dc = unwrap!(tier_res.datacenters.first());
+			let tier_dc = unwrap!(tier_res.datacenters.into_iter().next());
 
-			// Find any tier that has more CPU and memory than the requested resources
-			GlobalResult::Ok(tier_dc.tiers.iter().any(|t| {
-				t.cpu_millicores >= input.resources.cpu_millicores
-					&& t.memory >= input.resources.memory_mib
-			}))
+			GlobalResult::Ok(tier_dc.tiers)
 		},
 		async {
 			let builds_res = ctx
@@ -87,10 +86,6 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 		}
 	)?;
 
-	if !has_tier {
-		return Ok(Some("Too many resources allocated.".into()));
-	}
-
 	// TODO: Validate build belongs to env/game
 	let Some((build, upload_complete)) = upload_res else {
 		return Ok(Some("Build not found.".into()));
@@ -98,6 +93,44 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 
 	if !upload_complete {
 		return Ok(Some("Build upload not complete.".into()));
+	}
+
+	let resources = match build.allocation_type {
+		BuildAllocationType::None => {
+			// NOTE: This should be unreachable because if an old build is encountered the old actor wf is used.
+			return Ok(Some("Old builds not supported.".into()));
+		}
+		BuildAllocationType::Single => {
+			if let Some(resources) = &input.resources {
+				resources.clone()
+			} else {
+				return Ok(Some(
+					"Actors with builds of `allocation_type` = `single` must specify `resources`."
+						.into(),
+				));
+			}
+		}
+		BuildAllocationType::Multi => {
+			if input.resources.is_some() {
+				return Ok(Some("Cannot specify `resources` for actors with builds of `allocation_type` = `multi`.".into()));
+			}
+
+			let build_resources = unwrap!(build.resources, "multi build should have resources");
+
+			ActorResources {
+				cpu_millicores: build_resources.cpu_millicores,
+				memory_mib: build_resources.memory_mib,
+			}
+		}
+	};
+
+	// Find any tier that has more CPU and memory than the requested resources
+	let has_tier = tiers
+		.iter()
+		.any(|t| t.cpu_millicores >= resources.cpu_millicores && t.memory >= resources.memory_mib);
+
+	if !has_tier {
+		return Ok(Some("Too many resources allocated.".into()));
 	}
 
 	let Some(game_config) = game_config_res else {
@@ -253,27 +286,24 @@ pub async fn disable_tls_ports(
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 struct InsertDbInput {
-	actor_id: Uuid,
+	actor_id: util::Id,
 	env_id: Uuid,
 	tags: util::serde::HashableMap<String, String>,
-	resources: ActorResources,
+	resources: Option<ActorResources>,
 	lifecycle: ActorLifecycle,
 	image_id: Uuid,
 	args: Vec<String>,
 	network_mode: NetworkMode,
 	environment: util::serde::HashableMap<String, String>,
-	network_ports: util::serde::HashableMap<String, Port>,
 }
 
 #[activity(InsertDb)]
 async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64> {
 	let pool = ctx.sqlite().await?;
-	let mut conn = pool.conn().await?;
-	let mut tx = conn.begin().await?;
 	let create_ts = ctx.ts();
 
 	sql_execute!(
-		[ctx, @tx &mut tx]
+		[ctx, &pool]
 		"
 		INSERT INTO state (
 			env_id,
@@ -292,8 +322,8 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 		",
 		input.env_id,
 		serde_json::to_string(&input.tags)?,
-		input.resources.cpu_millicores as i32,
-		input.resources.memory_mib as i32,
+		input.resources.as_ref().map(|x| x.cpu_millicores as i32),
+		input.resources.as_ref().map(|x| x.memory_mib as i32),
 		input.lifecycle.kill_timeout_ms,
 		input.lifecycle.durable,
 		create_ts,
@@ -304,6 +334,25 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 	)
 	.await?;
 
+	Ok(create_ts)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+struct AllocateIngressPortsInput {
+	actor_id: util::Id,
+	network_ports: util::serde::HashableMap<String, Port>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AllocateIngressPortsOutput {
+	ports: Vec<(GameGuardProtocol, Vec<u16>)>,
+}
+
+#[activity(AllocateIngressPorts)]
+async fn allocate_ingress_ports(
+	ctx: &ActivityCtx,
+	input: &AllocateIngressPortsInput,
+) -> GlobalResult<AllocateIngressPortsOutput> {
 	// Count up ports per protocol
 	let mut port_counts = Vec::new();
 	for (_, port) in &input.network_ports {
@@ -324,7 +373,8 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 		}
 	}
 
-	// TODO: Move this from an op to an activity, and move the sql queries after to their own activity
+	let gg_config = &ctx.config().server()?.rivet.guard;
+
 	// Choose which port to assign for a job's ingress port.
 	// This is required because TCP and UDP do not have a `Host` header and thus cannot be re-routed by hostname.
 	//
@@ -333,19 +383,186 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 	// - HTTPS: 443
 	// - TCP/TLS: random
 	// - UDP: random
-	let ingress_ports_res = ctx
-		.op(crate::ops::actor::allocate_ingress_ports::Input {
-			actor_id: input.actor_id.into(),
-			ports: port_counts,
+	let ports = ctx
+		.fdb()
+		.await?
+		.run(|tx, _mc| {
+			let port_counts = port_counts.clone();
+			async move {
+				let mut results = Vec::new();
+
+				// TODO: Parallelize
+				for (protocol, count) in &port_counts {
+					// Determine port range per protocol
+					let port_range = match protocol {
+						GameGuardProtocol::Http | GameGuardProtocol::Https => {
+							return Err(fdb::FdbBindingError::CustomError(
+								"Dynamic allocation not implemented for http/https ports".into(),
+							));
+						}
+						GameGuardProtocol::Tcp | GameGuardProtocol::TcpTls => {
+							gg_config.min_ingress_port_tcp()..=gg_config.max_ingress_port_tcp()
+						}
+						GameGuardProtocol::Udp => {
+							gg_config.min_ingress_port_udp()..=gg_config.max_ingress_port_udp()
+						}
+					};
+
+					let mut last_port = None;
+					let mut ports = Vec::new();
+
+					// Choose a random starting port for better spread and less cache hits
+					let mut start = {
+						// It is important that we don't start at the end of the range so that the logic with
+						// `last_port` works correctly
+						let exclusive_port_range = *port_range.start()..*port_range.end();
+						rand::thread_rng().gen_range(exclusive_port_range)
+					};
+
+					// Build start and end keys for ingress ports subspace
+					let start_key = keys::subspace()
+						.subspace(&keys::port::IngressKey2::subspace(*protocol, start))
+						.range()
+						.0;
+					let end_key = keys::subspace()
+						.subspace(&keys::port::IngressKey2::subspace(
+							*protocol,
+							*port_range.end(),
+						))
+						.range()
+						.1;
+					let mut stream = tx.get_ranges_keyvalues(
+						fdb::RangeOption {
+							mode: StreamingMode::Iterator,
+							..(start_key, end_key.clone()).into()
+						},
+						// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys,
+						// just the one we choose
+						SNAPSHOT,
+					);
+
+					// Continue iterating over the same stream until all of the required ports are found
+					for _ in 0..*count {
+						// Iterate through the subspace range until a port is found
+						let port = loop {
+							let Some(entry) = stream.try_next().await? else {
+								match last_port {
+									Some(port) if port == *port_range.end() => {
+										// End of range reached, start a new range read from the beginning (wrap around)
+										if start != *port_range.start() {
+											last_port = None;
+
+											let old_start = start;
+											start = *port_range.start();
+
+											let start_key = keys::subspace()
+												.subspace(&keys::port::IngressKey2::subspace(
+													*protocol, start,
+												))
+												.range()
+												.0;
+											stream = tx.get_ranges_keyvalues(
+												fdb::RangeOption {
+													mode: StreamingMode::Iterator,
+													limit: Some(old_start as usize),
+													..(start_key, end_key.clone()).into()
+												},
+												// NOTE: This is not SERIALIZABLE because we don't want to conflict
+												// with all of the keys, just the one we choose
+												SNAPSHOT,
+											);
+
+											continue;
+										} else {
+											break None;
+										}
+									}
+									// Return port after last port
+									Some(last_port) => {
+										break Some(last_port + 1);
+									}
+									// No ports were returned (range is empty)
+									None => {
+										break Some(start);
+									}
+								}
+							};
+
+							let key = keys::subspace()
+								.unpack::<keys::port::IngressKey2>(entry.key())
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+							let current_port = key.port;
+
+							if let Some(last_port) = last_port {
+								// Gap found
+								if current_port != last_port + 1 {
+									break Some(last_port + 1);
+								}
+							}
+
+							last_port = Some(current_port);
+						};
+
+						let Some(port) = port else {
+							return Err(fdb::FdbBindingError::CustomError(
+								format!("not enough {protocol} ports available").into(),
+							));
+						};
+
+						let ingress_port_key =
+							keys::port::IngressKey2::new(*protocol, port, input.actor_id);
+						let ingress_port_key_buf = keys::subspace().pack(&ingress_port_key);
+
+						// Add read conflict only for this key
+						tx.add_conflict_range(
+							&ingress_port_key_buf,
+							&end_of_key_range(&ingress_port_key_buf),
+							ConflictRangeType::Read,
+						)?;
+
+						// Set key
+						tx.set(
+							&ingress_port_key_buf,
+							&ingress_port_key
+								.serialize(())
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
+
+						ports.push(port);
+					}
+
+					results.push((*protocol, ports));
+				}
+
+				Ok(results)
+			}
 		})
+		.custom_instrument(tracing::info_span!("allocate_ingress_ports_tx"))
 		.await?;
-	let mut ingress_ports = ingress_ports_res
-		.ports
-		.into_iter()
-		.map(|(protocol, ports)| (protocol, ports.into_iter()))
-		.collect::<Vec<_>>();
+
+	Ok(AllocateIngressPortsOutput { ports })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+struct InsertPortsInput {
+	actor_id: util::Id,
+	network_ports: util::serde::HashableMap<String, Port>,
+	ingress_ports: Vec<(GameGuardProtocol, Vec<u16>)>,
+}
+
+#[activity(InsertPorts)]
+async fn insert_ports(ctx: &ActivityCtx, input: &InsertPortsInput) -> GlobalResult<()> {
+	let pool = ctx.sqlite().await?;
+	let mut conn = pool.conn().await?;
+	let mut tx = conn.begin().await?;
 
 	let gg_config = &ctx.config().server()?.rivet.guard;
+	let mut ingress_ports = input
+		.ingress_ports
+		.iter()
+		.map(|(protocol, ports)| (protocol, ports.clone().into_iter()))
+		.collect::<Vec<_>>();
+
 	for (name, port) in input.network_ports.iter() {
 		match port.routing {
 			Routing::GameGuard { protocol } => {
@@ -368,7 +585,7 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 						GameGuardProtocol::Https => gg_config.https_port(),
 						GameGuardProtocol::Tcp | GameGuardProtocol::TcpTls | GameGuardProtocol::Udp => {
 							let (_, ports_iter) = unwrap!(
-								ingress_ports.iter_mut().find(|(p, _)| &protocol == p)
+								ingress_ports.iter_mut().find(|(p, _)| &&protocol == p)
 							);
 							unwrap!(ports_iter.next(), "missing ingress port")
 						},
@@ -398,12 +615,12 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 
 	tx.commit().await?;
 
-	Ok(create_ts)
+	Ok(())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 struct InsertFdbInput {
-	actor_id: Uuid,
+	actor_id: util::Id,
 	env_id: Uuid,
 	tags: util::serde::HashableMap<String, String>,
 	create_ts: i64,
@@ -414,7 +631,7 @@ async fn insert_fdb(ctx: &ActivityCtx, input: &InsertFdbInput) -> GlobalResult<(
 	ctx.fdb()
 		.await?
 		.run(|tx, _mc| async move {
-			let create_ts_key = keys::actor::CreateTsKey::new(input.actor_id);
+			let create_ts_key = keys::actor2::CreateTsKey::new(input.actor_id);
 			tx.set(
 				&keys::subspace().pack(&create_ts_key),
 				&create_ts_key
@@ -422,7 +639,7 @@ async fn insert_fdb(ctx: &ActivityCtx, input: &InsertFdbInput) -> GlobalResult<(
 					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 			);
 
-			let workflow_id_key = keys::actor::WorkflowIdKey::new(input.actor_id);
+			let workflow_id_key = keys::actor2::WorkflowIdKey::new(input.actor_id);
 			tx.set(
 				&keys::subspace().pack(&workflow_id_key),
 				&workflow_id_key
@@ -432,8 +649,8 @@ async fn insert_fdb(ctx: &ActivityCtx, input: &InsertFdbInput) -> GlobalResult<(
 
 			// Add env index key
 			let env_actor_key =
-				keys::env::ActorKey::new(input.env_id, input.create_ts, input.actor_id);
-			let data = keys::env::ActorKeyData {
+				keys::env::Actor2Key::new(input.env_id, input.create_ts, input.actor_id);
+			let data = keys::env::Actor2KeyData {
 				is_destroyed: false,
 				tags: input.tags.clone().into_iter().collect(),
 			};
@@ -453,9 +670,9 @@ async fn insert_fdb(ctx: &ActivityCtx, input: &InsertFdbInput) -> GlobalResult<(
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
-pub struct GetMetaInput {
-	pub env_id: Uuid,
-	pub image_id: Uuid,
+struct GetMetaInput {
+	env_id: Uuid,
+	image_id: Uuid,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Hash)]
@@ -467,13 +684,16 @@ pub struct GetMetaOutput {
 	pub build_file_name: String,
 	pub build_kind: BuildKind,
 	pub build_compression: BuildCompression,
+	pub build_allocation_type: BuildAllocationType,
+	pub build_allocation_total_slots: u32,
+	pub build_resources: Option<BuildResources>,
 	pub dc_name_id: String,
 	pub dc_display_name: String,
 	pub dc_build_delivery_method: BuildDeliveryMethod,
 }
 
 #[activity(GetMeta)]
-pub async fn get_meta(ctx: &ActivityCtx, input: &GetMetaInput) -> GlobalResult<GetMetaOutput> {
+async fn get_meta(ctx: &ActivityCtx, input: &GetMetaInput) -> GlobalResult<GetMetaOutput> {
 	let dc_id = ctx.config().server()?.rivet.edge()?.datacenter_id;
 
 	let (env_res, build_res, dc_res) = tokio::try_join!(
@@ -507,6 +727,9 @@ pub async fn get_meta(ctx: &ActivityCtx, input: &GetMetaInput) -> GlobalResult<G
 		build_file_name: build::utils::file_name(build.kind, build.compression),
 		build_kind: build.kind,
 		build_compression: build.compression,
+		build_allocation_type: build.allocation_type,
+		build_allocation_total_slots: build.allocation_total_slots,
+		build_resources: build.resources.clone(),
 		dc_name_id: dc.name_id.clone(),
 		dc_display_name: dc.display_name.clone(),
 		dc_build_delivery_method: dc.build_delivery_method,
@@ -515,7 +738,9 @@ pub async fn get_meta(ctx: &ActivityCtx, input: &GetMetaInput) -> GlobalResult<G
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 struct InsertMetaInput {
-	meta: GetMetaOutput,
+	project_id: Uuid,
+	build_kind: BuildKind,
+	build_compression: BuildCompression,
 	root_user_enabled: bool,
 }
 
@@ -533,9 +758,9 @@ async fn insert_meta(ctx: &ActivityCtx, input: &InsertMetaInput) -> GlobalResult
 			build_compression = ?,
 			root_user_enabled = ?
 		",
-		input.meta.project_id,
-		input.meta.build_kind as i64,
-		input.meta.build_compression as i64,
+		input.project_id,
+		input.build_kind as i64,
+		input.build_compression as i64,
 		input.root_user_enabled,
 	)
 	.await?;
@@ -557,8 +782,6 @@ pub struct ActorSetupCtx {
 	pub image_id: Uuid,
 	pub meta: GetMetaOutput,
 	pub resources: protocol::Resources,
-	pub artifact_url_stub: String,
-	pub fallback_artifact_url: Option<String>,
 }
 
 pub async fn setup(
@@ -580,9 +803,22 @@ pub async fn setup(
 					args: input.args.clone(),
 					network_mode: input.network_mode,
 					environment: input.environment.clone(),
-					network_ports,
 				})
 				.await?;
+
+			let ingress_ports_res = ctx
+				.activity(AllocateIngressPortsInput {
+					actor_id: input.actor_id,
+					network_ports: network_ports.clone(),
+				})
+				.await?;
+
+			ctx.activity(InsertPortsInput {
+				actor_id: input.actor_id,
+				network_ports,
+				ingress_ports: ingress_ports_res.ports,
+			})
+			.await?;
 
 			ctx.activity(InsertFdbInput {
 				actor_id: input.actor_id,
@@ -606,36 +842,49 @@ pub async fn setup(
 
 	ctx.v(2)
 		.activity(InsertMetaInput {
-			meta: meta.clone(),
+			project_id: meta.project_id,
+			build_kind: meta.build_kind,
+			build_compression: meta.build_compression,
 			root_user_enabled: input.root_user_enabled,
 		})
 		.await?;
 
-	let (resources, artifacts_res) = ctx
-		.join((
-			activity(SelectResourcesInput {
-				resources: input.resources.clone(),
-			}),
-			activity(ResolveArtifactsInput {
-				build_upload_id: meta.build_upload_id,
-				build_file_name: meta.build_file_name.clone(),
-				dc_build_delivery_method: meta.dc_build_delivery_method,
-			}),
-		))
+	// Use resources from build or from actor config
+	let resources = match meta.build_allocation_type {
+		BuildAllocationType::None => bail!("actors do not support old builds"),
+		BuildAllocationType::Single => unwrap!(
+			input.resources.clone(),
+			"single builds should have actor resources"
+		),
+		BuildAllocationType::Multi => {
+			let build_resources =
+				unwrap_ref!(meta.build_resources, "multi builds should have resources");
+
+			ActorResources {
+				cpu_millicores: build_resources.cpu_millicores,
+				memory_mib: build_resources.memory_mib,
+			}
+		}
+	};
+
+	let resources = ctx
+		.activity(SelectResourcesInput {
+			cpu_millicores: resources.cpu_millicores,
+			memory_mib: resources.memory_mib,
+		})
 		.await?;
 
 	Ok(ActorSetupCtx {
 		image_id,
 		meta,
 		resources,
-		artifact_url_stub: artifacts_res.artifact_url_stub,
-		fallback_artifact_url: artifacts_res.fallback_artifact_url,
 	})
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
 struct SelectResourcesInput {
-	resources: ActorResources,
+	cpu_millicores: u32,
+	memory_mib: u32,
 }
 
 #[activity(SelectResources)]
@@ -660,10 +909,9 @@ async fn select_resources(
 	// Find the first tier that has more CPU and memory than the requested
 	// resources
 	let tier = unwrap!(
-		tiers.iter().find(|t| {
-			t.cpu_millicores >= input.resources.cpu_millicores
-				&& t.memory >= input.resources.memory_mib
-		}),
+		tiers
+			.iter()
+			.find(|t| { t.cpu_millicores >= input.cpu_millicores && t.memory >= input.memory_mib }),
 		"no suitable tier found"
 	);
 
@@ -693,76 +941,5 @@ async fn select_resources(
 		memory,
 		memory_max,
 		disk: tier.disk,
-	})
-}
-
-#[derive(Debug, Serialize, Deserialize, Hash)]
-struct ResolveArtifactsInput {
-	build_upload_id: Uuid,
-	build_file_name: String,
-	dc_build_delivery_method: BuildDeliveryMethod,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ResolveArtifactsOutput {
-	artifact_url_stub: String,
-	fallback_artifact_url: Option<String>,
-	#[serde(default)]
-	artifact_size: u64,
-}
-
-#[activity(ResolveArtifacts)]
-async fn resolve_artifacts(
-	ctx: &ActivityCtx,
-	input: &ResolveArtifactsInput,
-) -> GlobalResult<ResolveArtifactsOutput> {
-	// Get the fallback URL
-	let fallback_artifact_url = {
-		tracing::debug!("using s3 direct delivery");
-
-		// Build client
-		let s3_client = s3_util::Client::with_bucket_and_endpoint(
-			ctx.config(),
-			"bucket-build",
-			s3_util::EndpointKind::EdgeInternal,
-		)
-		.await?;
-
-		let presigned_req = s3_client
-			.get_object()
-			.bucket(s3_client.bucket())
-			.key(format!(
-				"{upload_id}/{file_name}",
-				upload_id = input.build_upload_id,
-				file_name = input.build_file_name,
-			))
-			.presigned(
-				s3_util::aws_sdk_s3::presigning::PresigningConfig::builder()
-					.expires_in(std::time::Duration::from_secs(15 * 60))
-					.build()?,
-			)
-			.await?;
-
-		let addr_str = presigned_req.uri().to_string();
-		tracing::debug!(addr = %addr_str, "resolved artifact s3 presigned request");
-
-		addr_str
-	};
-
-	// Get the artifact size
-	let uploads_res = op!([ctx] upload_get {
-		upload_ids: vec![input.build_upload_id.into()],
-	})
-	.await?;
-	let upload = unwrap!(uploads_res.uploads.first());
-
-	Ok(ResolveArtifactsOutput {
-		artifact_url_stub: crate::util::image_artifact_url_stub(
-			ctx.config(),
-			input.build_upload_id,
-			&input.build_file_name,
-		)?,
-		fallback_artifact_url: Some(fallback_artifact_url),
-		artifact_size: upload.content_length,
 	})
 }

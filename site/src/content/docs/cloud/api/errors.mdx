@@ -296,6 +296,65 @@ resolved before attempting to add another hostname.
 An error was returned by a cloudflare API and has been re-routed to this error response.
 
 
+## Container Failed To Create
+
+<Summary>{`CONTAINER_FAILED_TO_CREATE`}</Summary>
+
+Container failed to create.
+
+
+## Invalid Container Ids
+
+<Summary>{`CONTAINER_LOGS_INVALID_CONTAINER_IDS`}</Summary>
+
+The provided list of container IDs is not in a valid JSON format. Please provide a valid JSON array of UUIDs.
+
+
+## No Container Ids
+
+<Summary>{`CONTAINER_LOGS_NO_CONTAINER_IDS`}</Summary>
+
+No container IDs were provided in the request. Please provide at least one valid container ID.
+
+
+## No Valid Container Ids
+
+<Summary>{`CONTAINER_LOGS_NO_VALID_CONTAINER_IDS`}</Summary>
+
+None of the provided container IDs are valid for this game/environment. Please provide valid container IDs.
+
+
+## Invalid Interval
+
+<Summary>{`CONTAINER_METRICS_INVALID_INTERVAL`}</Summary>
+
+The provided interval must be greater than 0. Please provide a valid interval value in milliseconds.
+
+## Invalid Metrics
+
+<Summary>{`CONTAINER_METRICS_INVALID_METRICS`}</Summary>
+
+The provided list of metrics is not in a valid JSON format. Please provide a valid JSON array of metric names.
+
+## No Metrics
+
+<Summary>{`CONTAINER_METRICS_NO_METRICS`}</Summary>
+
+No metrics were specified in the request. Please provide at least one metric name to query.
+
+## Unsupported Metrics
+
+<Summary>{`CONTAINER_METRICS_UNSUPPORTED_METRICS`}</Summary>
+
+The requested metrics are not supported. Supported metrics include: cpu, memory, memory_limit, network_rx_bytes, network_tx_bytes.
+
+## Container Not Found
+
+<Summary>{`CONTAINER_NOT_FOUND`}</Summary>
+
+Container not found for the given ID.
+
+
 ## Environment Not Found
 
 <Summary>{`ENVIRONMENT_NOT_FOUND`}</Summary>

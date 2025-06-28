@@ -20,8 +20,8 @@ pub fn registry() -> WorkflowResult<Registry> {
 
 	let mut registry = Registry::new();
 	registry.register_workflow::<client::Workflow>()?;
+	registry.register_workflow::<actor::v1::Workflow>()?;
 	registry.register_workflow::<actor::Workflow>()?;
-	registry.register_workflow::<actor2::Workflow>()?;
 
 	Ok(registry)
 }

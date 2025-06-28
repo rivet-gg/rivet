@@ -1,6 +1,7 @@
 export * as actors from "./actors";
 export * as builds from "./builds";
 export * as cloud from "./cloud";
+export * as containers from "./containers";
 export * as coreIntercom from "./coreIntercom";
 export * as edgeIntercom from "./edgeIntercom";
 export * as group from "./group";

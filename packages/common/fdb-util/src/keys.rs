@@ -54,6 +54,7 @@ pub const IMAGE_ID: usize = 52;
 pub const ACTOR2: usize = 53;
 pub const PENDING_ACTOR: usize = 54;
 pub const PENDING_ACTOR_BY_IMAGE_ID: usize = 55;
+pub const CONTAINER: usize = 56;
 
 // Directories with fdbrs must use string paths instead of tuples
 pub mod dir {
@@ -120,6 +121,7 @@ pub fn key_from_str(key: &str) -> Option<usize> {
 		"actor2" => Some(ACTOR2),
 		"pending_actor" => Some(PENDING_ACTOR),
 		"pending_actor_by_image_id" => Some(PENDING_ACTOR_BY_IMAGE_ID),
+		"container" => Some(CONTAINER),
 		_ => None,
 	}
 }

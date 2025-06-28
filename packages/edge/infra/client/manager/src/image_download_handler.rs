@@ -117,16 +117,15 @@ impl ImageDownloadHandler {
 		let mut tx = conn.begin().await?;
 
 		// Get total size of images directory. Note that it doesn't matter if this doesn't
-			// match the actual fs size because it should either be exactly at or below actual fs
-			// size. Also calculating fs size manually is expensive.
-			let (cache_count, images_dir_size) =
-				sqlx::query_as::<_, (i64, i64)>(indoc!(
-					"
+		// match the actual fs size because it should either be exactly at or below actual fs
+		// size. Also calculating fs size manually is expensive.
+		let (cache_count, images_dir_size) = sqlx::query_as::<_, (i64, i64)>(indoc!(
+			"
 					SELECT COUNT(size), COALESCE(SUM(size), 0) FROM images_cache
 					",
-				))
-				.fetch_one(&mut *tx)
-				.await?;
+		))
+		.fetch_one(&mut *tx)
+		.await?;
 
 		// Prune images
 		//
@@ -136,8 +135,7 @@ impl ImageDownloadHandler {
 		// size limit in edge cases by `actual size - compressed size`. In this situation,
 		// that extra difference is already reserved on the file system by the runner
 		// itself.
-		let (removed_count, removed_bytes) = if images_dir_size as u64
-			+ image_config.artifact_size
+		let (removed_count, removed_bytes) = if images_dir_size as u64 + image_config.artifact_size
 			> ctx.config().images.max_cache_size()
 		{
 			// Fetch as many images as it takes to clear up enough space for this new image.
@@ -179,7 +177,7 @@ impl ImageDownloadHandler {
 			.bind(image_config.id)
 			.bind(
 				(images_dir_size as u64)
-					.saturating_add(image_download_size)
+					.saturating_add(image_config.artifact_size)
 					.saturating_sub(ctx.config().images.max_cache_size()) as i64,
 			)
 			.fetch_all(&mut *tx)
@@ -221,7 +219,8 @@ impl ImageDownloadHandler {
 		};
 
 		metrics::IMAGE_CACHE_COUNT.set(cache_count + 1 - removed_count);
-		metrics::IMAGE_CACHE_SIZE.set(images_dir_size + image_config.artifact_size as i64 - removed_bytes);
+		metrics::IMAGE_CACHE_SIZE
+			.set(images_dir_size + image_config.artifact_size as i64 - removed_bytes);
 
 		sqlx::query(indoc!(
 			"
@@ -541,58 +540,6 @@ impl ImageDownloadHandler {
 		);
 
 		Ok(addresses)
-	}
-
-	/// Attempts to fetch HEAD for the image download url and determine the image's download size.
-	async fn fetch_image_download_size(
-		&self,
-		ctx: &Ctx,
-		image_config: &protocol::Image,
-	) -> Result<u64> {
-		// HEAD does not work if not using ATS
-		if std::env::var("__HACK__DISABLE_FETCH_IMAGE_SIZE").map_or(false, |x| x == "1") {
-			return Ok(0);
-		}
-
-		let addresses = self.get_image_addresses(ctx, image_config).await?;
-
-		let mut iter = addresses.into_iter();
-		while let Some(artifact_url) = iter.next() {
-			// Log the full URL we're attempting to download from
-			tracing::info!(image_id=?image_config.id, %artifact_url, "attempting to download image");
-
-			match reqwest::Client::new()
-				.head(&artifact_url)
-				.send()
-				.await
-				.and_then(|res| res.error_for_status())
-			{
-				Ok(res) => {
-					tracing::info!(image_id=?image_config.id, %artifact_url, "successfully fetched image HEAD");
-
-					// Read Content-Length header from response
-					let image_size = res
-						.headers()
-						.get(reqwest::header::CONTENT_LENGTH)
-						.context("no Content-Length header")?
-						.to_str()?
-						.parse::<u64>()
-						.context("invalid Content-Length header")?;
-
-					return Ok(image_size);
-				}
-				Err(err) => {
-					tracing::warn!(
-						image_id=?image_config.id,
-						%artifact_url,
-						%err,
-						"failed to fetch image HEAD"
-					);
-				}
-			}
-		}
-
-		bail!("artifact url could not be resolved");
 	}
 }
 

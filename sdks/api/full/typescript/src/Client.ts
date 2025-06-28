@@ -7,6 +7,7 @@ import * as core from "./core";
 import { Actors } from "./api/resources/actors/client/Client";
 import { Builds } from "./api/resources/builds/client/Client";
 import { Cloud } from "./api/resources/cloud/client/Client";
+import { Containers } from "./api/resources/containers/client/Client";
 import { CoreIntercom } from "./api/resources/coreIntercom/client/Client";
 import { EdgeIntercom } from "./api/resources/edgeIntercom/client/Client";
 import { Group } from "./api/resources/group/client/Client";
@@ -50,6 +51,7 @@ export class RivetClient {
     protected _actors: Actors | undefined;
     protected _builds: Builds | undefined;
     protected _cloud: Cloud | undefined;
+    protected _containers: Containers | undefined;
     protected _coreIntercom: CoreIntercom | undefined;
     protected _edgeIntercom: EdgeIntercom | undefined;
     protected _group: Group | undefined;
@@ -76,6 +78,10 @@ export class RivetClient {
 
     public get cloud(): Cloud {
         return (this._cloud ??= new Cloud(this._options));
+    }
+
+    public get containers(): Containers {
+        return (this._containers ??= new Containers(this._options));
     }
 
     public get coreIntercom(): CoreIntercom {

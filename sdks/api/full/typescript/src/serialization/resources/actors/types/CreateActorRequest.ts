@@ -7,7 +7,6 @@ import * as Rivet from "../../../../api/index";
 import * as core from "../../../../core";
 import { CreateActorRuntimeRequest } from "./CreateActorRuntimeRequest";
 import { CreateActorNetworkRequest } from "./CreateActorNetworkRequest";
-import { Resources } from "../resources/common/types/Resources";
 import { Lifecycle } from "../resources/common/types/Lifecycle";
 
 export const CreateActorRequest: core.serialization.ObjectSchema<
@@ -20,7 +19,6 @@ export const CreateActorRequest: core.serialization.ObjectSchema<
     buildTags: core.serialization.property("build_tags", core.serialization.unknown().optional()),
     runtime: CreateActorRuntimeRequest.optional(),
     network: CreateActorNetworkRequest.optional(),
-    resources: Resources.optional(),
     lifecycle: Lifecycle.optional(),
 });
 
@@ -32,7 +30,6 @@ export declare namespace CreateActorRequest {
         build_tags?: unknown | null;
         runtime?: CreateActorRuntimeRequest.Raw | null;
         network?: CreateActorNetworkRequest.Raw | null;
-        resources?: Resources.Raw | null;
         lifecycle?: Lifecycle.Raw | null;
     }
 }

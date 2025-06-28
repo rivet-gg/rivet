@@ -508,9 +508,7 @@ impl SqlitePoolManager {
 			.sum::<usize>() as f64;
 
 		// Update state if write was successful
-		for (key_packed, data) in db_data_to_snapshot {
-			let hex_key = hex::encode(&**key_packed);
-
+		for (_, data) in db_data_to_snapshot {
 			// Because this was batch processed we don't know the rate for each individual key, just estimate
 			// by calculating the size ratio
 			let ratio = data.len() as f64 / total_data_size;

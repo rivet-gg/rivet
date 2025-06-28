@@ -25,6 +25,7 @@ All URIs are relative to *https://api.rivet.gg*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+<<<<<<< HEAD
 *ActorsApi* | [**actors_create**](docs/ActorsApi.md#actors_create) | **POST** /actors | 
 *ActorsApi* | [**actors_destroy**](docs/ActorsApi.md#actors_destroy) | **DELETE** /actors/{actor} | 
 *ActorsApi* | [**actors_get**](docs/ActorsApi.md#actors_get) | **GET** /actors/{actor} | 
@@ -36,6 +37,24 @@ Class | Method | HTTP request | Description
 *ActorsLogsApi* | [**actors_logs_export**](docs/ActorsLogsApi.md#actors_logs_export) | **POST** /actors/logs/export | 
 *ActorsLogsApi* | [**actors_logs_get**](docs/ActorsLogsApi.md#actors_logs_get) | **GET** /actors/logs | 
 *ActorsMetricsApi* | [**actors_metrics_get**](docs/ActorsMetricsApi.md#actors_metrics_get) | **GET** /actors/{actor}/metrics/history | 
+=======
+*ActorsApi* | [**actors_create**](docs/ActorsApi.md#actors_create) | **POST** /v2/actors | 
+*ActorsApi* | [**actors_destroy**](docs/ActorsApi.md#actors_destroy) | **DELETE** /v2/actors/{actor} | 
+*ActorsApi* | [**actors_get**](docs/ActorsApi.md#actors_get) | **GET** /v2/actors/{actor} | 
+*ActorsApi* | [**actors_list**](docs/ActorsApi.md#actors_list) | **GET** /v2/actors | 
+*ActorsApi* | [**actors_upgrade**](docs/ActorsApi.md#actors_upgrade) | **POST** /v2/actors/{actor}/upgrade | 
+*ActorsApi* | [**actors_upgrade_all**](docs/ActorsApi.md#actors_upgrade_all) | **POST** /v2/actors/upgrade | 
+*ActorsLogsApi* | [**actors_logs_get**](docs/ActorsLogsApi.md#actors_logs_get) | **GET** /v2/actors/logs | 
+*ActorsMetricsApi* | [**actors_metrics_get**](docs/ActorsMetricsApi.md#actors_metrics_get) | **GET** /v2/actors/{actor}/metrics/history | 
+*ActorsV1Api* | [**actors_v1_create**](docs/ActorsV1Api.md#actors_v1_create) | **POST** /actors | 
+*ActorsV1Api* | [**actors_v1_destroy**](docs/ActorsV1Api.md#actors_v1_destroy) | **DELETE** /actors/{actor} | 
+*ActorsV1Api* | [**actors_v1_get**](docs/ActorsV1Api.md#actors_v1_get) | **GET** /actors/{actor} | 
+*ActorsV1Api* | [**actors_v1_list**](docs/ActorsV1Api.md#actors_v1_list) | **GET** /actors | 
+*ActorsV1Api* | [**actors_v1_upgrade**](docs/ActorsV1Api.md#actors_v1_upgrade) | **POST** /actors/{actor}/upgrade | 
+*ActorsV1Api* | [**actors_v1_upgrade_all**](docs/ActorsV1Api.md#actors_v1_upgrade_all) | **POST** /actors/upgrade | 
+*ActorsV1LogsApi* | [**actors_v1_logs_get**](docs/ActorsV1LogsApi.md#actors_v1_logs_get) | **GET** /actors/logs | 
+*ActorsV1MetricsApi* | [**actors_v1_metrics_get**](docs/ActorsV1MetricsApi.md#actors_v1_metrics_get) | **GET** /actors/{actor}/metrics/history | 
+>>>>>>> 43e5048bc (fix: api changes)
 *AuthIdentityEmailApi* | [**auth_identity_email_complete_email_verification**](docs/AuthIdentityEmailApi.md#auth_identity_email_complete_email_verification) | **POST** /auth/identity/email/complete-verification | 
 *AuthIdentityEmailApi* | [**auth_identity_email_start_email_verification**](docs/AuthIdentityEmailApi.md#auth_identity_email_start_email_verification) | **POST** /auth/identity/email/start-verification | 
 *AuthTokensApi* | [**auth_tokens_refresh_identity_token**](docs/AuthTokensApi.md#auth_tokens_refresh_identity_token) | **POST** /auth/tokens/identity | 
@@ -96,6 +115,14 @@ Class | Method | HTTP request | Description
 *CloudLogsApi* | [**cloud_logs_get_ray_perf_logs**](docs/CloudLogsApi.md#cloud_logs_get_ray_perf_logs) | **GET** /cloud/rays/{ray_id}/perf | 
 *CloudTiersApi* | [**cloud_tiers_get_region_tiers**](docs/CloudTiersApi.md#cloud_tiers_get_region_tiers) | **GET** /cloud/region-tiers | 
 *CloudUploadsApi* | [**cloud_uploads_complete_upload**](docs/CloudUploadsApi.md#cloud_uploads_complete_upload) | **POST** /cloud/uploads/{upload_id}/complete | 
+*ContainersApi* | [**containers_create**](docs/ContainersApi.md#containers_create) | **POST** /v1/containers | 
+*ContainersApi* | [**containers_destroy**](docs/ContainersApi.md#containers_destroy) | **DELETE** /v1/containers/{container} | 
+*ContainersApi* | [**containers_get**](docs/ContainersApi.md#containers_get) | **GET** /v1/containers/{container} | 
+*ContainersApi* | [**containers_list**](docs/ContainersApi.md#containers_list) | **GET** /v1/containers | 
+*ContainersApi* | [**containers_upgrade**](docs/ContainersApi.md#containers_upgrade) | **POST** /v1/containers/{container}/upgrade | 
+*ContainersApi* | [**containers_upgrade_all**](docs/ContainersApi.md#containers_upgrade_all) | **POST** /v1/containers/upgrade | 
+*ContainersLogsApi* | [**containers_logs_get**](docs/ContainersLogsApi.md#containers_logs_get) | **GET** /v1/containers/logs | 
+*ContainersMetricsApi* | [**containers_metrics_get**](docs/ContainersMetricsApi.md#containers_metrics_get) | **GET** /v1/containers/{container}/metrics/history | 
 *CoreIntercomPegboardApi* | [**core_intercom_pegboard_mark_client_registered**](docs/CoreIntercomPegboardApi.md#core_intercom_pegboard_mark_client_registered) | **POST** /pegboard/client/{client_id}/registered | 
 *EdgeIntercomPegboardApi* | [**edge_intercom_pegboard_prewarm_image**](docs/EdgeIntercomPegboardApi.md#edge_intercom_pegboard_prewarm_image) | **POST** /pegboard/image/{image_id}/prewarm | 
 *EdgeIntercomPegboardApi* | [**edge_intercom_pegboard_toggle_client_drain**](docs/EdgeIntercomPegboardApi.md#edge_intercom_pegboard_toggle_client_drain) | **POST** /pegboard/client/{client_id}/toggle-drain | 
@@ -198,12 +225,40 @@ Class | Method | HTTP request | Description
  - [ActorsPort](docs/ActorsPort.md)
  - [ActorsPortProtocol](docs/ActorsPortProtocol.md)
  - [ActorsPortRouting](docs/ActorsPortRouting.md)
+<<<<<<< HEAD
  - [ActorsQueryActorsResponse](docs/ActorsQueryActorsResponse.md)
  - [ActorsResources](docs/ActorsResources.md)
+=======
+ - [ActorsQueryLogStream](docs/ActorsQueryLogStream.md)
+>>>>>>> 43e5048bc (fix: api changes)
  - [ActorsRuntime](docs/ActorsRuntime.md)
  - [ActorsUpgradeActorRequest](docs/ActorsUpgradeActorRequest.md)
  - [ActorsUpgradeAllActorsRequest](docs/ActorsUpgradeAllActorsRequest.md)
  - [ActorsUpgradeAllActorsResponse](docs/ActorsUpgradeAllActorsResponse.md)
+ - [ActorsV1Actor](docs/ActorsV1Actor.md)
+ - [ActorsV1CreateActorNetworkRequest](docs/ActorsV1CreateActorNetworkRequest.md)
+ - [ActorsV1CreateActorPortRequest](docs/ActorsV1CreateActorPortRequest.md)
+ - [ActorsV1CreateActorRequest](docs/ActorsV1CreateActorRequest.md)
+ - [ActorsV1CreateActorResponse](docs/ActorsV1CreateActorResponse.md)
+ - [ActorsV1CreateActorRuntimeNetworkRequest](docs/ActorsV1CreateActorRuntimeNetworkRequest.md)
+ - [ActorsV1CreateActorRuntimeRequest](docs/ActorsV1CreateActorRuntimeRequest.md)
+ - [ActorsV1EndpointType](docs/ActorsV1EndpointType.md)
+ - [ActorsV1GetActorLogsResponse](docs/ActorsV1GetActorLogsResponse.md)
+ - [ActorsV1GetActorMetricsResponse](docs/ActorsV1GetActorMetricsResponse.md)
+ - [ActorsV1GetActorResponse](docs/ActorsV1GetActorResponse.md)
+ - [ActorsV1Lifecycle](docs/ActorsV1Lifecycle.md)
+ - [ActorsV1ListActorsResponse](docs/ActorsV1ListActorsResponse.md)
+ - [ActorsV1Network](docs/ActorsV1Network.md)
+ - [ActorsV1NetworkMode](docs/ActorsV1NetworkMode.md)
+ - [ActorsV1Port](docs/ActorsV1Port.md)
+ - [ActorsV1PortProtocol](docs/ActorsV1PortProtocol.md)
+ - [ActorsV1PortRouting](docs/ActorsV1PortRouting.md)
+ - [ActorsV1QueryLogStream](docs/ActorsV1QueryLogStream.md)
+ - [ActorsV1Resources](docs/ActorsV1Resources.md)
+ - [ActorsV1Runtime](docs/ActorsV1Runtime.md)
+ - [ActorsV1UpgradeActorRequest](docs/ActorsV1UpgradeActorRequest.md)
+ - [ActorsV1UpgradeAllActorsRequest](docs/ActorsV1UpgradeAllActorsRequest.md)
+ - [ActorsV1UpgradeAllActorsResponse](docs/ActorsV1UpgradeAllActorsResponse.md)
  - [AuthCompleteStatus](docs/AuthCompleteStatus.md)
  - [AuthIdentityCompleteEmailVerificationRequest](docs/AuthIdentityCompleteEmailVerificationRequest.md)
  - [AuthIdentityCompleteEmailVerificationResponse](docs/AuthIdentityCompleteEmailVerificationResponse.md)
@@ -374,6 +429,30 @@ Class | Method | HTTP request | Description
  - [CloudVersionMatchmakerPortRange](docs/CloudVersionMatchmakerPortRange.md)
  - [CloudVersionMatchmakerProxyKind](docs/CloudVersionMatchmakerProxyKind.md)
  - [CloudVersionSummary](docs/CloudVersionSummary.md)
+ - [ContainersContainer](docs/ContainersContainer.md)
+ - [ContainersCreateContainerNetworkRequest](docs/ContainersCreateContainerNetworkRequest.md)
+ - [ContainersCreateContainerPortRequest](docs/ContainersCreateContainerPortRequest.md)
+ - [ContainersCreateContainerRequest](docs/ContainersCreateContainerRequest.md)
+ - [ContainersCreateContainerResponse](docs/ContainersCreateContainerResponse.md)
+ - [ContainersCreateContainerRuntimeNetworkRequest](docs/ContainersCreateContainerRuntimeNetworkRequest.md)
+ - [ContainersCreateContainerRuntimeRequest](docs/ContainersCreateContainerRuntimeRequest.md)
+ - [ContainersEndpointType](docs/ContainersEndpointType.md)
+ - [ContainersGetContainerLogsResponse](docs/ContainersGetContainerLogsResponse.md)
+ - [ContainersGetContainerMetricsResponse](docs/ContainersGetContainerMetricsResponse.md)
+ - [ContainersGetContainerResponse](docs/ContainersGetContainerResponse.md)
+ - [ContainersLifecycle](docs/ContainersLifecycle.md)
+ - [ContainersListContainersResponse](docs/ContainersListContainersResponse.md)
+ - [ContainersNetwork](docs/ContainersNetwork.md)
+ - [ContainersNetworkMode](docs/ContainersNetworkMode.md)
+ - [ContainersPort](docs/ContainersPort.md)
+ - [ContainersPortProtocol](docs/ContainersPortProtocol.md)
+ - [ContainersPortRouting](docs/ContainersPortRouting.md)
+ - [ContainersQueryLogStream](docs/ContainersQueryLogStream.md)
+ - [ContainersResources](docs/ContainersResources.md)
+ - [ContainersRuntime](docs/ContainersRuntime.md)
+ - [ContainersUpgradeAllContainersRequest](docs/ContainersUpgradeAllContainersRequest.md)
+ - [ContainersUpgradeAllContainersResponse](docs/ContainersUpgradeAllContainersResponse.md)
+ - [ContainersUpgradeContainerRequest](docs/ContainersUpgradeContainerRequest.md)
  - [CoreIntercomPegboardMarkClientRegisteredRequest](docs/CoreIntercomPegboardMarkClientRegisteredRequest.md)
  - [EdgeIntercomPegboardToggleClientDrainRequest](docs/EdgeIntercomPegboardToggleClientDrainRequest.md)
  - [ErrorBody](docs/ErrorBody.md)

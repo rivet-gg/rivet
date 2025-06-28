@@ -40,7 +40,7 @@ func (c *Client) Get(ctx context.Context, request *actors.GetActorLogsRequestQue
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
-	endpointURL := baseURL + "/" + "actors/logs"
+	endpointURL := baseURL + "/" + "v2/actors/logs"
 
 	queryParams := make(url.Values)
 	if request.Project != nil {

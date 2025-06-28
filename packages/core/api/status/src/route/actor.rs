@@ -164,7 +164,7 @@ pub async fn status(
 		..Default::default()
 	};
 
-	let body = models::ActorsCreateActorRequest {
+	let body = models::ActorsV1CreateActorRequest {
 		tags: Some(serde_json::json!({
 			"name": query.build.build_name(),
 		})),
@@ -173,12 +173,12 @@ pub async fn status(
 			"current": "true",
 		}))),
 		region: Some(dc.name_id.clone()),
-		network: Some(Box::new(models::ActorsCreateActorNetworkRequest {
+		network: Some(Box::new(models::ActorsV1CreateActorNetworkRequest {
 			ports: Some(HashMap::from([(
 				"http".to_string(),
-				models::ActorsCreateActorPortRequest {
-					protocol: models::ActorsPortProtocol::Https,
-					routing: Some(Box::new(models::ActorsPortRouting {
+				models::ActorsV1CreateActorPortRequest {
+					protocol: models::ActorsV1PortProtocol::Https,
+					routing: Some(Box::new(models::ActorsV1PortRouting {
 						guard: Some(serde_json::json!({})),
 						host: None,
 					})),
@@ -187,14 +187,14 @@ pub async fn status(
 			)])),
 			..Default::default()
 		})),
-		lifecycle: Some(Box::new(models::ActorsLifecycle {
+		lifecycle: Some(Box::new(models::ActorsV1Lifecycle {
 			// Don't reboot on failure
 			durable: Some(false),
 			..Default::default()
 		})),
 		resources: match &query.build {
 			StatusQueryBuild::WsIsolate => None,
-			StatusQueryBuild::WsContainer => Some(Box::new(models::ActorsResources {
+			StatusQueryBuild::WsContainer => Some(Box::new(models::ActorsV1Resources {
 				cpu: 100,
 				memory: 128,
 			})),
@@ -204,8 +204,8 @@ pub async fn status(
 
 	tracing::info!("creating actor");
 	// Pass the request to the edge api
-	use actors_api::ActorsCreateError::*;
-	let res = match actors_api::actors_create(
+	use actors_v1_api::ActorsV1CreateError::*;
+	let res = match actors_v1_api::actors_v1_create(
 		&config,
 		body,
 		Some(&system_test_project),
@@ -252,8 +252,8 @@ pub async fn status(
 	let port = unwrap!(res.actor.network.ports.get("http"), "missing http protocol");
 
 	let protocol = match port.protocol {
-		models::ActorsPortProtocol::Http | models::ActorsPortProtocol::Tcp => "http",
-		models::ActorsPortProtocol::Https => "https",
+		models::ActorsV1PortProtocol::Http | models::ActorsV1PortProtocol::Tcp => "http",
+		models::ActorsV1PortProtocol::Https => "https",
 		_ => bail!("unsupported protocol"),
 	};
 	let hostname = unwrap_ref!(port.hostname);
@@ -269,8 +269,8 @@ pub async fn status(
 
 	// Destroy actor regardless of connection status
 	{
-		use actors_api::ActorsDestroyError::*;
-		match actors_api::actors_destroy(
+		use actors_v1_api::ActorsV1DestroyError::*;
+		match actors_v1_api::actors_v1_destroy(
 			&config,
 			&actor_id.to_string(),
 			Some(&system_test_project),

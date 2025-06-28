@@ -4,8 +4,12 @@ All URIs are relative to *https://api.rivet.gg*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+<<<<<<< HEAD
 [**actors_logs_export**](ActorsLogsApi.md#actors_logs_export) | **POST** /actors/logs/export | 
 [**actors_logs_get**](ActorsLogsApi.md#actors_logs_get) | **GET** /actors/logs | 
+=======
+[**actors_logs_get**](ActorsLogsApi.md#actors_logs_get) | **GET** /v2/actors/logs | 
+>>>>>>> 43e5048bc (fix: api changes)
 
 
 

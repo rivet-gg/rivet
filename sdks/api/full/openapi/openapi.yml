@@ -3,7 +3,7 @@ info:
   title: Rivet API
   version: ''
 paths:
-  /actors/{actor}:
+  /v2/actors/{actor}:
     get:
       description: Gets a actor.
       operationId: actors_get
@@ -152,7 +152,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
-  /actors:
+  /v2/actors:
     get:
       description: >-
         Lists all actors associated with the token used. Can be filtered by tags
@@ -306,7 +306,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ActorsCreateActorRequest'
-  /actors/{actor}/upgrade:
+  /v2/actors/{actor}/upgrade:
     post:
       description: Upgrades a actor.
       operationId: actors_upgrade
@@ -379,7 +379,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ActorsUpgradeActorRequest'
-  /actors/upgrade:
+  /v2/actors/upgrade:
     post:
       description: Upgrades all actors matching the given tags.
       operationId: actors_upgradeAll
@@ -446,6 +446,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ActorsUpgradeAllActorsRequest'
+<<<<<<< HEAD
   /actors/usage:
     get:
       description: >-
@@ -455,6 +456,22 @@ paths:
       tags:
         - Actors
       parameters:
+=======
+  /actors/{actor}:
+    get:
+      description: Gets a actor.
+      operationId: actors_v1_get
+      tags:
+        - ActorsV1
+      parameters:
+        - name: actor
+          in: path
+          description: The id of the actor to destroy
+          required: true
+          schema:
+            type: string
+            format: uuid
+>>>>>>> 43e5048bc (fix: api changes)
         - name: project
           in: query
           required: false
@@ -465,6 +482,7 @@ paths:
           required: false
           schema:
             type: string
+<<<<<<< HEAD
         - name: start
           in: query
           description: Start timestamp in milliseconds
@@ -498,13 +516,19 @@ paths:
           required: false
           schema:
             type: string
+=======
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActorsV1EndpointType'
       responses:
         '200':
           description: ''
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ActorsGetActorUsageResponse'
+                $ref: '#/components/schemas/ActorsV1GetActorResponse'
         '400':
           description: ''
           content:
@@ -542,6 +566,89 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+    delete:
+      description: Destroy a actor.
+      operationId: actors_v1_destroy
+      tags:
+        - ActorsV1
+      parameters:
+        - name: actor
+          in: path
+          description: The id of the actor to destroy
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: override_kill_timeout
+          in: query
+          description: >-
+            The duration to wait for in milliseconds before killing the actor.
+            This should be used to override the default kill timeout if a faster
+            time is needed, say for ignoring a graceful shutdown.
+          required: false
+          schema:
+            type: integer
+            format: int64
+>>>>>>> 43e5048bc (fix: api changes)
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+<<<<<<< HEAD
+                $ref: '#/components/schemas/ActorsGetActorUsageResponse'
+=======
+                $ref: '#/components/schemas/ActorsV1DestroyActorResponse'
+>>>>>>> 43e5048bc (fix: api changes)
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+<<<<<<< HEAD
   /actors/query:
     get:
       description: >-
@@ -550,6 +657,16 @@ paths:
       operationId: actors_query
       tags:
         - Actors
+=======
+  /actors:
+    get:
+      description: >-
+        Lists all actors associated with the token used. Can be filtered by tags
+        in the query string.
+      operationId: actors_v1_list
+      tags:
+        - ActorsV1
+>>>>>>> 43e5048bc (fix: api changes)
       parameters:
         - name: project
           in: query
@@ -561,6 +678,7 @@ paths:
           required: false
           schema:
             type: string
+<<<<<<< HEAD
         - name: query_json
           in: query
           description: JSON-encoded query expression for filtering actors
@@ -570,6 +688,25 @@ paths:
         - name: cursor
           in: query
           description: Cursor for pagination
+=======
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActorsV1EndpointType'
+        - name: tags_json
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: include_destroyed
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: cursor
+          in: query
+>>>>>>> 43e5048bc (fix: api changes)
           required: false
           schema:
             type: string
@@ -579,7 +716,11 @@ paths:
           content:
             application/json:
               schema:
+<<<<<<< HEAD
                 $ref: '#/components/schemas/ActorsQueryActorsResponse'
+=======
+                $ref: '#/components/schemas/ActorsV1ListActorsResponse'
+>>>>>>> 43e5048bc (fix: api changes)
         '400':
           description: ''
           content:
@@ -617,6 +758,221 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+<<<<<<< HEAD
+=======
+    post:
+      description: Create a new actor.
+      operationId: actors_v1_create
+      tags:
+        - ActorsV1
+      parameters:
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActorsV1EndpointType'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorsV1CreateActorResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActorsV1CreateActorRequest'
+  /actors/{actor}/upgrade:
+    post:
+      description: Upgrades a actor.
+      operationId: actors_v1_upgrade
+      tags:
+        - ActorsV1
+      parameters:
+        - name: actor
+          in: path
+          description: The id of the actor to upgrade
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorsV1UpgradeActorResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActorsV1UpgradeActorRequest'
+  /actors/upgrade:
+    post:
+      description: Upgrades all actors matching the given tags.
+      operationId: actors_v1_upgradeAll
+      tags:
+        - ActorsV1
+      parameters:
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorsV1UpgradeAllActorsResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActorsV1UpgradeAllActorsRequest'
+>>>>>>> 43e5048bc (fix: api changes)
   /builds/{build}:
     get:
       description: Get a build.
@@ -2567,6 +2923,448 @@ paths:
             schema:
               $ref: >-
                 #/components/schemas/CloudGamesNamespacesUpdateGameNamespaceVersionRequest
+  /v1/containers/{container}:
+    get:
+      description: Gets a container.
+      operationId: containers_get
+      tags:
+        - Containers
+      parameters:
+        - name: container
+          in: path
+          description: The id of the container to destroy
+          required: true
+          schema:
+            $ref: '#/components/schemas/Id'
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ContainersEndpointType'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainersGetContainerResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+    delete:
+      description: Destroy a container.
+      operationId: containers_destroy
+      tags:
+        - Containers
+      parameters:
+        - name: container
+          in: path
+          description: The id of the container to destroy
+          required: true
+          schema:
+            $ref: '#/components/schemas/Id'
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: override_kill_timeout
+          in: query
+          description: >-
+            The duration to wait for in milliseconds before killing the
+            container. This should be used to override the default kill timeout
+            if a faster time is needed, say for ignoring a graceful shutdown.
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainersDestroyContainerResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+  /v1/containers:
+    get:
+      description: >-
+        Lists all containers associated with the token used. Can be filtered by
+        tags in the query string.
+      operationId: containers_list
+      tags:
+        - Containers
+      parameters:
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ContainersEndpointType'
+        - name: tags_json
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: include_destroyed
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainersListContainersResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+    post:
+      description: Create a new container.
+      operationId: containers_create
+      tags:
+        - Containers
+      parameters:
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: endpoint_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ContainersEndpointType'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainersCreateContainerResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContainersCreateContainerRequest'
+  /v1/containers/{container}/upgrade:
+    post:
+      description: Upgrades a container.
+      operationId: containers_upgrade
+      tags:
+        - Containers
+      parameters:
+        - name: container
+          in: path
+          description: The id of the container to upgrade
+          required: true
+          schema:
+            $ref: '#/components/schemas/Id'
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainersUpgradeContainerResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContainersUpgradeContainerRequest'
+  /v1/containers/upgrade:
+    post:
+      description: Upgrades all containers matching the given tags.
+      operationId: containers_upgradeAll
+      tags:
+        - Containers
+      parameters:
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainersUpgradeAllContainersResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContainersUpgradeAllContainersRequest'
   /pegboard/client/{client_id}/registered:
     post:
       operationId: coreIntercom_pegboard_markClientRegistered
@@ -5566,7 +6364,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ServersCreateServerRequest'
-  /actors/logs:
+  /v2/actors/logs:
     get:
       description: Returns the logs for a given actor.
       operationId: actors_logs_get
@@ -5639,6 +6437,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+<<<<<<< HEAD
   /actors/logs/export:
     post:
       description: >-
@@ -5707,11 +6506,188 @@ paths:
                   type: string
                   description: JSON-encoded query expression for filtering logs
   /actors/{actor}/metrics/history:
+=======
+  /v2/actors/{actor}/metrics/history:
+>>>>>>> 43e5048bc (fix: api changes)
     get:
       description: Returns the metrics for a given actor.
       operationId: actors_metrics_get
       tags:
         - ActorsMetrics
+      parameters:
+        - name: actor
+          in: path
+          description: The id of the actor to destroy
+          required: true
+          schema:
+            $ref: '#/components/schemas/Id'
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: interval
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorsGetActorMetricsResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+  /actors/logs:
+    get:
+      description: Returns the logs for a given actor.
+      operationId: actors_v1_logs_get
+      tags:
+        - ActorsV1Logs
+      parameters:
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: stream
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ActorsV1QueryLogStream'
+        - name: actor_ids_json
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: search_text
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search_case_sensitive
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: search_enable_regex
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: watch_index
+          in: query
+          description: A query parameter denoting the requests watch index.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorsV1GetActorLogsResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+  /actors/{actor}/metrics/history:
+    get:
+      description: Returns the metrics for a given actor.
+      operationId: actors_v1_metrics_get
+      tags:
+        - ActorsV1Metrics
       parameters:
         - name: actor
           in: path
@@ -5751,7 +6727,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ActorsGetActorMetricsResponse'
+                $ref: '#/components/schemas/ActorsV1GetActorMetricsResponse'
         '400':
           description: ''
           content:
@@ -7556,6 +8532,180 @@ paths:
       responses:
         '204':
           description: ''
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+  /v1/containers/logs:
+    get:
+      description: Returns the logs for a given container.
+      operationId: containers_logs_get
+      tags:
+        - ContainersLogs
+      parameters:
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: stream
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ContainersQueryLogStream'
+        - name: container_ids_json
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: search_text
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search_case_sensitive
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: search_enable_regex
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: watch_index
+          in: query
+          description: A query parameter denoting the requests watch index.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainersGetContainerLogsResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
+  /v1/containers/{container}/metrics/history:
+    get:
+      description: Returns the metrics for a given container.
+      operationId: containers_metrics_get
+      tags:
+        - ContainersMetrics
+      parameters:
+        - name: container
+          in: path
+          description: The id of the container to destroy
+          required: true
+          schema:
+            $ref: '#/components/schemas/Id'
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: interval
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainersGetContainerMetricsResponse'
         '400':
           description: ''
           content:
@@ -9634,8 +10784,6 @@ components:
           $ref: '#/components/schemas/ActorsCreateActorRuntimeRequest'
         network:
           $ref: '#/components/schemas/ActorsCreateActorNetworkRequest'
-        resources:
-          $ref: '#/components/schemas/ActorsResources'
         lifecycle:
           $ref: '#/components/schemas/ActorsLifecycle'
       required:
@@ -9730,6 +10878,7 @@ components:
       required:
         - actors
         - pagination
+<<<<<<< HEAD
     ActorsGetActorUsageResponse:
       type: object
       properties:
@@ -9760,13 +10909,125 @@ components:
         - metric_types
         - metric_values
     ActorsQueryActorsResponse:
+=======
+    ActorsV1GetActorResponse:
+      type: object
+      properties:
+        actor:
+          $ref: '#/components/schemas/ActorsV1Actor'
+      required:
+        - actor
+    ActorsV1CreateActorRequest:
+      type: object
+      properties:
+        region:
+          type: string
+        tags: {}
+        build:
+          type: string
+          format: uuid
+        build_tags: {}
+        runtime:
+          $ref: '#/components/schemas/ActorsV1CreateActorRuntimeRequest'
+        network:
+          $ref: '#/components/schemas/ActorsV1CreateActorNetworkRequest'
+        resources:
+          $ref: '#/components/schemas/ActorsV1Resources'
+        lifecycle:
+          $ref: '#/components/schemas/ActorsV1Lifecycle'
+      required:
+        - tags
+    ActorsV1CreateActorRuntimeRequest:
+      type: object
+      properties:
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        network:
+          $ref: '#/components/schemas/ActorsV1CreateActorRuntimeNetworkRequest'
+    ActorsV1CreateActorRuntimeNetworkRequest:
+      type: object
+      properties:
+        endpoint_type:
+          $ref: '#/components/schemas/ActorsV1EndpointType'
+      required:
+        - endpoint_type
+    ActorsV1CreateActorNetworkRequest:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/ActorsV1NetworkMode'
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ActorsV1CreateActorPortRequest'
+        wait_ready:
+          type: boolean
+    ActorsV1CreateActorPortRequest:
+      type: object
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ActorsV1PortProtocol'
+        internal_port:
+          type: integer
+        routing:
+          $ref: '#/components/schemas/ActorsV1PortRouting'
+      required:
+        - protocol
+    ActorsV1CreateActorResponse:
+      type: object
+      properties:
+        actor:
+          $ref: '#/components/schemas/ActorsV1Actor'
+          description: The actor that was created
+      required:
+        - actor
+    ActorsV1DestroyActorResponse:
+      type: object
+      properties: {}
+    ActorsV1UpgradeActorRequest:
+      type: object
+      properties:
+        build:
+          type: string
+          format: uuid
+        build_tags: {}
+    ActorsV1UpgradeActorResponse:
+      type: object
+      properties: {}
+    ActorsV1UpgradeAllActorsRequest:
+      type: object
+      properties:
+        tags: {}
+        build:
+          type: string
+          format: uuid
+        build_tags: {}
+      required:
+        - tags
+    ActorsV1UpgradeAllActorsResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+      required:
+        - count
+    ActorsV1ListActorsResponse:
+>>>>>>> 43e5048bc (fix: api changes)
       type: object
       properties:
         actors:
           type: array
           items:
+<<<<<<< HEAD
             $ref: '#/components/schemas/ActorsActor'
           description: A list of actors matching the query
+=======
+            $ref: '#/components/schemas/ActorsV1Actor'
+          description: A list of actors for the project associated with the token.
+>>>>>>> 43e5048bc (fix: api changes)
         pagination:
           $ref: '#/components/schemas/Pagination'
       required:
@@ -10484,6 +11745,124 @@ components:
           description: |-
             **Deprecated: use `game_modes` instead**
             A list of game modes.
+    ContainersGetContainerResponse:
+      type: object
+      properties:
+        container:
+          $ref: '#/components/schemas/ContainersContainer'
+      required:
+        - container
+    ContainersCreateContainerRequest:
+      type: object
+      properties:
+        region:
+          type: string
+        tags: {}
+        build:
+          type: string
+          format: uuid
+        build_tags: {}
+        runtime:
+          $ref: '#/components/schemas/ContainersCreateContainerRuntimeRequest'
+        network:
+          $ref: '#/components/schemas/ContainersCreateContainerNetworkRequest'
+        resources:
+          $ref: '#/components/schemas/ContainersResources'
+        lifecycle:
+          $ref: '#/components/schemas/ContainersLifecycle'
+      required:
+        - tags
+        - resources
+    ContainersCreateContainerRuntimeRequest:
+      type: object
+      properties:
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        network:
+          $ref: '#/components/schemas/ContainersCreateContainerRuntimeNetworkRequest'
+    ContainersCreateContainerRuntimeNetworkRequest:
+      type: object
+      properties:
+        endpoint_type:
+          $ref: '#/components/schemas/ContainersEndpointType'
+      required:
+        - endpoint_type
+    ContainersCreateContainerNetworkRequest:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/ContainersNetworkMode'
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ContainersCreateContainerPortRequest'
+        wait_ready:
+          type: boolean
+    ContainersCreateContainerPortRequest:
+      type: object
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ContainersPortProtocol'
+        internal_port:
+          type: integer
+        routing:
+          $ref: '#/components/schemas/ContainersPortRouting'
+      required:
+        - protocol
+    ContainersCreateContainerResponse:
+      type: object
+      properties:
+        container:
+          $ref: '#/components/schemas/ContainersContainer'
+          description: The container that was created
+      required:
+        - container
+    ContainersDestroyContainerResponse:
+      type: object
+      properties: {}
+    ContainersUpgradeContainerRequest:
+      type: object
+      properties:
+        build:
+          type: string
+          format: uuid
+        build_tags: {}
+    ContainersUpgradeContainerResponse:
+      type: object
+      properties: {}
+    ContainersUpgradeAllContainersRequest:
+      type: object
+      properties:
+        tags: {}
+        build:
+          type: string
+          format: uuid
+        build_tags: {}
+      required:
+        - tags
+    ContainersUpgradeAllContainersResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+      required:
+        - count
+    ContainersListContainersResponse:
+      type: object
+      properties:
+        containers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContainersContainer'
+          description: A list of containers for the project associated with the token.
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+      required:
+        - containers
+        - pagination
     CoreIntercomPegboardMarkClientRegisteredRequest:
       type: object
       properties:
@@ -11012,8 +12391,6 @@ components:
           $ref: '#/components/schemas/ActorsRuntime'
         network:
           $ref: '#/components/schemas/ActorsNetwork'
-        resources:
-          $ref: '#/components/schemas/ActorsResources'
         lifecycle:
           $ref: '#/components/schemas/ActorsLifecycle'
         created_at:
@@ -11062,24 +12439,6 @@ components:
             If true, the actor will try to reschedule itself automatically in
             the event of a crash or a datacenter failover. The actor will not
             reschedule if it exits successfully.
-    ActorsResources:
-      type: object
-      properties:
-        cpu:
-          type: integer
-          description: >-
-            The number of CPU cores in millicores, or 1/1000 of a core. For
-            example,
-
-            1/8 of a core would be 125 millicores, and 1 core would be 1000
-
-            millicores.
-        memory:
-          type: integer
-          description: The amount of memory in megabytes
-      required:
-        - cpu
-        - memory
     ActorsNetwork:
       type: object
       properties:
@@ -11152,7 +12511,7 @@ components:
         actor_ids:
           type: array
           items:
-            $ref: '#/components/schemas/Id'
+            type: string
           description: >-
             List of actor IDs in these logs. The order of these correspond to
             the index in the log entry.
@@ -11206,6 +12565,238 @@ components:
       required:
         - url
     ActorsGetActorMetricsResponse:
+      type: object
+      properties:
+        actor_ids:
+          type: array
+          items:
+            type: string
+        metric_names:
+          type: array
+          items:
+            type: string
+        metric_attributes:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+        metric_types:
+          type: array
+          items:
+            type: string
+        metric_values:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+              format: double
+      required:
+        - actor_ids
+        - metric_names
+        - metric_attributes
+        - metric_types
+        - metric_values
+    ActorsV1Actor:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        region:
+          type: string
+        tags: {}
+        runtime:
+          $ref: '#/components/schemas/ActorsV1Runtime'
+        network:
+          $ref: '#/components/schemas/ActorsV1Network'
+        resources:
+          $ref: '#/components/schemas/ActorsV1Resources'
+        lifecycle:
+          $ref: '#/components/schemas/ActorsV1Lifecycle'
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        started_at:
+          $ref: '#/components/schemas/Timestamp'
+        destroyed_at:
+          $ref: '#/components/schemas/Timestamp'
+      required:
+        - id
+        - region
+        - tags
+        - runtime
+        - network
+        - lifecycle
+        - created_at
+    ActorsV1Runtime:
+      type: object
+      properties:
+        build:
+          type: string
+          format: uuid
+        arguments:
+          type: array
+          items:
+            type: string
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - build
+    ActorsV1Lifecycle:
+      type: object
+      properties:
+        kill_timeout:
+          type: integer
+          format: int64
+          description: >-
+            The duration to wait for in milliseconds before killing the actor.
+            This should be set to a safe default, and can be overridden during a
+            DELETE request if needed.
+        durable:
+          type: boolean
+          description: >-
+            If true, the actor will try to reschedule itself automatically in
+            the event of a crash or a datacenter failover. The actor will not
+            reschedule if it exits successfully.
+    ActorsV1Resources:
+      type: object
+      properties:
+        cpu:
+          type: integer
+          description: >-
+            The number of CPU cores in millicores, or 1/1000 of a core. For
+            example,
+
+            1/8 of a core would be 125 millicores, and 1 core would be 1000
+
+            millicores.
+        memory:
+          type: integer
+          description: The amount of memory in megabytes
+      required:
+        - cpu
+        - memory
+    ActorsV1Network:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/ActorsV1NetworkMode'
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ActorsV1Port'
+      required:
+        - mode
+        - ports
+    ActorsV1NetworkMode:
+      type: string
+      enum:
+        - bridge
+        - host
+    ActorsV1Port:
+      type: object
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ActorsV1PortProtocol'
+        internal_port:
+          type: integer
+        hostname:
+          type: string
+        port:
+          type: integer
+        path:
+          type: string
+        url:
+          type: string
+          description: >-
+            Fully formed connection URL including protocol, hostname, port, and
+            path, if applicable.
+        routing:
+          $ref: '#/components/schemas/ActorsV1PortRouting'
+      required:
+        - protocol
+        - routing
+    ActorsV1PortProtocol:
+      type: string
+      enum:
+        - http
+        - https
+        - tcp
+        - tcp_tls
+        - udp
+    ActorsV1PortRouting:
+      type: object
+      properties:
+        guard:
+          $ref: '#/components/schemas/ActorsV1GuardRouting'
+        host:
+          $ref: '#/components/schemas/ActorsV1HostRouting'
+    ActorsV1GuardRouting:
+      type: object
+      properties: {}
+    ActorsV1HostRouting:
+      type: object
+      properties: {}
+    ActorsV1EndpointType:
+      type: string
+      enum:
+        - hostname
+        - path
+    ActorsV1GetActorLogsResponse:
+      type: object
+      properties:
+        actor_ids:
+          type: array
+          items:
+            type: string
+          description: >-
+            List of actor IDs in these logs. The order of these correspond to
+            the index in the log entry.
+        lines:
+          type: array
+          items:
+            type: string
+          description: Sorted old to new.
+        timestamps:
+          type: array
+          items:
+            $ref: '#/components/schemas/Timestamp'
+          description: Sorted old to new.
+        streams:
+          type: array
+          items:
+            type: integer
+          description: |-
+            Streams the logs came from.
+
+            0 = stdout
+            1 = stderr
+        actor_indices:
+          type: array
+          items:
+            type: integer
+          description: >-
+            Index of the actor that this log was for. Use this index to look the
+            full ID in `actor_ids`.
+        watch:
+          $ref: '#/components/schemas/WatchResponse'
+      required:
+        - actor_ids
+        - lines
+        - timestamps
+        - streams
+        - actor_indices
+        - watch
+    ActorsV1QueryLogStream:
+      type: string
+      enum:
+        - std_out
+        - std_err
+        - all
+    ActorsV1GetActorMetricsResponse:
       type: object
       properties:
         actor_ids:
@@ -13251,6 +14842,246 @@ components:
       properties:
         cursor:
           type: string
+    ContainersContainer:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        region:
+          type: string
+        tags: {}
+        runtime:
+          $ref: '#/components/schemas/ContainersRuntime'
+        network:
+          $ref: '#/components/schemas/ContainersNetwork'
+        resources:
+          $ref: '#/components/schemas/ContainersResources'
+        lifecycle:
+          $ref: '#/components/schemas/ContainersLifecycle'
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        started_at:
+          $ref: '#/components/schemas/Timestamp'
+        destroyed_at:
+          $ref: '#/components/schemas/Timestamp'
+      required:
+        - id
+        - region
+        - tags
+        - runtime
+        - network
+        - resources
+        - lifecycle
+        - created_at
+    ContainersRuntime:
+      type: object
+      properties:
+        build:
+          type: string
+          format: uuid
+        arguments:
+          type: array
+          items:
+            type: string
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - build
+    ContainersLifecycle:
+      type: object
+      properties:
+        kill_timeout:
+          type: integer
+          format: int64
+          description: >-
+            The duration to wait for in milliseconds before killing the
+            container. This should be set to a safe default, and can be
+            overridden during a DELETE request if needed.
+        durable:
+          type: boolean
+          description: >-
+            If true, the container will try to reschedule itself automatically
+            in the event of a crash or a datacenter failover. The container will
+            not reschedule if it exits successfully.
+    ContainersResources:
+      type: object
+      properties:
+        cpu:
+          type: integer
+          description: >-
+            The number of CPU cores in millicores, or 1/1000 of a core. For
+            example,
+
+            1/8 of a core would be 125 millicores, and 1 core would be 1000
+
+            millicores.
+        memory:
+          type: integer
+          description: The amount of memory in megabytes
+      required:
+        - cpu
+        - memory
+    ContainersNetwork:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/ContainersNetworkMode'
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ContainersPort'
+      required:
+        - mode
+        - ports
+    ContainersNetworkMode:
+      type: string
+      enum:
+        - bridge
+        - host
+    ContainersPort:
+      type: object
+      properties:
+        protocol:
+          $ref: '#/components/schemas/ContainersPortProtocol'
+        internal_port:
+          type: integer
+        hostname:
+          type: string
+        port:
+          type: integer
+        path:
+          type: string
+        url:
+          type: string
+          description: >-
+            Fully formed connection URL including protocol, hostname, port, and
+            path, if applicable.
+        routing:
+          $ref: '#/components/schemas/ContainersPortRouting'
+      required:
+        - protocol
+        - routing
+    ContainersPortProtocol:
+      type: string
+      enum:
+        - http
+        - https
+        - tcp
+        - tcp_tls
+        - udp
+    ContainersPortRouting:
+      type: object
+      properties:
+        guard:
+          $ref: '#/components/schemas/ContainersGuardRouting'
+        host:
+          $ref: '#/components/schemas/ContainersHostRouting'
+    ContainersGuardRouting:
+      type: object
+      properties: {}
+    ContainersHostRouting:
+      type: object
+      properties: {}
+    ContainersEndpointType:
+      type: string
+      enum:
+        - hostname
+        - path
+    ContainersGetContainerLogsResponse:
+      type: object
+      properties:
+        container_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/Id'
+          description: >-
+            List of container IDs in these logs. The order of these correspond
+            to the index in the log entry.
+        lines:
+          type: array
+          items:
+            type: string
+          description: Sorted old to new.
+        timestamps:
+          type: array
+          items:
+            $ref: '#/components/schemas/Timestamp'
+          description: Sorted old to new.
+        streams:
+          type: array
+          items:
+            type: integer
+          description: |-
+            Streams the logs came from.
+
+            0 = stdout
+            1 = stderr
+        foreigns:
+          type: array
+          items:
+            type: boolean
+          description: >-
+            List of flags denoting if this log is not directly from the
+            container.
+        container_indices:
+          type: array
+          items:
+            type: integer
+          description: >-
+            Index of the container that this log was for. Use this index to look
+            the full ID in `container_ids`.
+        watch:
+          $ref: '#/components/schemas/WatchResponse'
+      required:
+        - container_ids
+        - lines
+        - timestamps
+        - streams
+        - foreigns
+        - container_indices
+        - watch
+    ContainersQueryLogStream:
+      type: string
+      enum:
+        - std_out
+        - std_err
+        - all
+    ContainersGetContainerMetricsResponse:
+      type: object
+      properties:
+        container_ids:
+          type: array
+          items:
+            type: string
+        metric_names:
+          type: array
+          items:
+            type: string
+        metric_attributes:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+        metric_types:
+          type: array
+          items:
+            type: string
+        metric_values:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+              format: double
+      required:
+        - container_ids
+        - metric_names
+        - metric_attributes
+        - metric_types
+        - metric_values
     GameHandle:
       type: object
       properties:

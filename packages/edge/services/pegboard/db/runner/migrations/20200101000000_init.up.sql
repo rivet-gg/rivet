@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS actor_runners (
     actor_id String,
-    generation UInt32,
     runner_id UUID,
     started_at DateTime64 (9),
     finished_at DateTime64 (9)

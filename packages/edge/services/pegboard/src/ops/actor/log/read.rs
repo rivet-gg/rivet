@@ -41,7 +41,7 @@ pub struct LogEntry {
 	pub message: Vec<u8>,
 	pub stream_type: u8,
 	pub foreign: bool,
-	pub actor_id: String,
+	pub actor_id: util::Id,
 }
 
 #[operation]

@@ -5,7 +5,7 @@ imports:
 
 service:
   auth: true
-  base-path: /actors
+  base-path: /v2/actors
   audiences:
     - runtime
   endpoints:
@@ -48,7 +48,7 @@ types:
     properties:
       actor_ids:
         docs: List of actor IDs in these logs. The order of these correspond to the index in the log entry.
-        type: list<commons.Id>
+        type: list<string>
       lines:
         docs: Sorted old to new.
         type: list<string>

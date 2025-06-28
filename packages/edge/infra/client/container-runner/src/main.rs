@@ -62,7 +62,7 @@ fn main() -> Result<()> {
 	// Run the container
 	let exit_code = match container::run(
 		msg_tx.clone(),
-		&actor_path,
+		&runner_path,
 		&container_id,
 		root_user_enabled,
 	) {

@@ -23,7 +23,7 @@ use crate::{
 
 use super::GlobalQuery;
 
-// MARK: GET /builds/{}
+// MARK: GET /v1/builds/{}
 #[tracing::instrument(skip_all)]
 pub async fn get(
 	ctx: Ctx<Auth>,
@@ -112,7 +112,7 @@ pub async fn get_deprecated(
 	})
 }
 
-// MARK: GET /builds
+// MARK: GET /v1/builds
 #[derive(Debug, Clone, Deserialize)]
 pub struct ListQuery {
 	#[serde(flatten)]
@@ -251,7 +251,7 @@ pub async fn list_deprecated(
 	})
 }
 
-// MARK: PATCH /builds/{}/tags
+// MARK: PATCH /v1/builds/{}/tags
 #[tracing::instrument(skip_all)]
 pub async fn patch_tags(
 	ctx: Ctx<Auth>,
@@ -351,7 +351,7 @@ pub async fn patch_tags_deprecated(
 	.await
 }
 
-// MARK: POST /builds/prepare
+// MARK: POST /v1/builds/prepare
 #[tracing::instrument(skip_all)]
 pub async fn create_build(
 	ctx: Ctx<Auth>,
@@ -491,7 +491,7 @@ pub async fn create_build_deprecated(
 	})
 }
 
-// MARK: POST /builds/{}/complete
+// MARK: POST /v1/builds/{}/complete
 #[tracing::instrument(skip_all)]
 pub async fn complete_build(
 	ctx: Ctx<Auth>,

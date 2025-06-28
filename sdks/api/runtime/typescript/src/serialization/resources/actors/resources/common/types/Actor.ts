@@ -8,7 +8,6 @@ import * as core from "../../../../../../core";
 import { Id } from "../../../../common/types/Id";
 import { Runtime } from "./Runtime";
 import { Network } from "./Network";
-import { Resources } from "./Resources";
 import { Lifecycle } from "./Lifecycle";
 import { Timestamp } from "../../../../common/types/Timestamp";
 
@@ -19,7 +18,6 @@ export const Actor: core.serialization.ObjectSchema<serializers.actors.Actor.Raw
         tags: core.serialization.unknown(),
         runtime: Runtime,
         network: Network,
-        resources: Resources.optional(),
         lifecycle: Lifecycle,
         createdAt: core.serialization.property("created_at", Timestamp),
         startedAt: core.serialization.property("started_at", Timestamp.optional()),
@@ -33,7 +31,6 @@ export declare namespace Actor {
         tags?: unknown;
         runtime: Runtime.Raw;
         network: Network.Raw;
-        resources?: Resources.Raw | null;
         lifecycle: Lifecycle.Raw;
         created_at: Timestamp.Raw;
         started_at?: Timestamp.Raw | null;

@@ -56,17 +56,34 @@ pub async fn route_via_route_config(
 	};
 
 	// Query actors with matching tags in this environment
-	let actors_res = ctx
-		.op(pegboard::ops::actor::list_for_env::Input {
+	let (actors_v1_res, actors_res) = tokio::try_join!(
+		ctx.op(pegboard::ops::actor::v1::list_for_env::Input {
+			env_id: namespace_id,
+			tags: selector_tags.clone(),
+			include_destroyed: false,
+			created_before: None,
+			limit: 50, // Reasonable limit for load balancing
+		}),
+		ctx.op(pegboard::ops::actor::list_for_env::Input {
 			env_id: namespace_id,
 			tags: selector_tags,
 			include_destroyed: false,
 			created_before: None,
 			limit: 50, // Reasonable limit for load balancing
-		})
-		.await?;
+		}),
+	)?;
 
-	if actors_res.actors.is_empty() {
+	let actors = actors_v1_res
+		.actors
+		.into_iter()
+		.map(|entry| pegboard::ops::actor::list_for_env::ActorEntry {
+			actor_id: entry.actor_id.into(),
+			create_ts: entry.create_ts,
+		})
+		.chain(actors_res.actors.into_iter())
+		.collect::<Vec<_>>();
+
+	if actors.is_empty() {
 		tracing::warn!(
 			host = host,
 			path = path,
@@ -118,7 +135,7 @@ pub async fn route_via_route_config(
 	// Fetch each actor's details to get their connection information
 	let mut targets = Vec::new();
 
-	for actor_entry in &actors_res.actors {
+	for actor_entry in &actors {
 		// Find actor's proxied ports
 		if let Some(actor_targets) =
 			find_actor_targets(ctx, &actor_entry.actor_id, dc_id, &path_to_forward).await?

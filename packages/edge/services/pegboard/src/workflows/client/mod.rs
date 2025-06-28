@@ -21,7 +21,7 @@ use sqlx::Acquire;
 
 use crate::{
 	client_config, keys, metrics, protocol, protocol::ClientFlavor, system_info,
-	workflows::actor2::Allocate,
+	workflows::actor::Allocate,
 };
 
 mod migrations;
@@ -131,7 +131,7 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 							for alloc in res.allocations {
 								ctx.v(2)
 									.signal(alloc.signal)
-									.to_workflow::<crate::workflows::actor2::Workflow>()
+									.to_workflow::<crate::workflows::actor::Workflow>()
 									.tag("actor_id", alloc.actor_id)
 									.send()
 									.await?;
@@ -166,11 +166,11 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 								{
 									// Try actor2 first
 									let res = ctx
-										.signal(crate::workflows::actor2::StateUpdate {
+										.signal(crate::workflows::actor::StateUpdate {
 											generation,
 											state: state.clone(),
 										})
-										.to_workflow::<crate::workflows::actor2::Workflow>()
+										.to_workflow::<crate::workflows::actor::Workflow>()
 										.tag("actor_id", actor_id)
 										.send()
 										.await;
@@ -180,11 +180,11 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 									{
 										// Try old actors
 										let res = ctx
-											.signal(crate::workflows::actor::StateUpdate {
+											.signal(crate::workflows::actor::v1::StateUpdate {
 												generation,
 												state,
 											})
-											.to_workflow::<crate::workflows::actor::Workflow>()
+											.to_workflow::<crate::workflows::actor::v1::Workflow>()
 											.tag("actor_id", actor_id)
 											.send()
 											.await;
@@ -272,8 +272,8 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 					for actor_id in actor_ids {
 						// Try actor2 first
 						let res = ctx
-							.signal(crate::workflows::actor2::Undrain {})
-							.to_workflow::<crate::workflows::actor2::Workflow>()
+							.signal(crate::workflows::actor::Undrain {})
+							.to_workflow::<crate::workflows::actor::Workflow>()
 							.tag("actor_id", actor_id)
 							.send()
 							.await;
@@ -281,8 +281,8 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 						if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
 							// Try old actors
 							let res = ctx
-								.signal(crate::workflows::actor::Undrain {})
-								.to_workflow::<crate::workflows::actor::Workflow>()
+								.signal(crate::workflows::actor::v1::Undrain {})
+								.to_workflow::<crate::workflows::actor::v1::Workflow>()
 								.tag("actor_id", actor_id)
 								.send()
 								.await;
@@ -307,7 +307,7 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 					for alloc in res.allocations {
 						ctx.v(2)
 							.signal(alloc.signal)
-							.to_workflow::<crate::workflows::actor2::Workflow>()
+							.to_workflow::<crate::workflows::actor::Workflow>()
 							.tag("actor_id", alloc.actor_id)
 							.send()
 							.await?;
@@ -321,7 +321,7 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 					for alloc in res.allocations {
 						ctx.v(2)
 							.signal(alloc.signal)
-							.to_workflow::<crate::workflows::actor2::Workflow>()
+							.to_workflow::<crate::workflows::actor::Workflow>()
 							.tag("actor_id", alloc.actor_id)
 							.send()
 							.await?;
@@ -364,11 +364,11 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 	for (actor_id, generation) in actors {
 		// Try actor2 first
 		let res = ctx
-			.signal(crate::workflows::actor2::StateUpdate {
+			.signal(crate::workflows::actor::StateUpdate {
 				generation,
 				state: protocol::ActorState::Lost,
 			})
-			.to_workflow::<crate::workflows::actor2::Workflow>()
+			.to_workflow::<crate::workflows::actor::Workflow>()
 			.tag("actor_id", actor_id)
 			.send()
 			.await;
@@ -376,11 +376,11 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 		if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
 			// Try old actors
 			let res = ctx
-				.signal(crate::workflows::actor::StateUpdate {
+				.signal(crate::workflows::actor::v1::StateUpdate {
 					generation,
 					state: protocol::ActorState::Lost,
 				})
-				.to_workflow::<crate::workflows::actor::Workflow>()
+				.to_workflow::<crate::workflows::actor::v1::Workflow>()
 				.tag("actor_id", actor_id)
 				.send()
 				.await;
@@ -836,16 +836,16 @@ pub async fn handle_commands(
 				if let Some(drain_timeout_ts) = drain_timeout_ts {
 					// Try actor2 first
 					let res = ctx
-						.signal(crate::workflows::actor2::Drain { drain_timeout_ts })
-						.to_workflow::<crate::workflows::actor2::Workflow>()
+						.signal(crate::workflows::actor::Drain { drain_timeout_ts })
+						.to_workflow::<crate::workflows::actor::Workflow>()
 						.tag("actor_id", actor_id)
 						.send()
 						.await;
 
 					if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
 						// Try old actors
-						ctx.signal(crate::workflows::actor::Drain { drain_timeout_ts })
-							.to_workflow::<crate::workflows::actor::Workflow>()
+						ctx.signal(crate::workflows::actor::v1::Drain { drain_timeout_ts })
+							.to_workflow::<crate::workflows::actor::v1::Workflow>()
 							.tag("actor_id", actor_id)
 							.send()
 							.await?;
@@ -863,11 +863,11 @@ pub async fn handle_commands(
 				if matches!(signal.try_into()?, Signal::SIGTERM | Signal::SIGKILL) {
 					// Try actor2 first
 					let res = ctx
-						.signal(crate::workflows::actor2::StateUpdate {
+						.signal(crate::workflows::actor::StateUpdate {
 							generation,
 							state: protocol::ActorState::Stopping,
 						})
-						.to_workflow::<crate::workflows::actor2::Workflow>()
+						.to_workflow::<crate::workflows::actor::Workflow>()
 						.tag("actor_id", actor_id)
 						.send()
 						.await;
@@ -875,11 +875,11 @@ pub async fn handle_commands(
 					if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
 						// Try old actors
 						let res = ctx
-							.signal(crate::workflows::actor::StateUpdate {
+							.signal(crate::workflows::actor::v1::StateUpdate {
 								generation,
 								state: protocol::ActorState::Stopping,
 							})
-							.to_workflow::<crate::workflows::actor::Workflow>()
+							.to_workflow::<crate::workflows::actor::v1::Workflow>()
 							.tag("actor_id", actor_id)
 							.send()
 							.await;

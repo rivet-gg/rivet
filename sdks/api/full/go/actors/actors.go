@@ -17,7 +17,6 @@ type CreateActorRequest struct {
 	BuildTags interface{}                `json:"build_tags,omitempty"`
 	Runtime   *CreateActorRuntimeRequest `json:"runtime,omitempty"`
 	Network   *CreateActorNetworkRequest `json:"network,omitempty"`
-	Resources *Resources                 `json:"resources,omitempty"`
 	Lifecycle *Lifecycle                 `json:"lifecycle,omitempty"`
 
 	_rawJSON json.RawMessage
