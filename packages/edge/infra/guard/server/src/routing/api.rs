@@ -10,9 +10,6 @@ use service_discovery::ServiceDiscovery;
 use url::Url;
 use uuid::Uuid;
 
-// TODO: Copied from cluster/src/workflows/server/install/install_scripts/components/rivet/mod.rs
-const TUNNEL_API_EDGE_PORT: u16 = 5010;
-
 /// Route requests to the API service
 #[tracing::instrument(skip_all)]
 pub async fn route_api_request(
