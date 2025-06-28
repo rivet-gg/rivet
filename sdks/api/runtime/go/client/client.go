@@ -6,6 +6,7 @@ import (
 	http "net/http"
 	actorsclient "sdk/actors/client"
 	buildsclient "sdk/builds/client"
+	containersclient "sdk/containers/client"
 	core "sdk/core"
 	regionsclient "sdk/regions/client"
 	routesclient "sdk/routes/client"
@@ -16,10 +17,11 @@ type Client struct {
 	caller  *core.Caller
 	header  http.Header
 
-	Actors  *actorsclient.Client
-	Builds  *buildsclient.Client
-	Regions *regionsclient.Client
-	Routes  *routesclient.Client
+	Actors     *actorsclient.Client
+	Builds     *buildsclient.Client
+	Containers *containersclient.Client
+	Regions    *regionsclient.Client
+	Routes     *routesclient.Client
 }
 
 func NewClient(opts ...core.ClientOption) *Client {
@@ -28,12 +30,13 @@ func NewClient(opts ...core.ClientOption) *Client {
 		opt(options)
 	}
 	return &Client{
-		baseURL: options.BaseURL,
-		caller:  core.NewCaller(options.HTTPClient),
-		header:  options.ToHeader(),
-		Actors:  actorsclient.NewClient(opts...),
-		Builds:  buildsclient.NewClient(opts...),
-		Regions: regionsclient.NewClient(opts...),
-		Routes:  routesclient.NewClient(opts...),
+		baseURL:    options.BaseURL,
+		caller:     core.NewCaller(options.HTTPClient),
+		header:     options.ToHeader(),
+		Actors:     actorsclient.NewClient(opts...),
+		Builds:     buildsclient.NewClient(opts...),
+		Containers: containersclient.NewClient(opts...),
+		Regions:    regionsclient.NewClient(opts...),
+		Routes:     routesclient.NewClient(opts...),
 	}
 }

@@ -2,11 +2,11 @@ use analytics::InsertClickHouseInput;
 use chirp_workflow::prelude::*;
 use destroy::KillCtx;
 use futures_util::FutureExt;
-use rivet_util::serde::HashableMap;
 
 use crate::{
 	protocol,
 	types::{ActorLifecycle, ActorResources, EndpointType, NetworkMode, Routing},
+	workflows::client::AllocatePendingActorsInput,
 };
 
 mod analytics;
@@ -14,6 +14,7 @@ pub mod destroy;
 mod migrations;
 mod runtime;
 mod setup;
+pub mod v1;
 
 // A small amount of time to separate the completion of the drain to the deletion of the cluster server. We
 // want the drain to complete first.
@@ -32,17 +33,18 @@ const RETRY_RESET_DURATION_MS: i64 = util::duration::minutes(10);
 
 #[derive(Clone, Debug, Serialize, Deserialize, Hash)]
 pub struct Input {
-	pub actor_id: Uuid,
+	pub actor_id: util::Id,
 	pub env_id: Uuid,
-	pub tags: HashableMap<String, String>,
-	pub resources: ActorResources,
+	pub tags: util::serde::HashableMap<String, String>,
+	/// Used to override image resources.
+	pub resources: Option<ActorResources>,
 	pub lifecycle: ActorLifecycle,
 	pub image_id: Uuid,
 	pub root_user_enabled: bool,
 	pub args: Vec<String>,
 	pub network_mode: NetworkMode,
-	pub environment: HashableMap<String, String>,
-	pub network_ports: HashableMap<String, Port>,
+	pub environment: util::serde::HashableMap<String, String>,
+	pub network_ports: util::serde::HashableMap<String, Port>,
 	pub endpoint_type: Option<EndpointType>,
 }
 
@@ -54,7 +56,7 @@ pub struct Port {
 }
 
 #[workflow]
-pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
+pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
 	migrations::run(ctx).await?;
 
 	let validation_res = ctx
@@ -111,7 +113,9 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 
 			ctx.workflow(destroy::Input {
 				actor_id: input.actor_id,
-				build_kind: None,
+				generation: 0,
+				image_id: input.image_id,
+				build_allocation_type: None,
 				kill: None,
 			})
 			.output()
@@ -133,17 +137,14 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 		.send()
 		.await?;
 
-	let Some(res) = runtime::spawn_actor(ctx, input, &initial_actor_setup, 0).await? else {
-		ctx.msg(Failed {
-			message: "Failed to allocate (no availability).".into(),
-		})
-		.tag("actor_id", input.actor_id)
-		.send()
-		.await?;
-
+	let Some(allocate_res) = runtime::spawn_actor(ctx, input, &initial_actor_setup, 0).await?
+	else {
+		// Destroyed early
 		ctx.workflow(destroy::Input {
 			actor_id: input.actor_id,
-			build_kind: Some(initial_actor_setup.meta.build_kind),
+			generation: 0,
+			image_id: input.image_id,
+			build_allocation_type: Some(initial_actor_setup.meta.build_allocation_type),
 			kill: None,
 		})
 		.output()
@@ -152,17 +153,14 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 		return Ok(());
 	};
 
-	ctx.v(2)
-		.msg(Allocated {
-			client_id: res.client_id,
-		})
-		.tag("actor_id", input.actor_id)
-		.send()
-		.await?;
-
-	let state_res = ctx
+	let lifecycle_res = ctx
 		.loope(
-			runtime::State::new(res.client_id, res.client_workflow_id, input.image_id),
+			runtime::State::new(
+				allocate_res.runner_id,
+				allocate_res.client_id,
+				allocate_res.client_workflow_id,
+				input.image_id,
+			),
 			|ctx, state| {
 				let input = input.clone();
 
@@ -188,21 +186,14 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 							)
 							.await?;
 
-							if let Some(sig) = runtime::reschedule_actor(
-								ctx,
-								&input,
-								state,
-								state.image_id.unwrap_or(input.image_id),
-							)
-							.await?
+							if runtime::reschedule_actor(ctx, &input, state, state.image_id).await?
 							{
 								// Destroyed early
-								return Ok(Loop::Break(runtime::StateRes {
+								return Ok(Loop::Break(runtime::LifecycleRes {
+									generation: state.generation,
+									image_id: state.image_id,
 									kill: Some(KillCtx {
-										generation: state.generation,
-										kill_timeout_ms: sig
-											.override_kill_timeout_ms
-											.unwrap_or(input.lifecycle.kill_timeout_ms),
+										kill_timeout_ms: input.lifecycle.kill_timeout_ms,
 									}),
 								}));
 							} else {
@@ -210,9 +201,10 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 								return Ok(Loop::Continue);
 							}
 						} else {
-							return Ok(Loop::Break(runtime::StateRes {
+							return Ok(Loop::Break(runtime::LifecycleRes {
+								generation: state.generation,
+								image_id: state.image_id,
 								kill: Some(KillCtx {
-									generation: state.generation,
 									kill_timeout_ms: input.lifecycle.kill_timeout_ms,
 								}),
 							}));
@@ -253,7 +245,10 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 								protocol::ActorState::Starting => {
 									state.gc_timeout_ts = None;
 
-									ctx.activity(runtime::SetStartedInput {}).await?;
+									ctx.activity(runtime::SetStartedInput {
+										actor_id: input.actor_id,
+									})
+									.await?;
 								}
 								protocol::ActorState::Running { ports, .. } => {
 									ctx.join((
@@ -266,9 +261,6 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 										}),
 									))
 									.await?;
-
-									// Old traefik timeout
-									ctx.removed::<Activity<WaitForTraefikPoll>>().await?;
 
 									let updated = ctx
 										.activity(runtime::SetConnectableInput {
@@ -337,15 +329,16 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 											ctx,
 											&input,
 											state,
-											state.image_id.unwrap_or(input.image_id),
+											state.image_id,
 										)
 										.await?
-										.is_some()
 										{
 											// Destroyed early
-											return Ok(Loop::Break(runtime::StateRes {
-												// Destroy actor is none here because if we received the destroy
-												// signal, it is guaranteed that we did not allocate another actor.
+											return Ok(Loop::Break(runtime::LifecycleRes {
+												generation: state.generation,
+												image_id: state.image_id,
+												// None here because if we received the destroy signal, it is
+												// guaranteed that we did not allocate another actor.
 												kill: None,
 											}));
 										}
@@ -363,13 +356,12 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 											.await?;
 										}
 
-										return Ok(Loop::Break(runtime::StateRes {
+										return Ok(Loop::Break(runtime::LifecycleRes {
+											generation: state.generation,
+											image_id: state.image_id,
 											// No need to kill if already exited
 											kill: matches!(sig.state, protocol::ActorState::Lost)
-												.then_some(KillCtx {
-													generation: state.generation,
-													kill_timeout_ms: 0,
-												}),
+												.then_some(KillCtx { kill_timeout_ms: 0 }),
 										}));
 									}
 								}
@@ -380,6 +372,26 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 								.tag("actor_id", input.actor_id)
 								.send()
 								.await?;
+
+							let validation_res = ctx
+								.activity(runtime::ValidateUpgradeInput {
+									initial_build_allocation_type: initial_actor_setup
+										.meta
+										.build_allocation_type,
+									image_id: sig.image_id,
+								})
+								.await?;
+
+							if let Some(error_message) = validation_res {
+								ctx.msg(UpgradeFailed {
+									message: error_message,
+								})
+								.tag("actor_id", input.actor_id)
+								.send()
+								.await?;
+
+								return Ok(Loop::Continue);
+							}
 
 							ctx.activity(runtime::SetConnectableInput { connectable: false })
 								.await?;
@@ -399,23 +411,16 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 								image_id: sig.image_id,
 							})
 							.await?;
-							state.image_id = Some(sig.image_id);
+							state.image_id = sig.image_id;
 
-							if let Some(sig) = runtime::reschedule_actor(
-								ctx,
-								&input,
-								state,
-								state.image_id.unwrap_or(input.image_id),
-							)
-							.await?
+							if runtime::reschedule_actor(ctx, &input, state, state.image_id).await?
 							{
 								// Destroyed early
-								return Ok(Loop::Break(runtime::StateRes {
+								return Ok(Loop::Break(runtime::LifecycleRes {
+									generation: state.generation,
+									image_id: input.image_id,
 									kill: Some(KillCtx {
-										generation: state.generation,
-										kill_timeout_ms: sig
-											.override_kill_timeout_ms
-											.unwrap_or(input.lifecycle.kill_timeout_ms),
+										kill_timeout_ms: input.lifecycle.kill_timeout_ms,
 									}),
 								}));
 							}
@@ -435,9 +440,10 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 							state.drain_timeout_ts = None;
 						}
 						Main::Destroy(sig) => {
-							return Ok(Loop::Break(runtime::StateRes {
+							return Ok(Loop::Break(runtime::LifecycleRes {
+								generation: state.generation,
+								image_id: input.image_id,
 								kill: Some(KillCtx {
-									generation: state.generation,
 									kill_timeout_ms: sig
 										.override_kill_timeout_ms
 										.unwrap_or(input.lifecycle.kill_timeout_ms),
@@ -455,22 +461,34 @@ pub async fn pegboard_actor(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResul
 
 	ctx.workflow(destroy::Input {
 		actor_id: input.actor_id,
-		build_kind: Some(initial_actor_setup.meta.build_kind.clone()),
-		kill: state_res.kill,
+		generation: lifecycle_res.generation,
+		image_id: lifecycle_res.image_id,
+		build_allocation_type: Some(initial_actor_setup.meta.build_allocation_type),
+		kill: lifecycle_res.kill,
 	})
 	.output()
 	.await?;
+
+	// NOTE: The reason we allocate other actors from this actor workflow is because if we instead sent a
+	// signal to the client wf here it would incur a heavy throughput hit and we need the client wf to be as
+	// lightweight as possible; processing as few signals that aren't events/commands.
+	// Allocate other pending actors from queue
+	let res = ctx.activity(AllocatePendingActorsInput {}).await?;
+
+	// Dispatch pending allocs
+	for alloc in res.allocations {
+		ctx.signal(alloc.signal)
+			.to_workflow::<Workflow>()
+			.tag("actor_id", alloc.actor_id)
+			.send()
+			.await?;
+	}
 
 	Ok(())
 }
 
 #[message("pegboard_actor_create_complete")]
 pub struct CreateComplete {}
-
-#[message("pegboard_actor_allocated")]
-pub struct Allocated {
-	pub client_id: Uuid,
-}
 
 #[message("pegboard_actor_failed")]
 pub struct Failed {
@@ -479,6 +497,15 @@ pub struct Failed {
 
 #[message("pegboard_actor_ready")]
 pub struct Ready {}
+
+#[signal("pegboard_actor_allocate")]
+#[derive(Debug)]
+pub struct Allocate {
+	pub runner_id: Uuid,
+	pub new_runner: bool,
+	pub client_id: Uuid,
+	pub client_workflow_id: Uuid,
+}
 
 #[signal("pegboard_actor_destroy")]
 pub struct Destroy {
@@ -514,8 +541,19 @@ pub struct StateUpdate {
 #[message("pegboard_actor_upgrade_started")]
 pub struct UpgradeStarted {}
 
+#[message("pegboard_actor_upgrade_failed")]
+pub struct UpgradeFailed {
+	pub message: String,
+}
+
 #[message("pegboard_actor_upgrade_complete")]
 pub struct UpgradeComplete {}
+
+join_signal!(PendingAllocation {
+	Allocate,
+	Destroy,
+	//
+});
 
 join_signal!(Main {
 	StateUpdate,
@@ -524,14 +562,3 @@ join_signal!(Main {
 	Undrain,
 	Destroy,
 });
-
-// Stub definition
-#[derive(Debug, Serialize, Deserialize, Hash)]
-pub struct WaitForTraefikPollInput {}
-#[activity(WaitForTraefikPoll)]
-pub async fn wait_for_traefik_poll(
-	_ctx: &ActivityCtx,
-	_input: &WaitForTraefikPollInput,
-) -> GlobalResult<()> {
-	Ok(())
-}

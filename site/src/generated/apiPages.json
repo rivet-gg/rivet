@@ -4,19 +4,59 @@
       "title": "Actors",
       "pages": [
         {
+          "title": "actors.v1.list",
+          "href": "/docs/api/actors/v1/list",
+          "sortingKey": "/actors get"
+        },
+        {
+          "title": "actors.v1.create",
+          "href": "/docs/api/actors/v1/create",
+          "sortingKey": "/actors post"
+        },
+        {
+          "title": "actors.v1.logs.get",
+          "href": "/docs/api/actors/v1/logs/get",
+          "sortingKey": "/actors/logs get"
+        },
+        {
+          "title": "actors.v1.upgradeAll",
+          "href": "/docs/api/actors/v1/upgrade-all",
+          "sortingKey": "/actors/upgrade post"
+        },
+        {
+          "title": "actors.v1.destroy",
+          "href": "/docs/api/actors/v1/destroy",
+          "sortingKey": "/actors/{actor} delete"
+        },
+        {
+          "title": "actors.v1.get",
+          "href": "/docs/api/actors/v1/get",
+          "sortingKey": "/actors/{actor} get"
+        },
+        {
+          "title": "actors.v1.metrics.get",
+          "href": "/docs/api/actors/v1/metrics/get",
+          "sortingKey": "/actors/{actor}/metrics/history get"
+        },
+        {
+          "title": "actors.v1.upgrade",
+          "href": "/docs/api/actors/v1/upgrade",
+          "sortingKey": "/actors/{actor}/upgrade post"
+        },
+        {
           "title": "actors.list",
           "href": "/docs/api/actors/list",
-          "sortingKey": "/actors get"
+          "sortingKey": "/v2/actors get"
         },
         {
           "title": "actors.create",
           "href": "/docs/api/actors/create",
-          "sortingKey": "/actors post"
+          "sortingKey": "/v2/actors post"
         },
         {
           "title": "actors.logs.get",
           "href": "/docs/api/actors/logs/get",
-          "sortingKey": "/actors/logs get"
+          "sortingKey": "/v2/actors/logs get"
         },
         {
           "title": "actors.logs.export",
@@ -31,7 +71,7 @@
         {
           "title": "actors.upgradeAll",
           "href": "/docs/api/actors/upgrade-all",
-          "sortingKey": "/actors/upgrade post"
+          "sortingKey": "/v2/actors/upgrade post"
         },
         {
           "title": "actors.usage",
@@ -41,22 +81,22 @@
         {
           "title": "actors.destroy",
           "href": "/docs/api/actors/destroy",
-          "sortingKey": "/actors/{actor} delete"
+          "sortingKey": "/v2/actors/{actor} delete"
         },
         {
           "title": "actors.get",
           "href": "/docs/api/actors/get",
-          "sortingKey": "/actors/{actor} get"
+          "sortingKey": "/v2/actors/{actor} get"
         },
         {
           "title": "actors.metrics.get",
           "href": "/docs/api/actors/metrics/get",
-          "sortingKey": "/actors/{actor}/metrics/history get"
+          "sortingKey": "/v2/actors/{actor}/metrics/history get"
         },
         {
           "title": "actors.upgrade",
           "href": "/docs/api/actors/upgrade",
-          "sortingKey": "/actors/{actor}/upgrade post"
+          "sortingKey": "/v2/actors/{actor}/upgrade post"
         }
       ]
     },

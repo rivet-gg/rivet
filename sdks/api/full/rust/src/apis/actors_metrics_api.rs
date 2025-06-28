@@ -41,7 +41,7 @@ pub async fn actors_metrics_get(
 	let local_var_client = &local_var_configuration.client;
 
 	let local_var_uri_str = format!(
-		"{}/actors/{actor}/metrics/history",
+		"{}/v2/actors/{actor}/metrics/history",
 		local_var_configuration.base_path,
 		actor = crate::apis::urlencode(actor)
 	);
