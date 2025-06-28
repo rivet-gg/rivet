@@ -34,7 +34,7 @@ pub enum PrintType {
 pub struct TailOpts<'a> {
 	pub print_type: PrintType,
 	pub environment: &'a str,
-	pub actor_id: Uuid,
+	pub actor_id: String,
 	pub stream: LogStream,
 	pub follow: bool,
 	pub exit_on_ctrl_c: bool,
@@ -110,7 +110,7 @@ async fn tail_stream(
 		let res = apis::actors_logs_api::actors_logs_get(
 			&ctx.openapi_config_cloud,
 			stream,
-			&serde_json::to_string(&vec![opts.actor_id])?,
+			&serde_json::to_string(&vec![&opts.actor_id])?,
 			Some(&ctx.project.name_id),
 			Some(opts.environment),
 			None,
@@ -190,7 +190,7 @@ async fn poll_actor_state(
 
 		let res = apis::actors_api::actors_get(
 			&ctx.openapi_config_cloud,
-			&opts.actor_id.to_string(),
+			&opts.actor_id,
 			Some(&ctx.project.name_id),
 			Some(opts.environment),
 			None,

@@ -13,8 +13,9 @@
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ActorsActor {
+    /// Can be a UUID or base36 encoded binary data.
     #[serde(rename = "id")]
-    pub id: uuid::Uuid,
+    pub id: String,
     #[serde(rename = "region")]
     pub region: String,
     #[serde(rename = "tags", deserialize_with = "Option::deserialize")]
@@ -39,7 +40,7 @@ pub struct ActorsActor {
 }
 
 impl ActorsActor {
-    pub fn new(id: uuid::Uuid, region: String, tags: Option<serde_json::Value>, runtime: crate::models::ActorsRuntime, network: crate::models::ActorsNetwork, lifecycle: crate::models::ActorsLifecycle, created_at: String) -> ActorsActor {
+    pub fn new(id: String, region: String, tags: Option<serde_json::Value>, runtime: crate::models::ActorsRuntime, network: crate::models::ActorsNetwork, lifecycle: crate::models::ActorsLifecycle, created_at: String) -> ActorsActor {
         ActorsActor {
             id,
             region,

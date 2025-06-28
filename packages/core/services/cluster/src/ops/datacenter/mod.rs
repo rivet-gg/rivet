@@ -6,3 +6,4 @@ pub mod resolve_for_name_id;
 pub mod server_spec_get;
 pub mod tls_get;
 pub mod topology_get;
+pub mod get_for_label;

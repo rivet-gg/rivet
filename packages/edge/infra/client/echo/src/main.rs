@@ -65,7 +65,7 @@ async fn run_websocket_client(url: &str) -> Result<(), Box<dyn std::error::Error
 
 	let payload = json!({
 		"init": {
-			"runner_id": Uuid::nil(),
+			"access_token": env::var("RIVET_ACCESS_TOKEN").expect("RIVET_ACCESS_TOKEN not set"),
 		},
 	});
 

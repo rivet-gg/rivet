@@ -68,7 +68,7 @@ async fn handle_connection(
 			guard.clone().unwrap()
 		};
 
-		let actor_id = Uuid::new_v4();
+		let actor_id = rivet_util::Id::new_v1(0);
 		let mut actor_state = State::None;
 
 		// Receive messages from socket

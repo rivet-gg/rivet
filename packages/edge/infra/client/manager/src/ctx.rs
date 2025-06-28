@@ -37,6 +37,7 @@ use uuid::Uuid;
 
 use crate::{
 	actor::Actor,
+	claims::{Claims, Entitlement},
 	event_sender::EventSender,
 	image_download_handler::ImageDownloadHandler,
 	metrics,
@@ -72,7 +73,7 @@ pub enum RuntimeError {
 
 #[derive(sqlx::FromRow)]
 struct ActorRow {
-	actor_id: Uuid,
+	actor_id: rivet_util::Id,
 	generation: i64,
 	config: Vec<u8>,
 }
@@ -88,6 +89,7 @@ struct RunnerRow {
 pub struct Ctx {
 	config: Config,
 	system: SystemInfo,
+	secret: Vec<u8>,
 
 	// This requires a RwLock because of the reset functionality which reinitialized the entire database. It
 	// should never be written to besides that.
@@ -97,19 +99,21 @@ pub struct Ctx {
 	pub(crate) image_download_handler: ImageDownloadHandler,
 
 	pub(crate) runners: RwLock<HashMap<Uuid, Arc<Runner>>>,
-	pub(crate) actors: RwLock<HashMap<(Uuid, u32), Arc<Actor>>>,
+	pub(crate) actors: RwLock<HashMap<(rivet_util::Id, u32), Arc<Actor>>>,
 }
 
 impl Ctx {
 	pub fn new(
 		config: Config,
 		system: SystemInfo,
+		secret: Vec<u8>,
 		pool: SqlitePool,
 		tx: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
 	) -> Arc<Self> {
 		Arc::new(Ctx {
 			config,
 			system,
+			secret,
 
 			pool: RwLock::new(pool),
 			tx: Mutex::new(tx),
@@ -537,7 +541,7 @@ impl Ctx {
 	}
 
 	async fn receive_runner_init_message(
-		&self,
+		self: &Arc<Self>,
 		ws_stream: &mut Option<WebSocketStream<TcpStream>>,
 	) -> Result<()> {
 		match tokio::time::timeout(
@@ -551,24 +555,41 @@ impl Ctx {
 					tracing::debug!("runner socket closed");
 					Ok(())
 				}
-				Some(Ok(Message::Binary(buf))) => match serde_json::from_slice::<
-					runner_protocol::ToManager,
-				>(&buf)
-				{
-					Ok(runner_protocol::ToManager::Init { runner_id }) => {
-						if let Some(runner) = self.runners.read().await.get(&runner_id) {
-							runner
-								.attach_socket(ws_stream.take().context("ws_stream should exist")?)
-								.await?;
+				Some(Ok(Message::Binary(buf))) => {
+					match serde_json::from_slice::<runner_protocol::ToManager>(&buf) {
+						Ok(runner_protocol::ToManager::Init { access_token }) => {
+							let claims = Claims::decode(&access_token, self.secret())
+								.context("could not decode access token from init packet")?;
 
-							Ok(())
-						} else {
-							bail!("killing unknown runner: {runner_id}");
+							// Read runner id from claims
+							let runner_id = 'ent: {
+								for ent in claims.ent() {
+									#[allow(irrefutable_let_patterns)]
+									if let Entitlement::Runner { runner_id } = ent {
+										break 'ent runner_id;
+									}
+								}
+
+								bail!("no runner entitlement");
+							};
+
+							if let Some(runner) = self.runners.read().await.get(&runner_id) {
+								runner
+									.attach_socket(
+										self,
+										ws_stream.take().context("ws_stream should exist")?,
+									)
+									.await?;
+
+								Ok(())
+							} else {
+								bail!("killing unknown runner: {runner_id}");
+							}
 						}
+						Ok(packet) => bail!("invalid init packet from runner: {packet:?}"),
+						Err(err) => Err(err).context("invalid init packet from runner"),
 					}
-					Ok(packet) => bail!("invalid init packet from runner: {packet:?}"),
-					Err(err) => Err(err).context("invalid init packet from runner"),
-				},
+				}
 				Some(Ok(packet)) => bail!("invalid init packet from runner: {packet:?}"),
 				Some(Err(err)) => Err(err).context("runner socket error"),
 			},
@@ -826,7 +847,7 @@ impl Ctx {
 				.await?;
 
 				let actor_rows = utils::sql::query(|| async {
-					sqlx::query_as::<_, (Uuid, i64, Option<i64>)>(indoc!(
+					sqlx::query_as::<_, (rivet_util::Id, i64, Option<i64>)>(indoc!(
 						"
 						UPDATE actors
 						SET stop_ts = ?2
@@ -1028,6 +1049,10 @@ impl Ctx {
 		&self.config.client
 	}
 
+	pub fn secret(&self) -> &[u8] {
+		&self.secret
+	}
+
 	pub fn runners_path(&self) -> PathBuf {
 		self.config().data_dir().join("runners")
 	}
@@ -1052,7 +1077,7 @@ impl Ctx {
 // Test bindings
 #[cfg(feature = "test")]
 impl Ctx {
-	pub fn actors(&self) -> &RwLock<HashMap<(Uuid, u32), Arc<Actor>>> {
+	pub fn actors(&self) -> &RwLock<HashMap<(rivet_util::Id, u32), Arc<Actor>>> {
 		&self.actors
 	}
 }
