@@ -368,7 +368,7 @@ impl ImageDownloadHandler {
 					let stderr = String::from_utf8_lossy(&output.stderr);
 					let bytes_read = match parse_tar_total_bytes(&stderr) {
 						Some(x) => x,
-						None =>{
+						None => {
 							tracing::error!(%stderr, "failed to parse bytes read from tar output");
 							bail!("failed to parse bytes read from tar output")
 						}
