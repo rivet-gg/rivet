@@ -14,19 +14,28 @@ docs/ActorsCreateActorRuntimeRequest.md
 docs/ActorsEndpointType.md
 docs/ActorsExportActorLogsResponse.md
 docs/ActorsGetActorLogsResponse.md
+docs/ActorsGetActorMetricsResponse.md
 docs/ActorsGetActorResponse.md
 docs/ActorsGetActorUsageResponse.md
 docs/ActorsLifecycle.md
 docs/ActorsListActorsResponse.md
 docs/ActorsLogsApi.md
+<<<<<<< HEAD
 docs/ActorsLogsExportRequest.md
+=======
+docs/ActorsMetricsApi.md
+>>>>>>> 43e5048bc (fix: api changes)
 docs/ActorsNetwork.md
 docs/ActorsNetworkMode.md
 docs/ActorsPort.md
 docs/ActorsPortProtocol.md
 docs/ActorsPortRouting.md
+<<<<<<< HEAD
 docs/ActorsQueryActorsResponse.md
 docs/ActorsResources.md
+=======
+docs/ActorsQueryLogStream.md
+>>>>>>> 43e5048bc (fix: api changes)
 docs/ActorsRuntime.md
 docs/ActorsUpgradeActorRequest.md
 docs/ActorsUpgradeAllActorsRequest.md
@@ -43,6 +52,33 @@ docs/BuildsPatchBuildTagsRequest.md
 docs/BuildsPrepareBuildRequest.md
 docs/BuildsPrepareBuildResponse.md
 docs/BuildsResources.md
+docs/ContainersApi.md
+docs/ContainersContainer.md
+docs/ContainersCreateContainerNetworkRequest.md
+docs/ContainersCreateContainerPortRequest.md
+docs/ContainersCreateContainerRequest.md
+docs/ContainersCreateContainerResponse.md
+docs/ContainersCreateContainerRuntimeNetworkRequest.md
+docs/ContainersCreateContainerRuntimeRequest.md
+docs/ContainersEndpointType.md
+docs/ContainersGetContainerLogsResponse.md
+docs/ContainersGetContainerMetricsResponse.md
+docs/ContainersGetContainerResponse.md
+docs/ContainersLifecycle.md
+docs/ContainersListContainersResponse.md
+docs/ContainersLogsApi.md
+docs/ContainersMetricsApi.md
+docs/ContainersNetwork.md
+docs/ContainersNetworkMode.md
+docs/ContainersPort.md
+docs/ContainersPortProtocol.md
+docs/ContainersPortRouting.md
+docs/ContainersQueryLogStream.md
+docs/ContainersResources.md
+docs/ContainersRuntime.md
+docs/ContainersUpgradeAllContainersRequest.md
+docs/ContainersUpgradeAllContainersResponse.md
+docs/ContainersUpgradeContainerRequest.md
 docs/ErrorBody.md
 docs/Pagination.md
 docs/RegionsApi.md
@@ -62,8 +98,12 @@ docs/WatchResponse.md
 git_push.sh
 src/apis/actors_api.rs
 src/apis/actors_logs_api.rs
+src/apis/actors_metrics_api.rs
 src/apis/builds_api.rs
 src/apis/configuration.rs
+src/apis/containers_api.rs
+src/apis/containers_logs_api.rs
+src/apis/containers_metrics_api.rs
 src/apis/mod.rs
 src/apis/regions_api.rs
 src/apis/routes_api.rs
@@ -78,6 +118,7 @@ src/models/actors_create_actor_runtime_request.rs
 src/models/actors_endpoint_type.rs
 src/models/actors_export_actor_logs_response.rs
 src/models/actors_get_actor_logs_response.rs
+src/models/actors_get_actor_metrics_response.rs
 src/models/actors_get_actor_response.rs
 src/models/actors_get_actor_usage_response.rs
 src/models/actors_lifecycle.rs
@@ -88,8 +129,12 @@ src/models/actors_network_mode.rs
 src/models/actors_port.rs
 src/models/actors_port_protocol.rs
 src/models/actors_port_routing.rs
+<<<<<<< HEAD
 src/models/actors_query_actors_response.rs
 src/models/actors_resources.rs
+=======
+src/models/actors_query_log_stream.rs
+>>>>>>> 43e5048bc (fix: api changes)
 src/models/actors_runtime.rs
 src/models/actors_upgrade_actor_request.rs
 src/models/actors_upgrade_all_actors_request.rs
@@ -105,6 +150,30 @@ src/models/builds_patch_build_tags_request.rs
 src/models/builds_prepare_build_request.rs
 src/models/builds_prepare_build_response.rs
 src/models/builds_resources.rs
+src/models/containers_container.rs
+src/models/containers_create_container_network_request.rs
+src/models/containers_create_container_port_request.rs
+src/models/containers_create_container_request.rs
+src/models/containers_create_container_response.rs
+src/models/containers_create_container_runtime_network_request.rs
+src/models/containers_create_container_runtime_request.rs
+src/models/containers_endpoint_type.rs
+src/models/containers_get_container_logs_response.rs
+src/models/containers_get_container_metrics_response.rs
+src/models/containers_get_container_response.rs
+src/models/containers_lifecycle.rs
+src/models/containers_list_containers_response.rs
+src/models/containers_network.rs
+src/models/containers_network_mode.rs
+src/models/containers_port.rs
+src/models/containers_port_protocol.rs
+src/models/containers_port_routing.rs
+src/models/containers_query_log_stream.rs
+src/models/containers_resources.rs
+src/models/containers_runtime.rs
+src/models/containers_upgrade_all_containers_request.rs
+src/models/containers_upgrade_all_containers_response.rs
+src/models/containers_upgrade_container_request.rs
 src/models/error_body.rs
 src/models/mod.rs
 src/models/pagination.rs

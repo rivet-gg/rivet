@@ -1,5 +1,6 @@
 export * as actors from "./actors";
 export * as builds from "./builds";
+export * as containers from "./containers";
 export * as regions from "./regions";
 export * as routes from "./routes";
 export * as common from "./common";

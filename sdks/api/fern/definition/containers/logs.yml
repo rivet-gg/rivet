@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  commons: ../common.yml
+
+service:
+  auth: true
+  base-path: /v1/containers
+  audiences:
+    - runtime
+  endpoints:
+    get:
+      path: /logs
+      method: GET
+      docs: >-
+        Returns the logs for a given container.
+      request:
+        name: GetContainerLogsRequestQuery
+        query-parameters:
+          project: optional<string>
+          environment: optional<string>
+          stream: QueryLogStream
+          container_ids_json: string
+          search_text: optional<string>
+          search_case_sensitive: optional<boolean>
+          search_enable_regex: optional<boolean>
+          watch_index:
+            docs: A query parameter denoting the requests watch index.
+            type: optional<string>
+      response: GetContainerLogsResponse
+
+types:
+  GetContainerLogsResponse:
+    properties:
+      container_ids:
+        docs: List of container IDs in these logs. The order of these correspond to the index in the log entry.
+        type: list<commons.Id>
+      lines:
+        docs: Sorted old to new.
+        type: list<string>
+      timestamps:
+        docs: Sorted old to new.
+        type: list<commons.Timestamp>
+      streams:
+        docs: |
+          Streams the logs came from.
+
+          0 = stdout
+          1 = stderr
+        type: list<integer>
+      foreigns:
+        docs: List of flags denoting if this log is not directly from the container.
+        type: list<boolean>
+      container_indices:
+        docs: Index of the container that this log was for. Use this index to look the full ID in `container_ids`.
+        type: list<integer>
+      watch: commons.WatchResponse
+
+  QueryLogStream:
+    enum:
+      - std_out
+      - std_err
+      - all

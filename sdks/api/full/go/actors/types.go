@@ -67,7 +67,6 @@ type Actor struct {
 	Tags        interface{}    `json:"tags,omitempty"`
 	Runtime     *Runtime       `json:"runtime,omitempty"`
 	Network     *Network       `json:"network,omitempty"`
-	Resources   *Resources     `json:"resources,omitempty"`
 	Lifecycle   *Lifecycle     `json:"lifecycle,omitempty"`
 	CreatedAt   sdk.Timestamp  `json:"created_at"`
 	StartedAt   *sdk.Timestamp `json:"started_at,omitempty"`
@@ -354,40 +353,6 @@ func (p *PortRouting) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", p)
-}
-
-type Resources struct {
-	// The number of CPU cores in millicores, or 1/1000 of a core. For example,
-	// 1/8 of a core would be 125 millicores, and 1 core would be 1000
-	// millicores.
-	Cpu int `json:"cpu"`
-	// The amount of memory in megabytes
-	Memory int `json:"memory"`
-
-	_rawJSON json.RawMessage
-}
-
-func (r *Resources) UnmarshalJSON(data []byte) error {
-	type unmarshaler Resources
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*r = Resources(value)
-	r._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (r *Resources) String() string {
-	if len(r._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(r._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(r); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", r)
 }
 
 type Runtime struct {

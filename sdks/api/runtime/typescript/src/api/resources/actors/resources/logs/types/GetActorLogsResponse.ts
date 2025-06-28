@@ -6,7 +6,7 @@ import * as Rivet from "../../../../../index";
 
 export interface GetActorLogsResponse {
     /** List of actor IDs in these logs. The order of these correspond to the index in the log entry. */
-    actorIds: Rivet.Id[];
+    actorIds: string[];
     /** Sorted old to new. */
     lines: string[];
     /** Sorted old to new. */

@@ -8,6 +8,7 @@ import (
 	authclient "sdk/auth/client"
 	buildsclient "sdk/builds/client"
 	cloudclient "sdk/cloud/client"
+	containersclient "sdk/containers/client"
 	core "sdk/core"
 	coreintercomclient "sdk/coreintercom/client"
 	edgeintercomclient "sdk/edgeintercom/client"
@@ -31,6 +32,7 @@ type Client struct {
 	Actors       *actorsclient.Client
 	Builds       *buildsclient.Client
 	Cloud        *cloudclient.Client
+	Containers   *containersclient.Client
 	CoreIntercom *coreintercomclient.Client
 	EdgeIntercom *edgeintercomclient.Client
 	Group        *groupclient.Client
@@ -58,6 +60,7 @@ func NewClient(opts ...core.ClientOption) *Client {
 		Actors:       actorsclient.NewClient(opts...),
 		Builds:       buildsclient.NewClient(opts...),
 		Cloud:        cloudclient.NewClient(opts...),
+		Containers:   containersclient.NewClient(opts...),
 		CoreIntercom: coreintercomclient.NewClient(opts...),
 		EdgeIntercom: edgeintercomclient.NewClient(opts...),
 		Group:        groupclient.NewClient(opts...),
