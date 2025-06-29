@@ -255,6 +255,73 @@ export const actorLogsQueryOptions = (
 	});
 };
 
+export const actorMetricsQueryOptions = (
+	{
+		projectNameId,
+		environmentNameId,
+		actorId,
+	}: {
+		projectNameId: string;
+		environmentNameId: string;
+		actorId: string;
+	},
+	opts: { refetchInterval?: number } = {},
+) => {
+	return queryOptions({
+		...opts,
+		queryKey: [
+			"project",
+			projectNameId,
+			"environment",
+			environmentNameId,
+			"actor",
+			actorId,
+			"metrics",
+		] as const,
+		queryFn: async ({
+			signal: abortSignal,
+			queryKey: [, project, , environment, , actorId],
+		}) => {
+			const now = Date.now();
+			const start = now - 60000; // Last minute
+			const end = now;
+			
+			const response = await rivetClient.actors.metrics.get(
+				{
+					project,
+					environment,
+					start,
+					end,
+					interval: 10000, // 10 second intervals
+					actorIdsJson: JSON.stringify([actorId]),
+					metricsJson: JSON.stringify([
+						"container_cpu_usage_seconds_total",
+						"container_memory_usage_bytes"
+					]),
+				},
+				{ abortSignal },
+			);
+
+			// Extract the latest metrics values
+			let cpu: number | null = null;
+			let memory: number | null = null;
+
+			if (response.metrics && response.metrics.length >= 2) {
+				const cpuData = response.metrics[0];
+				const memoryData = response.metrics[1];
+				
+				// Get the last data point for each metric
+				cpu = cpuData && cpuData.length > 0 ? cpuData[cpuData.length - 1] : null;
+				memory = memoryData && memoryData.length > 0 ? memoryData[memoryData.length - 1] : null;
+			}
+
+			return {
+				metrics: { cpu, memory },
+			};
+		},
+	});
+};
+
 export const actorBuildsQueryOptions = ({
 	projectNameId,
 	environmentNameId,

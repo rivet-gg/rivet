@@ -5394,6 +5394,92 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
+  /actors/metrics/history:
+    get:
+      description: Returns the metrics for a given actor.
+      operationId: actors_metrics_get
+      tags:
+        - ActorsMetrics
+      parameters:
+        - name: project
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: interval
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: actor_ids_json
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: metrics_json
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorsGetActorMetricsResponse'
+        '400':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '408':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security: *ref_0
   /auth/identity/email/start-verification:
     post:
       description: Starts the verification process for linking an email to your identity.
@@ -10740,6 +10826,23 @@ components:
         - std_out
         - std_err
         - all
+    ActorsGetActorMetricsResponse:
+      type: object
+      properties:
+        actor_ids:
+          type: array
+          items:
+            type: string
+        metrics:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+              format: double
+      required:
+        - actor_ids
+        - metrics
     AuthCompleteStatus:
       type: string
       enum:

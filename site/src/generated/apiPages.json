@@ -19,6 +19,11 @@
           "sortingKey": "/actors/logs get"
         },
         {
+          "title": "actors.metrics.get",
+          "href": "/docs/api/actors/metrics/get",
+          "sortingKey": "/actors/metrics/history get"
+        },
+        {
           "title": "actors.upgradeAll",
           "href": "/docs/api/actors/upgrade-all",
           "sortingKey": "/actors/upgrade post"

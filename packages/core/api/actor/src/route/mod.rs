@@ -8,6 +8,7 @@ use uuid::Uuid;
 pub mod actors;
 pub mod builds;
 pub mod logs;
+pub mod metrics;
 pub mod regions;
 pub mod routes;
 
@@ -124,6 +125,12 @@ define_router! {
 			),
 		},
 
+		"actors" / "metrics": {
+			GET: metrics::get_metrics(
+				query: metrics::GetActorMetricsQuery,
+				opt_auth: true,
+			),
+		},
 
 		"builds": {
 			GET: builds::list(
