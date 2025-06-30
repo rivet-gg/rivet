@@ -16,6 +16,19 @@ import {
 	createFiltersPicker,
 	createFiltersSchema,
 } from "@rivet-gg/components";
+import { ActorsListRow } from "./actors-list-row";
+import { CreateActorButton } from "./create-actor-button";
+import { GoToActorButton } from "./go-to-actor-button";
+import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useAtomValue, useSetAtom } from "jotai";
+import {
+	actorFiltersAtom,
+	actorFiltersCountAtom,
+	actorRegionsAtom,
+	actorsQueryAtom,
+	actorTagsAtom,
+	filteredActorsCountAtom,
+} from "./actor-context";
 import {
 	Icon,
 	faActors,
@@ -30,26 +43,16 @@ import {
 	faTag,
 	faTs,
 } from "@rivet-gg/icons";
-import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useMemo } from "react";
-import {
-	actorFiltersAtom,
-	actorFiltersCountAtom,
-	actorRegionsAtom,
-	actorTagsAtom,
-	actorsAtomsAtom,
-	actorsPaginationAtom,
-	actorsQueryAtom,
-	filteredActorsCountAtom,
-} from "./actor-context";
-import { ActorStatus } from "./actor-status";
-import type { ActorStatus as ActorStatusType } from "./actor-status-indicator";
 import { ActorTag } from "./actor-tags";
-import { ActorsListRow } from "./actors-list-row";
+import { ActorStatus } from "./actor-status";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+	actorsLisPaginationQueryOptions,
+	actorsListQueryOptions,
+} from "./queries";
+import type { ActorStatus as ActorStatusType } from "./queries";
 import { useActorsView } from "./actors-view-context-provider";
-import { CreateActorButton } from "./create-actor-button";
-import { GoToActorButton } from "./go-to-actor-button";
 
 export function ActorsList() {
 	return (
@@ -112,19 +115,26 @@ function LoadingIndicator() {
 }
 
 function List() {
-	const actors = useAtomValue(actorsAtomsAtom);
+	const { data: actorIds = [] } = useInfiniteQuery(actorsListQueryOptions());
+	const actorId = useSearch({ select: (state) => state.actorId });
+
 	return (
 		<>
-			{actors.map((actor) => (
-				<ActorsListRow key={`${actor}`} actor={actor} />
+			{actorIds.map((id) => (
+				<ActorsListRow
+					key={id}
+					actorId={id}
+					isCurrent={actorId === id}
+				/>
 			))}
 		</>
 	);
 }
 
 function Pagination() {
-	const { hasNextPage, isFetchingNextPage, fetchNextPage } =
-		useAtomValue(actorsPaginationAtom);
+	const { hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteQuery(
+		actorsLisPaginationQueryOptions(),
+	);
 
 	if (hasNextPage) {
 		return (

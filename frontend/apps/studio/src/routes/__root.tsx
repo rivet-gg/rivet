@@ -6,8 +6,8 @@ import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { usePostHog } from "posthog-js/react";
-import { Suspense } from "react";
 import { z } from "zod";
+import { Suspense } from "react";
 
 function Modals() {
 	const search = Route.useSearch();
@@ -91,26 +91,10 @@ function Modals() {
 // 		</PageLayout.Root>
 // 	);
 // }
-
-function Root() {
-	return (
-		<Layout.Root>
-			<Layout.VisibleInFull>
-				<Layout.Header />
-				<Layout.Main>
-					{/* <Modals /> */}
-					<Outlet />
-				</Layout.Main>
-			</Layout.VisibleInFull>
-			<Layout.Footer />
-		</Layout.Root>
-	);
-}
-
 function RootRoute() {
 	return (
 		<>
-			<Root />
+			<Outlet />
 			<Suspense>
 				<Modals />
 			</Suspense>

@@ -9,20 +9,17 @@ import {
 	cn,
 } from "@rivet-gg/components";
 import { Icon, faBooks } from "@rivet-gg/icons";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import { Fragment } from "react";
-import type { Actor, ActorAtom } from "./actor-context";
 import { ActorObjectInspector } from "./console/actor-inspector";
-
-const selector = (a: Actor) => a.network?.ports;
+import { Fragment } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { type ActorId, actorNetworkPortsQueryOptions } from "./queries";
 
 export interface ActorNetworkProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
-export function ActorNetwork({ actor }: ActorNetworkProps) {
-	const ports = useAtomValue(selectAtom(actor, selector));
+export function ActorNetwork({ actorId }: ActorNetworkProps) {
+	const { data: ports } = useQuery(actorNetworkPortsQueryOptions(actorId));
 	if (!ports) {
 		return null;
 	}

@@ -10,13 +10,13 @@ export function initThirdPartyProviders(router: unknown, debug: boolean) {
 	let ph: PostHog | null = null;
 
 	// init posthog
-	if (config.posthog) {
-		ph =
-			posthog.init(config.posthog.apiKey, {
-				api_host: config.posthog.apiHost,
-				debug: debug,
-			}) || null;
-	}
+	// if (config.posthog) {
+	// 	ph =
+	// 		posthog.init(config.posthog.apiKey, {
+	// 			api_host: config.posthog.apiHost,
+	// 			debug: debug,
+	// 		}) || null;
+	// }
 
 	// init sentry
 	if (config.sentry) {

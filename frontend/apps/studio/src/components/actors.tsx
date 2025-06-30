@@ -3,10 +3,8 @@ import {
 	ActorsActorDetails,
 	ActorsActorEmptyDetails,
 	ActorsListPreview,
-	currentActorAtom,
 } from "@rivet-gg/components/actors";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useAtomValue } from "jotai";
 
 export function Actors({ actorId }: { actorId: string | undefined }) {
 	return (
@@ -27,16 +25,15 @@ export function Actors({ actorId }: { actorId: string | undefined }) {
 }
 
 function Actor() {
-	const actor = useAtomValue(currentActorAtom);
 	const navigate = useNavigate();
-	const { tab } = useSearch({ from: "/_layout/" });
+	const { tab, actorId } = useSearch({ from: "/_layout/" });
 
-	if (!actor) {
+	if (!actorId) {
 		return null;
 	}
 	return (
 		<ActorsActorDetails
-			actor={actor}
+			actorId={actorId}
 			tab={tab}
 			onTabChange={(tab) => {
 				navigate({

@@ -1,28 +1,18 @@
 import { Dd, DiscreteCopyButton, Dl, Dt, Flex, cn } from "@rivet-gg/components";
 import { formatISO } from "date-fns";
-import equal from "fast-deep-equal";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import type { Actor, ActorAtom } from "./actor-context";
 import { ActorRegion } from "./actor-region";
 import { ActorTags } from "./actor-tags";
-
-const selector = (a: Actor) => ({
-	id: a.id,
-	tags: a.tags,
-	createdAt: a.createdAt,
-	destroyedAt: a.destroyedAt,
-	region: a.region,
-});
+import { useQuery } from "@tanstack/react-query";
+import { actorGeneralQueryOptions, type ActorId } from "./queries";
 
 export interface ActorGeneralProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
-export function ActorGeneral({ actor }: ActorGeneralProps) {
-	const { id, tags, createdAt, destroyedAt, region } = useAtomValue(
-		selectAtom(actor, selector, equal),
-	);
+export function ActorGeneral({ actorId }: ActorGeneralProps) {
+	const {
+		data: { region, tags, createdAt, destroyedAt } = {},
+	} = useQuery(actorGeneralQueryOptions(actorId));
 
 	return (
 		<div className="px-4 mt-4 mb-8">
@@ -39,8 +29,8 @@ export function ActorGeneral({ actor }: ActorGeneralProps) {
 					</Dd>
 					<Dt>ID</Dt>
 					<Dd className="text-mono">
-						<DiscreteCopyButton size="xs" value={id}>
-							{id}
+						<DiscreteCopyButton size="xs" value={actorId}>
+							{actorId}
 						</DiscreteCopyButton>
 					</Dd>
 					<Dt>Tags</Dt>

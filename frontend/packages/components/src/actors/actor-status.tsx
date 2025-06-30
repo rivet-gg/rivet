@@ -2,20 +2,20 @@ import { cn } from "@rivet-gg/components";
 import type { ActorAtom } from "./actor-context";
 import {
 	ActorStatusIndicator,
-	type ActorStatus as ActorStatusType,
-	AtomizedActorStatusIndicator,
+	QueriedActorStatusIndicator,
 } from "./actor-status-indicator";
 import {
 	ActorStatusLabel,
-	AtomizedActorStatusLabel,
+	QueriedActorStatusLabel,
 } from "./actor-status-label";
+import type { ActorStatus as ActorStatusType } from "./queries";
 
 interface ActorStatusProps {
 	className?: string;
-	actor: ActorAtom;
+	actorId: string;
 }
 
-export const AtomizedActorStatus = ({
+export const QueriedActorStatus = ({
 	className,
 	...props
 }: ActorStatusProps) => {
@@ -26,8 +26,8 @@ export const AtomizedActorStatus = ({
 				className,
 			)}
 		>
-			<AtomizedActorStatusIndicator {...props} />
-			<AtomizedActorStatusLabel {...props} />
+			<QueriedActorStatusIndicator {...props} />
+			<QueriedActorStatusLabel {...props} />
 		</div>
 	);
 };

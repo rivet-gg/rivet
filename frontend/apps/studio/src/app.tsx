@@ -6,18 +6,14 @@ import {
 	TooltipProvider,
 	getConfig,
 } from "@rivet-gg/components";
-import {
-	actorFiltersAtom,
-	currentActorIdAtom,
-	pickActorListFilters,
-} from "@rivet-gg/components/actors";
 import { PageLayout } from "@rivet-gg/components/layout";
 import * as Sentry from "@sentry/react";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
-import { useAtom } from "jotai";
-import { withAtomEffect } from "jotai-effect";
 import { Suspense } from "react";
 import { routeTree } from "./routeTree.gen";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./queries/global";
 
 declare module "@tanstack/react-router" {
 	interface Register {
@@ -36,42 +32,26 @@ export const router = createRouter({
 	},
 });
 
-const effect = withAtomEffect(actorFiltersAtom, (get, set) => {
-	// set initial values
-	const search = router.state.location.search;
-
-	const filters = pickActorListFilters(search);
-
-	set(actorFiltersAtom, filters);
-	set(currentActorIdAtom, router.state.location.search.actorId);
-});
-
-const effect2 = withAtomEffect(actorFiltersAtom, (get, set) => {
-	return router.subscribe("onResolved", (event) => {
-		set(actorFiltersAtom, pickActorListFilters(event.toLocation.search));
-		set(currentActorIdAtom, event.toLocation.search.actorId);
-	});
-});
-
 function InnerApp() {
-	useAtom(effect);
-	useAtom(effect2);
-
 	return <RouterProvider router={router} />;
 }
 
 export function App() {
 	return (
-		<ConfigProvider value={getConfig()}>
-			<ThirdPartyProviders>
-				<Suspense fallback={<FullscreenLoading />}>
-					<TooltipProvider>
-						<InnerApp />
-					</TooltipProvider>
-				</Suspense>
-			</ThirdPartyProviders>
+		<QueryClientProvider client={queryClient}>
+			<ConfigProvider value={getConfig()}>
+				<ThirdPartyProviders>
+					<Suspense fallback={<FullscreenLoading />}>
+						<TooltipProvider>
+							<InnerApp />
+						</TooltipProvider>
+					</Suspense>
+				</ThirdPartyProviders>
 
-			<Toaster />
-		</ConfigProvider>
+				<Toaster />
+			</ConfigProvider>
+
+			<ReactQueryDevtools client={queryClient} />
+		</QueryClientProvider>
 	);
 }

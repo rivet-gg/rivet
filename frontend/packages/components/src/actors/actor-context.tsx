@@ -4,37 +4,60 @@ import { type Atom, atom } from "jotai";
 import { atomFamily, splitAtom } from "jotai/utils";
 import { toRecord } from "../lib/utils";
 import { FilterOp, type FilterValue } from "../ui/filters";
-import { ACTOR_FRAMEWORK_TAG_VALUE } from "./actor-tags";
+import { ActorFeature } from "./queries";
+import type { Actor, ActorLogEntry } from "@rivetkit/core/inspector";
+export {
+	createManagerInspectorClient,
+	createActorInspectorClient,
+} from "@rivetkit/core/inspector";
 
-export enum ActorFeature {
-	Logs = "logs",
-	Config = "config",
-	Connections = "connections",
-	State = "state",
-	Console = "console",
-	Runtime = "runtime",
-	Metrics = "metrics",
-	InspectReconnectNotification = "inspect_reconnect_notification",
+interface QueryOptions {
+	signal: AbortSignal;
 }
 
-export type Actor = Omit<
-	Rivet.actor.Actor,
-	"createdAt" | "runtime" | "lifecycle" | "network" | "resources"
-> & {
-	status: "unknown" | "starting" | "running" | "stopped" | "crashed";
+interface ActorsDataProvider {
+	getActors: (
+		param: { cursor: string; limit: number },
+		opts: QueryOptions,
+	) => Promise<Actor[]>;
+	getActor: (id: string, opts: QueryOptions) => Promise<Actor | null>;
+	getActorLogs: (id: string, opts: QueryOptions) => Promise<ActorLogEntry[]>;
+	getRegions: (opts: QueryOptions) => Promise<Rivet.regions.Region[]>;
+}
 
-	lifecycle?: Rivet.actor.Lifecycle;
-	endpoint?: string;
-	logs: LogsAtom;
-	metrics: MetricsAtom;
-	network?: Rivet.actor.Network | null;
-	resources?: Rivet.actor.Resources | null;
-	runtime?: Rivet.actor.Runtime | null;
-	destroy?: DestroyActorAtom;
-	destroyTs?: Date;
-	createdAt?: Date;
-	features?: ActorFeature[];
+export const actorsDataProvider = {
+	__provider: null as ActorsDataProvider | null,
+	set: (provider: ActorsDataProvider) => {
+		actorsDataProvider.__provider = provider;
+	},
+	get: (): ActorsDataProvider => {
+		if (!actorsDataProvider.__provider) {
+			throw new Error(
+				"Actors data provider is not set. Please set it using setActorsDataProvider.",
+			);
+		}
+		return actorsDataProvider.__provider;
+	},
 };
+
+// export type Actor = Omit<
+// 	Rivet.actor.Actor,
+// 	"createdAt" | "runtime" | "lifecycle" | "network" | "resources"
+// > & {
+// 	status: "unknown" | "starting" | "running" | "stopped" | "crashed";
+
+// 	lifecycle?: Rivet.actor.Lifecycle;
+// 	endpoint?: string;
+// 	logs: LogsAtom;
+// 	metrics: MetricsAtom;
+// 	network?: Rivet.actor.Network | null;
+// 	resources?: Rivet.actor.Resources | null;
+// 	runtime?: Rivet.actor.Runtime | null;
+// 	destroy?: DestroyActorAtom;
+// 	destroyTs?: Date;
+// 	createdAt?: Date;
+// 	features?: ActorFeature[];
+// };
 
 export type Logs = {
 	id: string;
@@ -47,7 +70,7 @@ export type Logs = {
 
 export type Metrics = Record<string, number | null>;
 
-export type Build = Rivet.actor.Build;
+export type Build = Rivet.builds.Build;
 export type DestroyActor = {
 	isDestroying: boolean;
 	destroy: () => Promise<void>;
@@ -80,7 +103,7 @@ export type CreateActor = {
 	endpoint: string | null;
 };
 
-export type Region = Rivet.actor.Region;
+export type Region = Rivet.regions.Region;
 
 // global atoms
 export const currentActorIdAtom = atom<string | undefined>(undefined);
@@ -126,6 +149,12 @@ export const actorEnvironmentAtom = atom<{
 	projectNameId: string;
 	environmentNameId: string;
 } | null>(null);
+
+export type ExportLogsHandler = (params: {
+	projectNameId: string;
+	environmentNameId: string;
+	queryJson: string;
+}) => Promise<{ url: string }>;
 
 export const actorMetricsTimeWindowAtom = atom<number>(15 * 60 * 1000); // Default to 15 minutes
 
@@ -396,7 +425,6 @@ const commonActorFeatures = [
 	ActorFeature.Config,
 	ActorFeature.Runtime,
 	ActorFeature.Metrics,
-	ActorFeature.InspectReconnectNotification,
 ];
 
 export const currentActorFeaturesAtom = atom((get) => {
@@ -419,7 +447,7 @@ export const currentActorFeaturesAtom = atom((get) => {
 				ActorFeature.Connections,
 				ActorFeature.State,
 				ActorFeature.Console,
-				ActorFeature.InspectReconnectNotification,
+				// ActorFeature.InspectReconnectNotification,
 			];
 		}
 		return commonActorFeatures;

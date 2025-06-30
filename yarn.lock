@@ -1237,6 +1237,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@codemirror/merge@npm:^6.10.2":
+  version: 6.10.2
+  resolution: "@codemirror/merge@npm:6.10.2"
+  dependencies:
+    "@codemirror/language": "npm:^6.0.0"
+    "@codemirror/state": "npm:^6.0.0"
+    "@codemirror/view": "npm:^6.17.0"
+    "@lezer/highlight": "npm:^1.0.0"
+    style-mod: "npm:^4.1.0"
+  checksum: 10c0/474f604f2aabcbcc7fad685d4518c2e94d06adbba0954d0c7162f8faf2f3d8b720c8a0cfc4330dcfdc1fbfb067e51bec7c4284087cfbeb27e4298c836c5c4523
+  languageName: node
+  linkType: hard
+
 "@codemirror/search@npm:^6.0.0":
   version: 6.5.11
   resolution: "@codemirror/search@npm:6.5.11"
@@ -1668,6 +1681,16 @@ __metadata:
     "@hono/node-server": ^1.11.1
     hono: ^4.6.0
   checksum: 10c0/7bd8f72af2dae0319fbe1ffa831f65456ec3342d7607bfb45d4071d8412c9c2e8faa533d6dcf49c603508e4d353b65920da618d07d5a129e6634793298f2f940
+  languageName: node
+  linkType: hard
+
+"@hono/standard-validator@npm:^0.1.3":
+  version: 0.1.3
+  resolution: "@hono/standard-validator@npm:0.1.3"
+  peerDependencies:
+    "@standard-schema/spec": 1.0.0
+    hono: ">=3.9.0"
+  checksum: 10c0/c1bf8ddbb06c83c44d8d3c2b0cf78793d2d026bf8db1d4fd83a935c67051d4a713c391bf9466e516dcb5d038b3cd925a7d5a85b423d7507ed2b75a1c1b107e90
   languageName: node
   linkType: hard
 
@@ -2583,6 +2606,13 @@ __metadata:
   bin:
     api-extractor: bin/api-extractor
   checksum: 10c0/1bbd1866508db2c5c0ad771e4aeccef95201319879b5cd2b00c5177cfdedb1ad5bc35a452be9d14ac3cfcdf7c9b7c3a737bc2ada9bdcc48eb0e6e11214169b52
+  languageName: node
+  linkType: hard
+
+"@microsoft/fetch-event-source@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "@microsoft/fetch-event-source@npm:2.0.1"
+  checksum: 10c0/38c69e9b9990e6cee715c7bbfa2752f943b42575acadb36facf19bb831f1520c469f854277439154258e0e1dc8650cc85038230d1f451e3f6b62e8faeaa1126c
   languageName: node
   linkType: hard
 
@@ -4463,6 +4493,7 @@ __metadata:
   dependencies:
     "@codemirror/lang-javascript": "npm:^6.2.2"
     "@codemirror/lang-json": "npm:^6.0.1"
+    "@codemirror/merge": "npm:^6.10.2"
     "@codemirror/view": "npm:^6.28.4"
     "@fortawesome/fontawesome-svg-core": "npm:^6.5.2"
     "@fortawesome/free-brands-svg-icons": "npm:^6.5.2"
@@ -4490,9 +4521,12 @@ __metadata:
     "@radix-ui/react-tooltip": "npm:^1.1.1"
     "@radix-ui/react-visually-hidden": "npm:^1.0.3"
     "@rivet-gg/icons": "workspace:^"
+    "@rivetkit/core": "npm:^0.9.0"
     "@sentry/react": "npm:^8.26.0"
     "@shikijs/langs": "npm:^3.2.1"
     "@tailwindcss/container-queries": "npm:^0.1.1"
+    "@tanstack/query-core": "npm:^5.81.5"
+    "@tanstack/react-query": "npm:^5.81.5"
     "@tanstack/react-table": "npm:^8.21.2"
     "@tanstack/react-virtual": "npm:^3.10.8"
     "@types/mime": "npm:^4.0.0"
@@ -4590,6 +4624,7 @@ __metadata:
     react-konami-code: "npm:^2.3.0"
     react-turnstile: "npm:^1.1.3"
     recharts: "npm:^2.12.7"
+    reconnecting-websocket: "npm:^4.4.0"
     remark-gfm: "npm:^4.0.1"
     rollup-plugin-visualizer: "npm:^5.14.0"
     shiki: "npm:^1.24.2"
@@ -4636,10 +4671,13 @@ __metadata:
     "@fortawesome/free-solid-svg-icons": "npm:^6.5.2"
     "@fortawesome/react-fontawesome": "npm:^0.2.2"
     "@hookform/resolvers": "npm:^3.3.4"
+    "@microsoft/fetch-event-source": "npm:^2.0.1"
     "@rivet-gg/components": "workspace:*"
     "@rivet-gg/icons": "workspace:*"
     "@sentry/react": "npm:^8.26.0"
     "@sentry/vite-plugin": "npm:^2.22.2"
+    "@tanstack/react-query": "npm:^5.81.5"
+    "@tanstack/react-query-devtools": "npm:^5.81.5"
     "@tanstack/react-router": "npm:^1.114.25"
     "@tanstack/react-table": "npm:^8.20.6"
     "@tanstack/router-devtools": "npm:^1.114.25"
@@ -4658,6 +4696,7 @@ __metadata:
     actor-core: "npm:^0.6.2"
     autoprefixer: "npm:^10.4.19"
     bcryptjs: "npm:^2.4.3"
+    fast-json-patch: "npm:^3.1.1"
     file-saver: "npm:^2.0.5"
     framer-motion: "npm:^11.2.11"
     jotai: "npm:^2.12.2"
@@ -4687,6 +4726,42 @@ __metadata:
     typescript: "npm:^5.3.3"
   languageName: unknown
   linkType: soft
+
+"@rivetkit/core@file:frontend/packages/rivetkit-core.tgz::locator=rivet%40workspace%3A.":
+  version: 0.9.0-rc.1
+  resolution: "@rivetkit/core@file:frontend/packages/rivetkit-core.tgz#frontend/packages/rivetkit-core.tgz::hash=7a1414&locator=rivet%40workspace%3A."
+  dependencies:
+    "@hono/standard-validator": "npm:^0.1.3"
+    cbor-x: "npm:^1.6.0"
+    fast-json-patch: "npm:^3.1.1"
+    invariant: "npm:^2.2.4"
+    nanoevents: "npm:^9.1.0"
+    on-change: "npm:^5.0.1"
+    p-retry: "npm:^6.2.1"
+    zod: "npm:^3.25.67"
+  peerDependencies:
+    "@hono/node-server": ^1.14.0
+    "@hono/node-ws": ^1.1.1
+    "@hono/zod-openapi": ^0.19.6
+    eventsource: ^3.0.5
+    hono: ^4.7.0
+    ws: ^8.0.0
+  peerDependenciesMeta:
+    "@hono/node-server":
+      optional: true
+    "@hono/node-ws":
+      optional: true
+    "@hono/zod-openapi":
+      optional: true
+    eventsource:
+      optional: true
+    hono:
+      optional: true
+    ws:
+      optional: true
+  checksum: 10c0/cf332fa4ab1887bcee97f1031b7b9bc1d6e80e8ee7502af6f72429e1746027bf7c1587a181de023cb9926a2c2cc8da75154e860d47c513b0ac517f012cf21c81
+  languageName: node
+  linkType: hard
 
 "@rolldown/pluginutils@npm:1.0.0-beta.9":
   version: 1.0.0-beta.9
@@ -6268,10 +6343,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/query-core@npm:5.81.5, @tanstack/query-core@npm:^5.81.5":
+  version: 5.81.5
+  resolution: "@tanstack/query-core@npm:5.81.5"
+  checksum: 10c0/8d3af841f0e2f3fba1dfd100a8bbc2d07e7b1d5b8570d3d0d8bba5127601c2788e5f7c84839f93f3b0cbe54f14866c1fef8e3f9e745f02d27afaaeea33b7b755
+  languageName: node
+  linkType: hard
+
 "@tanstack/query-devtools@npm:5.76.0":
   version: 5.76.0
   resolution: "@tanstack/query-devtools@npm:5.76.0"
   checksum: 10c0/2bee4a39c083a0260bd15e98f02d39f078d363430b74da313260ff37deb4b416d874e3a58f4691698f848076532eaf104ff2843a016aec6186dd1c39c5dd3d6f
+  languageName: node
+  linkType: hard
+
+"@tanstack/query-devtools@npm:5.81.2":
+  version: 5.81.2
+  resolution: "@tanstack/query-devtools@npm:5.81.2"
+  checksum: 10c0/f942cba7bd3ecb471063cd472eeebb2ec76005feeb7e0f357b191da5ab9f769aa767bc88d4da82b2b39c4fcbb16dfed38ce3c77b6eea4d4c30405368c1120207
   languageName: node
   linkType: hard
 
@@ -6306,6 +6395,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/react-query-devtools@npm:^5.81.5":
+  version: 5.81.5
+  resolution: "@tanstack/react-query-devtools@npm:5.81.5"
+  dependencies:
+    "@tanstack/query-devtools": "npm:5.81.2"
+  peerDependencies:
+    "@tanstack/react-query": ^5.81.5
+    react: ^18 || ^19
+  checksum: 10c0/6e0c416cea1ae86620be1da882605871ba4c7304cb4789074e59371226492c737e6f051d2bd70f9f1fd5065d9b0bbf56db0987df1e0bf2b35f8c1c66b5620d0c
+  languageName: node
+  linkType: hard
+
 "@tanstack/react-query-persist-client@npm:^5.56.2":
   version: 5.77.2
   resolution: "@tanstack/react-query-persist-client@npm:5.77.2"
@@ -6326,6 +6427,17 @@ __metadata:
   peerDependencies:
     react: ^18 || ^19
   checksum: 10c0/949d866ca8e1264ab506c7ac5ae11a596103a2f0c5cbf46022a22d256951791e330a8f126011cc6a73831514f889b87de11063d04f14014038375ae5a7ad3556
+  languageName: node
+  linkType: hard
+
+"@tanstack/react-query@npm:^5.81.5":
+  version: 5.81.5
+  resolution: "@tanstack/react-query@npm:5.81.5"
+  dependencies:
+    "@tanstack/query-core": "npm:5.81.5"
+  peerDependencies:
+    react: ^18 || ^19
+  checksum: 10c0/04803dd7d7d6ac73ba8c55bb25d76aa2f74d173d1574a113c35559bf6a8ac7d04a75db5e470e9a2e4132fee5e0ce1ab23bd8c27d17f70a461aca0e7ae740e76b
   languageName: node
   linkType: hard
 
@@ -10385,6 +10497,13 @@ __metadata:
     merge2: "npm:^1.3.0"
     micromatch: "npm:^4.0.8"
   checksum: 10c0/f6aaa141d0d3384cf73cbcdfc52f475ed293f6d5b65bfc5def368b09163a9f7e5ec2b3014d80f733c405f58e470ee0cc451c2937685045cddcdeaa24199c43fe
+  languageName: node
+  linkType: hard
+
+"fast-json-patch@npm:^3.1.1":
+  version: 3.1.1
+  resolution: "fast-json-patch@npm:3.1.1"
+  checksum: 10c0/8a0438b4818bb53153275fe5b38033610e8c9d9eb11869e6a7dc05eb92fa70f3caa57015e344eb3ae1e71c7a75ad4cc6bc2dc9e0ff281d6ed8ecd44505210ca8
   languageName: node
   linkType: hard
 
@@ -15401,6 +15520,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"reconnecting-websocket@npm:^4.4.0":
+  version: 4.4.0
+  resolution: "reconnecting-websocket@npm:4.4.0"
+  checksum: 10c0/0155223200882e123bc884eb5935bdff7ee4d2998eee578c23bba6a6fec63b68c22ccaf9ff4bdcd05284568d89f02e6a664cc40daf108872f820197848b09579
+  languageName: node
+  linkType: hard
+
 "reflect.getprototypeof@npm:^1.0.6, reflect.getprototypeof@npm:^1.0.9":
   version: 1.0.10
   resolution: "reflect.getprototypeof@npm:1.0.10"
@@ -19166,17 +19292,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.24, zod@npm:^3.24.1, zod@npm:^3.24.2":
+"zod@npm:3.25.32":
   version: 3.25.32
   resolution: "zod@npm:3.25.32"
   checksum: 10c0/de0bc052a7666578b3d5dd42bc522f02f27e1c798236439c0f6b6bc1b311a221706aebdafb1f58399d5f558b1fab7860c6970e096fe8d6947743bc791d567c4b
-  languageName: node
-  linkType: hard
-
-"zod@npm:^3.25.56":
-  version: 3.25.56
-  resolution: "zod@npm:3.25.56"
-  checksum: 10c0/3800f01d4b1df932b91354eb1e648f69cc7e5561549e6d2bf83827d930a5f33bbf92926099445f6fc1ebb64ca9c6513ef9ae5e5409cfef6325f354bcf6fc9a24
   languageName: node
   linkType: hard
 

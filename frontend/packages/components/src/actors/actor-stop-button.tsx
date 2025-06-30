@@ -1,42 +1,38 @@
 import { Button, WithTooltip } from "@rivet-gg/components";
 import { Icon, faXmark } from "@rivet-gg/icons";
 
-import equal from "fast-deep-equal";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import type { Actor, ActorAtom, DestroyActorAtom } from "./actor-context";
-
-const selector = (a: Actor) => ({
-	destroyedAt: a.destroyedAt,
-	destroy: a.destroy,
-});
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+	actorDestroyedAtQueryOptions,
+	actorDestroyMutationOptions,
+	type ActorId,
+} from "./queries";
 
 interface ActorStopButtonProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
-export function ActorStopButton({ actor }: ActorStopButtonProps) {
-	const { destroy: destroyAtom, destroyedAt } = useAtomValue(
-		selectAtom(actor, selector, equal),
+export function ActorStopButton({ actorId }: ActorStopButtonProps) {
+	const { data: destroyedAt } = useQuery(
+		actorDestroyedAtQueryOptions(actorId),
 	);
 
-	if (destroyedAt || !destroyAtom) {
+	const { mutate, isPending } = useMutation(
+		actorDestroyMutationOptions(actorId),
+	);
+
+	if (destroyedAt) {
 		return null;
 	}
 
-	return <Content destroy={destroyAtom} />;
-}
-
-function Content({ destroy: destroyAtom }: { destroy: DestroyActorAtom }) {
-	const { destroy, isDestroying } = useAtomValue(destroyAtom);
 	return (
 		<WithTooltip
 			trigger={
 				<Button
-					isLoading={isDestroying}
+					isLoading={isPending}
 					variant="destructive"
 					size="icon-sm"
-					onClick={destroy}
+					onClick={() => mutate()}
 				>
 					<Icon icon={faXmark} />
 				</Button>
