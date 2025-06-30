@@ -5,36 +5,26 @@ import { toRecord } from "../lib/utils";
 import { ACTOR_FRAMEWORK_TAG_VALUE } from "./actor-tags";
 import { FilterOp, type FilterValue } from "../ui/filters";
 import { isAfter, isBefore } from "date-fns";
+import { ActorFeature } from "./queries";
 
-export enum ActorFeature {
-	Logs = "logs",
-	Config = "config",
-	Connections = "connections",
-	State = "state",
-	Console = "console",
-	Runtime = "runtime",
-	Metrics = "metrics",
-	InspectReconnectNotification = "inspect_reconnect_notification",
-}
+// export type Actor = Omit<
+// 	Rivet.actor.Actor,
+// 	"createdAt" | "runtime" | "lifecycle" | "network" | "resources"
+// > & {
+// 	status: "unknown" | "starting" | "running" | "stopped" | "crashed";
 
-export type Actor = Omit<
-	Rivet.actor.Actor,
-	"createdAt" | "runtime" | "lifecycle" | "network" | "resources"
-> & {
-	status: "unknown" | "starting" | "running" | "stopped" | "crashed";
-
-	lifecycle?: Rivet.actor.Lifecycle;
-	endpoint?: string;
-	logs: LogsAtom;
-	metrics: MetricsAtom;
-	network?: Rivet.actor.Network | null;
-	resources?: Rivet.actor.Resources | null;
-	runtime?: Rivet.actor.Runtime | null;
-	destroy?: DestroyActorAtom;
-	destroyTs?: Date;
-	createdAt?: Date;
-	features?: ActorFeature[];
-};
+// 	lifecycle?: Rivet.actor.Lifecycle;
+// 	endpoint?: string;
+// 	logs: LogsAtom;
+// 	metrics: MetricsAtom;
+// 	network?: Rivet.actor.Network | null;
+// 	resources?: Rivet.actor.Resources | null;
+// 	runtime?: Rivet.actor.Runtime | null;
+// 	destroy?: DestroyActorAtom;
+// 	destroyTs?: Date;
+// 	createdAt?: Date;
+// 	features?: ActorFeature[];
+// };
 
 export type Logs = {
 	id: string;
@@ -422,7 +412,7 @@ export const currentActorFeaturesAtom = atom((get) => {
 				ActorFeature.Connections,
 				ActorFeature.State,
 				ActorFeature.Console,
-				ActorFeature.InspectReconnectNotification,
+				// ActorFeature.InspectReconnectNotification,
 			];
 		}
 		return commonActorFeatures;

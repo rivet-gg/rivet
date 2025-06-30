@@ -7,56 +7,54 @@ import {
 	cn,
 } from "@rivet-gg/components";
 import { memo, type ReactNode, Suspense } from "react";
-import { ActorConfigTab } from "./actor-config-tab";
-import { ActorConnectionsTab } from "./actor-connections-tab";
 import { ActorDetailsSettingsProvider } from "./actor-details-settings";
 import { ActorLogsTab } from "./actor-logs-tab";
-import { ActorMetricsTab } from "./actor-metrics-tab";
-import { ActorStateTab } from "./actor-state-tab";
-import { AtomizedActorStatus } from "./actor-status";
+import { QueriedActorStatus } from "./actor-status";
 import { ActorStopButton } from "./actor-stop-button";
 import { ActorsSidebarToggleButton } from "./actors-sidebar-toggle-button";
-import { ActorConsole } from "./console/actor-console";
-import { ActorWorkerContextProvider } from "./worker/actor-worker-context";
-import {
-	ActorFeature,
-	currentActorFeaturesAtom,
-	type ActorAtom,
-} from "./actor-context";
-import { useAtomValue } from "jotai";
 import { useActorsView } from "./actors-view-context-provider";
 import { faQuestionSquare, Icon } from "@rivet-gg/icons";
+import { useQuery } from "@tanstack/react-query";
+import {
+	ActorFeature,
+	actorFeaturesQueryOptions,
+	type ActorId,
+} from "./queries";
+import { ActorConfigTab } from "./actor-config-tab";
+import { ActorMetricsTab } from "./actor-metrics-tab";
 
 interface ActorsActorDetailsProps {
 	tab?: string;
-	actor: ActorAtom;
+	actorId: ActorId;
 	onTabChange?: (tab: string) => void;
 }
 
 export const ActorsActorDetails = memo(
-	({ tab, onTabChange, actor }: ActorsActorDetailsProps) => {
-		const actorFeatures = useAtomValue(currentActorFeaturesAtom);
-		const supportsConsole = actorFeatures?.includes(ActorFeature.Console);
+	({ tab, onTabChange, actorId }: ActorsActorDetailsProps) => {
+		const { data: features = [] } = useQuery(
+			actorFeaturesQueryOptions(actorId),
+		);
+		const supportsConsole = features?.includes(ActorFeature.Console);
 
 		return (
 			<ActorDetailsSettingsProvider>
-				<ActorWorkerContextProvider
+				{/* <ActorWorkerContextProvider
 					actor={actor}
 					notifyOnReconnect={actorFeatures?.includes(
 						ActorFeature.InspectReconnectNotification,
 					)}
-				>
-					<div className="flex flex-col h-full flex-1">
-						<ActorTabs
-							features={actorFeatures}
-							actor={actor}
-							tab={tab}
-							onTabChange={onTabChange}
-						/>
+				> */}
+				<div className="flex flex-col h-full flex-1">
+					<ActorTabs
+						features={features}
+						actorId={actorId}
+						tab={tab}
+						onTabChange={onTabChange}
+					/>
 
-						{supportsConsole ? <ActorConsole /> : null}
-					</div>
-				</ActorWorkerContextProvider>
+					{/* {supportsConsole ? <ActorConsole /> : null} */}
+				</div>
+				{/* </ActorWorkerContextProvider> */}
 			</ActorDetailsSettingsProvider>
 		);
 	},
@@ -84,7 +82,7 @@ export function ActorTabs({
 	tab,
 	features,
 	onTabChange,
-	actor,
+	actorId,
 	className,
 	disabled,
 	children,
@@ -93,7 +91,7 @@ export function ActorTabs({
 	tab?: string;
 	features: ActorFeature[];
 	onTabChange?: (tab: string) => void;
-	actor?: ActorAtom;
+	actorId?: ActorId;
 	className?: string;
 	children?: ReactNode;
 }) {
@@ -146,23 +144,23 @@ export function ActorTabs({
 							</TabsTrigger>
 						) : null}
 					</TabsList>
-					{actor ? (
+					{actorId ? (
 						<Flex
 							gap="2"
 							justify="between"
 							items="center"
 							className="h-[36px] pb-3 pt-2 pr-4"
 						>
-							<AtomizedActorStatus
+							<QueriedActorStatus
 								className="text-sm h-auto"
-								actor={actor}
+								actorId={actorId}
 							/>
-							<ActorStopButton actor={actor} />
+							<ActorStopButton actorId={actorId} />
 						</Flex>
 					) : null}
 				</div>
 			</div>
-			{actor ? (
+			{actorId ? (
 				<>
 					{supportsLogs ? (
 						<TabsContent
@@ -170,7 +168,7 @@ export function ActorTabs({
 							className="min-h-0 flex-1 mt-0 h-full"
 						>
 							<Suspense fallback={<ActorLogsTab.Skeleton />}>
-								<ActorLogsTab actor={actor} />
+								<ActorLogsTab actorId={actorId} />
 							</Suspense>
 						</TabsContent>
 					) : null}
@@ -179,7 +177,7 @@ export function ActorTabs({
 							value="config"
 							className="min-h-0 flex-1 mt-0 h-full"
 						>
-							<ActorConfigTab actor={actor} />
+							<ActorConfigTab actorId={actorId} />
 						</TabsContent>
 					) : null}
 					{supportsConnections ? (
@@ -187,7 +185,7 @@ export function ActorTabs({
 							value="connections"
 							className="min-h-0 flex-1 mt-0"
 						>
-							<ActorConnectionsTab actor={actor} />
+							{/* <ActorConnectionsTab actor={actor} /> */}
 						</TabsContent>
 					) : null}
 					{supportsState ? (
@@ -195,7 +193,7 @@ export function ActorTabs({
 							value="state"
 							className="min-h-0 flex-1 mt-0"
 						>
-							<ActorStateTab actor={actor} />
+							{/* <ActorStateTab actor={actor} /> */}
 						</TabsContent>
 					) : null}
 					{supportsMetrics ? (
@@ -203,7 +201,7 @@ export function ActorTabs({
 							value="metrics"
 							className="min-h-0 flex-1 mt-0 h-full"
 						>
-							<ActorMetricsTab actor={actor} />
+							<ActorMetricsTab actorId={actorId} />
 						</TabsContent>
 					) : null}
 				</>
