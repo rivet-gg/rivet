@@ -27,7 +27,7 @@ export default defineConfig({
 		vitePluginFaviconsInject(
 			path.resolve(__dirname, "public", "favicon.svg"),
 			{
-				appName: "Actor Core ⋅ Studio",
+				appName: "RivetKit ⋅ Studio",
 				theme_color: "#ff4f00",
 			},
 		),

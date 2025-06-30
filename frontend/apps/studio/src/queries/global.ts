@@ -1,8 +1,5 @@
 import { toast } from "@rivet-gg/components";
-import { broadcastQueryClient } from "@tanstack/query-broadcast-client-experimental";
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
-import superjson from "superjson";
 
 const queryCache = new QueryCache();
 
@@ -21,23 +18,12 @@ export const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
 			staleTime: 5 * 1000,
-			gcTime: 1000 * 60 * 60 * 24,
-			retry: 2,
-			refetchOnWindowFocus: false,
+			gcTime: 60 * 1000,
+			retry: 3,
+			refetchOnWindowFocus: true,
 			refetchOnReconnect: false,
 		},
 	},
 	queryCache,
 	mutationCache,
-});
-
-export const queryClientPersister = createSyncStoragePersister({
-	storage: window.localStorage,
-	serialize: superjson.stringify,
-	deserialize: superjson.parse,
-});
-
-broadcastQueryClient({
-	queryClient,
-	broadcastChannel: "rivet-gg-hub",
 });

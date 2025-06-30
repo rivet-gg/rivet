@@ -1,32 +1,29 @@
 import { Icon, faQuestionSquare } from "@rivet-gg/icons";
-import { useAtomValue, useSetAtom } from "jotai";
-import { selectAtom } from "jotai/utils";
-import { useCallback } from "react";
 import { Button } from "../ui/button";
 import { FilterOp } from "../ui/filters";
-import {
-	type ActorFeature,
-	actorFiltersAtom,
-	currentActorQueryAtom,
-} from "./actor-context";
 import { ActorTabs } from "./actors-actor-details";
 import { useActorsView } from "./actors-view-context-provider";
 import { ShimmerLine } from "../shimmer-line";
+import { useNavigate } from "@tanstack/react-router";
+import type { ActorFeature, ActorId } from "./queries";
+import { useQuery } from "@tanstack/react-query";
+import { useManagerQueries } from "./manager-queries-context";
 
 export function ActorNotFound({
+	actorId,
 	features = [],
-}: { features?: ActorFeature[] }) {
+}: { features?: ActorFeature[]; actorId?: ActorId }) {
 	const { copy } = useActorsView();
 
-	const setFilters = useSetAtom(actorFiltersAtom);
-	const hasDevMode = useAtomValue(
-		selectAtom(
-			actorFiltersAtom,
-			useCallback((filters) => filters.devMode, []),
-		),
-	);
+	const navigate = useNavigate();
 
-	const { isLoading } = useAtomValue(currentActorQueryAtom);
+	const hasDevMode = false;
+
+	const { isLoading } = useQuery({
+		// biome-ignore lint/style/noNonNullAssertion: enabled guarantees actorId is defined
+		...useManagerQueries().actorQueryOptions(actorId!),
+		enabled: !!actorId,
+	});
 
 	return (
 		<div className="flex flex-col h-full flex-1">
@@ -53,13 +50,16 @@ export function ActorNotFound({
 							variant="outline"
 							size="sm"
 							onClick={() => {
-								setFilters((prev) => ({
-									...prev,
-									devMode: {
-										value: ["true"],
-										operator: FilterOp.EQUAL,
-									},
-								}));
+								navigate({
+									to: ".",
+									search: (prev) => ({
+										...prev,
+										devMode: {
+											value: ["true"],
+											operator: FilterOp.EQUAL,
+										},
+									}),
+								});
 							}}
 						>
 							{copy.showHiddenActors}

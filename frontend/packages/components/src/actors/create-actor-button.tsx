@@ -1,21 +1,23 @@
 import { Button, type ButtonProps, WithTooltip } from "@rivet-gg/components";
 import { Icon, faPlus } from "@rivet-gg/icons";
 import { useNavigate } from "@tanstack/react-router";
-import { useAtomValue } from "jotai";
-import {
-	actorBuildsCountAtom,
-	actorManagerEndpointAtom,
-} from "./actor-context";
 import { useActorsView } from "./actors-view-context-provider";
+import { useQuery } from "@tanstack/react-query";
+import { useManagerQueries } from "./manager-queries-context";
 
 export function CreateActorButton(props: ButtonProps) {
 	const navigate = useNavigate();
-	const builds = useAtomValue(actorBuildsCountAtom);
-	const endpoint = useAtomValue(actorManagerEndpointAtom);
+
+	const queries = useManagerQueries();
+	const { data } = useQuery(useManagerQueries().buildsQueryOptions());
 
 	const { copy, canCreate: contextAllowActorsCreation } = useActorsView();
 
-	const canCreate = builds > 0 && contextAllowActorsCreation && endpoint;
+	const canCreate =
+		data &&
+		data.length > 0 &&
+		contextAllowActorsCreation &&
+		queries.endpoint;
 
 	if (!contextAllowActorsCreation) {
 		return null;
@@ -52,7 +54,7 @@ export function CreateActorButton(props: ButtonProps) {
 		<WithTooltip
 			trigger={content}
 			content={
-				builds <= 0 || !endpoint
+				(data && data.length <= 0) || !queries.endpoint
 					? "Please deploy a build first."
 					: copy.createActorUsingForm
 			}

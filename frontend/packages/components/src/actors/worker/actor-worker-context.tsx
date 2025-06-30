@@ -1,5 +1,3 @@
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
 import {
 	type ReactNode,
 	createContext,
@@ -9,10 +7,12 @@ import {
 	useState,
 	useSyncExternalStore,
 } from "react";
-import { toast } from "sonner";
-import { assertNonNullable } from "../../lib/utils";
-import { type Actor, type ActorAtom, ActorFeature } from "../actor-context";
 import { ActorWorkerContainer } from "./actor-worker-container";
+import { assertNonNullable } from "../../lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { ActorFeature, type ActorId } from "../queries";
+import { useManagerQueries } from "../manager-queries-context";
+import { useActorQueries } from "../actor-queries-context";
 
 export const ActorWorkerContext = createContext<ActorWorkerContainer | null>(
 	null,
@@ -24,31 +24,27 @@ export const useActorWorker = () => {
 	return value;
 };
 
-const selector = (a: Actor) => ({
-	actorId: a.id,
-	endpoint: a.endpoint,
-	enabled:
-		!a.destroyedAt &&
-		a.endpoint !== null &&
-		a.startedAt !== null &&
-		a.features?.includes(ActorFeature.Console),
-});
-
 interface ActorWorkerContextProviderProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 	children: ReactNode;
-	notifyOnReconnect?: boolean;
 }
-
-// FIXME: rewrite with jotai
 export const ActorWorkerContextProvider = ({
 	children,
-	actor,
-	notifyOnReconnect,
+	actorId,
 }: ActorWorkerContextProviderProps) => {
-	const { actorId, endpoint, enabled } = useAtomValue(
-		selectAtom(actor, selector),
-	);
+	const {
+		data: { features, endpoint, name, destroyedAt, startedAt } = {},
+	} = useQuery(useManagerQueries().actorWorkerQueryOptions(actorId));
+	const enabled =
+		(features?.includes(ActorFeature.Console) &&
+			!destroyedAt &&
+			!!startedAt) ??
+		false;
+
+	const actorQueries = useActorQueries();
+	const {
+		data: { rpcs } = {},
+	} = useQuery(actorQueries.actorRpcsQueryOptions(actorId, { enabled }));
 
 	const [container] = useState<ActorWorkerContainer>(
 		() => new ActorWorkerContainer(),
@@ -58,22 +54,21 @@ export const ActorWorkerContextProvider = ({
 	useEffect(() => {
 		const ctrl = new AbortController();
 
-		if (enabled && endpoint) {
+		if (enabled) {
 			container.init({
 				actorId,
 				endpoint,
-				notifyOnReconnect,
+				name,
 				signal: ctrl.signal,
+				rpcs,
 			});
-		} else {
-			toast.dismiss("ac-ws-reconnect");
 		}
 
 		return () => {
 			ctrl.abort();
 			container.terminate();
 		};
-	}, [actorId, endpoint, enabled]);
+	}, [actorId, enabled, rpcs, endpoint, name]);
 
 	return (
 		<ActorWorkerContext.Provider value={container}>
@@ -108,51 +103,6 @@ export function useActorWorkerStatus() {
 		),
 		useCallback(() => {
 			return container.getStatus();
-		}, [container]),
-	);
-}
-
-export function useActorRpcs() {
-	const container = useActorWorker();
-	return useSyncExternalStore(
-		useCallback(
-			(cb) => {
-				return container.subscribe(cb);
-			},
-			[container],
-		),
-		useCallback(() => {
-			return container.getRpcs();
-		}, [container]),
-	);
-}
-
-export function useActorState() {
-	const container = useActorWorker();
-	return useSyncExternalStore(
-		useCallback(
-			(cb) => {
-				return container.subscribe(cb);
-			},
-			[container],
-		),
-		useCallback(() => {
-			return container.getState();
-		}, [container]),
-	);
-}
-
-export function useActorConnections() {
-	const container = useActorWorker();
-	return useSyncExternalStore(
-		useCallback(
-			(cb) => {
-				return container.subscribe(cb);
-			},
-			[container],
-		),
-		useCallback(() => {
-			return container.getConnections();
 		}, [container]),
 	);
 }

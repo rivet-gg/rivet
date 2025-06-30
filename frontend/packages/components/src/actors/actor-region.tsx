@@ -1,13 +1,11 @@
 import { Flex, WithTooltip } from "@rivet-gg/components";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import { useCallback } from "react";
 import {
 	REGION_LABEL,
 	RegionIcon,
 	getRegionKey,
 } from "../matchmaker/lobby-region";
-import { actorRegionsAtom } from "./actor-context";
+import { useQuery } from "@tanstack/react-query";
+import { useManagerQueries } from "./manager-queries-context";
 
 interface ActorRegionProps {
 	regionId?: string;
@@ -20,15 +18,13 @@ export function ActorRegion({
 	regionId,
 	className,
 }: ActorRegionProps) {
-	const region = useAtomValue(
-		selectAtom(
-			actorRegionsAtom,
-			useCallback(
-				(regions) => regions.find((region) => region.id === regionId),
-				[regionId],
-			),
-		),
+	const { data: region } = useQuery(
+		useManagerQueries().regionQueryOptions(regionId),
 	);
+
+	if (!regionId || !region) {
+		return null;
+	}
 
 	const regionKey = getRegionKey(region?.id);
 
@@ -49,12 +45,7 @@ export function ActorRegion({
 		<WithTooltip
 			content={REGION_LABEL[regionKey] ?? REGION_LABEL.unknown}
 			trigger={
-				<Flex
-					gap="2"
-					items="center"
-					justify="center"
-					className={className}
-				>
+				<Flex gap="2" items="center" justify="center" className={className}>
 					<RegionIcon region={regionKey} className="w-4 min-w-4" />
 				</Flex>
 			}

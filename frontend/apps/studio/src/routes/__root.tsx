@@ -1,76 +1,9 @@
-import { FEEDBACK_FORM_ID, FullscreenLoading } from "@rivet-gg/components";
+import { FullscreenLoading } from "@rivet-gg/components";
 
-import * as Layout from "@/components/layout";
-import { useDialog } from "@rivet-gg/components/actors";
 import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { zodValidator } from "@tanstack/zod-adapter";
-import { usePostHog } from "posthog-js/react";
-import { Suspense } from "react";
 import { z } from "zod";
-
-function Modals() {
-	const search = Route.useSearch();
-	const navigate = Route.useNavigate();
-
-	const posthog = usePostHog();
-
-	const FeedbackDialog = useDialog.Feedback.Dialog;
-	const GoToActorDialog = useDialog.GoToActor.Dialog;
-	const CreateActorDialog = useDialog.CreateActor.Dialog;
-
-	const { modal, utm_source } = search;
-
-	const handleOnOpenChange = (value: boolean) => {
-		if (!value) {
-			navigate({ search: (old) => ({ ...old, modal: undefined }) });
-		} else {
-			posthog.capture("survey shown", { $survey_id: FEEDBACK_FORM_ID });
-		}
-	};
-
-	return (
-		<>
-			<FeedbackDialog
-				source={utm_source}
-				dialogProps={{
-					open: modal === "feedback",
-					onOpenChange: handleOnOpenChange,
-				}}
-			/>
-			<GoToActorDialog
-				onSubmit={(actorId) => {
-					navigate({
-						to: ".",
-						search: (old) => ({
-							...old,
-							actorId,
-							modal: undefined,
-						}),
-					});
-				}}
-				dialogProps={{
-					open: modal === "go-to-actor",
-					onOpenChange: (value) => {
-						if (!value) {
-							navigate({ search: { modal: undefined } });
-						}
-					},
-				}}
-			/>
-			<CreateActorDialog
-				dialogProps={{
-					open: modal === "create-actor",
-					onOpenChange: (value) => {
-						if (!value) {
-							navigate({ search: { modal: undefined } });
-						}
-					},
-				}}
-			/>
-		</>
-	);
-}
 
 // function RootNotFoundComponent() {
 // 	return (
@@ -91,29 +24,10 @@ function Modals() {
 // 		</PageLayout.Root>
 // 	);
 // }
-
-function Root() {
-	return (
-		<Layout.Root>
-			<Layout.VisibleInFull>
-				<Layout.Header />
-				<Layout.Main>
-					{/* <Modals /> */}
-					<Outlet />
-				</Layout.Main>
-			</Layout.VisibleInFull>
-			<Layout.Footer />
-		</Layout.Root>
-	);
-}
-
 function RootRoute() {
 	return (
 		<>
-			<Root />
-			<Suspense>
-				<Modals />
-			</Suspense>
+			<Outlet />
 			{import.meta.env.DEV ? <TanStackRouterDevtools /> : null}
 		</>
 	);

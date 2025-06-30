@@ -1,12 +1,24 @@
 import { Button, ScrollArea } from "@rivet-gg/components";
 import { useRef } from "react";
-import { useActorRpcs, useActorWorker } from "../worker/actor-worker-context";
+import { useActorWorker } from "../worker/actor-worker-context";
 import { ActorConsoleMessage } from "./actor-console-message";
 import { ReplInput, type ReplInputRef, replaceCode } from "./repl-input";
+import type { ActorId } from "../queries";
+import { useQuery } from "@tanstack/react-query";
+import { useActorQueries } from "../actor-queries-context";
 
-export function ActorConsoleInput() {
+interface ActorConsoleInputProps {
+	actorId: ActorId;
+}
+
+export function ActorConsoleInput({ actorId }: ActorConsoleInputProps) {
 	const worker = useActorWorker();
-	const rpcs = useActorRpcs();
+
+	const actorQueries = useActorQueries();
+	const {
+		data: { rpcs = [] } = {},
+	} = useQuery(actorQueries.actorRpcsQueryOptions(actorId));
+
 	const ref = useRef<ReplInputRef>(null);
 
 	return (

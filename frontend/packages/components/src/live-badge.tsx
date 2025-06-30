@@ -16,3 +16,15 @@ export function LiveBadge({ className }: LiveBadgeProps) {
 		</Badge>
 	);
 }
+
+export function PauseBadge({ className }: LiveBadgeProps) {
+	return (
+		<Badge
+			className={cn(className, "flex justify-center items-center")}
+			variant="outline"
+		>
+			<div className="mr-2 bg-muted rounded-full size-2" />
+			Pause
+		</Badge>
+	);
+}

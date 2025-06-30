@@ -24,7 +24,7 @@ const defaultValue = {
 		createActorModal: {
 			title: "Create Actor",
 			description:
-				"Choose a build to create an Actor from. Actor will be created using default settings.",
+				"Quickly create an Actor by providing the necessary details.",
 		},
 
 		actorNotFound: "Actor not found",
@@ -35,6 +35,12 @@ const defaultValue = {
 			title: "Getting Started with Actors",
 			description:
 				"Use a quick start guide to start deploying Actors to your environment.",
+		},
+	},
+	links: {
+		gettingStarted: {
+			node: "https://www.rivet.gg/docs/actors/quickstart/backend/",
+			react: "https://www.rivet.gg/docs/actors/quickstart/react/",
 		},
 	},
 	canCreate: true,

@@ -35,10 +35,7 @@ export const ActorId = () => {
 				<FormItem>
 					<FormLabel>{copy.actorId}</FormLabel>
 					<FormControl>
-						<Input
-							{...field}
-							placeholder="00000000-0000-0000-0000-000000000000"
-						/>
+						<Input {...field} placeholder="Actor ID" />
 					</FormControl>
 					<FormMessage />
 				</FormItem>

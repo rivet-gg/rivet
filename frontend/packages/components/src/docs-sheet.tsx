@@ -9,7 +9,7 @@ import {
 	SheetTrigger,
 } from "./ui/sheet";
 import { WithTooltip } from "./ui/tooltip";
-import { Link, Text } from "./ui/typography";
+import { Button } from "./ui/button";
 
 interface DocsSheetProps {
 	path: string;
@@ -38,21 +38,30 @@ export function DocsSheet({
 			)}
 			<SheetContent className="sm:max-w-[500px]">
 				<SheetHeader>
-					<SheetTitle>{title}</SheetTitle>
-					<Text className="text-xs">
-						<Link
-							href={
-								path.startsWith("http")
-									? path
-									: `https://rivet.gg/${path}?utm_source=hub&embed=true#${hash}`
-							}
-							target="_blank"
-							rel="noopener noreferrer"
+					<SheetTitle className="flex items-center justify-between">
+						{title}{" "}
+						<Button
+							asChild
+							variant="ghost"
+							size="sm"
+							className="mr-4"
+							endIcon={<Icon icon={faExternalLink} />}
 						>
-							Open in New Tab <Icon icon={faExternalLink} />
-						</Link>
-					</Text>
-					<SheetDescription className="-mx-6" asChild>
+							<a
+								target="_blank"
+								rel="noopener noreferrer"
+								href={
+									path.startsWith("http")
+										? path
+										: `https://rivet.gg/${path}?utm_source=hub&embed=true#${hash}`
+								}
+							>
+								Open in new tab
+							</a>
+						</Button>
+					</SheetTitle>
+
+					<SheetDescription className="-mx-6 mt-4" asChild>
 						<div>
 							<iframe
 								className="w-full h-screen border-t"

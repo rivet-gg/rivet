@@ -1091,3 +1091,10 @@ export function createFiltersPicker(definitions: FilterDefinitions) {
 		return _.pick(object, keys);
 	};
 }
+
+export function createFiltersRemover(definitions: FilterDefinitions) {
+	return (object: Record<string, unknown>) => {
+		const keys = Object.keys(definitions);
+		return _.omit(object, keys);
+	};
+}

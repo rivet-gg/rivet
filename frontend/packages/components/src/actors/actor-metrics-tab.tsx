@@ -1,10 +1,10 @@
 import { Button, ScrollArea } from "@rivet-gg/components";
 import { Icon, faBooks } from "@rivet-gg/icons";
 import { ActorMetrics } from "./actor-metrics";
-import type { ActorAtom } from "./actor-context";
+import type { ActorId } from "./queries";
 
 interface ActorMetricsTabProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
 export function ActorMetricsTab(props: ActorMetricsTabProps) {

@@ -101,13 +101,16 @@ export const CopyArea = forwardRef<HTMLButtonElement, CopyAreaProps>(
 
 interface CopyButtonProps extends ComponentProps<typeof Slot> {
 	children: ReactNode;
-	value: string;
+	value: string | (() => string);
 }
 
 export const CopyButton = forwardRef<HTMLElement, CopyButtonProps>(
 	({ children, value, ...props }, ref) => {
 		const handleClick: MouseEventHandler<HTMLElement> = (event) => {
-			navigator.clipboard.writeText(value);
+			event.stopPropagation();
+			navigator.clipboard.writeText(
+				typeof value === "function" ? value() : value,
+			);
 			toast.success("Copied to clipboard");
 			props.onClick?.(event);
 		};
@@ -119,9 +122,12 @@ export const CopyButton = forwardRef<HTMLElement, CopyButtonProps>(
 	},
 );
 
+export type DiscreteCopyButtonProps = CopyButtonProps &
+	ComponentProps<typeof Button>;
+
 export const DiscreteCopyButton = forwardRef<
 	HTMLElement,
-	CopyButtonProps & ButtonProps
+	DiscreteCopyButtonProps
 >(({ children, value, ...props }, ref) => {
 	return (
 		<WithTooltip

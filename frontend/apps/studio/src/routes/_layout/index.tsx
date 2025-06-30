@@ -1,57 +1,22 @@
 import { Actors } from "@/components/actors";
 import {
-	connectionEffect,
-	connectionStateAtom,
-	initiallyConnectedAtom,
-} from "@/stores/manager";
-import {
 	Button,
 	Card,
 	CardContent,
-	CardFooter,
 	CardHeader,
 	CardTitle,
-	CodeFrame,
-	CodeGroup,
-	CodeSource,
 	DocsSheet,
 	H1,
-	Link,
-	Strong,
 } from "@rivet-gg/components";
-import {
-	ActorsListFiltersSchema,
-	currentActorIdAtom,
-} from "@rivet-gg/components/actors";
-import {
-	Icon,
-	faBrave,
-	faChrome,
-	faReact,
-	faSafari,
-	faTs,
-} from "@rivet-gg/icons";
+import { Icon, faNodeJs, faReact } from "@rivet-gg/icons";
 import { createFileRoute } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
-import { AnimatePresence, motion } from "framer-motion";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { z } from "zod";
-// @ts-expect-error types are missing
-import devNpm, { source as devNpmSource } from "../../content/dev-npm.sh?shiki";
-import devPnpm, {
-	source as devPnpmSource,
-	// @ts-expect-error types are missing
-} from "../../content/dev-pnpm.sh?shiki";
-import devYarn, {
-	source as devYarnSource,
-	// @ts-expect-error types are missing
-} from "../../content/dev-yarn.sh?shiki";
-
-import devBun, {
-	source as devBunSource,
-	// @ts-expect-error types are missing
-} from "../../content/dev-bun.sh?shiki";
+import { useManagerQueries } from "@rivet-gg/components/actors";
+import { useQuery } from "@tanstack/react-query";
+import { ConnectionForm } from "@/components/connection-form";
+import { docsLinks } from "@/content/data";
 
 export const Route = createFileRoute("/_layout/")({
 	component: RouteComponent,
@@ -60,163 +25,120 @@ export const Route = createFileRoute("/_layout/")({
 			.object({
 				actorId: z.string().optional(),
 				tab: z.string().optional(),
+				url: z.string().optional(),
 			})
-			.merge(ActorsListFiltersSchema),
+			.and(z.record(z.string(), z.any())),
 	),
 });
 
 function RouteComponent() {
-	useAtom(connectionEffect);
+	const { actorId, u = "http://localhost:8080", t } = Route.useSearch();
 
-	const isInitiallyConnected = useAtomValue(initiallyConnectedAtom);
-	const status = useAtomValue(connectionStateAtom);
+	const navigate = Route.useNavigate();
+	const { setToken, token, ...queries } = useManagerQueries();
 
-	const { actorId } = Route.useSearch();
+	const { isSuccess } = useQuery(queries.managerStatusQueryOptions());
+	const previouslyConnected = useRef(isSuccess);
 
-	const setCurrentActorId = useSetAtom(currentActorIdAtom);
+	const ref = useRef<HTMLFormElement>(null);
+
+	useLayoutEffect(() => {
+		if (u && t) {
+			ref.current?.requestSubmit();
+		}
+	}, [u, t]);
 
 	useEffect(() => {
-		setCurrentActorId(actorId);
-	}, [actorId, setCurrentActorId]);
+		if (isSuccess && !previouslyConnected.current) {
+			previouslyConnected.current = true;
+		}
+	}, [isSuccess]);
+
+	if ((token && previouslyConnected.current) || isSuccess) {
+		return <Actors actorId={actorId} />;
+	}
 
 	return (
-		<AnimatePresence initial={false}>
-			{status === "disconnected" && !isInitiallyConnected ? (
-				<motion.div
-					initial={{ opacity: 0, scale: 0.95 }}
-					animate={{ opacity: 1, scale: 1 }}
-					exit={{ opacity: 0, scale: 0.95 }}
-					className="h-full w-full flex items-center justify-center flex-col"
-				>
-					<H1>Rivet Studio</H1>
-					<Card className="max-w-md w-full mb-6 mt-8">
-						<CardHeader>
-							<CardTitle>Getting Started</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p>
-								Get started with one of our quick start guides:
-							</p>
-							<div className="flex-1 flex flex-col gap-2 mt-4">
-								<div className="flex flex-row justify-stretch items-center gap-2">
-									<DocsSheet
-										path="https://rivetkit.org/actors/quickstart-backend"
-										title="Node.js & Bun Quick Start"
-									>
-										<Button
-											className="flex-1"
-											variant="outline"
-											startIcon={<Icon icon={faTs} />}
-										>
-											TypeScript
-										</Button>
-									</DocsSheet>
-									<DocsSheet
-										path="https://rivetkit.org/actors/quickstart-frontend"
-										title="React Quick Start"
-									>
-										<Button
-											className="flex-1"
-											variant="outline"
-											startIcon={<Icon icon={faReact} />}
-										>
-											React
-										</Button>
-									</DocsSheet>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-					<Card className="max-w-md w-full my-6">
-						<CardHeader>
-							<CardTitle>Connect to Project</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p>
-								Connect Rivet Studio to your ActorCore project,
-								using the following command:
-							</p>
+		<div className="w-full h-full flex flex-col items-center justify-center">
+			<H1 className="mb-8">Rivet Studio</H1>
+			<Card className="max-w-md w-full mb-6">
+				<CardHeader>
+					<CardTitle>Getting Started</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<p>Get started with one of our quick start guides:</p>
+					<div className="flex-1 flex flex-col gap-2 mt-4">
+						<div className="flex flex-row justify-stretch items-center gap-2">
+							<DocsSheet
+								path={docsLinks.gettingStarted.node}
+								title="Node.js & Bun Quickstart"
+							>
+								<Button
+									className="flex-1"
+									variant="outline"
+									startIcon={<Icon icon={faNodeJs} />}
+								>
+									Node.js & Bun
+								</Button>
+							</DocsSheet>
+							<DocsSheet
+								path={docsLinks.gettingStarted.react}
+								title="React Quickstart"
+							>
+								<Button
+									className="flex-1"
+									variant="outline"
+									startIcon={<Icon icon={faReact} />}
+								>
+									React
+								</Button>
+							</DocsSheet>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 
-							<CodeGroup>
-								<CodeFrame
-									title="npm"
-									language="bash"
-									code={devNpmSource}
-								>
-									<CodeSource>{devNpm}</CodeSource>
-								</CodeFrame>
-								<CodeFrame
-									title="pnpm"
-									language="bash"
-									code={devPnpmSource}
-								>
-									<CodeSource>{devPnpm}</CodeSource>
-								</CodeFrame>
-								<CodeFrame
-									title="bun"
-									language="bash"
-									code={devBunSource}
-								>
-									<CodeSource>{devBun}</CodeSource>
-								</CodeFrame>
-								<CodeFrame
-									title="yarn"
-									language="bash"
-									code={devYarnSource}
-								>
-									<CodeSource>{devYarn}</CodeSource>
-								</CodeFrame>
-							</CodeGroup>
-						</CardContent>
-					</Card>
+			<Card className="max-w-md w-full mb-6">
+				<CardHeader>
+					<CardTitle>Connect to Project</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<p className="mb-4">
+						Connect to your RivetKit project by entering the URL and
+						access token.
+					</p>
 
-					<Card className="max-w-md w-full my-6">
-						<CardHeader>
-							<CardTitle>Having trouble connecting?</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<p>
-								Rivet Studio works best in{" "}
-								<Strong>
-									<Icon icon={faChrome} /> Chrome
-								</Strong>
-								. Some browsers like{" "}
-								<Strong>
-									<Icon icon={faSafari} /> Safari
-								</Strong>{" "}
-								and{" "}
-								<Strong>
-									<Icon icon={faBrave} /> Brave
-								</Strong>{" "}
-								block access to localhost by default.
-							</p>
-						</CardContent>
-						<CardFooter>
-							<p className="text-muted-foreground text-sm">
-								Having issues? Join the{" "}
-								<Link
-									href="https://rivet.gg/discord"
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									Rivet Discord
-								</Link>{" "}
-								or{" "}
-								<Link
-									href="https://github.com/rivet-gg/rivet/issues"
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									file a GitHub Issue
-								</Link>
-								.
-							</p>
-						</CardFooter>
-					</Card>
-				</motion.div>
-			) : (
-				<Actors actorId={actorId} />
-			)}
-		</AnimatePresence>
+					<ConnectionForm
+						ref={ref}
+						defaultValues={{
+							username: u || "http://localhost:8080",
+							token: token || t || "",
+						}}
+						onSubmit={async (values, form) => {
+							try {
+								await queries.getManagerStatus({
+									token: values.token,
+									url: values.username,
+								});
+								setToken(values.username, values.token);
+								navigate({
+									to: ".",
+									search: (old) => ({
+										...old,
+										u: values.username,
+										modal: undefined,
+									}),
+								});
+							} catch (error) {
+								form.setError("token", {
+									message:
+										"Failed to connect. Please check your URL and token.",
+								});
+							}
+						}}
+					/>
+				</CardContent>
+			</Card>
+		</div>
 	);
 }

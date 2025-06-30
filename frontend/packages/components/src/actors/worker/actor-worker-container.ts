@@ -1,15 +1,11 @@
 import { CancelledError } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { ls } from "../../lib/utils";
 import ActorWorker from "./actor-repl.worker?worker";
 import {
 	type CodeMessage,
 	type FormattedCode,
 	type InitMessage,
-	type InspectData,
 	type Log,
 	ResponseSchema,
-	type SetStateMessage,
 } from "./actor-worker-schema";
 
 export type ReplCommand = {
@@ -35,23 +31,19 @@ export type ContainerStatus =
 export type ContainerState = {
 	status: ContainerStatus;
 	commands: ReplCommand[];
-} & InspectData;
+};
 
 export class ActorWorkerContainer {
 	#state: ContainerState = {
 		status: { type: "unknown" },
 		commands: [],
-		rpcs: [],
-		state: { enabled: false, value: undefined },
-		connections: [],
 	};
 
 	#meta: {
 		actorId: string;
-	} | null = null;
-
-	#opts: {
-		notifyOnReconnect?: boolean;
+		rpcs: string[];
+		endpoint?: string;
+		name?: string;
 	} | null = null;
 
 	#listeners: (() => void)[] = [];
@@ -60,19 +52,20 @@ export class ActorWorkerContainer {
 	//
 	async init({
 		actorId,
-		endpoint,
 		signal,
-		notifyOnReconnect,
+		rpcs = [],
+		endpoint,
+		name,
 	}: {
 		actorId: string;
-		endpoint: string;
 		signal: AbortSignal;
-		notifyOnReconnect?: boolean;
+		rpcs?: string[];
+		endpoint?: string;
+		name?: string;
 	}) {
 		this.terminate();
 
-		this.#meta = { actorId };
-		this.#opts = { notifyOnReconnect };
+		this.#meta = { actorId, rpcs, endpoint, name };
 		this.#state.status = { type: "pending" };
 		this.#update();
 		try {
@@ -93,7 +86,7 @@ export class ActorWorkerContainer {
 			const worker = new ActorWorker({ name: `actor-${actorId}` });
 			signal.throwIfAborted();
 			// now worker needs to check if the actor is supported
-			this.#setupWorker(worker, { actorId, endpoint });
+			this.#setupWorker(worker);
 			signal.throwIfAborted();
 			return worker;
 		} catch (e) {
@@ -123,18 +116,11 @@ export class ActorWorkerContainer {
 		this.#worker = undefined;
 		this.#state.commands = [];
 		this.#state.status = { type: "unknown" };
-		this.#state.rpcs = [];
-		this.#state.state = {
-			enabled: false,
-			value: undefined,
-		};
 		this.#meta = null;
-		this.#opts = null;
-		this.#state.connections = [];
 		this.#update();
 	}
 
-	#setupWorker(worker: Worker, data: Omit<InitMessage, "type">) {
+	#setupWorker(worker: Worker) {
 		this.#worker = worker;
 		this.#worker.addEventListener("message", (event) => {
 			try {
@@ -152,8 +138,10 @@ export class ActorWorkerContainer {
 
 		this.#worker.postMessage({
 			type: "init",
-			...data,
-			token: ls.get("rivet-token")?.token,
+			rpcs: this.#meta?.rpcs ?? [],
+			id: this.#meta?.actorId ?? "",
+			endpoint: this.#meta?.endpoint ?? "",
+			name: this.#meta?.name ?? "",
 		} satisfies InitMessage);
 	}
 
@@ -172,36 +160,12 @@ export class ActorWorkerContainer {
 		this.#update();
 	}
 
-	setState(data: string) {
-		this.#worker?.postMessage({
-			type: "set-state",
-			data,
-		} satisfies SetStateMessage);
-		this.#state.state = {
-			...this.#state.state,
-			value: JSON.parse(data || "{}"),
-		};
-		this.#update();
-	}
-
 	getCommands() {
 		return this.#state.commands;
 	}
 
 	getStatus() {
 		return this.#state.status;
-	}
-
-	getRpcs() {
-		return this.#state.rpcs;
-	}
-
-	getState() {
-		return this.#state.state;
-	}
-
-	getConnections() {
-		return this.#state.connections;
 	}
 
 	subscribe(cb: () => void) {
@@ -294,30 +258,7 @@ export class ActorWorkerContainer {
 		}
 
 		if (msg.type === "ready") {
-			if (this.#opts?.notifyOnReconnect) {
-				toast.success("Connected to Actor", {
-					id: "ac-ws-reconnect",
-				});
-			}
 			this.#state.status = { type: "ready" };
-		}
-
-		if (msg.type === "inspect" || msg.type === "ready") {
-			this.#state.rpcs = [...msg.data.rpcs];
-			this.#state.state = {
-				...msg.data.state,
-				value: msg.data.state.value || {},
-			};
-			this.#state.connections = [...msg.data.connections];
-			this.#update();
-		}
-
-		if (msg.type === "lost-connection") {
-			this.#state.status = { type: "pending" };
-
-			if (this.#opts?.notifyOnReconnect) {
-				toast.loading("Reconnecting...", { id: "ac-ws-reconnect" });
-			}
 			this.#update();
 		}
 	}

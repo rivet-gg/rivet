@@ -1,4 +1,3 @@
-import { useAtomValue } from "jotai";
 import {
 	DialogDescription,
 	DialogFooter,
@@ -6,15 +5,18 @@ import {
 	DialogTitle,
 } from "../../ui/dialog";
 import { Flex } from "../../ui/flex";
-import { createActorAtom } from "../actor-context";
 import { useActorsView } from "../actors-view-context-provider";
 import * as ActorCreateForm from "../form/actor-create-form";
 import type { DialogContentProps } from "../hooks";
+import { useMutation } from "@tanstack/react-query";
+import { useManagerQueries } from "../manager-queries-context";
 
 interface ContentProps extends DialogContentProps {}
 
 export default function CreateActorDialog({ onClose }: ContentProps) {
-	const { endpoint, create } = useAtomValue(createActorAtom);
+	const { mutateAsync } = useMutation(
+		useManagerQueries().createActorMutationOptions(),
+	);
 
 	const { copy } = useActorsView();
 
@@ -22,23 +24,17 @@ export default function CreateActorDialog({ onClose }: ContentProps) {
 		<>
 			<ActorCreateForm.Form
 				onSubmit={async (values) => {
-					if (!endpoint) {
-						throw new Error("No endpoint");
-					}
-					await create({
-						endpoint,
-						id: values.buildId,
-						tags: Object.fromEntries(
-							values.tags.map((tag) => [tag.key, tag.value]),
-						),
-						params: values.parameters
-							? JSON.parse(values.parameters)
+					const key = JSON.parse(values.key);
+					await mutateAsync({
+						name: values.name,
+						input: values.input
+							? JSON.parse(values.input)
 							: undefined,
-						region: values.regionId,
+						key: Array.isArray(key) ? key : [key],
 					});
 					onClose?.();
 				}}
-				defaultValues={{ buildId: "", regionId: "" }}
+				defaultValues={{ name: "" }}
 			>
 				<DialogHeader>
 					<DialogTitle>{copy.createActorModal.title}</DialogTitle>
@@ -48,9 +44,10 @@ export default function CreateActorDialog({ onClose }: ContentProps) {
 				</DialogHeader>
 				<Flex gap="4" direction="col">
 					<ActorCreateForm.Build />
-					<ActorCreateForm.Region />
-					<ActorCreateForm.Tags />
-					{/* <ActorCreateForm.Parameters /> */}
+					{/* <ActorCreateForm.Region /> */}
+					{/* <ActorCreateForm.Tags /> */}
+					<ActorCreateForm.Keys />
+					<ActorCreateForm.JsonInput />
 				</Flex>
 				<DialogFooter>
 					<ActorCreateForm.Submit type="submit">

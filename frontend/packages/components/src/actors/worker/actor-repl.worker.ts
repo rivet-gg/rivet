@@ -1,25 +1,18 @@
 import {
-	type InspectData,
-	type ToClient,
-	ToClientSchema,
-	type ToServer,
-} from "actor-core/inspector/protocol/actor";
-import { fromJs } from "esast-util-from-js";
-import { toJs } from "estree-util-to-js";
-
-import type { Request, ResponseOk } from "actor-core/protocol/http";
-import {
 	type HighlighterCore,
 	createHighlighterCore,
 	createOnigurumaEngine,
 } from "shiki";
-import { endWithSlash } from "../../lib/utils";
 import {
 	MessageSchema,
-	type ReplErrorCode,
-	type Response,
 	ResponseSchema,
+	type Response,
+	type ReplErrorCode,
+	type InitMessage,
 } from "./actor-worker-schema";
+import { fromJs } from "esast-util-from-js";
+import { toJs } from "estree-util-to-js";
+import { createClient } from "@rivetkit/actor/client";
 
 class ReplError extends Error {
 	constructor(
@@ -109,68 +102,7 @@ const createConsole = (id: string) => {
 	);
 };
 
-let init: null | ({ ws: WebSocket; url: URL } & InspectData) = null;
-
-async function connect(endpoint: string, opts?: { token?: string }) {
-	const url = new URL("inspect", endWithSlash(endpoint));
-
-	if (opts?.token) {
-		url.searchParams.set("token", opts.token);
-	}
-
-	const ws = new WebSocket(url);
-
-	await waitForOpen(ws);
-
-	ws.send(
-		JSON.stringify({
-			type: "info",
-		} satisfies ToServer),
-	);
-
-	const { type: _, ...info } = await waitForMessage(ws, "info");
-	init = { ...info, ws, url: new URL(endpoint) };
-
-	ws.addEventListener("message", (event) => {
-		try {
-			const data = ToClientSchema.parse(JSON.parse(event.data));
-
-			if (data.type === "info") {
-				return respond({
-					type: "inspect",
-					data: {
-						...data,
-					},
-				});
-			}
-			if (data.type === "error") {
-				return respond({
-					type: "error",
-					data: data.message,
-				});
-			}
-		} catch (error) {
-			console.warn("Malformed message", event.data, error);
-			return;
-		}
-	});
-
-	ws.addEventListener("close", () => {
-		respond({
-			type: "lost-connection",
-		});
-		setTimeout(() => {
-			connect(endpoint, opts);
-		}, 500);
-	});
-
-	respond({
-		type: "ready",
-		data: {
-			...info,
-		},
-	});
-}
+let init: null | Omit<InitMessage, "type"> = null;
 
 addEventListener("message", async (event) => {
 	const { success, error, data } = MessageSchema.safeParse(event.data);
@@ -181,29 +113,16 @@ addEventListener("message", async (event) => {
 	}
 
 	if (data.type === "init") {
-		if (init) {
-			respond({
-				type: "error",
-				data: new Error("Actor already initialized"),
-			});
-			return;
-		}
-
-		try {
-			await Promise.race([
-				connect(data.endpoint, data.token ? { token: data.token } : {}),
-				wait(5000).then(() => {
-					throw new Error("Timeout");
-				}),
-			]);
-
-			return;
-		} catch (e) {
-			return respond({
-				type: "error",
-				data: e,
-			});
-		}
+		init = {
+			rpcs: data.rpcs ?? [],
+			endpoint: data.endpoint,
+			name: data.name,
+			id: data.id,
+		};
+		respond({
+			type: "ready",
+		});
+		return;
 	}
 
 	if (data.type === "code") {
@@ -224,30 +143,20 @@ addEventListener("message", async (event) => {
 				data: formatted,
 			});
 
+			const client = createClient(actor.endpoint).getForId(
+				actor.name,
+				actor.id,
+			);
+
 			const createRpc =
 				(rpc: string) =>
 				async (...args: unknown[]) => {
-					const url = new URL(
-						`rpc/${rpc}`,
-						endWithSlash(actor.url.href),
-					);
-					const response = await fetch(url, {
-						method: "POST",
-						body: JSON.stringify({
-							a: args,
-						} satisfies Request),
-					});
-
-					if (!response.ok) {
-						throw new Error("RPC failed");
-					}
-
-					const data = (await response.json()) as ResponseOk;
-					return data.o;
+					const response = await client.action({ name: rpc, args });
+					return response;
 				};
 
 			const exposedActor = Object.fromEntries(
-				init?.rpcs.map((rpc) => [rpc, createRpc(rpc)]) ?? [],
+				actor.rpcs?.map((rpc) => [rpc, createRpc(rpc)]) ?? [],
 			);
 
 			const evaluated = await evaluateCode(data.data, {
@@ -268,88 +177,8 @@ addEventListener("message", async (event) => {
 			});
 		}
 	}
-
-	if (data.type === "set-state") {
-		const actor = init;
-		if (!actor) {
-			respond({
-				type: "error",
-				data: new Error("Actor not initialized"),
-			});
-			return;
-		}
-
-		try {
-			const state = JSON.parse(data.data);
-			actor.ws.send(
-				JSON.stringify({
-					type: "setState",
-					state,
-				} satisfies ToServer),
-			);
-		} catch (e) {
-			return respond({
-				type: "error",
-				data: e,
-			});
-		}
-	}
 });
 
 function respond(msg: Response) {
 	return postMessage(ResponseSchema.parse(msg));
-}
-
-function waitForOpen(ws: WebSocket) {
-	const { promise, resolve, reject } = Promise.withResolvers();
-	ws.addEventListener("open", () => {
-		resolve(undefined);
-	});
-	ws.addEventListener("error", (event) => {
-		reject();
-	});
-	ws.addEventListener("close", (event) => {
-		reject();
-	});
-
-	return Promise.race([
-		promise,
-		wait(5000).then(() => {
-			throw new Error("Timeout");
-		}),
-	]);
-}
-
-function waitForMessage<T extends ToClient["type"]>(
-	ws: WebSocket,
-	type: T,
-): Promise<Extract<ToClient, { type: T }>> {
-	const { promise, resolve, reject } =
-		Promise.withResolvers<Extract<ToClient, { type: T }>>();
-
-	function onMessage(event: MessageEvent) {
-		try {
-			const data = ToClientSchema.parse(JSON.parse(event.data));
-
-			if (data.type === type) {
-				resolve(data as Extract<ToClient, { type: T }>);
-				ws.removeEventListener("message", onMessage);
-			}
-		} catch (e) {
-			console.error(e);
-		}
-	}
-
-	ws.addEventListener("message", onMessage);
-	ws.addEventListener("error", (event) => {
-		ws.removeEventListener("message", onMessage);
-		reject();
-	});
-
-	return Promise.race([
-		promise,
-		wait(5000).then(() => {
-			throw new Error("Timeout");
-		}),
-	]);
 }

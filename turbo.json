@@ -1,6 +1,7 @@
 {
 	"$schema": "https://turbo.build/schema.json",
 	"globalEnv": ["FONTAWESOME_PACKAGE_TOKEN"],
+	"globalPassThroughEnv": ["COREPACK_HOME"],
 	"tasks": {
 		"//#fmt": {
 			"cache": false

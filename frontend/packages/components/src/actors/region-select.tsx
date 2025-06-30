@@ -1,7 +1,7 @@
 import { Combobox } from "@rivet-gg/components";
-import { useAtomValue } from "jotai";
-import { actorRegionsAtom } from "./actor-context";
 import { ActorRegion } from "./actor-region";
+import { useQuery } from "@tanstack/react-query";
+import { useManagerQueries } from "./manager-queries-context";
 
 interface RegionSelectProps {
 	onValueChange: (value: string) => void;
@@ -9,7 +9,7 @@ interface RegionSelectProps {
 }
 
 export function RegionSelect({ onValueChange, value }: RegionSelectProps) {
-	const data = useAtomValue(actorRegionsAtom);
+	const { data = [] } = useQuery(useManagerQueries().regionsQueryOptions());
 
 	const regions = [
 		{

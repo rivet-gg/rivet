@@ -1,11 +1,6 @@
-import { InspectDataSchema } from "actor-core/inspector/protocol/actor";
 import { z } from "zod";
 
-export type ReplErrorCode =
-	| "unsupported"
-	| "runtime_error"
-	| "timeout"
-	| "syntax";
+export type ReplErrorCode = "unsupported" | "runtime_error" | "syntax";
 
 const CodeMessageSchema = z.object({
 	type: z.literal("code"),
@@ -14,20 +9,15 @@ const CodeMessageSchema = z.object({
 });
 const InitMessageSchema = z.object({
 	type: z.literal("init"),
+	rpcs: z.array(z.string()).optional(),
 	endpoint: z.string(),
-	actorId: z.string(),
-	token: z.string().optional(),
-});
-
-const SetStateMessageSchema = z.object({
-	type: z.literal("set-state"),
-	data: z.string(),
+	name: z.string(),
+	id: z.string(),
 });
 
 export const MessageSchema = z.discriminatedUnion("type", [
 	CodeMessageSchema,
 	InitMessageSchema,
-	SetStateMessageSchema,
 ]);
 
 export const FormattedCodeSchema = z
@@ -73,14 +63,6 @@ export const ResponseSchema = z.discriminatedUnion("type", [
 	}),
 	z.object({
 		type: z.literal("ready"),
-		data: InspectDataSchema,
-	}),
-	z.object({
-		type: z.literal("inspect"),
-		data: InspectDataSchema,
-	}),
-	z.object({
-		type: z.literal("lost-connection"),
 	}),
 ]);
 
@@ -90,5 +72,3 @@ export type FormattedCode = z.infer<typeof FormattedCodeSchema>;
 export type Log = z.infer<typeof LogSchema>;
 export type InitMessage = z.infer<typeof InitMessageSchema>;
 export type CodeMessage = z.infer<typeof CodeMessageSchema>;
-export type InspectData = z.infer<typeof InspectDataSchema>;
-export type SetStateMessage = z.infer<typeof SetStateMessageSchema>;

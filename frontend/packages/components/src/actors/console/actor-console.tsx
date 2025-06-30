@@ -6,13 +6,33 @@ import { useActorWorkerStatus } from "../worker/actor-worker-context";
 import { ActorWorkerStatus } from "../worker/actor-worker-status";
 import { ActorConsoleInput } from "./actor-console-input";
 import { ActorConsoleLogs } from "./actor-console-logs";
+import type { ActorId } from "../queries";
+import { useQuery } from "@tanstack/react-query";
+import { useActorQueries } from "../actor-queries-context";
 
-export function ActorConsole() {
+interface ActorConsoleProps {
+	actorId: ActorId;
+}
+
+export function ActorConsole({ actorId }: ActorConsoleProps) {
 	const [isOpen, setOpen] = useState(false);
 
 	const status = useActorWorkerStatus();
+	const actorQueries = useActorQueries();
+	const { isSuccess, isError, isLoading } = useQuery(
+		actorQueries.actorPingQueryOptions(actorId, {
+			enabled: true,
+			refetchInterval: false,
+		}),
+	);
 
-	const isBlocked = status.type !== "ready";
+	const isBlocked = status.type !== "ready" || !isSuccess;
+
+	const combinedStatus = isError
+		? "error"
+		: isLoading
+			? "pending"
+			: status.type;
 
 	return (
 		<motion.div
@@ -31,7 +51,7 @@ export function ActorConsole() {
 			>
 				<span>
 					Console
-					<ActorWorkerStatus status={status.type} />
+					<ActorWorkerStatus status={combinedStatus} />
 				</span>
 			</Button>
 			<AnimatePresence>
@@ -41,7 +61,7 @@ export function ActorConsole() {
 						className="flex flex-col flex-1 max-h-full overflow-hidden"
 					>
 						<ActorConsoleLogs />
-						<ActorConsoleInput />
+						<ActorConsoleInput actorId={actorId} />
 					</motion.div>
 				) : null}
 			</AnimatePresence>
