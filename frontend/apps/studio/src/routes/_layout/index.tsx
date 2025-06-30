@@ -1,10 +1,5 @@
 import { Actors } from "@/components/actors";
 import {
-	connectionEffect,
-	connectionStateAtom,
-	initiallyConnectedAtom,
-} from "@/stores/manager";
-import {
 	Button,
 	Card,
 	CardContent,
@@ -20,10 +15,6 @@ import {
 	Strong,
 } from "@rivet-gg/components";
 import {
-	ActorsListFiltersSchema,
-	currentActorIdAtom,
-} from "@rivet-gg/components/actors";
-import {
 	Icon,
 	faChrome,
 	faBrave,
@@ -35,7 +26,6 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 import { z } from "zod";
 // @ts-expect-error types are missing
@@ -53,6 +43,14 @@ import devBun, {
 	source as devBunSource,
 	// @ts-expect-error types are missing
 } from "../../content/dev-bun.sh?shiki";
+import {
+	type ActorId,
+	ActorsListFiltersSchema,
+	actorsQueryOptions,
+	useManagerInspector,
+	useManagerInspectorListener,
+} from "@rivet-gg/components/actors";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_layout/")({
 	component: RouteComponent,
@@ -67,22 +65,35 @@ export const Route = createFileRoute("/_layout/")({
 });
 
 function RouteComponent() {
-	useAtom(connectionEffect);
-
-	const isInitiallyConnected = useAtomValue(initiallyConnectedAtom);
-	const status = useAtomValue(connectionStateAtom);
-
 	const { actorId } = Route.useSearch();
 
-	const setCurrentActorId = useSetAtom(currentActorIdAtom);
+	const ws = useManagerInspector();
+	const queryClient = useQueryClient();
 
 	useEffect(() => {
-		setCurrentActorId(actorId);
-	}, [actorId, setCurrentActorId]);
+		if (ws.isConnected) {
+			ws.send({ type: "info" });
+		}
+	}, [ws.isConnected]);
+
+	useManagerInspectorListener((msg) => {
+		if (msg.type === "info") {
+			queryClient.setQueryData(actorsQueryOptions().queryKey, () => ({
+				pages: [
+					msg.actors.map((actor) => ({
+						...actor,
+						id: actor.id as ActorId,
+					})),
+				],
+				pageParams: [],
+			}));
+		}
+	});
 
 	return (
 		<AnimatePresence initial={false}>
-			{status === "disconnected" && !isInitiallyConnected ? (
+			{
+				/* {status === "disconnected" && !isInitiallyConnected ? (
 				<motion.div
 					initial={{ opacity: 0, scale: 0.95 }}
 					animate={{ opacity: 1, scale: 1 }}
@@ -227,9 +238,10 @@ function RouteComponent() {
 						</CardFooter>
 					</Card>
 				</motion.div>
-			) : (
+			) : (*/
 				<Actors actorId={actorId} />
-			)}
+				/*	)} */
+			}
 		</AnimatePresence>
 	);
 }

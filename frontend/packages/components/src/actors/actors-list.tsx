@@ -25,8 +25,6 @@ import {
 	actorFiltersAtom,
 	actorFiltersCountAtom,
 	actorRegionsAtom,
-	actorsAtomsAtom,
-	actorsPaginationAtom,
 	actorsQueryAtom,
 	actorTagsAtom,
 	filteredActorsCountAtom,
@@ -49,8 +47,13 @@ import {
 import { useActorsView } from "./actors-view-context-provider";
 import { useCallback, useMemo } from "react";
 import { ActorTag } from "./actor-tags";
-import type { ActorStatus as ActorStatusType } from "./actor-status-indicator";
 import { ActorStatus } from "./actor-status";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+	actorsLisPaginationQueryOptions,
+	actorsListQueryOptions,
+} from "./queries";
+import type { ActorStatus as ActorStatusType } from "./queries";
 
 export function ActorsList() {
 	return (
@@ -113,19 +116,26 @@ function LoadingIndicator() {
 }
 
 function List() {
-	const actors = useAtomValue(actorsAtomsAtom);
+	const { data: actorIds = [] } = useInfiniteQuery(actorsListQueryOptions());
+	const actorId = useSearch({ select: (state) => state.actorId });
+
 	return (
 		<>
-			{actors.map((actor) => (
-				<ActorsListRow key={`${actor}`} actor={actor} />
+			{actorIds.map((id) => (
+				<ActorsListRow
+					key={id}
+					actorId={id}
+					isCurrent={actorId === id}
+				/>
 			))}
 		</>
 	);
 }
 
 function Pagination() {
-	const { hasNextPage, isFetchingNextPage, fetchNextPage } =
-		useAtomValue(actorsPaginationAtom);
+	const { hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteQuery(
+		actorsLisPaginationQueryOptions(),
+	);
 
 	if (hasNextPage) {
 		return (

@@ -9,6 +9,7 @@ import { type LogsTypeFilter, filterLogs } from "./actor-logs";
 import type { ActorAtom, LogsAtom } from "./actor-context";
 import { selectAtom } from "jotai/utils";
 import { type Atom, atom, useAtom } from "jotai";
+import { ActorId } from "./queries";
 
 const downloadLogsAtom = atom(
 	null,
@@ -53,19 +54,19 @@ const downloadLogsAtom = atom(
 );
 
 interface ActorDownloadLogsButtonProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 	typeFilter?: LogsTypeFilter;
 	filter?: string;
 }
 
 export function ActorDownloadLogsButton({
-	actor,
+	actorId,
 	typeFilter,
 	filter,
 }: ActorDownloadLogsButtonProps) {
 	const [settings] = useActorDetailsSettings();
 
-	const [, downloadLogs] = useAtom(downloadLogsAtom);
+	// const [, downloadLogs] = useAtom(downloadLogsAtom);
 
 	return (
 		<WithTooltip
@@ -76,13 +77,14 @@ export function ActorDownloadLogsButton({
 					variant="outline"
 					aria-label="Download logs"
 					size="icon-sm"
-					onClick={() =>
-						downloadLogs({
-							typeFilter,
-							filter,
-							settings,
-							logs: selectAtom(actor, (a) => a.logs),
-						})
+					onClick={
+						() => {}
+						// downloadLogs({
+						// 	typeFilter,
+						// 	filter,
+						// 	settings,
+						// 	logs: selectAtom(actor, (a) => a.logs),
+						// })
 					}
 				>
 					<Icon icon={faSave} />

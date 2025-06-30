@@ -3,10 +3,10 @@ import { Icon, faBooks } from "@rivet-gg/icons";
 import { ActorGeneral } from "./actor-general";
 import { ActorNetwork } from "./actor-network";
 import { ActorRuntime } from "./actor-runtime";
-import type { ActorAtom } from "./actor-context";
+import type { ActorId } from "./queries";
 
 interface ActorConfigTabProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
 export function ActorConfigTab(props: ActorConfigTabProps) {
