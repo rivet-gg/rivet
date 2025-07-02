@@ -154,7 +154,7 @@ pub async fn create(
 		resources: Some((*body.resources).api_into()),
 		lifecycle: body.lifecycle.map(|x| (*x).api_into()).unwrap_or_else(|| {
 			pegboard::types::ActorLifecycle {
-				kill_timeout_ms: 0,
+				kill_timeout_ms: 5000,
 				durable: false,
 			}
 		}),
