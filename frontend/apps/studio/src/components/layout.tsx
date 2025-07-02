@@ -1,9 +1,14 @@
-import { connectionStateAtom } from "@/stores/manager";
-import { cn, DocsSheet, ShimmerLine } from "@rivet-gg/components";
+import { cn, DocsSheet } from "@rivet-gg/components";
+import { useManagerInspector } from "@rivet-gg/components/actors";
 import { Header as RivetHeader, NavItem } from "@rivet-gg/components/header";
-import { faGithub, Icon } from "@rivet-gg/icons";
+import {
+	faCheck,
+	faGithub,
+	faSpinnerThird,
+	faTriangleExclamation,
+	Icon,
+} from "@rivet-gg/icons";
 import { Link } from "@tanstack/react-router";
-import { useAtomValue } from "jotai";
 import type { PropsWithChildren, ReactNode } from "react";
 
 interface RootProps {
@@ -30,15 +35,58 @@ const VisibleInFull = ({ children }: PropsWithChildren) => {
 	);
 };
 
+function ConnectionStatus() {
+	const ws = useManagerInspector();
+
+	if (ws.isConnecting) {
+		return (
+			<p className="animate-in fade-in">
+				Connecting to{" "}
+				<span className="underline underline-offset-2">
+					localhost:6420
+				</span>
+				<Icon icon={faSpinnerThird} className="animate-spin ml-2" />
+			</p>
+		);
+	}
+
+	if (ws.isDisconnected) {
+		return (
+			<p className="text-red-500 animate-shake">
+				Couldn't connect to{" "}
+				<span className="underline underline-offset-2">
+					localhost:6420
+				</span>
+				<Icon icon={faTriangleExclamation} className="ml-2" />
+			</p>
+		);
+	}
+
+	if (ws.isConnected) {
+		return (
+			<p className="text-primary animate-in fade-in">
+				Connected to{" "}
+				<span className="underline underline-offset-2">
+					localhost:6420
+				</span>
+				<Icon icon={faCheck} className="ml-2" />
+			</p>
+		);
+	}
+}
+
 const Header = () => {
-	const connectionStatus = useAtomValue(connectionStateAtom);
 	return (
 		<RivetHeader
-			logo={<img src="/logo.svg" alt="Rivet.gg" className="h-6" />}
-			addons={
-				connectionStatus !== "connected" ? (
-					<ShimmerLine className="-bottom-1" />
-				) : null
+			className="bg-stripes"
+			logo={
+				<>
+					<img src="/logo.svg" alt="Rivet.gg" className="h-6" />{" "}
+					Studio
+					<div className="text-xs  font-mono text-muted-foreground">
+						<ConnectionStatus />
+					</div>
+				</>
 			}
 			links={
 				<>

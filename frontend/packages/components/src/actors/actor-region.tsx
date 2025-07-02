@@ -1,13 +1,11 @@
-import { cn, Flex, WithTooltip } from "@rivet-gg/components";
+import { Flex, WithTooltip } from "@rivet-gg/components";
 import {
 	REGION_LABEL,
 	RegionIcon,
 	getRegionKey,
 } from "../matchmaker/lobby-region";
-import { actorRegionsAtom, type Actor } from "./actor-context";
-import { selectAtom } from "jotai/utils";
-import { useAtomValue } from "jotai";
-import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { regionQueryOptions } from "./queries";
 
 interface ActorRegionProps {
 	regionId?: string;
@@ -20,15 +18,11 @@ export function ActorRegion({
 	regionId,
 	className,
 }: ActorRegionProps) {
-	const region = useAtomValue(
-		selectAtom(
-			actorRegionsAtom,
-			useCallback(
-				(regions) => regions.find((region) => region.id === regionId),
-				[regionId],
-			),
-		),
-	);
+	const { data: region } = useQuery(regionQueryOptions(regionId));
+
+	if (!regionId || !region) {
+		return null;
+	}
 
 	const regionKey = getRegionKey(region?.id);
 

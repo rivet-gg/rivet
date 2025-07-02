@@ -2,38 +2,31 @@ import { Suspense } from "react";
 import { ActorBuild } from "./actor-build";
 import { ActorObjectInspector } from "./console/actor-inspector";
 import { ACTOR_FRAMEWORK_TAG_VALUE } from "./actor-tags";
-import {
-	ActorFeature,
-	currentActorFeaturesAtom,
-	type Actor,
-	type ActorAtom,
-} from "./actor-context";
-import { selectAtom } from "jotai/utils";
-import { useAtomValue } from "jotai";
 import { Dd, Dl, Dt } from "../ui/typography";
 import { Flex } from "../ui/flex";
 import { formatDuration } from "../lib/formatter";
 import { toRecord } from "../lib/utils";
 import { Skeleton } from "../ui/skeleton";
-import equal from "fast-deep-equal";
-
-const selector = (a: Actor) => ({
-	lifecycle: a.lifecycle,
-	resources: a.resources,
-	runtime: a.runtime,
-	tags: a.tags,
-});
+import { useQuery } from "@tanstack/react-query";
+import {
+	ActorFeature,
+	actorFeaturesQueryOptions,
+	type ActorId,
+	actorRuntimeQueryOptions,
+} from "./queries";
 
 export interface ActorRuntimeProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
-export function ActorRuntime({ actor }: ActorRuntimeProps) {
-	const { lifecycle, resources, runtime, tags } = useAtomValue(
-		selectAtom(actor, selector, equal),
-	);
+export function ActorRuntime({ actorId }: ActorRuntimeProps) {
+	const {
+		data: { lifecycle, resources, runtime, tags } = {},
+	} = useQuery(actorRuntimeQueryOptions(actorId));
 
-	const features = useAtomValue(currentActorFeaturesAtom);
+	const { data: features = [] } = useQuery(
+		actorFeaturesQueryOptions(actorId),
+	);
 
 	return (
 		<>
@@ -83,7 +76,7 @@ export function ActorRuntime({ actor }: ActorRuntimeProps) {
 			<Suspense
 				fallback={<Skeleton className="w-full h-32 col-span-2" />}
 			>
-				<ActorBuild actor={actor} />
+				<ActorBuild actorId={actorId} />
 			</Suspense>
 		</>
 	);

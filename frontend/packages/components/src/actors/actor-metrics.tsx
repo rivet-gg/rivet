@@ -1,35 +1,36 @@
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import equal from "fast-deep-equal";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dd, Dl, Dt, Flex, Button } from "@rivet-gg/components";
-import type { Actor, ActorAtom } from "./actor-context";
-
-const selector = (a: Actor) => ({
-	metrics: a.metrics,
-	status: a.status,
-});
+import {
+	type ActorId,
+	actorMetricsQueryOptions,
+	actorStatusQueryOptions,
+} from "./queries";
+import { useQuery } from "@tanstack/react-query";
 
 export interface ActorMetricsProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
-export function ActorMetrics({ actor }: ActorMetricsProps) {
-	const { metrics, status } = useAtomValue(selectAtom(actor, selector, equal));
-	const metricsData = useAtomValue(metrics);
+export function ActorMetrics({ actorId }: ActorMetricsProps) {
+	const { data: status } = useQuery(actorStatusQueryOptions(actorId));
+	const {
+		data: metricsData,
+		isLoading,
+		isError,
+	} = useQuery(actorMetricsQueryOptions(actorId));
+
 	const [showAdvanced, setShowAdvanced] = useState(false);
-	const [cpuPercentage, setCpuPercentage] = useState<string>("n/a");
 
 	const isActorRunning = status === "running";
 
 	const formatBytes = (bytes: number | null | undefined) => {
-		if (!isActorRunning || bytes === null || bytes === undefined) return "n/a";
+		if (!isActorRunning || bytes === null || bytes === undefined)
+			return "n/a";
 		const mb = bytes / 1024 / 1024;
 		if (mb < 1024) {
 			return `${mb.toFixed(1)} MB`;
-		} else {
-			return `${(mb / 1024).toFixed(1)} GB`;
 		}
+		return `${(mb / 1024).toFixed(1)} GB`;
 	};
 
 	const formatCpuUsage = (cpu: number | null | undefined) => {
@@ -38,32 +39,31 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 	};
 
 	const formatNumber = (value: number | null | undefined) => {
-		if (!isActorRunning || value === null || value === undefined) return "n/a";
+		if (!isActorRunning || value === null || value === undefined)
+			return "n/a";
 		return value.toLocaleString();
 	};
 
 	const formatTimestamp = (timestamp: number | null | undefined) => {
-		if (!isActorRunning || timestamp === null || timestamp === undefined) return "n/a";
+		if (!isActorRunning || timestamp === null || timestamp === undefined)
+			return "n/a";
 		return new Date(timestamp * 1000).toLocaleString();
 	};
 
 	// Calculate CPU percentage using time series data points
-	useEffect(() => {
+	const cpuPercentage = useMemo(() => {
 		if (!isActorRunning) {
-			setCpuPercentage("n/a");
-			return;
+			return "n/a";
 		}
 
 		const data = metricsData;
 		if (!data || !data.rawData || !data.interval) {
-			setCpuPercentage("n/a");
-			return;
+			return "n/a";
 		}
 
 		const cpuValues = data.rawData.cpu_usage_seconds_total;
 		if (!cpuValues || cpuValues.length < 2) {
-			setCpuPercentage("n/a");
-			return;
+			return "n/a";
 		}
 
 		// Find two non-zero consecutive data points to calculate rate
@@ -71,11 +71,15 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 		for (let i = cpuValues.length - 1; i > 0; i--) {
 			const currentCpu = cpuValues[i];
 			const previousCpu = cpuValues[i - 1];
-			
-			if (currentCpu !== 0 && previousCpu !== 0 && currentCpu >= previousCpu) {
+
+			if (
+				currentCpu !== 0 &&
+				previousCpu !== 0 &&
+				currentCpu >= previousCpu
+			) {
 				const cpuDelta = currentCpu - previousCpu;
 				const timeDelta = data.interval / 1000; // Convert ms to seconds
-				
+
 				// Rate calculation: CPU seconds used per second of real time
 				// This gives the fraction of available CPU used (0-1)
 				cpuRate = (cpuDelta / timeDelta) * 100;
@@ -83,19 +87,27 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 			}
 		}
 
-		setCpuPercentage(`${Math.min(cpuRate, 100).toFixed(2)}%`);
+		return `${Math.min(cpuRate, 100).toFixed(2)}%`;
 	}, [metricsData, isActorRunning]);
 
-	const calculateMemoryPercentage = (usage: number | null | undefined, limit: number | null | undefined) => {
-		if (!isActorRunning || usage === null || usage === undefined || limit === null || limit === undefined || limit === 0) {
+	const calculateMemoryPercentage = (
+		usage: number | null | undefined,
+		limit: number | null | undefined,
+	) => {
+		if (
+			!isActorRunning ||
+			usage === null ||
+			usage === undefined ||
+			limit === null ||
+			limit === undefined ||
+			limit === 0
+		) {
 			return null;
 		}
 		return (usage / limit) * 100;
 	};
 
-	const isLoading = metricsData.status === "pending";
-	const hasError = metricsData.status === "error";
-	const data = metricsData.metrics || {};
+	const data = metricsData?.metrics || {};
 
 	if (isLoading) {
 		return (
@@ -106,21 +118,26 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 		);
 	}
 
-	if (hasError) {
+	if (isError) {
 		return (
 			<div className="px-4 my-8">
 				<h3 className="mb-2 font-semibold">Metrics</h3>
-				<div className="text-xs text-destructive">Error loading metrics</div>
+				<div className="text-xs text-destructive">
+					Error loading metrics
+				</div>
 			</div>
 		);
 	}
 
-	const memoryPercentage = calculateMemoryPercentage(data.memory_usage_bytes, data.spec_memory_limit_bytes);
+	const memoryPercentage = calculateMemoryPercentage(
+		data.memory_usage_bytes,
+		data.spec_memory_limit_bytes,
+	);
 
 	return (
 		<div className="px-4 my-8">
 			<h3 className="mb-4 font-semibold">Container Metrics</h3>
-			
+
 			{/* Main Metrics */}
 			<div className="mb-6">
 				<Dl className="grid grid-cols-2 gap-4">
@@ -166,17 +183,33 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 							<Dt>CPU Load Average (10s)</Dt>
 							<Dd>{formatCpuUsage(data.cpu_load_average_10s)}</Dd>
 							<Dt>CPU Usage Seconds Total</Dt>
-							<Dd>{formatNumber(data.cpu_usage_seconds_total)}</Dd>
+							<Dd>
+								{formatNumber(data.cpu_usage_seconds_total)}
+							</Dd>
 							<Dt>CPU User Seconds Total</Dt>
 							<Dd>{formatNumber(data.cpu_user_seconds_total)}</Dd>
 							<Dt>CPU System Seconds Total</Dt>
-							<Dd>{formatNumber(data.cpu_system_seconds_total)}</Dd>
+							<Dd>
+								{formatNumber(data.cpu_system_seconds_total)}
+							</Dd>
 							<Dt>CPU Schedstat Run Periods</Dt>
-							<Dd>{formatNumber(data.cpu_schedstat_run_periods_total)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.cpu_schedstat_run_periods_total,
+								)}
+							</Dd>
 							<Dt>CPU Schedstat Run Seconds</Dt>
-							<Dd>{formatNumber(data.cpu_schedstat_run_seconds_total)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.cpu_schedstat_run_seconds_total,
+								)}
+							</Dd>
 							<Dt>CPU Schedstat Runqueue Seconds</Dt>
-							<Dd>{formatNumber(data.cpu_schedstat_runqueue_seconds_total)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.cpu_schedstat_runqueue_seconds_total,
+								)}
+							</Dd>
 						</Dl>
 					</div>
 
@@ -187,7 +220,9 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 							<Dt>Memory Usage</Dt>
 							<Dd>{formatBytes(data.memory_usage_bytes)}</Dd>
 							<Dt>Memory Working Set</Dt>
-							<Dd>{formatBytes(data.memory_working_set_bytes)}</Dd>
+							<Dd>
+								{formatBytes(data.memory_working_set_bytes)}
+							</Dd>
 							<Dt>Memory RSS</Dt>
 							<Dd>{formatBytes(data.memory_rss)}</Dd>
 							<Dt>Memory Cache</Dt>
@@ -208,13 +243,29 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 						<h4 className="font-medium mb-2">Memory Failures</h4>
 						<Dl>
 							<Dt>Page Fault (Container)</Dt>
-							<Dd>{formatNumber(data.memory_failures_pgfault_container)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.memory_failures_pgfault_container,
+								)}
+							</Dd>
 							<Dt>Page Fault (Hierarchy)</Dt>
-							<Dd>{formatNumber(data.memory_failures_pgfault_hierarchy)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.memory_failures_pgfault_hierarchy,
+								)}
+							</Dd>
 							<Dt>Major Page Fault (Container)</Dt>
-							<Dd>{formatNumber(data.memory_failures_pgmajfault_container)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.memory_failures_pgmajfault_container,
+								)}
+							</Dd>
 							<Dt>Major Page Fault (Hierarchy)</Dt>
-							<Dd>{formatNumber(data.memory_failures_pgmajfault_hierarchy)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.memory_failures_pgmajfault_hierarchy,
+								)}
+							</Dd>
 						</Dl>
 					</div>
 
@@ -225,15 +276,23 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 							<Dt>Memory Limit</Dt>
 							<Dd>{formatBytes(data.spec_memory_limit_bytes)}</Dd>
 							<Dt>Memory Reservation Limit</Dt>
-							<Dd>{formatBytes(data.spec_memory_reservation_limit_bytes)}</Dd>
+							<Dd>
+								{formatBytes(
+									data.spec_memory_reservation_limit_bytes,
+								)}
+							</Dd>
 							<Dt>Memory Swap Limit</Dt>
-							<Dd>{formatBytes(data.spec_memory_swap_limit_bytes)}</Dd>
+							<Dd>
+								{formatBytes(data.spec_memory_swap_limit_bytes)}
+							</Dd>
 						</Dl>
 					</div>
 
 					{/* Processes & Threads */}
 					<div>
-						<h4 className="font-medium mb-2">Processes & Threads</h4>
+						<h4 className="font-medium mb-2">
+							Processes & Threads
+						</h4>
 						<Dl>
 							<Dt>Processes</Dt>
 							<Dd>{formatNumber(data.processes)}</Dd>
@@ -250,7 +309,9 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 							<Dt>Tasks IO Waiting</Dt>
 							<Dd>{formatNumber(data.tasks_state_iowaiting)}</Dd>
 							<Dt>Tasks Uninterruptible</Dt>
-							<Dd>{formatNumber(data.tasks_state_uninterruptible)}</Dd>
+							<Dd>
+								{formatNumber(data.tasks_state_uninterruptible)}
+							</Dd>
 						</Dl>
 					</div>
 
@@ -259,9 +320,13 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 						<h4 className="font-medium mb-2">Filesystem</h4>
 						<Dl>
 							<Dt>Reads Bytes Total (sda)</Dt>
-							<Dd>{formatBytes(data.fs_reads_bytes_total_sda)}</Dd>
+							<Dd>
+								{formatBytes(data.fs_reads_bytes_total_sda)}
+							</Dd>
 							<Dt>Writes Bytes Total (sda)</Dt>
-							<Dd>{formatBytes(data.fs_writes_bytes_total_sda)}</Dd>
+							<Dd>
+								{formatBytes(data.fs_writes_bytes_total_sda)}
+							</Dd>
 						</Dl>
 					</div>
 
@@ -270,21 +335,53 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 						<h4 className="font-medium mb-2">Network - Receive</h4>
 						<Dl>
 							<Dt>Bytes Total (eth0)</Dt>
-							<Dd>{formatBytes(data.network_receive_bytes_total_eth0)}</Dd>
+							<Dd>
+								{formatBytes(
+									data.network_receive_bytes_total_eth0,
+								)}
+							</Dd>
 							<Dt>Bytes Total (eth1)</Dt>
-							<Dd>{formatBytes(data.network_receive_bytes_total_eth1)}</Dd>
+							<Dd>
+								{formatBytes(
+									data.network_receive_bytes_total_eth1,
+								)}
+							</Dd>
 							<Dt>Errors Total (eth0)</Dt>
-							<Dd>{formatNumber(data.network_receive_errors_total_eth0)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_receive_errors_total_eth0,
+								)}
+							</Dd>
 							<Dt>Errors Total (eth1)</Dt>
-							<Dd>{formatNumber(data.network_receive_errors_total_eth1)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_receive_errors_total_eth1,
+								)}
+							</Dd>
 							<Dt>Packets Dropped (eth0)</Dt>
-							<Dd>{formatNumber(data.network_receive_packets_dropped_total_eth0)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_receive_packets_dropped_total_eth0,
+								)}
+							</Dd>
 							<Dt>Packets Dropped (eth1)</Dt>
-							<Dd>{formatNumber(data.network_receive_packets_dropped_total_eth1)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_receive_packets_dropped_total_eth1,
+								)}
+							</Dd>
 							<Dt>Packets Total (eth0)</Dt>
-							<Dd>{formatNumber(data.network_receive_packets_total_eth0)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_receive_packets_total_eth0,
+								)}
+							</Dd>
 							<Dt>Packets Total (eth1)</Dt>
-							<Dd>{formatNumber(data.network_receive_packets_total_eth1)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_receive_packets_total_eth1,
+								)}
+							</Dd>
 						</Dl>
 					</div>
 
@@ -293,21 +390,53 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 						<h4 className="font-medium mb-2">Network - Transmit</h4>
 						<Dl>
 							<Dt>Bytes Total (eth0)</Dt>
-							<Dd>{formatBytes(data.network_transmit_bytes_total_eth0)}</Dd>
+							<Dd>
+								{formatBytes(
+									data.network_transmit_bytes_total_eth0,
+								)}
+							</Dd>
 							<Dt>Bytes Total (eth1)</Dt>
-							<Dd>{formatBytes(data.network_transmit_bytes_total_eth1)}</Dd>
+							<Dd>
+								{formatBytes(
+									data.network_transmit_bytes_total_eth1,
+								)}
+							</Dd>
 							<Dt>Errors Total (eth0)</Dt>
-							<Dd>{formatNumber(data.network_transmit_errors_total_eth0)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_transmit_errors_total_eth0,
+								)}
+							</Dd>
 							<Dt>Errors Total (eth1)</Dt>
-							<Dd>{formatNumber(data.network_transmit_errors_total_eth1)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_transmit_errors_total_eth1,
+								)}
+							</Dd>
 							<Dt>Packets Dropped (eth0)</Dt>
-							<Dd>{formatNumber(data.network_transmit_packets_dropped_total_eth0)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_transmit_packets_dropped_total_eth0,
+								)}
+							</Dd>
 							<Dt>Packets Dropped (eth1)</Dt>
-							<Dd>{formatNumber(data.network_transmit_packets_dropped_total_eth1)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_transmit_packets_dropped_total_eth1,
+								)}
+							</Dd>
 							<Dt>Packets Total (eth0)</Dt>
-							<Dd>{formatNumber(data.network_transmit_packets_total_eth0)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_transmit_packets_total_eth0,
+								)}
+							</Dd>
 							<Dt>Packets Total (eth1)</Dt>
-							<Dd>{formatNumber(data.network_transmit_packets_total_eth1)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_transmit_packets_total_eth1,
+								)}
+							</Dd>
 						</Dl>
 					</div>
 
@@ -316,27 +445,51 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 						<h4 className="font-medium mb-2">TCP Connections</h4>
 						<Dl>
 							<Dt>Close</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_close)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_close)}
+							</Dd>
 							<Dt>Close Wait</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_closewait)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_closewait)}
+							</Dd>
 							<Dt>Closing</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_closing)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_closing)}
+							</Dd>
 							<Dt>Established</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_established)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_tcp_usage_established,
+								)}
+							</Dd>
 							<Dt>Fin Wait 1</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_finwait1)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_finwait1)}
+							</Dd>
 							<Dt>Fin Wait 2</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_finwait2)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_finwait2)}
+							</Dd>
 							<Dt>Last Ack</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_lastack)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_lastack)}
+							</Dd>
 							<Dt>Listen</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_listen)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_listen)}
+							</Dd>
 							<Dt>Syn Recv</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_synrecv)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_synrecv)}
+							</Dd>
 							<Dt>Syn Sent</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_synsent)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_synsent)}
+							</Dd>
 							<Dt>Time Wait</Dt>
-							<Dd>{formatNumber(data.network_tcp_usage_timewait)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp_usage_timewait)}
+							</Dd>
 						</Dl>
 					</div>
 
@@ -345,27 +498,53 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 						<h4 className="font-medium mb-2">TCP6 Connections</h4>
 						<Dl>
 							<Dt>Close</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_close)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp6_usage_close)}
+							</Dd>
 							<Dt>Close Wait</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_closewait)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_tcp6_usage_closewait,
+								)}
+							</Dd>
 							<Dt>Closing</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_closing)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp6_usage_closing)}
+							</Dd>
 							<Dt>Established</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_established)}</Dd>
+							<Dd>
+								{formatNumber(
+									data.network_tcp6_usage_established,
+								)}
+							</Dd>
 							<Dt>Fin Wait 1</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_finwait1)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp6_usage_finwait1)}
+							</Dd>
 							<Dt>Fin Wait 2</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_finwait2)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp6_usage_finwait2)}
+							</Dd>
 							<Dt>Last Ack</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_lastack)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp6_usage_lastack)}
+							</Dd>
 							<Dt>Listen</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_listen)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp6_usage_listen)}
+							</Dd>
 							<Dt>Syn Recv</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_synrecv)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp6_usage_synrecv)}
+							</Dd>
 							<Dt>Syn Sent</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_synsent)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp6_usage_synsent)}
+							</Dd>
 							<Dt>Time Wait</Dt>
-							<Dd>{formatNumber(data.network_tcp6_usage_timewait)}</Dd>
+							<Dd>
+								{formatNumber(data.network_tcp6_usage_timewait)}
+							</Dd>
 						</Dl>
 					</div>
 
@@ -374,13 +553,21 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 						<h4 className="font-medium mb-2">UDP Connections</h4>
 						<Dl>
 							<Dt>Dropped</Dt>
-							<Dd>{formatNumber(data.network_udp_usage_dropped)}</Dd>
+							<Dd>
+								{formatNumber(data.network_udp_usage_dropped)}
+							</Dd>
 							<Dt>Listen</Dt>
-							<Dd>{formatNumber(data.network_udp_usage_listen)}</Dd>
+							<Dd>
+								{formatNumber(data.network_udp_usage_listen)}
+							</Dd>
 							<Dt>RX Queued</Dt>
-							<Dd>{formatNumber(data.network_udp_usage_rxqueued)}</Dd>
+							<Dd>
+								{formatNumber(data.network_udp_usage_rxqueued)}
+							</Dd>
 							<Dt>TX Queued</Dt>
-							<Dd>{formatNumber(data.network_udp_usage_txqueued)}</Dd>
+							<Dd>
+								{formatNumber(data.network_udp_usage_txqueued)}
+							</Dd>
 						</Dl>
 					</div>
 
@@ -389,13 +576,21 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 						<h4 className="font-medium mb-2">UDP6 Connections</h4>
 						<Dl>
 							<Dt>Dropped</Dt>
-							<Dd>{formatNumber(data.network_udp6_usage_dropped)}</Dd>
+							<Dd>
+								{formatNumber(data.network_udp6_usage_dropped)}
+							</Dd>
 							<Dt>Listen</Dt>
-							<Dd>{formatNumber(data.network_udp6_usage_listen)}</Dd>
+							<Dd>
+								{formatNumber(data.network_udp6_usage_listen)}
+							</Dd>
 							<Dt>RX Queued</Dt>
-							<Dd>{formatNumber(data.network_udp6_usage_rxqueued)}</Dd>
+							<Dd>
+								{formatNumber(data.network_udp6_usage_rxqueued)}
+							</Dd>
 							<Dt>TX Queued</Dt>
-							<Dd>{formatNumber(data.network_udp6_usage_txqueued)}</Dd>
+							<Dd>
+								{formatNumber(data.network_udp6_usage_txqueued)}
+							</Dd>
 						</Dl>
 					</div>
 
