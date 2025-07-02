@@ -4,6 +4,11 @@ use std::path::Path;
 
 use super::{partial_oci_config::PartialOciConfigUser, seccomp};
 
+// CPU period in microseconds.
+//
+// https://www.kernel.org/doc/Documentation/scheduler/sched-bwc.txt
+const CPU_PERIOD: u64 = 100000;
+
 pub struct ConfigOpts<'a> {
 	pub runner_path: &'a Path,
 	pub netns_path: &'a Path,
@@ -89,14 +94,8 @@ pub fn config(opts: ConfigOpts) -> Result<serde_json::Value> {
 						// If `quota` is greater than `period`, it is allowed to use multiple cores.
 						//
 						// Read more: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/resource_management_guide/sec-cpu
-						// "quota": CPU_PERIOD * cpu / 1_000,
-						// "period": CPU_PERIOD,
-						// Use the env var for the CPU since Nomad handles assigning CPUs to each task
-						// "cpus": if cpu >= 1_000 {
-						// 	Some(template_env_var("NOMAD_CPU_CORES"))
-						// } else {
-						// 	None
-						// }
+						"quota": CPU_PERIOD * opts.cpu / 1_000,
+						"period": CPU_PERIOD,
 					}))
 				} else {
 					None
