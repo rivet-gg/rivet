@@ -1,11 +1,22 @@
 use foundationdb::tuple::{
 	Bytes, PackResult, TupleDepth, TuplePack, TupleUnpack, VersionstampOffset,
 };
-use serde::{Deserialize, Serialize};
+use pegboard_config::runner_protocol::proto::kv;
+use prost::Message;
 
 // TODO: Custom deser impl that uses arrays instead of objects?
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Key(Vec<Vec<u8>>);
+#[derive(Clone)]
+#[repr(transparent)]
+pub struct Key {
+	inner: kv::Key,
+}
+
+impl Key {
+	pub fn convert_vec(value: Vec<kv::Key>) -> Vec<Key> {
+		// SAFETY: Key is a wrapper around kv::Kky, identical memory layout
+		unsafe { std::mem::transmute(value) }
+	}
+}
 
 impl std::fmt::Debug for Key {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -15,7 +26,7 @@ impl std::fmt::Debug for Key {
 
 impl PartialEq for Key {
 	fn eq(&self, other: &Self) -> bool {
-		self.0 == other.0
+		self.inner == other.inner
 	}
 }
 
@@ -23,7 +34,7 @@ impl Eq for Key {}
 
 impl std::hash::Hash for Key {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-		for buffer in &self.0 {
+		for buffer in &self.inner.segments {
 			state.write(buffer);
 		}
 	}
@@ -31,8 +42,7 @@ impl std::hash::Hash for Key {
 
 impl Key {
 	pub fn len(&self) -> usize {
-		// Arbitrary 4 accounting for nesting overhead
-		self.0.iter().fold(0, |acc, x| acc + x.len()) + 4 * self.0.len()
+		self.inner.encoded_len()
 	}
 }
 
@@ -47,7 +57,7 @@ impl TuplePack for Key {
 		w.write_all(&[fdb_util::codes::NESTED])?;
 		offset += 1;
 
-		for v in self.0.iter() {
+		for v in self.inner.segments.iter() {
 			offset += v.pack(w, tuple_depth.increment())?;
 		}
 
@@ -62,22 +72,41 @@ impl<'de> TupleUnpack<'de> for Key {
 	fn unpack(mut input: &[u8], tuple_depth: TupleDepth) -> PackResult<(&[u8], Self)> {
 		input = fdb_util::parse_code(input, fdb_util::codes::NESTED)?;
 
-		let mut vec = Vec::new();
+		let mut segments = Vec::new();
 		while !is_end_of_tuple(input, true) {
 			let (rem, v) = Bytes::unpack(input, tuple_depth.increment())?;
 			input = rem;
-			vec.push(v.into_owned());
+			segments.push(v.into_owned());
 		}
 
 		input = fdb_util::parse_code(input, fdb_util::codes::NIL)?;
 
-		Ok((input, Key(vec)))
+		Ok((
+			input,
+			Key {
+				inner: kv::Key { segments },
+			},
+		))
+	}
+}
+
+impl From<kv::Key> for Key {
+	fn from(value: kv::Key) -> Key {
+		Key { inner: value }
+	}
+}
+
+impl From<Key> for kv::Key {
+	fn from(value: Key) -> kv::Key {
+		value.inner
 	}
 }
 
 /// Same as Key: except when packing, it leaves off the NIL byte to allow for an open range.
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ListKey(Vec<Vec<u8>>);
+#[derive(Clone)]
+pub struct ListKey {
+	inner: kv::Key,
+}
 
 impl std::fmt::Debug for ListKey {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -96,7 +125,7 @@ impl TuplePack for ListKey {
 		w.write_all(&[fdb_util::codes::NESTED])?;
 		offset += 1;
 
-		for v in &self.0 {
+		for v in &self.inner.segments {
 			offset += v.pack(w, tuple_depth.increment())?;
 		}
 
@@ -108,8 +137,19 @@ impl TuplePack for ListKey {
 
 impl ListKey {
 	pub fn len(&self) -> usize {
-		// Arbitrary 4 accounting for nesting overhead
-		self.0.iter().fold(0, |acc, x| acc + x.len()) + 4 * self.0.len()
+		self.inner.encoded_len()
+	}
+}
+
+impl From<kv::Key> for ListKey {
+	fn from(value: kv::Key) -> ListKey {
+		ListKey { inner: value }
+	}
+}
+
+impl From<ListKey> for kv::Key {
+	fn from(value: ListKey) -> kv::Key {
+		value.inner
 	}
 }
 

@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+package rivet.pegboard.runner_protocol;
+
+import "kv.proto";
+
+message ToManager {
+	message ActorStateUpdate {
+		string actor_id = 1;
+		uint32 generation = 2;
+		ActorState state = 3;
+	}
+	
+	message Ping {}
+
+	oneof message {
+		ActorStateUpdate actor_state_update = 1;
+		Ping ping = 2;
+		rivet.pegboard.kv.Request kv = 3;
+	}
+}
+
+message ToRunner {
+	message Init {
+		bytes input = 1;
+	}
+
+	message Pong {}
+	
+	message Close {
+		optional string reason = 1;
+	}
+	
+	message StartActor {
+		string actor_id = 1;
+		uint32 generation = 2;
+		map<string, string> env = 3;
+		ActorMetadata metadata = 4;
+	}
+	
+	message SignalActor {
+		string actor_id = 1;
+		uint32 generation = 2;
+		int32 signal = 3;
+		bool persist_storage = 4;
+	}
+	
+	oneof message {
+		Init init = 1;
+		Pong pong = 2;
+		Close close = 3;
+		StartActor start_actor = 4;
+		SignalActor signal_actor = 5;
+		rivet.pegboard.kv.Response kv = 6;
+	}
+}
+
+message ActorMetadata {
+	message Actor {
+		string actor_id = 1;
+		map<string, string> tags = 2;
+		int64 create_ts = 3;
+	}
+	
+	message Network {
+		map<string, Port> ports = 1;
+	}
+	
+	message Project {
+		string project_id = 1;
+		string slug = 2;
+	}
+	
+	message Environment {
+		string env_id = 1;
+		string slug = 2;
+	}
+	
+	message Datacenter {
+		string name_id = 1;
+		string display_name = 2;
+	}
+	
+	message Cluster {
+		string cluster_id = 1;
+	}
+	
+	message Build {
+		string build_id = 1;
+	}
+
+	Actor actor = 1;
+	Network network = 2;
+	Project project = 3;
+	Environment environment = 4;
+	Datacenter datacenter = 5;
+	Cluster cluster = 6;
+	Build build = 7;
+}
+
+message Port {
+	optional int32 internal_port = 1;
+	optional string public_hostname = 2;
+	optional int32 public_port = 3;
+	optional string public_path = 4;
+	Routing routing = 5;
+}
+
+message Routing {
+	message GameGuard {
+		GameGuardProtocol protocol = 1;
+	}
+	
+	message Host {
+		HostProtocol protocol = 1;
+	}
+
+	oneof routing {
+		GameGuard game_guard = 1;
+		Host host = 2;
+	}	
+}
+
+enum GameGuardProtocol {
+	GG_HTTP = 0;
+	GG_HTTPS = 1;
+	GG_TCP = 2;
+	GG_TCP_TLS = 3;
+	GG_UDP = 4;
+}
+
+enum HostProtocol {
+	HOST_TCP = 0;
+	HOST_UDP = 1;
+}
+
+message ActorState {
+	message Running {}
+	
+	message Exited {
+		optional int32 exit_code = 1;
+	}
+	
+	oneof state {
+		Running running = 1;
+		Exited exited = 2;
+	}
+}

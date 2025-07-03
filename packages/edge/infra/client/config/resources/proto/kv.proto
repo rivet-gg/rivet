@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package rivet.pegboard.kv;
+
+message Request {
+	message Get {
+		repeated Key keys = 1;
+	}
+
+	message List {
+		ListQuery query = 1;
+		bool reverse = 2;
+		optional uint64 limit = 3;
+	}
+
+	message Put {
+		repeated Key keys = 1;
+		repeated bytes values = 2;
+	}
+
+	message Delete {
+		repeated Key keys = 1;
+	}
+
+	message Drop {}
+
+	string actor_id = 1;
+	uint32 generation = 2;
+	uint32 request_id = 3;
+
+	oneof data {
+		Get get = 4;
+		List list = 5;
+		Put put = 6;
+		Delete delete = 7;
+		Drop drop = 8;
+	}
+}
+
+message Response {
+	message Error {
+		string message = 1;
+	}
+
+	message Get {
+		repeated Key keys = 1;
+		repeated Entry values = 2;
+	}
+	
+	message List {
+		repeated Key keys = 1;
+		repeated Entry values = 2;
+	}
+	
+	message Put {}
+	
+	message Delete {}
+	
+	message Drop {}
+
+	uint32 request_id = 1;
+	oneof data {
+		Error error = 2;
+		Get get = 3;
+		List list = 4;
+		Put put = 5;
+		Delete delete = 6;
+		Drop drop = 7;
+	}
+}
+
+message Key {
+	repeated bytes segments = 1;
+}
+
+message Entry {
+	bytes value = 1;
+	optional Metadata metadata = 2;
+}
+
+message Metadata {
+	bytes _version = 1;
+	int64 create_ts = 2; 
+}
+
+message ListQuery {
+	message All {}
+
+	message Range {
+		Key start = 1;
+		Key end = 2;
+		bool exclusive = 3;
+	}
+
+	message Prefix {
+		Key key = 1; 
+	}
+
+	oneof kind {
+		All all = 1;
+		Range range = 2;
+		Prefix prefix = 3;
+	}
+}
