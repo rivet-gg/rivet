@@ -68,8 +68,7 @@ git = "https://github.com/rivet-gg/rivet-term"
 rev = "55e328470b68c557fb9bc8298369f90182d35b6d"
 
 [workspace.dependencies.redis]
-git = "https://github.com/rivet-gg/redis-rs"
-rev = "ac3e27f"
+version = "0.25.0"
 default-features = false
 
 [workspace.dependencies.serde_array_query]
