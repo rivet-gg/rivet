@@ -27,7 +27,7 @@ const CI_ENVIRONMENT_ID: &str = "ci";
 
 /// Release URLs for CI components
 ///
-/// Uploaded with ./scripts/cloud/upload-builds.ts
+/// Uploaded with ./scripts/addons/upload-builds.ts
 const CI_MANAGER_RELEASE_URL: &str =
 	"https://releases.rivet.gg/ci-manager/2025-06-10-09-25-53-481Z/image.tar";
 const CI_RUNNER_RELEASE_URL: &str =

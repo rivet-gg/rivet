@@ -5,6 +5,7 @@
 	"workspaces": [
 		"frontend/apps/*",
 		"frontend/packages/*",
+		"addons/packages/*",
 		"cloud/packages/*",
 		"site",
 		"sdks/api/runtime/typescript",
