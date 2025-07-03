@@ -38,7 +38,7 @@ async function main() {
     for (const component of COMPONENTS) {
       console.log(`\nBuilding ${component}...`);
       
-      const componentPath = join(projectRoot, 'cloud/packages', component);
+      const componentPath = join(projectRoot, 'addons/packages', component);
       const tarPath = join(tempDir, `${component}.tar`);
       
       // Build Docker image
