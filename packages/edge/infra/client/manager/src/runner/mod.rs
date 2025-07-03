@@ -124,8 +124,12 @@ impl Runner {
 					tracing::info!(runner_id=?self.runner_id, "runner received another socket, closing old one");
 
 					// Close the old socket
-					let buf = runner_protocol::encode_frame(&runner_protocol::ToRunner::Close {
-						reason: Some("replacing with new socket".into()),
+					let buf = runner_protocol::encode_frame(&runner_protocol::proto::ToRunner {
+						message: Some(runner_protocol::proto::to_runner::Message::Close(
+							runner_protocol::proto::to_runner::Close {
+								reason: Some("replacing with new socket".into()),
+							},
+						)),
 					})?;
 
 					if let Err(err) = existing_tx.send(buf.into()).await {
@@ -178,21 +182,23 @@ impl Runner {
 				break Ok(());
 			};
 
-			let (_, packet) = runner_protocol::decode_frame::<runner_protocol::ToManager>(&buf?)
-				.context("failed to decode frame")?;
+			let (_, packet) =
+				runner_protocol::decode_frame::<runner_protocol::proto::ToManager>(&buf?)
+					.context("failed to decode frame")?;
 
 			tracing::debug!(?packet, "runner received packet");
 
-			match packet {
-				runner_protocol::ToManager::Ping { .. } => {
+			match packet.message.context("ToManager.message")? {
+				runner_protocol::proto::to_manager::Message::Ping(_) => {
 					// TODO: Rate limit?
-					self.send(&runner_protocol::ToRunner::Pong).await?;
+					self.send(&runner_protocol::proto::ToRunner {
+						message: Some(runner_protocol::proto::to_runner::Message::Pong(
+							runner_protocol::proto::to_runner::Pong {},
+						)),
+					})
+					.await?;
 				}
-				runner_protocol::ToManager::ActorStateUpdate {
-					actor_id,
-					generation,
-					state,
-				} => {
+				runner_protocol::proto::to_manager::Message::ActorStateUpdate(msg) => {
 					match self.config.image.allocation_type {
 						protocol::ImageAllocationType::Single => {
 							tracing::debug!("unexpected state update from non-multi runner");
@@ -202,25 +208,27 @@ impl Runner {
 							// are listening to this runner's `actor_proxy_tx`. This means invalid messages are ignored.
 							// NOTE: No receivers is not an error
 							let _ = self.actor_proxy_tx.send((
-								actor_id,
-								generation,
-								runner_protocol::ToActor::StateUpdate { state },
+								rivet_util::Id::parse(&msg.actor_id)?,
+								msg.generation,
+								runner_protocol::ToActor::StateUpdate {
+									state: msg.state.context("ActorStateUpdate.state")?,
+								},
 							));
 						}
 					}
 				}
-				runner_protocol::ToManager::Kv(req) => {
+				runner_protocol::proto::to_manager::Message::Kv(msg) => {
 					let _ = self.actor_proxy_tx.send((
-						req.actor_id,
-						req.generation,
-						runner_protocol::ToActor::Kv(req),
+						rivet_util::Id::parse(&msg.actor_id)?,
+						msg.generation,
+						runner_protocol::ToActor::Kv(msg),
 					));
 				}
 			}
 		}
 	}
 
-	pub async fn send(&self, packet: &runner_protocol::ToRunner) -> Result<()> {
+	pub async fn send(&self, packet: &runner_protocol::proto::ToRunner) -> Result<()> {
 		match &self.comms {
 			Comms::Basic => bail!("cannot send socket message to basic runner"),
 			Comms::Socket(socket) => {

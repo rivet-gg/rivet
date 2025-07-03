@@ -11,7 +11,8 @@ fdb-util.workspace = true
 foundationdb.workspace = true
 futures-util = { version = "0.3" }
 indexmap = { version = "2.0" }
-prost = "0.13.3"
+pegboard-config.workspace = true
+prost = "0.14"
 rivet-util-id.workspace = true
 serde = { version = "1.0.195", features = ["derive"] }
 serde_json = "1.0.111"

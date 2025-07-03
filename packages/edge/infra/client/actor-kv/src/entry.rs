@@ -1,13 +1,39 @@
 use anyhow::*;
 use foundationdb as fdb;
+use pegboard_config::runner_protocol::proto::kv;
 use prost::Message;
-use serde::{Deserialize, Serialize};
 
-use crate::{key::Key, metadata::Metadata};
+use crate::key::Key;
+
+/// Represents a Rivet KV value.
+#[derive(Clone, Debug)]
+pub struct Entry {
+	inner: kv::Entry,
+}
+
+impl std::ops::Deref for Entry {
+	type Target = kv::Entry;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
+	}
+}
+
+impl From<kv::Entry> for Entry {
+	fn from(value: kv::Entry) -> Entry {
+		Entry { inner: value }
+	}
+}
+
+impl From<Entry> for kv::Entry {
+	fn from(value: Entry) -> kv::Entry {
+		value.inner
+	}
+}
 
 #[derive(Default)]
 pub(crate) struct EntryBuilder {
-	metadata: Option<Metadata>,
+	metadata: Option<kv::Metadata>,
 	value: Vec<u8>,
 	next_idx: usize,
 }
@@ -19,7 +45,7 @@ impl EntryBuilder {
 				// We ignore setting the metadata again because it means the same key was given twice in the
 				// input keys for `ActorKv::get`. We don't perform automatic deduplication.
 				if self.metadata.is_none() {
-					self.metadata = Some(Metadata::decode(value.value())?);
+					self.metadata = Some(kv::Metadata::decode(value.value())?);
 				}
 			}
 			SubKey::Chunk(idx, value) => {
@@ -40,19 +66,15 @@ impl EntryBuilder {
 		ensure!(!self.value.is_empty(), "empty value at key {key:?}");
 
 		Ok(Entry {
-			metadata: self
-				.metadata
-				.with_context(|| format!("no metadata for key {key:?}"))?,
-			value: self.value,
+			inner: kv::Entry {
+				metadata: Some(
+					self.metadata
+						.with_context(|| format!("no metadata for key {key:?}"))?,
+				),
+				value: self.value,
+			},
 		})
 	}
-}
-
-/// Represents a Rivet KV value.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Entry {
-	pub metadata: Metadata,
-	pub value: Vec<u8>,
 }
 
 /// Represents FDB keys within a Rivet KV key.

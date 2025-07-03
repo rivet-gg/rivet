@@ -14,7 +14,7 @@ use indexmap::IndexMap;
 pub use key::Key;
 use list_query::ListLimitReached;
 pub use list_query::ListQuery;
-pub use metadata::Metadata;
+use pegboard_config::runner_protocol::proto::kv;
 use prost::Message;
 use tokio::sync::Mutex;
 use utils::{validate_entries, validate_keys, TransactionExt};
@@ -22,7 +22,6 @@ use utils::{validate_entries, validate_keys, TransactionExt};
 mod entry;
 pub mod key;
 mod list_query;
-mod metadata;
 mod utils;
 
 const MAX_KEY_SIZE: usize = 2 * 1024;
@@ -325,8 +324,8 @@ impl ActorKv {
 								// Clear previous before setting
 								tx.clear_subspace_range(&key_subspace);
 
-								let metadata = Metadata {
-									kv_version: self.version.as_bytes().to_vec(),
+								let metadata = kv::Metadata {
+									version: self.version.as_bytes().to_vec(),
 									create_ts: utils::now(),
 								};
 								let mut buf = Vec::new();

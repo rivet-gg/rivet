@@ -1,4 +1,5 @@
 use std::{
+	collections::HashMap,
 	result::Result::{Err, Ok},
 	sync::Arc,
 };
@@ -133,11 +134,19 @@ impl Actor {
 					}
 					protocol::ImageAllocationType::Multi => {
 						self.runner
-							.send(&runner_protocol::ToRunner::StartActor {
-								actor_id: self.actor_id,
-								generation: self.generation,
-								env: self.config.env.clone(),
-								metadata: self.config.metadata.clone(),
+							.send(&runner_protocol::proto::ToRunner {
+								message: Some(
+									runner_protocol::proto::to_runner::Message::StartActor(
+										runner_protocol::proto::to_runner::StartActor {
+											actor_id: self.actor_id.to_string(),
+											generation: self.generation,
+											env: self.runner.config().env.clone().into(),
+											metadata: Some(convert_actor_metadata_to_proto(
+												&self.config.metadata.deserialize()?,
+											)),
+										},
+									),
+								),
 							})
 							.await?;
 					}
@@ -152,11 +161,19 @@ impl Actor {
 					}
 					protocol::ImageAllocationType::Multi => {
 						self.runner
-							.send(&runner_protocol::ToRunner::StartActor {
-								actor_id: self.actor_id,
-								generation: self.generation,
-								env: self.config.env.clone(),
-								metadata: self.config.metadata.clone(),
+							.send(&runner_protocol::proto::ToRunner {
+								message: Some(
+									runner_protocol::proto::to_runner::Message::StartActor(
+										runner_protocol::proto::to_runner::StartActor {
+											actor_id: self.actor_id.to_string(),
+											generation: self.generation,
+											env: self.runner.config().env.clone().into(),
+											metadata: Some(convert_actor_metadata_to_proto(
+												&self.config.metadata.deserialize()?,
+											)),
+										},
+									),
+								),
 							})
 							.await?;
 					}
@@ -187,8 +204,8 @@ impl Actor {
 
 					match res {
 						runner_protocol::ToActor::StateUpdate { state } => {
-							match state {
-								runner_protocol::ActorState::Running => {
+							match state.state.context("ActorState.state")? {
+								runner_protocol::proto::actor_state::State::Running(_) => {
 									tracing::info!(
 										actor_id=?self.actor_id,
 										generation=?self.generation,
@@ -202,76 +219,163 @@ impl Actor {
 
 									self.set_running(ctx, pid, ports).await?;
 								},
-								runner_protocol::ActorState::Exited {
-									exit_code,
-								} => break exit_code,
+								runner_protocol::proto::actor_state::State::Exited(state) => {
+									break state.exit_code;
+								}
 							}
 						}
 						runner_protocol::ToActor::Kv(req) => {
 							// TODO: Add queue and bg thread for processing kv ops
 							// Run kv operation
-							match req.data {
-								runner_protocol::KvRequestData::Get { keys } => {
-									let res = self.kv.get(keys).await;
-									let error = res.as_ref().err().map(|x| x.to_string());
+							match req.data.context("Request.data")? {
+								runner_protocol::proto::kv::request::Data::Get(body) => {
+									let res = self.kv.get(pegboard_actor_kv::Key::convert_vec(body.keys)).await;
 
-									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
-										request_id: req.request_id,
-										data: res.ok().map(|entries| {
-											let (keys, values) = entries.into_iter().unzip();
-											runner_protocol::KvResponseData::Get {
-												keys,
-												values,
+									self.runner.send(&runner_protocol::proto::ToRunner {
+										message: Some(runner_protocol::proto::to_runner::Message::Kv(
+											runner_protocol::proto::kv::Response {
+												request_id: req.request_id,
+												data: match res {
+													Ok(entries) => {
+														let (keys, values) = entries
+															.into_iter()
+															.map(|(k, v)| (k.into(), v.into()))
+															.unzip();
+														Some(runner_protocol::proto::kv::response::Data::Get(
+															runner_protocol::proto::kv::response::Get {
+																keys,
+																values,
+															}
+														))
+													}
+													Err(err) => {
+														Some(runner_protocol::proto::kv::response::Data::Error(
+															runner_protocol::proto::kv::response::Error {
+																message: err.to_string(),
+															}
+														))
+													}
+												},
 											}
-										}),
-										error,
-									})).await?;
+										)),
+									}).await?;
 								}
-								runner_protocol::KvRequestData::List { query, reverse, limit } => {
-									let res = self.kv.list(query, reverse, limit).await;
-									let error = res.as_ref().err().map(|x| x.to_string());
+								runner_protocol::proto::kv::request::Data::List(body) => {
+									let res = self.kv.list(
+										body.query.context("List.query")?.try_into()?,
+										body.reverse,
+										body.limit.map(TryInto::try_into).transpose()?
+									).await;
 
-									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
-										request_id: req.request_id,
-										data: res.ok().map(|entries| {
-											let (keys, values) = entries.into_iter().unzip();
-											runner_protocol::KvResponseData::List {
-												keys,
-												values,
+									self.runner.send(&runner_protocol::proto::ToRunner {
+										message: Some(runner_protocol::proto::to_runner::Message::Kv(
+											runner_protocol::proto::kv::Response {
+												request_id: req.request_id,
+												data: match res {
+													Ok(entries) => {
+														let (keys, values) = entries
+															.into_iter()
+															.map(|(k, v)| (k.into(), v.into()))
+															.unzip();
+														Some(runner_protocol::proto::kv::response::Data::List(
+															runner_protocol::proto::kv::response::List {
+																keys,
+																values,
+															}
+														))
+													}
+													Err(err) => {
+														Some(runner_protocol::proto::kv::response::Data::Error(
+															runner_protocol::proto::kv::response::Error {
+																message: err.to_string(),
+															}
+														))
+													}
+												},
 											}
-										}),
-										error,
-									})).await?;
+										)),
+									}).await?;
 								}
-								runner_protocol::KvRequestData::Put { keys, values } => {
-									let res = self.kv.put(keys.into_iter().zip(values.into_iter()).collect()).await;
-									let error = res.as_ref().err().map(|x| x.to_string());
+								runner_protocol::proto::kv::request::Data::Put(body) => {
+									let res = self.kv.put(
+										body.keys
+											.into_iter()
+											.map(|x| x.into())
+											.zip(body.values.into_iter().map(|x| x.into()))
+											.collect()
+									).await;
 
-									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
-										request_id: req.request_id,
-										data: res.ok().map(|_| runner_protocol::KvResponseData::Put {}),
-										error,
-									})).await?;
+									self.runner.send(&runner_protocol::proto::ToRunner {
+										message: Some(runner_protocol::proto::to_runner::Message::Kv(
+											runner_protocol::proto::kv::Response {
+												request_id: req.request_id,
+												data: match res {
+													Ok(_) => {
+														Some(runner_protocol::proto::kv::response::Data::Put(
+															runner_protocol::proto::kv::response::Put {}
+														))
+													}
+													Err(err) => {
+														Some(runner_protocol::proto::kv::response::Data::Error(
+															runner_protocol::proto::kv::response::Error {
+																message: err.to_string(),
+															}
+														))
+													}
+												},
+											}
+										)),
+									}).await?;
 								}
-								runner_protocol::KvRequestData::Delete { keys } => {
-									let res = self.kv.delete(keys).await;
-									let error = res.as_ref().err().map(|x| x.to_string());
+								runner_protocol::proto::kv::request::Data::Delete(body) => {
+									let res = self.kv.delete(pegboard_actor_kv::Key::convert_vec(body.keys)).await;
 
-									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
-										request_id: req.request_id,
-										data: res.ok().map(|_| runner_protocol::KvResponseData::Delete {}),
-										error,
-									})).await?;
+									self.runner.send(&runner_protocol::proto::ToRunner {
+										message: Some(runner_protocol::proto::to_runner::Message::Kv(
+											runner_protocol::proto::kv::Response {
+												request_id: req.request_id,
+												data: match res {
+													Ok(_) => {
+														Some(runner_protocol::proto::kv::response::Data::Delete(
+															runner_protocol::proto::kv::response::Delete {}
+														))
+													}
+													Err(err) => {
+														Some(runner_protocol::proto::kv::response::Data::Error(
+															runner_protocol::proto::kv::response::Error {
+																message: err.to_string(),
+															}
+														))
+													}
+												},
+											}
+										)),
+									}).await?;
 								}
-								runner_protocol::KvRequestData::Drop { } => {
+								runner_protocol::proto::kv::request::Data::Drop(_) => {
 									let res = self.kv.delete_all().await;
-									let error = res.as_ref().err().map(|x| x.to_string());
 
-									self.runner.send(&runner_protocol::ToRunner::Kv(runner_protocol::KvResponse {
-										request_id: req.request_id,
-										data: res.ok().map(|_| runner_protocol::KvResponseData::Drop {}),
-										error,
-									})).await?;
+									self.runner.send(&runner_protocol::proto::ToRunner {
+										message: Some(runner_protocol::proto::to_runner::Message::Kv(
+											runner_protocol::proto::kv::Response {
+												request_id: req.request_id,
+												data: match res {
+													Ok(_) => {
+														Some(runner_protocol::proto::kv::response::Data::Drop(
+															runner_protocol::proto::kv::response::Drop {}
+														))
+													}
+													Err(err) => {
+														Some(runner_protocol::proto::kv::response::Data::Error(
+															runner_protocol::proto::kv::response::Error {
+																message: err.to_string(),
+															}
+														))
+													}
+												},
+											}
+										)),
+									}).await?;
 								}
 							}
 						}
@@ -318,11 +422,15 @@ impl Actor {
 			// Send message
 			if self.runner.has_socket() {
 				self.runner
-					.send(&runner_protocol::ToRunner::SignalActor {
-						actor_id: self.actor_id,
-						generation: self.generation,
-						signal: signal as i32,
-						persist_storage,
+					.send(&runner_protocol::proto::ToRunner {
+						message: Some(runner_protocol::proto::to_runner::Message::SignalActor(
+							runner_protocol::proto::to_runner::SignalActor {
+								actor_id: self.actor_id.to_string(),
+								generation: self.generation,
+								signal: signal as i32,
+								persist_storage,
+							},
+						)),
 					})
 					.await?;
 			}
@@ -463,5 +571,98 @@ impl Actor {
 		}
 
 		Ok(())
+	}
+}
+
+/// Convert from serde ActorMetadata to proto ActorMetadata
+pub fn convert_actor_metadata_to_proto(
+	metadata: &protocol::ActorMetadata,
+) -> runner_protocol::proto::ActorMetadata {
+	use runner_protocol::proto::{
+		actor_metadata, routing, ActorMetadata, GameGuardProtocol, HostProtocol, Port, Routing,
+	};
+
+	let mut proto_ports = HashMap::new();
+	for (key, port) in &metadata
+		.network
+		.as_ref()
+		.expect("should have network")
+		.ports
+	{
+		proto_ports.insert(
+			key.clone(),
+			Port {
+				internal_port: port.internal_port,
+				public_hostname: port.public_hostname.clone(),
+				public_port: port.public_port,
+				public_path: port.public_path.clone(),
+				routing: Some(Routing {
+					routing: Some(match &port.routing {
+						pegboard::types::Routing::GameGuard { protocol } => {
+							routing::Routing::GameGuard(routing::GameGuard {
+								protocol: match protocol {
+									pegboard::types::GameGuardProtocol::Http => {
+										GameGuardProtocol::GgHttp as i32
+									}
+									pegboard::types::GameGuardProtocol::Https => {
+										GameGuardProtocol::GgHttps as i32
+									}
+									pegboard::types::GameGuardProtocol::Tcp => {
+										GameGuardProtocol::GgTcp as i32
+									}
+									pegboard::types::GameGuardProtocol::TcpTls => {
+										GameGuardProtocol::GgTcpTls as i32
+									}
+									pegboard::types::GameGuardProtocol::Udp => {
+										GameGuardProtocol::GgUdp as i32
+									}
+								},
+							})
+						}
+						pegboard::types::Routing::Host { protocol } => {
+							routing::Routing::Host(routing::Host {
+								protocol: match protocol {
+									pegboard::types::HostProtocol::Tcp => {
+										HostProtocol::HostTcp as i32
+									}
+									pegboard::types::HostProtocol::Udp => {
+										HostProtocol::HostUdp as i32
+									}
+								},
+							})
+						}
+					}),
+				}),
+			},
+		);
+	}
+	let network = actor_metadata::Network { ports: proto_ports };
+
+	// Create the final ActorMetadata
+	ActorMetadata {
+		actor: Some(actor_metadata::Actor {
+			actor_id: metadata.actor.actor_id.to_string(),
+			tags: metadata.actor.tags.clone().into(),
+			create_ts: metadata.actor.create_ts,
+		}),
+		network: Some(network),
+		project: Some(actor_metadata::Project {
+			project_id: metadata.project.project_id.to_string(),
+			slug: metadata.project.slug.clone(),
+		}),
+		environment: Some(actor_metadata::Environment {
+			env_id: metadata.environment.env_id.to_string(),
+			slug: metadata.environment.slug.clone(),
+		}),
+		datacenter: Some(actor_metadata::Datacenter {
+			name_id: metadata.datacenter.name_id.clone(),
+			display_name: metadata.datacenter.display_name.clone(),
+		}),
+		cluster: Some(actor_metadata::Cluster {
+			cluster_id: metadata.cluster.cluster_id.to_string(),
+		}),
+		build: Some(actor_metadata::Build {
+			build_id: metadata.build.build_id.to_string(),
+		}),
 	}
 }

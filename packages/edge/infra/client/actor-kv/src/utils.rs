@@ -1,4 +1,4 @@
-use std::{collections::HashMap, result::Result::Ok};
+use std::result::Result::Ok;
 
 use anyhow::*;
 use foundationdb as fdb;
