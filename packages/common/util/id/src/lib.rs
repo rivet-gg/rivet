@@ -242,7 +242,7 @@ impl TuplePack for Id {
 		let mut size = 1;
 
 		w.write_all(&[fdb_util::codes::ID])?;
-		
+
 		// IMPORTANT: While the normal bytes representation of a v0 ID doesn't include the version, we write
 		// it here so that we can unpack without a terminating NIL.
 		if let Id::V0(_) = self {

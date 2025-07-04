@@ -5,7 +5,7 @@ use crate::types::LogsStreamType;
 
 #[derive(Debug)]
 pub struct Input {
-	pub actor_id: Uuid,
+	pub actor_id: util::Id,
 	pub stream_type: LogsStreamType,
 }
 
@@ -26,33 +26,57 @@ pub async fn pegboard_actor_log_read(ctx: &OperationCtx, input: &Input) -> Globa
 		LogsStreamType::StdErr => "stderr.txt",
 	};
 
-	let mut entries_cursor = ctx
-		.clickhouse()
-		.await?
-		.query(indoc!(
-			"
-			SELECT message
-			FROM db_pegboard_actor_log.actor_logs
-			WHERE
-				actor_id = ? AND
-				stream_type = ?
-			ORDER BY ts ASC
-
-			UNION ALL
-
-			SELECT message
-			FROM db_pegboard_actor_log.actor_logs2
-			WHERE
-				actor_id = ? AND
-				stream_type = ?
-			ORDER BY ts ASC
-			"
-		))
-		.bind(input.actor_id)
-		.bind(input.stream_type as i8)
-		.bind(input.actor_id.to_string())
-		.bind(input.stream_type as i8)
-		.fetch::<LogEntry>()?;
+	let mut entries_cursor = if let util::Id::V0(actor_id) = input.actor_id {
+		ctx.clickhouse()
+			.await?
+			.query(indoc!(
+				"
+				SELECT message
+				FROM db_pegboard_actor_log.actor_logs
+				WHERE
+					actor_id = ? AND
+					stream_type = ?
+				ORDER BY ts ASC
+	
+				UNION ALL
+	
+				SELECT message
+				FROM db_pegboard_actor_log.actor_logs2
+				WHERE
+					actor_id = ? AND
+					stream_type = ?
+				ORDER BY ts ASC
+				"
+			))
+			.bind(actor_id)
+			.bind(input.stream_type as i8)
+			.bind(actor_id.to_string())
+			.bind(input.stream_type as i8)
+			.fetch::<LogEntry>()?
+	} else {
+		ctx.clickhouse()
+			.await?
+			.query(indoc!(
+				"
+				SELECT l.message
+				FROM db_pegboard_runner_log.runner_logs AS l
+				JOIN db_pegboard_runner.actor_runners AS ar
+				ON l.runner_id = ar.runner_id
+				WHERE
+					ar.actor_id IN ?
+					AND l.stream_type IN ?
+					-- Check if the log was created during the time this actor was on this runner
+					AND l.ts >= ar.started_at
+					AND (ar.finished_at IS NULL OR l.ts <= ar.finished_at)
+					-- Filter for actor-specific log entries using regex
+					AND (l.actor_id = ar.actor_id OR l.actor_id = '')
+				ORDER BY l.ts ASC
+				"
+			))
+			.bind(input.actor_id.to_string())
+			.bind(input.stream_type as i8)
+			.fetch::<LogEntry>()?
+	};
 
 	let mut lines = 0;
 	let mut buf = Vec::new();

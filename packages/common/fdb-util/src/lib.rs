@@ -11,12 +11,12 @@ use foundationdb::{
 	self as fdb,
 	future::FdbValue,
 	options::DatabaseOption,
-	tuple::{self, PackResult, PackError, TuplePack, TupleUnpack},
+	tuple::{self, PackError, PackResult, TuplePack, TupleUnpack},
 	KeySelector, RangeOption,
 };
 
-pub mod keys;
 pub mod codes;
+pub mod keys;
 mod metrics;
 
 /// Makes the code blatantly obvious if its using a snapshot read.
@@ -193,34 +193,34 @@ pub fn end_of_key_range(key: &[u8]) -> Vec<u8> {
 // Copied from foundationdb crate
 #[inline]
 pub fn parse_bytes(input: &[u8], num: usize) -> PackResult<(&[u8], &[u8])> {
-    if input.len() < num {
-        Err(PackError::MissingBytes)
-    } else {
-        Ok((&input[num..], &input[..num]))
-    }
+	if input.len() < num {
+		Err(PackError::MissingBytes)
+	} else {
+		Ok((&input[num..], &input[..num]))
+	}
 }
 
 // Copied from foundationdb crate
 #[inline]
 pub fn parse_byte(input: &[u8]) -> PackResult<(&[u8], u8)> {
-    if input.is_empty() {
-        Err(PackError::MissingBytes)
-    } else {
-        Ok((&input[1..], input[0]))
-    }
+	if input.is_empty() {
+		Err(PackError::MissingBytes)
+	} else {
+		Ok((&input[1..], input[0]))
+	}
 }
 
 // Copied from foundationdb crate
 pub fn parse_code(input: &[u8], expected: u8) -> PackResult<&[u8]> {
-    let (input, found) = parse_byte(input)?;
-    if found == expected {
-        Ok(input)
-    } else {
-        Err(PackError::BadCode {
-            found,
-            expected: Some(expected),
-        })
-    }
+	let (input, found) = parse_byte(input)?;
+	if found == expected {
+		Ok(input)
+	} else {
+		Err(PackError::BadCode {
+			found,
+			expected: Some(expected),
+		})
+	}
 }
 
 pub mod prelude {
