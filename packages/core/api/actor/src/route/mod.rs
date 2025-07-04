@@ -83,7 +83,7 @@ define_router! {
 			),
 		},
 
-		"actors" / Uuid: {
+		"actors" / util::Id: {
 			GET: actors::get(
 				query: actors::GlobalEndpointTypeQuery,
 				opt_auth: true,
@@ -105,7 +105,7 @@ define_router! {
 			),
 		},
 
-		"actors" / Uuid / "upgrade": {
+		"actors" / util::Id / "upgrade": {
 			POST: actors::upgrade(
 				query: GlobalQuery,
 				body: models::ActorsUpgradeActorRequest,

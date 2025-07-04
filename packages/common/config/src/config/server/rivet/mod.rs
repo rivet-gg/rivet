@@ -850,3 +850,12 @@ pub struct Edge {
 	#[serde(default)]
 	pub redirect_logs_dir: Option<PathBuf>,
 }
+
+impl Edge {
+	/// u16 used in the `Id` type for actors
+	pub fn datacenter_label(&self) -> u16 {
+		// Read first 2 bytes
+		let bytes = self.datacenter_id.as_bytes();
+		u16::from_be_bytes([bytes[0], bytes[1]])
+	}
+}
