@@ -5,9 +5,7 @@
 import * as serializers from "../../../index";
 import * as Rivet from "../../../../api/index";
 import * as core from "../../../../core";
-import { CreateActorRuntimeRequest } from "./CreateActorRuntimeRequest";
-import { CreateActorNetworkRequest } from "./CreateActorNetworkRequest";
-import { Lifecycle } from "../resources/common/types/Lifecycle";
+import { EndpointType } from "../resources/common/types/EndpointType";
 
 export const CreateActorRequest: core.serialization.ObjectSchema<
     serializers.actors.CreateActorRequest.Raw,
@@ -17,9 +15,10 @@ export const CreateActorRequest: core.serialization.ObjectSchema<
     tags: core.serialization.unknown(),
     build: core.serialization.string().optional(),
     buildTags: core.serialization.property("build_tags", core.serialization.unknown().optional()),
-    runtime: CreateActorRuntimeRequest.optional(),
-    network: CreateActorNetworkRequest.optional(),
-    lifecycle: Lifecycle.optional(),
+    networkEndpointType: core.serialization.property("network_endpoint_type", EndpointType.optional()),
+    waitForNetworkReady: core.serialization.property("wait_for_network_ready", core.serialization.boolean().optional()),
+    killTimeout: core.serialization.property("kill_timeout", core.serialization.number().optional()),
+    durable: core.serialization.boolean().optional(),
 });
 
 export declare namespace CreateActorRequest {
@@ -28,8 +27,9 @@ export declare namespace CreateActorRequest {
         tags?: unknown;
         build?: string | null;
         build_tags?: unknown | null;
-        runtime?: CreateActorRuntimeRequest.Raw | null;
-        network?: CreateActorNetworkRequest.Raw | null;
-        lifecycle?: Lifecycle.Raw | null;
+        network_endpoint_type?: EndpointType.Raw | null;
+        wait_for_network_ready?: boolean | null;
+        kill_timeout?: number | null;
+        durable?: boolean | null;
     }
 }

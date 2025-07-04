@@ -18,15 +18,22 @@ import * as Rivet from "../../../../index";
  *             },
  *             kind: "docker_image",
  *             compression: "none",
- *             allocation: {
- *                 single: {},
- *                 multi: {
+ *             runtime: {
+ *                 container: {
+ *                     environment: undefined,
+ *                     networkMode: undefined,
+ *                     ports: undefined
+ *                 },
+ *                 actor: {
+ *                     environment: undefined,
+ *                     networkMode: undefined,
+ *                     ports: undefined,
+ *                     resources: {
+ *                         cpu: 1,
+ *                         memory: 1
+ *                     },
  *                     slots: 1
  *                 }
- *             },
- *             resources: {
- *                 cpu: 1,
- *                 memory: 1
  *             }
  *         }
  *     }

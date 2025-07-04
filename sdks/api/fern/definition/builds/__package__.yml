@@ -108,8 +108,7 @@ types:
       image_file: uploadCommons.PrepareFile
       kind: optional<localCommons.Kind>
       compression: optional<localCommons.Compression>
-      allocation: optional<localCommons.Allocation>
-      resources: optional<localCommons.Resources>
+      runtime: optional<localCommons.Runtime>
 
   PrepareBuildResponse:
     properties:
