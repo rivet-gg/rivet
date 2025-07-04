@@ -13,7 +13,7 @@ pub struct ActorsV1Resources {
 	/// The number of CPU cores in millicores, or 1/1000 of a core. For example, 1/8 of a core would be 125 millicores, and 1 core would be 1000 millicores.
 	#[serde(rename = "cpu")]
 	pub cpu: i32,
-	/// The amount of memory in megabytes
+	/// The amount of memory in mebibytes
 	#[serde(rename = "memory")]
 	pub memory: i32,
 }

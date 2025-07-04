@@ -5,6 +5,7 @@
 import * as Rivet from "../../../../../../../index";
 
 export interface Network {
+    /** **Deprecated** */
     mode: Rivet.actors.v1.NetworkMode;
     ports: Record<string, Rivet.actors.v1.Port>;
 }

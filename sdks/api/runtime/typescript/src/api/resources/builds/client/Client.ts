@@ -530,15 +530,15 @@ export class Builds {
      *             },
      *             kind: "docker_image",
      *             compression: "none",
-     *             allocation: {
-     *                 single: {},
-     *                 multi: {
+     *             runtime: {
+     *                 container: {},
+     *                 actor: {
+     *                     resources: {
+     *                         cpu: 1,
+     *                         memory: 1
+     *                     },
      *                     slots: 1
      *                 }
-     *             },
-     *             resources: {
-     *                 cpu: 1,
-     *                 memory: 1
      *             }
      *         }
      *     })

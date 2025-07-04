@@ -20,14 +20,22 @@ pub struct ContainersContainer {
     pub region: String,
     #[serde(rename = "tags", deserialize_with = "Option::deserialize")]
     pub tags: Option<serde_json::Value>,
-    #[serde(rename = "runtime")]
-    pub runtime: Box<crate::models::ContainersRuntime>,
-    #[serde(rename = "network")]
-    pub network: Box<crate::models::ContainersNetwork>,
+    #[serde(rename = "build")]
+    pub build: uuid::Uuid,
+    #[serde(rename = "arguments", skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Vec<String>>,
+    #[serde(rename = "environment", skip_serializing_if = "Option::is_none")]
+    pub environment: Option<::std::collections::HashMap<String, String>>,
+    #[serde(rename = "ports")]
+    pub ports: ::std::collections::HashMap<String, crate::models::ContainersPort>,
     #[serde(rename = "resources")]
-    pub resources: Box<crate::models::ContainersResources>,
-    #[serde(rename = "lifecycle")]
-    pub lifecycle: Box<crate::models::ContainersLifecycle>,
+    pub resources: Box<crate::models::BuildsResources>,
+    /// The duration to wait for in milliseconds before force killing the actor after a DELETE request. This gives the actor time to perform a shutdown sequence before being killed. This should be set to a safe default, and can be overridden during a DELETE request if needed.
+    #[serde(rename = "kill_timeout", skip_serializing_if = "Option::is_none")]
+    pub kill_timeout: Option<i64>,
+    /// If true, the actor will try to reschedule itself automatically in the event of a crash or a datacenter failover. The actor will not reschedule if it exits successfully.
+    #[serde(rename = "durable", skip_serializing_if = "Option::is_none")]
+    pub durable: Option<bool>,
     /// RFC3339 timestamp
     #[serde(rename = "created_at")]
     pub created_at: String,
@@ -40,15 +48,18 @@ pub struct ContainersContainer {
 }
 
 impl ContainersContainer {
-    pub fn new(id: String, region: String, tags: Option<serde_json::Value>, runtime: crate::models::ContainersRuntime, network: crate::models::ContainersNetwork, resources: crate::models::ContainersResources, lifecycle: crate::models::ContainersLifecycle, created_at: String) -> ContainersContainer {
+    pub fn new(id: String, region: String, tags: Option<serde_json::Value>, build: uuid::Uuid, ports: ::std::collections::HashMap<String, crate::models::ContainersPort>, resources: crate::models::BuildsResources, created_at: String) -> ContainersContainer {
         ContainersContainer {
             id,
             region,
             tags,
-            runtime: Box::new(runtime),
-            network: Box::new(network),
+            build,
+            arguments: None,
+            environment: None,
+            ports,
             resources: Box::new(resources),
-            lifecycle: Box::new(lifecycle),
+            kill_timeout: None,
+            durable: None,
             created_at,
             started_at: None,
             destroyed_at: None,
