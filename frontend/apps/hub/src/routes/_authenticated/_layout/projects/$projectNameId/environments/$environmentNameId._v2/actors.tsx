@@ -1,7 +1,6 @@
 import {
 	ActorFeature,
 	ActorNotFound,
-	ActorsActorDetails,
 	ActorsActorEmptyDetails,
 	ActorsListFiltersSchema,
 	ActorsListPreview,
@@ -25,6 +24,7 @@ import { useAtomValue } from "jotai";
 import { useDialog } from "@/hooks/use-dialog";
 import { ErrorComponent } from "@/components/error-component";
 import { ActorsProvider } from "@/domains/project/components/actors/actors-provider";
+import { ActorsActorDetailsWrapper } from "@/domains/project/components/actors/actors-actor-details-wrapper";
 function Actor() {
 	const navigate = Route.useNavigate();
 	const { tab } = Route.useSearch();
@@ -46,7 +46,7 @@ function Actor() {
 	}
 
 	return (
-		<ActorsActorDetails
+		<ActorsActorDetailsWrapper
 			actor={actor}
 			tab={tab}
 			onTabChange={(tab) => {
