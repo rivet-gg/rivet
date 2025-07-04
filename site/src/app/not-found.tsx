@@ -1,14 +1,14 @@
 import { Button } from "@/components/Button";
 import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { Icon, faBlockQuestion } from "@rivet-gg/icons";
 import "@/styles/tailwind.css";
 import "@/styles/fonts.css";
+import { FancyHeader } from "@/components/v2/FancyHeader";
 
 function PageNotFound() {
 	return (
-		<div>
-			<Header />
+		<>
+			<FancyHeader />
 			<div className="relative pt-14">
 				<div className="relative flex min-h-[80vh] w-full items-center justify-center text-center">
 					<div className="transition-opacity">
@@ -26,7 +26,7 @@ function PageNotFound() {
 				</div>
 			</div>
 			<Footer />
-		</div>
+		</>
 	);
 }
 
