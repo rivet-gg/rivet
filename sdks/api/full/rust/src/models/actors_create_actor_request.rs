@@ -23,12 +23,22 @@ pub struct ActorsCreateActorRequest {
 		skip_serializing_if = "Option::is_none"
 	)]
 	pub build_tags: Option<Option<serde_json::Value>>,
-	#[serde(rename = "runtime", skip_serializing_if = "Option::is_none")]
-	pub runtime: Option<Box<crate::models::ActorsCreateActorRuntimeRequest>>,
-	#[serde(rename = "network", skip_serializing_if = "Option::is_none")]
-	pub network: Option<Box<crate::models::ActorsCreateActorNetworkRequest>>,
-	#[serde(rename = "lifecycle", skip_serializing_if = "Option::is_none")]
-	pub lifecycle: Option<Box<crate::models::ActorsLifecycle>>,
+	#[serde(
+		rename = "network_endpoint_type",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub network_endpoint_type: Option<crate::models::ActorsEndpointType>,
+	#[serde(
+		rename = "wait_for_network_ready",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub wait_for_network_ready: Option<bool>,
+	/// The duration to wait for in milliseconds before force killing the actor after a DELETE request. This gives the actor time to perform a shutdown sequence before being killed. This should be set to a safe default, and can be overridden during a DELETE request if needed.
+	#[serde(rename = "kill_timeout", skip_serializing_if = "Option::is_none")]
+	pub kill_timeout: Option<i64>,
+	/// If true, the actor will try to reschedule itself automatically in the event of a crash or a datacenter failover. The actor will not reschedule if it exits successfully.
+	#[serde(rename = "durable", skip_serializing_if = "Option::is_none")]
+	pub durable: Option<bool>,
 }
 
 impl ActorsCreateActorRequest {
@@ -38,9 +48,10 @@ impl ActorsCreateActorRequest {
 			tags,
 			build: None,
 			build_tags: None,
-			runtime: None,
-			network: None,
-			lifecycle: None,
+			network_endpoint_type: None,
+			wait_for_network_ready: None,
+			kill_timeout: None,
+			durable: None,
 		}
 	}
 }

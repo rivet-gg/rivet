@@ -8,8 +8,8 @@ use futures_util::{StreamExt, TryStreamExt};
 use crate::{
 	keys,
 	types::{
-		Actor, ActorLifecycle, ActorResources, EndpointType, GameGuardProtocol, HostProtocol,
-		NetworkMode, Port, Routing,
+		Actor, ActorLifecycle, ActorResources, EndpointType, GameGuardProtocol, HostProtocol, Port,
+		Routing,
 	},
 };
 
@@ -30,7 +30,6 @@ struct ActorRow {
 	client_wan_hostname: Option<String>,
 	image_id: Uuid,
 	args: sqlx::types::Json<Vec<String>>,
-	network_mode: i64,
 	environment: sqlx::types::Json<HashMap<String, String>>,
 }
 
@@ -169,7 +168,6 @@ pub async fn pegboard_actor_get(ctx: &OperationCtx, input: &Input) -> GlobalResu
 						client_wan_hostname,
 						image_id,
 						json(args) AS args,
-						network_mode,
 						json(environment) AS environment
 					FROM state
 					",
@@ -314,7 +312,7 @@ pub async fn pegboard_actor_get(ctx: &OperationCtx, input: &Input) -> GlobalResu
 				args: s.row.args.0.clone(),
 				environment: s.row.environment.0.clone(),
 				image_id: s.row.image_id,
-				network_mode: unwrap!(NetworkMode::from_repr(s.row.network_mode.try_into()?)),
+				network_mode: None,
 				network_ports: ports,
 				create_ts: s.row.create_ts,
 				start_ts: s.row.start_ts,

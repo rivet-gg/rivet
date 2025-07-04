@@ -6,9 +6,7 @@ import * as serializers from "../../../../../index";
 import * as Rivet from "../../../../../../api/index";
 import * as core from "../../../../../../core";
 import { Id } from "../../../../common/types/Id";
-import { Runtime } from "./Runtime";
-import { Network } from "./Network";
-import { Lifecycle } from "./Lifecycle";
+import { Port } from "./Port";
 import { Timestamp } from "../../../../common/types/Timestamp";
 
 export const Actor: core.serialization.ObjectSchema<serializers.actors.Actor.Raw, Rivet.actors.Actor> =
@@ -16,9 +14,10 @@ export const Actor: core.serialization.ObjectSchema<serializers.actors.Actor.Raw
         id: Id,
         region: core.serialization.string(),
         tags: core.serialization.unknown(),
-        runtime: Runtime,
-        network: Network,
-        lifecycle: Lifecycle,
+        build: core.serialization.string(),
+        ports: core.serialization.record(core.serialization.string(), Port),
+        killTimeout: core.serialization.property("kill_timeout", core.serialization.number().optional()),
+        durable: core.serialization.boolean().optional(),
         createdAt: core.serialization.property("created_at", Timestamp),
         startedAt: core.serialization.property("started_at", Timestamp.optional()),
         destroyedAt: core.serialization.property("destroyed_at", Timestamp.optional()),
@@ -29,9 +28,10 @@ export declare namespace Actor {
         id: Id.Raw;
         region: string;
         tags?: unknown;
-        runtime: Runtime.Raw;
-        network: Network.Raw;
-        lifecycle: Lifecycle.Raw;
+        build: string;
+        ports: Record<string, Port.Raw>;
+        kill_timeout?: number | null;
+        durable?: boolean | null;
         created_at: Timestamp.Raw;
         started_at?: Timestamp.Raw | null;
         destroyed_at?: Timestamp.Raw | null;

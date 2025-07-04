@@ -2,6 +2,7 @@
 
 imports:
   commons: ../common.yml
+  buildCommons: ../builds/common.yml
 
 types:
   Actor:
@@ -10,15 +11,12 @@ types:
       region: string
       tags: unknown
       build: uuid
-      arguments: optional<list<string>>
-      environment: optional<map<string, string>>
-      network_mode: NetworkMode
       ports: map<string, Port>
       kill_timeout:
         docs: >-
-          The duration to wait for in milliseconds before killing the actor.
-          This should be set to a safe default, and can be overridden during a
-          DELETE request if needed.
+          The duration to wait for in milliseconds before force killing the actor after a DELETE request.
+          This gives the actor time to perform a shutdown sequence before being killed. This should be set to
+          a safe default, and can be overridden during a DELETE request if needed.
         type: optional<long>
       durable:
         docs: >-
@@ -29,14 +27,9 @@ types:
       started_at: optional<commons.Timestamp>
       destroyed_at: optional<commons.Timestamp>
 
-  NetworkMode:
-    enum:
-      - bridge
-      - host
-
   Port:
     properties:
-      protocol: PortProtocol
+      protocol: buildCommons.PortProtocol
       internal_port: optional<integer>
       hostname: optional<string>
       port: optional<integer>
@@ -45,41 +38,9 @@ types:
         docs: |
           Fully formed connection URL including protocol, hostname, port, and path, if applicable.
         type: optional<string>
-      routing: PortRouting
-
-  PortProtocol:
-    enum:
-      - http
-      - https
-      - tcp
-      - tcp_tls
-      - udp
-
-  PortRouting:
-    properties:
-      guard: optional<GuardRouting>
-      host: optional<HostRouting>
-
-  GuardRouting:
-    properties: {}
-
-  HostRouting:
-    properties: {}
+      routing: buildCommons.PortRouting
 
   EndpointType:
     enum:
       - hostname
       - path
-
-  Resources:
-    properties:
-      cpu:
-        docs: |
-          The number of CPU cores in millicores, or 1/1000 of a core. For example,
-          1/8 of a core would be 125 millicores, and 1 core would be 1000
-          millicores.
-        type: integer
-      memory:
-        docs: The amount of memory in megabytes
-        type: integer
-

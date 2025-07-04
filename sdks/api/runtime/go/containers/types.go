@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	uuid "github.com/google/uuid"
 	sdk "sdk"
+	builds "sdk/builds"
 	core "sdk/core"
 )
 
@@ -53,13 +54,18 @@ type GetContainersRequestQuery struct {
 }
 
 type Container struct {
-	Id          sdk.Id         `json:"id"`
-	Region      string         `json:"region"`
-	Tags        interface{}    `json:"tags,omitempty"`
-	Runtime     *Runtime       `json:"runtime,omitempty"`
-	Network     *Network       `json:"network,omitempty"`
-	Resources   *Resources     `json:"resources,omitempty"`
-	Lifecycle   *Lifecycle     `json:"lifecycle,omitempty"`
+	Id          sdk.Id            `json:"id"`
+	Region      string            `json:"region"`
+	Tags        interface{}       `json:"tags,omitempty"`
+	Build       uuid.UUID         `json:"build"`
+	Arguments   []string          `json:"arguments,omitempty"`
+	Environment map[string]string `json:"environment,omitempty"`
+	Ports       map[string]*Port  `json:"ports,omitempty"`
+	Resources   *builds.Resources `json:"resources,omitempty"`
+	// The duration to wait for in milliseconds before force killing the actor after a DELETE request. This gives the actor time to perform a shutdown sequence before being killed. This should be set to a safe default, and can be overridden during a DELETE request if needed.
+	KillTimeout *int64 `json:"kill_timeout,omitempty"`
+	// If true, the actor will try to reschedule itself automatically in the event of a crash or a datacenter failover. The actor will not reschedule if it exits successfully.
+	Durable     *bool          `json:"durable,omitempty"`
 	CreatedAt   sdk.Timestamp  `json:"created_at"`
 	StartedAt   *sdk.Timestamp `json:"started_at,omitempty"`
 	DestroyedAt *sdk.Timestamp `json:"destroyed_at,omitempty"`
@@ -112,153 +118,15 @@ func (e EndpointType) Ptr() *EndpointType {
 	return &e
 }
 
-type GuardRouting struct {
-	_rawJSON json.RawMessage
-}
-
-func (g *GuardRouting) UnmarshalJSON(data []byte) error {
-	type unmarshaler GuardRouting
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*g = GuardRouting(value)
-	g._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (g *GuardRouting) String() string {
-	if len(g._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(g._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(g); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", g)
-}
-
-type HostRouting struct {
-	_rawJSON json.RawMessage
-}
-
-func (h *HostRouting) UnmarshalJSON(data []byte) error {
-	type unmarshaler HostRouting
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*h = HostRouting(value)
-	h._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (h *HostRouting) String() string {
-	if len(h._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(h._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(h); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", h)
-}
-
-type Lifecycle struct {
-	// The duration to wait for in milliseconds before killing the container. This should be set to a safe default, and can be overridden during a DELETE request if needed.
-	KillTimeout *int64 `json:"kill_timeout,omitempty"`
-	// If true, the container will try to reschedule itself automatically in the event of a crash or a datacenter failover. The container will not reschedule if it exits successfully.
-	Durable *bool `json:"durable,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (l *Lifecycle) UnmarshalJSON(data []byte) error {
-	type unmarshaler Lifecycle
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*l = Lifecycle(value)
-	l._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (l *Lifecycle) String() string {
-	if len(l._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(l._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(l); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", l)
-}
-
-type Network struct {
-	Mode  NetworkMode      `json:"mode,omitempty"`
-	Ports map[string]*Port `json:"ports,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (n *Network) UnmarshalJSON(data []byte) error {
-	type unmarshaler Network
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*n = Network(value)
-	n._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (n *Network) String() string {
-	if len(n._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(n._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(n); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", n)
-}
-
-type NetworkMode string
-
-const (
-	NetworkModeBridge NetworkMode = "bridge"
-	NetworkModeHost   NetworkMode = "host"
-)
-
-func NewNetworkModeFromString(s string) (NetworkMode, error) {
-	switch s {
-	case "bridge":
-		return NetworkModeBridge, nil
-	case "host":
-		return NetworkModeHost, nil
-	}
-	var t NetworkMode
-	return "", fmt.Errorf("%s is not a valid %T", s, t)
-}
-
-func (n NetworkMode) Ptr() *NetworkMode {
-	return &n
-}
-
 type Port struct {
-	Protocol     PortProtocol `json:"protocol,omitempty"`
-	InternalPort *int         `json:"internal_port,omitempty"`
-	Hostname     *string      `json:"hostname,omitempty"`
-	Port         *int         `json:"port,omitempty"`
-	Path         *string      `json:"path,omitempty"`
+	Protocol     builds.PortProtocol `json:"protocol,omitempty"`
+	InternalPort *int                `json:"internal_port,omitempty"`
+	Hostname     *string             `json:"hostname,omitempty"`
+	Port         *int                `json:"port,omitempty"`
+	Path         *string             `json:"path,omitempty"`
 	// Fully formed connection URL including protocol, hostname, port, and path, if applicable.
-	Url     *string      `json:"url,omitempty"`
-	Routing *PortRouting `json:"routing,omitempty"`
+	Url     *string             `json:"url,omitempty"`
+	Routing *builds.PortRouting `json:"routing,omitempty"`
 
 	_rawJSON json.RawMessage
 }
@@ -284,253 +152,6 @@ func (p *Port) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", p)
-}
-
-type PortProtocol string
-
-const (
-	PortProtocolHttp   PortProtocol = "http"
-	PortProtocolHttps  PortProtocol = "https"
-	PortProtocolTcp    PortProtocol = "tcp"
-	PortProtocolTcpTls PortProtocol = "tcp_tls"
-	PortProtocolUdp    PortProtocol = "udp"
-)
-
-func NewPortProtocolFromString(s string) (PortProtocol, error) {
-	switch s {
-	case "http":
-		return PortProtocolHttp, nil
-	case "https":
-		return PortProtocolHttps, nil
-	case "tcp":
-		return PortProtocolTcp, nil
-	case "tcp_tls":
-		return PortProtocolTcpTls, nil
-	case "udp":
-		return PortProtocolUdp, nil
-	}
-	var t PortProtocol
-	return "", fmt.Errorf("%s is not a valid %T", s, t)
-}
-
-func (p PortProtocol) Ptr() *PortProtocol {
-	return &p
-}
-
-type PortRouting struct {
-	Guard *GuardRouting `json:"guard,omitempty"`
-	Host  *HostRouting  `json:"host,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (p *PortRouting) UnmarshalJSON(data []byte) error {
-	type unmarshaler PortRouting
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*p = PortRouting(value)
-	p._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (p *PortRouting) String() string {
-	if len(p._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(p._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(p); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", p)
-}
-
-type Resources struct {
-	// The number of CPU cores in millicores, or 1/1000 of a core. For example,
-	// 1/8 of a core would be 125 millicores, and 1 core would be 1000
-	// millicores.
-	Cpu int `json:"cpu"`
-	// The amount of memory in megabytes
-	Memory int `json:"memory"`
-
-	_rawJSON json.RawMessage
-}
-
-func (r *Resources) UnmarshalJSON(data []byte) error {
-	type unmarshaler Resources
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*r = Resources(value)
-	r._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (r *Resources) String() string {
-	if len(r._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(r._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(r); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", r)
-}
-
-type Runtime struct {
-	Build       uuid.UUID         `json:"build"`
-	Arguments   []string          `json:"arguments,omitempty"`
-	Environment map[string]string `json:"environment,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (r *Runtime) UnmarshalJSON(data []byte) error {
-	type unmarshaler Runtime
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*r = Runtime(value)
-	r._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (r *Runtime) String() string {
-	if len(r._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(r._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(r); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", r)
-}
-
-type CreateContainerNetworkRequest struct {
-	Mode      *NetworkMode                           `json:"mode,omitempty"`
-	Ports     map[string]*CreateContainerPortRequest `json:"ports,omitempty"`
-	WaitReady *bool                                  `json:"wait_ready,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (c *CreateContainerNetworkRequest) UnmarshalJSON(data []byte) error {
-	type unmarshaler CreateContainerNetworkRequest
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*c = CreateContainerNetworkRequest(value)
-	c._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (c *CreateContainerNetworkRequest) String() string {
-	if len(c._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(c); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", c)
-}
-
-type CreateContainerPortRequest struct {
-	Protocol     PortProtocol `json:"protocol,omitempty"`
-	InternalPort *int         `json:"internal_port,omitempty"`
-	Routing      *PortRouting `json:"routing,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (c *CreateContainerPortRequest) UnmarshalJSON(data []byte) error {
-	type unmarshaler CreateContainerPortRequest
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*c = CreateContainerPortRequest(value)
-	c._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (c *CreateContainerPortRequest) String() string {
-	if len(c._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(c); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", c)
-}
-
-type CreateContainerRuntimeNetworkRequest struct {
-	EndpointType EndpointType `json:"endpoint_type,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (c *CreateContainerRuntimeNetworkRequest) UnmarshalJSON(data []byte) error {
-	type unmarshaler CreateContainerRuntimeNetworkRequest
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*c = CreateContainerRuntimeNetworkRequest(value)
-	c._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (c *CreateContainerRuntimeNetworkRequest) String() string {
-	if len(c._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(c); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", c)
-}
-
-type CreateContainerRuntimeRequest struct {
-	Environment map[string]string                     `json:"environment,omitempty"`
-	Network     *CreateContainerRuntimeNetworkRequest `json:"network,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (c *CreateContainerRuntimeRequest) UnmarshalJSON(data []byte) error {
-	type unmarshaler CreateContainerRuntimeRequest
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*c = CreateContainerRuntimeRequest(value)
-	c._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (c *CreateContainerRuntimeRequest) String() string {
-	if len(c._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(c._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(c); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", c)
 }
 
 type UpgradeContainerRequestQuery struct {

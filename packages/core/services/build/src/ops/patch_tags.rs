@@ -14,7 +14,7 @@ pub struct Input {
 pub struct Output {}
 
 #[operation]
-pub async fn patch_tags(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
+pub async fn build_patch_tags(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 	let exclusive_tags_json = if let Some(exclusive_tags) = &input.exclusive_tags {
 		// Validate tags don't overlap
 		let exclusive_tags_map = exclusive_tags
