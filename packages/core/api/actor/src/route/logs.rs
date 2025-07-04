@@ -22,7 +22,7 @@ pub struct GetActorLogsQuery {
 	#[serde(flatten)]
 	pub global: GlobalQuery,
 	/// JSON-encoded user query expression for filtering logs
-	pub query_json: String,
+	pub query_json: Option<String>,
 }
 
 #[tracing::instrument(skip_all)]
@@ -43,18 +43,34 @@ pub async fn get_logs(
 		)
 		.await?;
 
-	// Parse user query expression
-	let user_query_expr =
-		match serde_json::from_str::<clickhouse_user_query::QueryExpr>(&query.query_json) {
+	// Parse user query expression if provided
+	let (user_query_expr, actor_ids) = if let Some(query_json) = &query.query_json {
+		let expr = match serde_json::from_str::<clickhouse_user_query::QueryExpr>(query_json) {
 			Ok(expr) => expr,
 			Err(e) => {
 				bail_with!(ACTOR_LOGS_INVALID_QUERY_EXPR, error = e.to_string());
 			}
 		};
+		// Extract actor IDs from the query expression
+		let actor_ids = extract_actor_ids_from_query(&expr)?;
+		ensure_with!(!actor_ids.is_empty(), ACTOR_LOGS_NO_ACTOR_IDS);
+		(Some(expr), actor_ids)
+	} else {
+		// No query provided, return empty result
+		(None, vec![])
+	};
 
-	// Extract actor IDs from the query expression
-	let actor_ids = extract_actor_ids_from_query(&user_query_expr)?;
-	ensure_with!(!actor_ids.is_empty(), ACTOR_LOGS_NO_ACTOR_IDS);
+	// If no query provided, return empty logs
+	if actor_ids.is_empty() {
+		return Ok(models::ActorsGetActorLogsResponse {
+			actor_ids: vec![],
+			lines: vec![],
+			timestamps: vec![],
+			streams: vec![],
+			actor_indices: vec![],
+			watch: WatchResponse::new_as_model(util::timestamp::now() * 1_000_000),
+		});
+	}
 
 	// Filter to only valid actors for this game/env
 	let valid_actor_ids = assert::actor_for_env(&ctx, &actor_ids, game_id, env_id, None).await?;
@@ -99,7 +115,7 @@ pub async fn get_logs(
 					count: 64,
 					order_by: pegboard::ops::actor::log::read_with_query::Order::Desc,
 					query: pegboard::ops::actor::log::read_with_query::Query::AfterNts(anchor),
-					user_query_expr: Some(user_query_expr_clone.clone()),
+					user_query_expr: user_query_expr_clone.clone(),
 				})
 				.await?;
 
@@ -137,7 +153,7 @@ pub async fn get_logs(
 			count: 256,
 			order_by: pegboard::ops::actor::log::read_with_query::Order::Desc,
 			query: pegboard::ops::actor::log::read_with_query::Query::BeforeNts(before_nts),
-			user_query_expr: Some(user_query_expr.clone()),
+			user_query_expr: user_query_expr.clone(),
 		})
 		.await?
 	};
@@ -273,9 +289,9 @@ pub async fn get_logs_deprecated(
 		property: "actor_id".to_string(),
 		map_key: None,
 		value: server_id.to_string(),
-		case_sensitive: true,
+		case_insensitive: false,
 	};
-	let query_json = serde_json::to_string(&query_expr)?;
+	let query_json = Some(serde_json::to_string(&query_expr)?);
 
 	let logs_res = get_logs(ctx, watch_index, GetActorLogsQuery { global, query_json }).await?;
 	Ok(models::ServersGetServerLogsResponse {
@@ -307,18 +323,22 @@ pub async fn export_logs(
 		)
 		.await?;
 
-	// Parse user query expression
-	let user_query_expr =
-		match serde_json::from_str::<clickhouse_user_query::QueryExpr>(&body.query_json) {
+	// Parse user query expression if provided
+	let (user_query_expr, actor_ids) = if let Some(query_json) = &body.query_json {
+		let expr = match serde_json::from_str::<clickhouse_user_query::QueryExpr>(query_json) {
 			Ok(expr) => expr,
 			Err(e) => {
 				bail_with!(ACTOR_LOGS_INVALID_QUERY_EXPR, error = e.to_string());
 			}
 		};
-
-	// Extract actor IDs from the query expression
-	let actor_ids = extract_actor_ids_from_query(&user_query_expr)?;
-	ensure_with!(!actor_ids.is_empty(), ACTOR_LOGS_NO_ACTOR_IDS);
+		// Extract actor IDs from the query expression
+		let actor_ids = extract_actor_ids_from_query(&expr)?;
+		ensure_with!(!actor_ids.is_empty(), ACTOR_LOGS_NO_ACTOR_IDS);
+		(Some(expr), actor_ids)
+	} else {
+		// No query provided, return empty result
+		return Ok(models::ActorsExportActorLogsResponse { url: String::new() });
+	};
 
 	// Filter to only valid actors for this game/env
 	let valid_actor_ids = assert::actor_for_env(&ctx, &actor_ids, game_id, env_id, None).await?;
@@ -341,7 +361,7 @@ pub async fn export_logs(
 			count: i64::MAX,
 			order_by: pegboard::ops::actor::log::read_with_query::Order::Asc,
 			query: pegboard::ops::actor::log::read_with_query::Query::All,
-			user_query_expr: Some(user_query_expr.clone()),
+			user_query_expr: user_query_expr,
 		})
 		.await?;
 

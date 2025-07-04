@@ -7,9 +7,11 @@ import type { ActorAtom } from "./actor-context";
 
 interface ActorLogsTabProps {
 	actor: ActorAtom;
+	onExportLogs?: (actorId: string, typeFilter?: string, filter?: string) => Promise<void>;
+	isExporting?: boolean;
 }
 
-export function ActorLogsTab({ actor }: ActorLogsTabProps) {
+export function ActorLogsTab({ actor, onExportLogs, isExporting }: ActorLogsTabProps) {
 	const [search, setSearch] = useState("");
 	const [logsFilter, setLogsFilter] = useState<LogsTypeFilter>("all");
 
@@ -64,6 +66,8 @@ export function ActorLogsTab({ actor }: ActorLogsTabProps) {
 						actor={actor}
 						typeFilter={logsFilter}
 						filter={search}
+						onExportLogs={onExportLogs}
+						isExporting={isExporting}
 					/>
 					<ActorDetailsSettingsButton />
 				</div>

@@ -80,7 +80,7 @@ pub async fn pegboard_actor_log_read_with_query(
 	// Build user query filter if provided
 	let (user_query_where, user_query_builder) = if let Some(ref query_expr) = input.user_query_expr
 	{
-		let builder = UserDefinedQueryBuilder::new(&ACTOR_LOGS_SCHEMA, query_expr)
+		let builder = UserDefinedQueryBuilder::new(&ACTOR_LOGS_SCHEMA, Some(query_expr))
 			.map_err(|e| GlobalError::raw(e))?;
 		let where_clause = format!("AND ({})", builder.where_expr());
 		(where_clause, Some(builder))
@@ -122,6 +122,8 @@ pub async fn pegboard_actor_log_read_with_query(
 			?
 		"
 	);
+
+	tracing::debug!(?query, "querying actor logs");
 
 	// Build query with all parameters and safety restrictions
 	let mut query_builder = clickhouse
