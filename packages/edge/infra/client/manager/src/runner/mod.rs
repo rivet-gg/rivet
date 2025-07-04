@@ -49,7 +49,7 @@ const GET_PID_TIMEOUT: Duration = Duration::from_secs(256);
 // If this was "rivet-", we'd have to report on non-actor cgroups with cadvisor.
 //
 // See also packages/core/services/cluster/src/workflows/server/install/install_scripts/files/cadvisor_metric_exporter.sh & packages/core/api/actor/src/route/metrics.rs
-pub const RIVET_CONTAINER_PREFIX: &str = "pegboard-actor-";
+pub const RIVET_CONTAINER_PREFIX: &str = "pegboard-runner-";
 
 #[derive(sqlx::FromRow)]
 pub struct ProxiedPortRow {

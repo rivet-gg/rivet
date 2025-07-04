@@ -100,7 +100,7 @@ pub async fn actors_create(configuration: &configuration::Configuration, actors_
 
     let local_var_client = &local_var_configuration.client;
 
-    let local_var_uri_str = format!("{}/actors", local_var_configuration.base_path);
+    let local_var_uri_str = format!("{}/v2/actors", local_var_configuration.base_path);
     let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
 
     if let Some(ref local_var_str) = project {
@@ -141,7 +141,7 @@ pub async fn actors_destroy(configuration: &configuration::Configuration, actor:
 
     let local_var_client = &local_var_configuration.client;
 
-    let local_var_uri_str = format!("{}/actors/{actor}", local_var_configuration.base_path, actor=crate::apis::urlencode(actor));
+    let local_var_uri_str = format!("{}/v2/actors/{actor}", local_var_configuration.base_path, actor=crate::apis::urlencode(actor));
     let mut local_var_req_builder = local_var_client.request(reqwest::Method::DELETE, local_var_uri_str.as_str());
 
     if let Some(ref local_var_str) = project {
@@ -181,7 +181,7 @@ pub async fn actors_get(configuration: &configuration::Configuration, actor: &st
 
     let local_var_client = &local_var_configuration.client;
 
-    let local_var_uri_str = format!("{}/actors/{actor}", local_var_configuration.base_path, actor=crate::apis::urlencode(actor));
+    let local_var_uri_str = format!("{}/v2/actors/{actor}", local_var_configuration.base_path, actor=crate::apis::urlencode(actor));
     let mut local_var_req_builder = local_var_client.request(reqwest::Method::GET, local_var_uri_str.as_str());
 
     if let Some(ref local_var_str) = project {
@@ -221,7 +221,7 @@ pub async fn actors_list(configuration: &configuration::Configuration, project: 
 
     let local_var_client = &local_var_configuration.client;
 
-    let local_var_uri_str = format!("{}/actors", local_var_configuration.base_path);
+    let local_var_uri_str = format!("{}/v2/actors", local_var_configuration.base_path);
     let mut local_var_req_builder = local_var_client.request(reqwest::Method::GET, local_var_uri_str.as_str());
 
     if let Some(ref local_var_str) = project {
@@ -270,7 +270,7 @@ pub async fn actors_upgrade(configuration: &configuration::Configuration, actor:
 
     let local_var_client = &local_var_configuration.client;
 
-    let local_var_uri_str = format!("{}/actors/{actor}/upgrade", local_var_configuration.base_path, actor=crate::apis::urlencode(actor));
+    let local_var_uri_str = format!("{}/v2/actors/{actor}/upgrade", local_var_configuration.base_path, actor=crate::apis::urlencode(actor));
     let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
 
     if let Some(ref local_var_str) = project {
@@ -308,7 +308,7 @@ pub async fn actors_upgrade_all(configuration: &configuration::Configuration, ac
 
     let local_var_client = &local_var_configuration.client;
 
-    let local_var_uri_str = format!("{}/actors/upgrade", local_var_configuration.base_path);
+    let local_var_uri_str = format!("{}/v2/actors/upgrade", local_var_configuration.base_path);
     let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
 
     if let Some(ref local_var_str) = project {

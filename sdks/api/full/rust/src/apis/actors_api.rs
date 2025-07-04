@@ -103,7 +103,7 @@ pub async fn actors_create(
 
 	let local_var_client = &local_var_configuration.client;
 
-	let local_var_uri_str = format!("{}/actors", local_var_configuration.base_path);
+	let local_var_uri_str = format!("{}/v2/actors", local_var_configuration.base_path);
 	let mut local_var_req_builder =
 		local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
 
@@ -161,7 +161,7 @@ pub async fn actors_destroy(
 	let local_var_client = &local_var_configuration.client;
 
 	let local_var_uri_str = format!(
-		"{}/actors/{actor}",
+		"{}/v2/actors/{actor}",
 		local_var_configuration.base_path,
 		actor = crate::apis::urlencode(actor)
 	);
@@ -221,7 +221,7 @@ pub async fn actors_get(
 	let local_var_client = &local_var_configuration.client;
 
 	let local_var_uri_str = format!(
-		"{}/actors/{actor}",
+		"{}/v2/actors/{actor}",
 		local_var_configuration.base_path,
 		actor = crate::apis::urlencode(actor)
 	);
@@ -282,7 +282,7 @@ pub async fn actors_list(
 
 	let local_var_client = &local_var_configuration.client;
 
-	let local_var_uri_str = format!("{}/actors", local_var_configuration.base_path);
+	let local_var_uri_str = format!("{}/v2/actors", local_var_configuration.base_path);
 	let mut local_var_req_builder =
 		local_var_client.request(reqwest::Method::GET, local_var_uri_str.as_str());
 
@@ -351,7 +351,7 @@ pub async fn actors_upgrade(
 	let local_var_client = &local_var_configuration.client;
 
 	let local_var_uri_str = format!(
-		"{}/actors/{actor}/upgrade",
+		"{}/v2/actors/{actor}/upgrade",
 		local_var_configuration.base_path,
 		actor = crate::apis::urlencode(actor)
 	);
@@ -406,7 +406,7 @@ pub async fn actors_upgrade_all(
 
 	let local_var_client = &local_var_configuration.client;
 
-	let local_var_uri_str = format!("{}/actors/upgrade", local_var_configuration.base_path);
+	let local_var_uri_str = format!("{}/v2/actors/upgrade", local_var_configuration.base_path);
 	let mut local_var_req_builder =
 		local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
 

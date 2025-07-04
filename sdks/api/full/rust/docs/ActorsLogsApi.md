@@ -4,7 +4,7 @@ All URIs are relative to *https://api.rivet.gg*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**actors_logs_get**](ActorsLogsApi.md#actors_logs_get) | **GET** /actors/logs | 
+[**actors_logs_get**](ActorsLogsApi.md#actors_logs_get) | **GET** /v2/actors/logs | 
 
 
 

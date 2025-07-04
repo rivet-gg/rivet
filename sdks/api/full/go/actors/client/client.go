@@ -15,6 +15,7 @@ import (
 	actors "sdk/actors"
 	logs "sdk/actors/logs"
 	metrics "sdk/actors/metrics"
+	v1client "sdk/actors/v1/client"
 	core "sdk/core"
 )
 
@@ -23,6 +24,7 @@ type Client struct {
 	caller  *core.Caller
 	header  http.Header
 
+	V1      *v1client.Client
 	Logs    *logs.Client
 	Metrics *metrics.Client
 }
@@ -36,6 +38,7 @@ func NewClient(opts ...core.ClientOption) *Client {
 		baseURL: options.BaseURL,
 		caller:  core.NewCaller(options.HTTPClient),
 		header:  options.ToHeader(),
+		V1:      v1client.NewClient(opts...),
 		Logs:    logs.NewClient(opts...),
 		Metrics: metrics.NewClient(opts...),
 	}
@@ -49,7 +52,7 @@ func (c *Client) Get(ctx context.Context, actor sdk.Id, request *actors.ListActo
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
-	endpointURL := fmt.Sprintf(baseURL+"/"+"actors/%v", actor)
+	endpointURL := fmt.Sprintf(baseURL+"/"+"v2/actors/%v", actor)
 
 	queryParams := make(url.Values)
 	if request.Project != nil {
@@ -141,7 +144,7 @@ func (c *Client) List(ctx context.Context, request *actors.GetActorsRequestQuery
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
-	endpointURL := baseURL + "/" + "actors"
+	endpointURL := baseURL + "/" + "v2/actors"
 
 	queryParams := make(url.Values)
 	if request.Project != nil {
@@ -242,7 +245,7 @@ func (c *Client) Create(ctx context.Context, request *actors.CreateActorRequestQ
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
-	endpointURL := baseURL + "/" + "actors"
+	endpointURL := baseURL + "/" + "v2/actors"
 
 	queryParams := make(url.Values)
 	if request.Project != nil {
@@ -337,7 +340,7 @@ func (c *Client) Destroy(ctx context.Context, actor sdk.Id, request *actors.Dest
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
-	endpointURL := fmt.Sprintf(baseURL+"/"+"actors/%v", actor)
+	endpointURL := fmt.Sprintf(baseURL+"/"+"v2/actors/%v", actor)
 
 	queryParams := make(url.Values)
 	if request.Project != nil {
@@ -431,7 +434,7 @@ func (c *Client) Upgrade(ctx context.Context, actor sdk.Id, request *actors.Upgr
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
-	endpointURL := fmt.Sprintf(baseURL+"/"+"actors/%v/upgrade", actor)
+	endpointURL := fmt.Sprintf(baseURL+"/"+"v2/actors/%v/upgrade", actor)
 
 	queryParams := make(url.Values)
 	if request.Project != nil {
@@ -521,7 +524,7 @@ func (c *Client) UpgradeAll(ctx context.Context, request *actors.UpgradeAllActor
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
-	endpointURL := baseURL + "/" + "actors/upgrade"
+	endpointURL := baseURL + "/" + "v2/actors/upgrade"
 
 	queryParams := make(url.Values)
 	if request.Project != nil {

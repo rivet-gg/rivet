@@ -204,50 +204,100 @@ async fn find_actor(
 		return Ok(None);
 	}
 
-	// Create subs before checking for proxied ports
-	let mut ready_sub = ctx
-		.subscribe::<pegboard::workflows::actor::Ready>(("actor_id", actor_id))
-		.await?;
-	let mut fail_sub = ctx
-		.subscribe::<pegboard::workflows::actor::Failed>(("actor_id", actor_id))
-		.await?;
-	let mut destroy_sub = ctx
-		.subscribe::<pegboard::workflows::actor::DestroyStarted>(("actor_id", actor_id))
-		.await?;
+	let proxied_ports = if actor_id.as_v0().is_some() {
+		// Create subs before checking for proxied ports
+		let mut ready_sub = ctx
+			.subscribe::<pegboard::workflows::actor::v1::Ready>(("actor_id", actor_id))
+			.await?;
+		let mut fail_sub = ctx
+			.subscribe::<pegboard::workflows::actor::v1::Failed>(("actor_id", actor_id))
+			.await?;
+		let mut destroy_sub = ctx
+			.subscribe::<pegboard::workflows::actor::v1::DestroyStarted>(("actor_id", actor_id))
+			.await?;
 
-	let proxied_ports = if let Some(proxied_ports) =
-		tokio::time::timeout(Duration::from_secs(5), fetch_proxied_ports(ctx, actor_id)).await??
-	{
-		proxied_ports
-	} else {
-		tracing::info!(?actor_id, "waiting for actor to become ready");
-
-		// Wait for ready, fail, or destroy
-		tokio::select! {
-			res = ready_sub.next() => { res?; },
-			res = fail_sub.next() => {
-				let msg = res?;
-				bail_with!(ACTOR_FAILED_TO_CREATE, error = msg.message);
-			}
-			res = destroy_sub.next() => {
-				res?;
-				bail_with!(ACTOR_FAILED_TO_CREATE, error = "Actor failed before reaching a ready state.");
-			}
-			// Ready timeout
-			_ = tokio::time::sleep(Duration::from_secs(15)) => {
-				return Ok(None);
-			}
-		}
-
-		// Fetch again after ready
-		let Some(proxied_ports) =
+		if let Some(proxied_ports) =
 			tokio::time::timeout(Duration::from_secs(5), fetch_proxied_ports(ctx, actor_id))
 				.await??
-		else {
-			return Ok(None);
-		};
+		{
+			proxied_ports
+		} else {
+			tracing::info!(?actor_id, "waiting for actor to become ready");
 
-		proxied_ports
+			// Wait for ready, fail, or destroy
+			tokio::select! {
+				res = ready_sub.next() => { res?; },
+				res = fail_sub.next() => {
+					let msg = res?;
+					bail_with!(ACTOR_FAILED_TO_CREATE, error = msg.message);
+				}
+				res = destroy_sub.next() => {
+					res?;
+					bail_with!(ACTOR_FAILED_TO_CREATE, error = "Actor failed before reaching a ready state.");
+				}
+				// Ready timeout
+				_ = tokio::time::sleep(Duration::from_secs(15)) => {
+					return Ok(None);
+				}
+			}
+
+			// Fetch again after ready
+			let Some(proxied_ports) =
+				tokio::time::timeout(Duration::from_secs(5), fetch_proxied_ports(ctx, actor_id))
+					.await??
+			else {
+				return Ok(None);
+			};
+
+			proxied_ports
+		}
+	} else {
+		// Create subs before checking for proxied ports
+		let mut ready_sub = ctx
+			.subscribe::<pegboard::workflows::actor::Ready>(("actor_id", actor_id))
+			.await?;
+		let mut fail_sub = ctx
+			.subscribe::<pegboard::workflows::actor::Failed>(("actor_id", actor_id))
+			.await?;
+		let mut destroy_sub = ctx
+			.subscribe::<pegboard::workflows::actor::DestroyStarted>(("actor_id", actor_id))
+			.await?;
+
+		if let Some(proxied_ports) =
+			tokio::time::timeout(Duration::from_secs(5), fetch_proxied_ports(ctx, actor_id))
+				.await??
+		{
+			proxied_ports
+		} else {
+			tracing::info!(?actor_id, "waiting for actor to become ready");
+
+			// Wait for ready, fail, or destroy
+			tokio::select! {
+				res = ready_sub.next() => { res?; },
+				res = fail_sub.next() => {
+					let msg = res?;
+					bail_with!(ACTOR_FAILED_TO_CREATE, error = msg.message);
+				}
+				res = destroy_sub.next() => {
+					res?;
+					bail_with!(ACTOR_FAILED_TO_CREATE, error = "Actor failed before reaching a ready state.");
+				}
+				// Ready timeout
+				_ = tokio::time::sleep(Duration::from_secs(15)) => {
+					return Ok(None);
+				}
+			}
+
+			// Fetch again after ready
+			let Some(proxied_ports) =
+				tokio::time::timeout(Duration::from_secs(5), fetch_proxied_ports(ctx, actor_id))
+					.await??
+			else {
+				return Ok(None);
+			};
+
+			proxied_ports
+		}
 	};
 
 	tracing::info!(?actor_id, "actor ready");
