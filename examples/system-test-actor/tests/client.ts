@@ -61,10 +61,10 @@ async function run() {
 				lifecycle: {
 					durable: false,
 				},
-				resources: {
-					cpu: 100,
-					memory: 100,
-				},
+				// resources: {
+				// 	cpu: 100,
+				// 	memory: 100,
+				// },
 			},
 		});
 		actorId = actor.id;
