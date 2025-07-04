@@ -20,9 +20,12 @@ async fn migrate_init(ctx: &ActivityCtx, _input: &MigrateInitInput) -> GlobalRes
 		[ctx, @tx &mut tx]
 		"
 		CREATE TABLE state (
+			-- Updated later
+			project_id BLOB NOT NULL DEFAULT X'00000000000000000000000000000000', -- UUID
+			
 			env_id BLOB NOT NULL, -- UUID
 			tags BLOB NOT NULL, -- JSONB, map<string, string>
-			
+
 			resources_cpu_millicores INT,
 			resources_memory_mib INT,
 
@@ -30,6 +33,7 @@ async fn migrate_init(ctx: &ActivityCtx, _input: &MigrateInitInput) -> GlobalRes
 			selected_resources_cpu_millicores INT,
 			selected_resources_memory_mib INT,
 
+			old_runner_id BLOB, -- UUID
 			runner_id BLOB, -- UUID
 			client_id BLOB, -- UUID
 			client_workflow_id BLOB, -- UUID
@@ -47,7 +51,12 @@ async fn migrate_init(ctx: &ActivityCtx, _input: &MigrateInitInput) -> GlobalRes
 			image_id BLOB NOT NULL, -- UUID
 			args BLOB NOT NULL, -- JSONB, list<string>
 			network_mode INT NOT NULL, -- pegboard::types::NetworkMode
-			environment BLOB NOT NULL -- JSONB, map<string, string>
+			environment BLOB NOT NULL, -- JSONB, map<string, string>
+
+			-- Updated later
+			root_user_enabled INT NOT NULL DEFAULT false,
+			build_kind INT NOT NULL DEFAULT -1,
+			build_compression INT NOT NULL DEFAULT -1
 		) STRICT;
 
 		CREATE TABLE ports_ingress (
