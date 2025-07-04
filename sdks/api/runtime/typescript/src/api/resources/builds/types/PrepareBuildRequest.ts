@@ -8,6 +8,8 @@ export interface PrepareBuildRequest {
     /** A tag given to the project build. */
     imageTag?: string;
     imageFile: Rivet.upload.PrepareFile;
-    kind?: Rivet.builds.BuildKind;
-    compression?: Rivet.builds.BuildCompression;
+    kind?: Rivet.builds.Kind;
+    compression?: Rivet.builds.Compression;
+    allocation?: Rivet.builds.Allocation;
+    resources?: Rivet.builds.Resources;
 }
