@@ -2,6 +2,8 @@
 
 imports:
   commons: ../common.yml
+  actorCommons: ../actors/common.yml
+  containerCommons: ../containers/common.yml
 
 types:
   Build:
@@ -12,11 +14,10 @@ types:
       content_length:
         docs: Unsigned 64 bit integer.
         type: long
-      allocation: optional<Allocation>
-      resources: optional<Resources>
       tags:
         docs: Tags of this build
         type: map<string, string>
+      runtime: optional<Runtime>
 
   Kind:
     enum:
@@ -36,18 +37,52 @@ types:
       - value: lz4
         docs: LZ4 compression. Use the minimum compression level.
 
-  Allocation:
+  Runtime:
     properties:
-      single: optional<AllocationSingle>
-      multi: optional<AllocationMulti>
+      container: optional<RuntimeContainer>
+      actor: optional<RuntimeActor>
   
-  AllocationSingle:
-    properties: {}
-
-  AllocationMulti:
+  RuntimeContainer:
     properties:
+      # arguments: optional<list<string>>
+      environment: optional<map<string, string>>
+      network_mode: optional<NetworkMode>
+      ports: optional<map<string, PortRequest>>
+
+  RuntimeActor:
+    properties:
+      # arguments: optional<list<string>>
+      environment: optional<map<string, string>>
+      network_mode: optional<NetworkMode>
+      ports: optional<map<string, PortRequest>>
+      resources: Resources
       slots: integer
 
+  PortProtocol:
+    enum:
+      - http
+      - https
+      - tcp
+      - tcp_tls
+      - udp
+
+  PortRouting:
+    properties:
+      guard: optional<GuardRouting>
+      host: optional<HostRouting>
+
+  GuardRouting:
+    properties: {}
+
+  HostRouting:
+    properties: {}
+
+  PortRequest:
+    properties:
+      protocol: PortProtocol
+      internal_port: optional<integer>
+      routing: optional<PortRouting>
+  
   Resources:
     properties:
       cpu:
@@ -57,5 +92,10 @@ types:
           millicores.
         type: integer
       memory:
-        docs: The amount of memory in megabytes
+        docs: The amount of memory in mebibytes
         type: integer
+
+  NetworkMode:
+    enum:
+      - bridge
+      - host

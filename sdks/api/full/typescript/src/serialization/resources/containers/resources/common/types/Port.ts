@@ -5,8 +5,8 @@
 import * as serializers from "../../../../../index";
 import * as Rivet from "../../../../../../api/index";
 import * as core from "../../../../../../core";
-import { PortProtocol } from "./PortProtocol";
-import { PortRouting } from "./PortRouting";
+import { PortProtocol } from "../../../../builds/resources/common/types/PortProtocol";
+import { PortRouting } from "../../../../builds/resources/common/types/PortRouting";
 
 export const Port: core.serialization.ObjectSchema<serializers.containers.Port.Raw, Rivet.containers.Port> =
     core.serialization.object({

@@ -5,10 +5,9 @@
 import * as serializers from "../../../index";
 import * as Rivet from "../../../../api/index";
 import * as core from "../../../../core";
-import { CreateContainerRuntimeRequest } from "./CreateContainerRuntimeRequest";
-import { CreateContainerNetworkRequest } from "./CreateContainerNetworkRequest";
-import { Resources } from "../resources/common/types/Resources";
-import { Lifecycle } from "../resources/common/types/Lifecycle";
+import { EndpointType } from "../resources/common/types/EndpointType";
+import { PortRequest } from "../../builds/resources/common/types/PortRequest";
+import { Resources } from "../../builds/resources/common/types/Resources";
 
 export const CreateContainerRequest: core.serialization.ObjectSchema<
     serializers.containers.CreateContainerRequest.Raw,
@@ -18,10 +17,13 @@ export const CreateContainerRequest: core.serialization.ObjectSchema<
     tags: core.serialization.unknown(),
     build: core.serialization.string().optional(),
     buildTags: core.serialization.property("build_tags", core.serialization.unknown().optional()),
-    runtime: CreateContainerRuntimeRequest.optional(),
-    network: CreateContainerNetworkRequest.optional(),
+    environment: core.serialization.record(core.serialization.string(), core.serialization.string()).optional(),
+    networkEndpointType: core.serialization.property("network_endpoint_type", EndpointType.optional()),
+    waitForNetworkReady: core.serialization.property("wait_for_network_ready", core.serialization.boolean().optional()),
+    ports: core.serialization.record(core.serialization.string(), PortRequest).optional(),
     resources: Resources,
-    lifecycle: Lifecycle.optional(),
+    killTimeout: core.serialization.property("kill_timeout", core.serialization.number().optional()),
+    durable: core.serialization.boolean().optional(),
 });
 
 export declare namespace CreateContainerRequest {
@@ -30,9 +32,12 @@ export declare namespace CreateContainerRequest {
         tags?: unknown;
         build?: string | null;
         build_tags?: unknown | null;
-        runtime?: CreateContainerRuntimeRequest.Raw | null;
-        network?: CreateContainerNetworkRequest.Raw | null;
+        environment?: Record<string, string> | null;
+        network_endpoint_type?: EndpointType.Raw | null;
+        wait_for_network_ready?: boolean | null;
+        ports?: Record<string, PortRequest.Raw> | null;
         resources: Resources.Raw;
-        lifecycle?: Lifecycle.Raw | null;
+        kill_timeout?: number | null;
+        durable?: boolean | null;
     }
 }

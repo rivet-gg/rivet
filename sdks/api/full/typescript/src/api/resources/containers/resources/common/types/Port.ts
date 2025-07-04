@@ -5,12 +5,12 @@
 import * as Rivet from "../../../../../index";
 
 export interface Port {
-    protocol: Rivet.containers.PortProtocol;
+    protocol: Rivet.builds.PortProtocol;
     internalPort?: number;
     hostname?: string;
     port?: number;
     path?: string;
     /** Fully formed connection URL including protocol, hostname, port, and path, if applicable. */
     url?: string;
-    routing: Rivet.containers.PortRouting;
+    routing: Rivet.builds.PortRouting;
 }

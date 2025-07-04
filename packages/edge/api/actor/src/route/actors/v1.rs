@@ -113,9 +113,12 @@ pub async fn create(
 		error = "`tags` must be `Map<String, String>`"
 	);
 
-	if let build::types::BuildAllocationType::None = build.allocation_type {
-		// todo unsupported build allocation type, use v2 endpoint.
-	}
+	// Validate runtime
+	ensure_with!(
+		build.runtime.is_none(),
+		ACTOR_FAILED_TO_CREATE,
+		error = "cannot use this build with the v1 endpoint"
+	);
 
 	let network = body.network.unwrap_or_default();
 	let endpoint_type = body

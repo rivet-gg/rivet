@@ -297,7 +297,9 @@ pub async fn pegboard_actor_get(ctx: &OperationCtx, input: &Input) -> GlobalResu
 				args: s.row.args.0.clone(),
 				environment: s.row.environment.0.clone(),
 				image_id: s.row.image_id,
-				network_mode: unwrap!(NetworkMode::from_repr(s.row.network_mode.try_into()?)),
+				network_mode: Some(unwrap!(NetworkMode::from_repr(
+					s.row.network_mode.try_into()?
+				))),
 				network_ports: ports,
 				create_ts: s.row.create_ts,
 				start_ts: s.row.start_ts,

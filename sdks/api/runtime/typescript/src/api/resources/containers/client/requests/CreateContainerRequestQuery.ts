@@ -19,25 +19,22 @@ import * as Rivet from "../../../../index";
  *             buildTags: {
  *                 "key": "value"
  *             },
- *             runtime: {
- *                 environment: {},
- *                 network: {
- *                     endpointType: "hostname"
- *                 }
+ *             environment: {
+ *                 "string": "string"
  *             },
- *             network: {
- *                 mode: "bridge",
- *                 ports: {},
- *                 waitReady: true
+ *             networkEndpointType: "hostname",
+ *             waitForNetworkReady: true,
+ *             ports: {
+ *                 "string": {
+ *                     protocol: "http"
+ *                 }
  *             },
  *             resources: {
  *                 cpu: 1,
  *                 memory: 1
  *             },
- *             lifecycle: {
- *                 killTimeout: 1000000,
- *                 durable: true
- *             }
+ *             killTimeout: 1000000,
+ *             durable: true
  *         }
  *     }
  */

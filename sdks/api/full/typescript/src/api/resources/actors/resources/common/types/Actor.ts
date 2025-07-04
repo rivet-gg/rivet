@@ -8,9 +8,12 @@ export interface Actor {
     id: Rivet.Id;
     region: string;
     tags?: unknown;
-    runtime: Rivet.actors.Runtime;
-    network: Rivet.actors.Network;
-    lifecycle: Rivet.actors.Lifecycle;
+    build: string;
+    ports: Record<string, Rivet.actors.Port>;
+    /** The duration to wait for in milliseconds before force killing the actor after a DELETE request. This gives the actor time to perform a shutdown sequence before being killed. This should be set to a safe default, and can be overridden during a DELETE request if needed. */
+    killTimeout?: number;
+    /** If true, the actor will try to reschedule itself automatically in the event of a crash or a datacenter failover. The actor will not reschedule if it exits successfully. */
+    durable?: boolean;
     createdAt: Rivet.Timestamp;
     startedAt?: Rivet.Timestamp;
     destroyedAt?: Rivet.Timestamp;

@@ -14,7 +14,7 @@
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ActorsPort {
     #[serde(rename = "protocol")]
-    pub protocol: crate::models::ActorsPortProtocol,
+    pub protocol: crate::models::BuildsPortProtocol,
     #[serde(rename = "internal_port", skip_serializing_if = "Option::is_none")]
     pub internal_port: Option<i32>,
     #[serde(rename = "hostname", skip_serializing_if = "Option::is_none")]
@@ -27,11 +27,11 @@ pub struct ActorsPort {
     #[serde(rename = "url", skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     #[serde(rename = "routing")]
-    pub routing: Box<crate::models::ActorsPortRouting>,
+    pub routing: Box<crate::models::BuildsPortRouting>,
 }
 
 impl ActorsPort {
-    pub fn new(protocol: crate::models::ActorsPortProtocol, routing: crate::models::ActorsPortRouting) -> ActorsPort {
+    pub fn new(protocol: crate::models::BuildsPortProtocol, routing: crate::models::BuildsPortRouting) -> ActorsPort {
         ActorsPort {
             protocol,
             internal_port: None,

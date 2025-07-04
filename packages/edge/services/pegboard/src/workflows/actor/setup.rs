@@ -1,4 +1,4 @@
-use build::types::{BuildAllocationType, BuildCompression, BuildKind, BuildResources};
+use build::types::{BuildCompression, BuildKind, BuildNetworkMode, BuildRuntime};
 use chirp_workflow::prelude::*;
 use cluster::types::BuildDeliveryMethod;
 use fdb_util::{end_of_key_range, FormalKey, SNAPSHOT};
@@ -13,7 +13,7 @@ use sqlx::Acquire;
 use super::{Input, Port};
 use crate::{
 	keys, protocol,
-	types::{ActorLifecycle, ActorResources, GameGuardProtocol, NetworkMode, Routing},
+	types::{ActorLifecycle, ActorResources, GameGuardProtocol, Routing},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
@@ -22,29 +22,14 @@ pub struct ValidateInput {
 	pub tags: util::serde::HashableMap<String, String>,
 	pub resources: Option<ActorResources>,
 	pub image_id: Uuid,
-	pub root_user_enabled: bool,
 	pub args: Vec<String>,
-	pub network_mode: NetworkMode,
 	pub environment: util::serde::HashableMap<String, String>,
 	pub network_ports: util::serde::HashableMap<String, Port>,
 }
 
 #[activity(Validate)]
 pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<Option<String>> {
-	let dc_id = ctx.config().server()?.rivet.edge()?.datacenter_id;
-
-	let (tiers, upload_res, game_config_res) = tokio::try_join!(
-		async {
-			let tier_res = ctx
-				.op(tier::ops::list::Input {
-					datacenter_ids: vec![dc_id],
-					pegboard: true,
-				})
-				.await?;
-			let tier_dc = unwrap!(tier_res.datacenters.into_iter().next());
-
-			GlobalResult::Ok(tier_dc.tiers)
-		},
+	let (upload_res, game_config_res) = tokio::try_join!(
 		async {
 			let builds_res = ctx
 				.op(build::ops::get::Input {
@@ -73,7 +58,7 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 			.await?;
 
 			let Some(game) = games_res.games.first() else {
-				return Ok(None);
+				return GlobalResult::Ok(None);
 			};
 
 			let game_config_res = ctx
@@ -95,56 +80,31 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 		return Ok(Some("Build upload not complete.".into()));
 	}
 
-	let resources = match build.allocation_type {
-		BuildAllocationType::None => {
-			// NOTE: This should be unreachable because if an old build is encountered the old actor wf is used.
-			return Ok(Some("Old builds not supported.".into()));
-		}
-		BuildAllocationType::Single => {
-			if let Some(resources) = &input.resources {
-				resources.clone()
-			} else {
-				return Ok(Some(
-					"Actors with builds of `allocation_type` = `single` must specify `resources`."
-						.into(),
-				));
-			}
-		}
-		BuildAllocationType::Multi => {
-			if input.resources.is_some() {
-				return Ok(Some("Cannot specify `resources` for actors with builds of `allocation_type` = `multi`.".into()));
-			}
-
-			let build_resources = unwrap!(build.resources, "multi build should have resources");
-
-			ActorResources {
-				cpu_millicores: build_resources.cpu_millicores,
-				memory_mib: build_resources.memory_mib,
-			}
-		}
+	let Some(build_runtime) = build.runtime else {
+		return Ok(Some("Old builds not allowed".into()));
 	};
 
-	// Find any tier that has more CPU and memory than the requested resources
-	let has_tier = tiers
-		.iter()
-		.any(|t| t.cpu_millicores >= resources.cpu_millicores && t.memory >= resources.memory_mib);
-
-	if !has_tier {
-		return Ok(Some("Too many resources allocated.".into()));
+	match &build_runtime {
+		BuildRuntime::Container { .. } => {
+			if input.resources.is_none() {
+				return Ok(Some("Containers must specify `resources`.".into()));
+			}
+		}
+		BuildRuntime::Actor { .. } => {
+			if input.resources.is_some() {
+				return Ok(Some("Actors cannot specify `resources`.".into()));
+			}
+		}
 	}
 
 	let Some(game_config) = game_config_res else {
 		return Ok(Some("Environment not found.".into()));
 	};
 
-	if matches!(input.network_mode, NetworkMode::Host) && !game_config.host_networking_enabled {
+	if matches!(build_runtime.network_mode(), BuildNetworkMode::Host)
+		&& !game_config.host_networking_enabled
+	{
 		return Ok(Some("Host networking is not enabled for this game.".into()));
-	}
-
-	if input.root_user_enabled && !game_config.root_user_enabled {
-		return Ok(Some(
-			"Docker root user is not enabled for this game.".into(),
-		));
 	}
 
 	if input.tags.len() > 8 {
@@ -178,7 +138,7 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 	for (i, arg) in input.args.iter().enumerate() {
 		if arg.len() > 256 {
 			return Ok(Some(format!(
-				"runtime.args[{i}]: Argument too large (max 256 bytes)."
+				"args[{i}]: Argument too large (max 256 bytes)."
 			)));
 		}
 	}
@@ -190,13 +150,13 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 	for (k, v) in &input.environment {
 		if k.len() > 256 {
 			return Ok(Some(format!(
-				"runtime.environment[{:?}]: Key too large (max 256 bytes).",
+				"environment[{:?}]: Key too large (max 256 bytes).",
 				util::safe_slice(k, 0, 256),
 			)));
 		}
 		if v.len() > 1024 {
 			return Ok(Some(format!(
-				"runtime.environment[{k:?}]: Value too large (max 1024 bytes)."
+				"environment[{k:?}]: Value too large (max 1024 bytes)."
 			)));
 		}
 	}
@@ -208,26 +168,26 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 	for (name, port) in &input.network_ports {
 		if name.len() > 16 {
 			return Ok(Some(format!(
-				"runtime.ports[{:?}]: Port name too large (max 16 bytes).",
+				"ports[{:?}]: Port name too large (max 16 bytes).",
 				util::safe_slice(name, 0, 16),
 			)));
 		}
 
-		match input.network_mode {
-			NetworkMode::Bridge => {
+		match build_runtime.network_mode() {
+			BuildNetworkMode::Bridge => {
 				// NOTE: Temporary validation until we implement bridge networking for isolates
 				if let BuildKind::JavaScript = build.kind {
 					if port.internal_port.is_some() {
 						return Ok(Some(format!(
-							"runtime.ports[{name:?}].internal_port: Must be null when `network.mode` = \"bridge\" and using a JS build.",
+							"ports[{name:?}].internal_port: Must be null when `network.mode` = \"bridge\" and using a JS build.",
 						)));
 					}
 				}
 			}
-			NetworkMode::Host => {
+			BuildNetworkMode::Host => {
 				if port.internal_port.is_some() {
 					return Ok(Some(format!(
-						"runtime.ports[{name:?}].internal_port: Must be null when `network.mode` = \"host\".",
+						"ports[{name:?}].internal_port: Must be null when `network.mode` = \"host\".",
 					)));
 				}
 			}
@@ -238,14 +198,14 @@ pub async fn validate(ctx: &ActivityCtx, input: &ValidateInput) -> GlobalResult<
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
-pub struct DisableTlsPortsInput {
-	pub network_ports: util::serde::HashableMap<String, Port>,
+struct DisableTlsPortsInput {
+	network_ports: util::serde::HashableMap<String, Port>,
 }
 
 /// If TLS is not enabled in the cluster, we downgrade all protocols to the non-TLS equivalents.
 /// This allows developers to develop locally with the same code they would use in production.
 #[activity(DisableTlsPorts)]
-pub async fn disable_tls_ports(
+async fn disable_tls_ports(
 	ctx: &ActivityCtx,
 	input: &DisableTlsPortsInput,
 ) -> GlobalResult<util::serde::HashableMap<String, Port>> {
@@ -293,7 +253,6 @@ struct InsertDbInput {
 	lifecycle: ActorLifecycle,
 	image_id: Uuid,
 	args: Vec<String>,
-	network_mode: NetworkMode,
 	environment: util::serde::HashableMap<String, String>,
 }
 
@@ -315,7 +274,6 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 			create_ts,
 			image_id,
 			args,
-			network_mode,
 			environment
 		)
 		VALUES (?, jsonb(?), ?, ?, ?, ?, ?, ?, jsonb(?), ?, jsonb(?))
@@ -329,7 +287,6 @@ async fn insert_db(ctx: &ActivityCtx, input: &InsertDbInput) -> GlobalResult<i64
 		create_ts,
 		input.image_id,
 		serde_json::to_string(&input.args)?,
-		input.network_mode as i32,
 		serde_json::to_string(&input.environment)?,
 	)
 	.await?;
@@ -684,9 +641,7 @@ pub struct GetMetaOutput {
 	pub build_file_name: String,
 	pub build_kind: BuildKind,
 	pub build_compression: BuildCompression,
-	pub build_allocation_type: BuildAllocationType,
-	pub build_allocation_total_slots: u32,
-	pub build_resources: Option<BuildResources>,
+	pub build_runtime: BuildRuntime,
 	pub dc_name_id: String,
 	pub dc_display_name: String,
 	pub dc_build_delivery_method: BuildDeliveryMethod,
@@ -727,9 +682,7 @@ async fn get_meta(ctx: &ActivityCtx, input: &GetMetaInput) -> GlobalResult<GetMe
 		build_file_name: build::utils::file_name(build.kind, build.compression),
 		build_kind: build.kind,
 		build_compression: build.compression,
-		build_allocation_type: build.allocation_type,
-		build_allocation_total_slots: build.allocation_total_slots,
-		build_resources: build.resources.clone(),
+		build_runtime: unwrap!(build.runtime.clone(), "new builds should have runtime"),
 		dc_name_id: dc.name_id.clone(),
 		dc_display_name: dc.display_name.clone(),
 		dc_build_delivery_method: dc.build_delivery_method,
@@ -741,7 +694,6 @@ struct InsertMetaInput {
 	project_id: Uuid,
 	build_kind: BuildKind,
 	build_compression: BuildCompression,
-	root_user_enabled: bool,
 }
 
 #[activity(InsertMeta)]
@@ -755,13 +707,11 @@ async fn insert_meta(ctx: &ActivityCtx, input: &InsertMetaInput) -> GlobalResult
 		SET
 			project_id = ?,
 			build_kind = ?,
-			build_compression = ?,
-			root_user_enabled = ?
+			build_compression = ?
 		",
 		input.project_id,
 		input.build_kind as i64,
 		input.build_compression as i64,
-		input.root_user_enabled,
 	)
 	.await?;
 
@@ -769,19 +719,15 @@ async fn insert_meta(ctx: &ActivityCtx, input: &InsertMetaInput) -> GlobalResult
 }
 
 pub enum SetupCtx {
-	Init {
-		network_ports: util::serde::HashableMap<String, Port>,
-	},
-	Reschedule {
-		image_id: Uuid,
-	},
+	Init,
+	Reschedule { image_id: Uuid },
 }
 
 #[derive(Clone)]
 pub struct ActorSetupCtx {
 	pub image_id: Uuid,
 	pub meta: GetMetaOutput,
-	pub resources: protocol::Resources,
+	pub selected_resources: protocol::Resources,
 }
 
 pub async fn setup(
@@ -790,7 +736,7 @@ pub async fn setup(
 	setup: SetupCtx,
 ) -> GlobalResult<ActorSetupCtx> {
 	let image_id = match setup {
-		SetupCtx::Init { network_ports } => {
+		SetupCtx::Init => {
 			let tags = input.tags.clone();
 			let create_ts = ctx
 				.activity(InsertDbInput {
@@ -801,24 +747,9 @@ pub async fn setup(
 					lifecycle: input.lifecycle.clone(),
 					image_id: input.image_id,
 					args: input.args.clone(),
-					network_mode: input.network_mode,
 					environment: input.environment.clone(),
 				})
 				.await?;
-
-			let ingress_ports_res = ctx
-				.activity(AllocateIngressPortsInput {
-					actor_id: input.actor_id,
-					network_ports: network_ports.clone(),
-				})
-				.await?;
-
-			ctx.activity(InsertPortsInput {
-				actor_id: input.actor_id,
-				network_ports,
-				ingress_ports: ingress_ports_res.ports,
-			})
-			.await?;
 
 			ctx.activity(InsertFdbInput {
 				actor_id: input.actor_id,
@@ -840,34 +771,60 @@ pub async fn setup(
 		})
 		.await?;
 
+	let network_ports = ctx
+		.activity(DisableTlsPortsInput {
+			// Merge provided ports with build ports
+			network_ports: meta
+				.build_runtime
+				.ports()
+				.iter()
+				.map(|(k, port)| (k.clone(), port.clone().into()))
+				.chain(
+					input
+						.network_ports
+						.iter()
+						.map(|(k, v)| (k.clone(), v.clone())),
+				)
+				.collect(),
+		})
+		.await?;
+
+	let ingress_ports_res = ctx
+		.activity(AllocateIngressPortsInput {
+			actor_id: input.actor_id,
+			network_ports: network_ports.clone(),
+		})
+		.await?;
+
+	ctx.activity(InsertPortsInput {
+		actor_id: input.actor_id,
+		network_ports,
+		ingress_ports: ingress_ports_res.ports,
+	})
+	.await?;
+
 	ctx.v(2)
 		.activity(InsertMetaInput {
 			project_id: meta.project_id,
 			build_kind: meta.build_kind,
 			build_compression: meta.build_compression,
-			root_user_enabled: input.root_user_enabled,
 		})
 		.await?;
 
 	// Use resources from build or from actor config
-	let resources = match meta.build_allocation_type {
-		BuildAllocationType::None => bail!("actors do not support old builds"),
-		BuildAllocationType::Single => unwrap!(
+	let resources = match &meta.build_runtime {
+		BuildRuntime::Container { .. } => unwrap!(
 			input.resources.clone(),
-			"single builds should have actor resources"
+			"containers should have resources property set"
 		),
-		BuildAllocationType::Multi => {
-			let build_resources =
-				unwrap_ref!(meta.build_resources, "multi builds should have resources");
-
-			ActorResources {
-				cpu_millicores: build_resources.cpu_millicores,
-				memory_mib: build_resources.memory_mib,
-			}
-		}
+		BuildRuntime::Actor { resources, .. } => ActorResources {
+			cpu_millicores: resources.cpu_millicores,
+			memory_mib: resources.memory_mib,
+		},
 	};
 
-	let resources = ctx
+	// Choose resources based on tier
+	let selected_resources = ctx
 		.activity(SelectResourcesInput {
 			cpu_millicores: resources.cpu_millicores,
 			memory_mib: resources.memory_mib,
@@ -877,7 +834,7 @@ pub async fn setup(
 	Ok(ActorSetupCtx {
 		image_id,
 		meta,
-		resources,
+		selected_resources,
 	})
 }
 

@@ -1,0 +1,2 @@
+ALTER TABLE builds
+	ADD COLUMN runtime JSONB;

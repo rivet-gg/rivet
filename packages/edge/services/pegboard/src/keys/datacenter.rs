@@ -1,7 +1,7 @@
 use std::result::Result::Ok;
 
 use anyhow::*;
-use build::types::BuildAllocationType;
+use build::types::BuildRuntime;
 use chirp_workflow::prelude::*;
 use fdb_util::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -342,12 +342,11 @@ impl<'de> TupleUnpack<'de> for PendingActorByImageIdKey {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PendingActorByImageIdKeyData {
 	pub generation: u32,
-	pub build_allocation_type: BuildAllocationType,
-	pub build_allocation_total_slots: u32,
+	pub build_runtime: BuildRuntime,
 	/// Millicore (1/1000 of a core).
-	pub cpu: u64,
+	pub selected_cpu: u64,
 	/// Bytes.
-	pub memory: u64,
+	pub selected_mem: u64,
 }
 
 pub struct PendingActorByImageIdSubspaceKey {
@@ -433,12 +432,11 @@ impl<'de> TupleUnpack<'de> for PendingActorKey {
 pub struct PendingActorKeyData {
 	pub generation: u32,
 	pub image_id: Uuid,
-	pub build_allocation_type: BuildAllocationType,
-	pub build_allocation_total_slots: u32,
+	pub build_runtime: BuildRuntime,
 	/// Millicore (1/1000 of a core).
-	pub cpu: u64,
+	pub selected_cpu: u64,
 	/// Bytes.
-	pub memory: u64,
+	pub selected_mem: u64,
 }
 
 pub struct PendingActorSubspaceKey {}

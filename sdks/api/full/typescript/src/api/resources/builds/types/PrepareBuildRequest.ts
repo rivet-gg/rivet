@@ -10,6 +10,5 @@ export interface PrepareBuildRequest {
     imageFile: Rivet.upload.PrepareFile;
     kind?: Rivet.builds.Kind;
     compression?: Rivet.builds.Compression;
-    allocation?: Rivet.builds.Allocation;
-    resources?: Rivet.builds.Resources;
+    runtime?: Rivet.builds.Runtime;
 }

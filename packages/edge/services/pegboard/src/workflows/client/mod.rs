@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use ::build::types::BuildAllocationType;
+use ::build::types::BuildRuntime;
 use chirp_workflow::prelude::*;
 use fdb_util::{end_of_key_range, FormalKey, SERIALIZABLE, SNAPSHOT};
 use foundationdb::{
@@ -1143,10 +1143,10 @@ pub(crate) async fn allocate_pending_actors(
 				let queue_value = queue_key
 					.deserialize(queue_entry.value())
 					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
-				let memory_mib = queue_value.memory / 1024 / 1024;
+				let memory_mib = queue_value.selected_mem / 1024 / 1024;
 
 				// Check for availability amongst existing runners
-				if let BuildAllocationType::Multi = queue_value.build_allocation_type {
+				if let BuildRuntime::Actor { .. } = &queue_value.build_runtime {
 					// Select a range that only includes runners that have enough remaining slots to allocate
 					// this actor
 					let start = keys::subspace().pack(
@@ -1333,7 +1333,7 @@ pub(crate) async fn allocate_pending_actors(
 
 					// Update allocated amount
 					let new_remaining_mem = old_client_allocation_key.remaining_mem - memory_mib;
-					let new_remaining_cpu = old_remaining_cpu - queue_value.cpu;
+					let new_remaining_cpu = old_remaining_cpu - queue_value.selected_cpu;
 					let new_allocation_key = keys::datacenter::ClientsByRemainingMemKey::new(
 						client_flavor,
 						new_remaining_mem,
@@ -1367,9 +1367,8 @@ pub(crate) async fn allocate_pending_actors(
 							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 					);
 
-					let remaining_slots =
-						queue_value.build_allocation_total_slots.saturating_sub(1);
-					let total_slots = queue_value.build_allocation_total_slots;
+					let remaining_slots = queue_value.build_runtime.slots().saturating_sub(1);
+					let total_slots = queue_value.build_runtime.slots();
 
 					// Insert runner records
 					let remaining_slots_key = keys::runner::RemainingSlotsKey::new(runner_id);
@@ -1396,9 +1395,9 @@ pub(crate) async fn allocate_pending_actors(
 							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 					);
 
-					// Insert runner index key if multi. Single allocation per container runners don't need to be
-					// in the alloc idx because they only have 1 slot
-					if let BuildAllocationType::Multi = queue_value.build_allocation_type {
+					// Insert runner index key if actor. Container actor runners don't need to be in the alloc
+					// idx because they only have 1 slot
+					if let BuildRuntime::Actor { .. } = queue_value.build_runtime {
 						let runner_idx_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
 							queue_value.image_id,
 							remaining_slots,

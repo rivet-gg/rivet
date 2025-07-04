@@ -10,8 +10,7 @@ export interface Build {
     createdAt: Rivet.Timestamp;
     /** Unsigned 64 bit integer. */
     contentLength: number;
-    allocation?: Rivet.builds.Allocation;
-    resources?: Rivet.builds.Resources;
     /** Tags of this build */
     tags: Record<string, string>;
+    runtime?: Rivet.builds.Runtime;
 }

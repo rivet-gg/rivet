@@ -2,10 +2,12 @@ use analytics::InsertClickHouseInput;
 use chirp_workflow::prelude::*;
 use destroy::KillCtx;
 use futures_util::FutureExt;
+use rivet_api::models;
+use rivet_convert::{ApiInto, ApiTryInto};
 
 use crate::{
 	protocol,
-	types::{ActorLifecycle, ActorResources, EndpointType, NetworkMode, Routing},
+	types::{ActorLifecycle, ActorResources, EndpointType, Routing},
 	workflows::client::AllocatePendingActorsInput,
 };
 
@@ -40,9 +42,7 @@ pub struct Input {
 	pub resources: Option<ActorResources>,
 	pub lifecycle: ActorLifecycle,
 	pub image_id: Uuid,
-	pub root_user_enabled: bool,
 	pub args: Vec<String>,
-	pub network_mode: NetworkMode,
 	pub environment: util::serde::HashableMap<String, String>,
 	pub network_ports: util::serde::HashableMap<String, Port>,
 	pub endpoint_type: Option<EndpointType>,
@@ -55,6 +55,15 @@ pub struct Port {
 	pub routing: Routing,
 }
 
+impl From<build::types::BuildPort> for Port {
+	fn from(value: build::types::BuildPort) -> Port {
+		Port {
+			internal_port: value.internal_port,
+			routing: value.routing.into(),
+		}
+	}
+}
+
 #[workflow]
 pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResult<()> {
 	migrations::run(ctx).await?;
@@ -65,9 +74,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 			tags: input.tags.clone(),
 			resources: input.resources.clone(),
 			image_id: input.image_id,
-			root_user_enabled: input.root_user_enabled,
 			args: input.args.clone(),
-			network_mode: input.network_mode,
 			environment: input.environment.clone(),
 			network_ports: input.network_ports.clone(),
 		})
@@ -85,20 +92,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 		return Ok(());
 	}
 
-	let network_ports = ctx
-		.activity(setup::DisableTlsPortsInput {
-			network_ports: input.network_ports.clone(),
-		})
-		.await?;
-
-	let res = setup::setup(
-		ctx,
-		input,
-		setup::SetupCtx::Init {
-			network_ports: network_ports.clone(),
-		},
-	)
-	.await;
+	let res = setup::setup(ctx, input, setup::SetupCtx::Init).await;
 	let initial_actor_setup = match ctx.catch_unrecoverable(res)? {
 		Ok(res) => res,
 		Err(err) => {
@@ -115,7 +109,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 				actor_id: input.actor_id,
 				generation: 0,
 				image_id: input.image_id,
-				build_allocation_type: None,
+				build_runtime_kind: None,
 				kill: None,
 			})
 			.output()
@@ -144,7 +138,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 			actor_id: input.actor_id,
 			generation: 0,
 			image_id: input.image_id,
-			build_allocation_type: Some(initial_actor_setup.meta.build_allocation_type),
+			build_runtime_kind: Some(initial_actor_setup.meta.build_runtime.kind()),
 			kill: None,
 		})
 		.output()
@@ -163,6 +157,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 			),
 			|ctx, state| {
 				let input = input.clone();
+				let initial_build_runtime_kind = initial_actor_setup.meta.build_runtime.kind();
 
 				async move {
 					let sig = if let Some(drain_timeout_ts) = state.drain_timeout_ts {
@@ -375,9 +370,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 							let validation_res = ctx
 								.activity(runtime::ValidateUpgradeInput {
-									initial_build_allocation_type: initial_actor_setup
-										.meta
-										.build_allocation_type,
+									initial_build_runtime_kind,
 									image_id: sig.image_id,
 								})
 								.await?;
@@ -463,7 +456,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 		actor_id: input.actor_id,
 		generation: lifecycle_res.generation,
 		image_id: lifecycle_res.image_id,
-		build_allocation_type: Some(initial_actor_setup.meta.build_allocation_type),
+		build_runtime_kind: Some(initial_actor_setup.meta.build_runtime.kind()),
 		kill: lifecycle_res.kill,
 	})
 	.output()
@@ -552,7 +545,7 @@ pub struct UpgradeComplete {}
 join_signal!(PendingAllocation {
 	Allocate,
 	Destroy,
-	//
+	// Comment to prevent invalid formatting
 });
 
 join_signal!(Main {
@@ -562,3 +555,52 @@ join_signal!(Main {
 	Undrain,
 	Destroy,
 });
+
+pub fn convert_port_request_from_api(
+	port_name: &str,
+	port: models::BuildsPortRequest,
+) -> GlobalResult<Port> {
+	Ok(Port {
+		internal_port: port.internal_port.map(TryInto::try_into).transpose()?,
+		routing: if let Some(routing) = port.routing {
+			match *routing {
+				models::BuildsPortRouting {
+					guard: Some(_gg),
+					host: None,
+				} => crate::types::Routing::GameGuard {
+					protocol: port.protocol.api_into(),
+				},
+				models::BuildsPortRouting {
+					guard: None,
+					host: Some(_),
+				} => crate::types::Routing::Host {
+					protocol: match port.protocol.api_try_into() {
+						Err(err)
+							if GlobalError::is(
+								&err,
+								formatted_error::code::ACTOR_FAILED_TO_CREATE,
+							) =>
+						{
+							// Add location
+							bail_with!(
+								ACTOR_FAILED_TO_CREATE,
+								error = format!("network.ports[{port_name:?}].protocol: Host port protocol must be either TCP or UDP.")
+							);
+						}
+						x => x?,
+					},
+				},
+				models::BuildsPortRouting { .. } => {
+					bail_with!(
+						ACTOR_FAILED_TO_CREATE,
+						error = format!("network.ports[{port_name:?}].routing: Must specify either `guard` or `host` routing type.")
+					);
+				}
+			}
+		} else {
+			crate::types::Routing::GameGuard {
+				protocol: port.protocol.api_into(),
+			}
+		},
+	})
+}

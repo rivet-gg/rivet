@@ -5,8 +5,8 @@ const MAX_UPLOAD_SIZE: u64 = util::file_size::gigabytes(8);
 const MAX_JS_BUILD_UPLOAD_SIZE: u64 = util::file_size::megabytes(10);
 use crate::{
 	types::{
-		upload::PrepareFile, upload::PresignedUploadRequest, BuildAllocationType, BuildCompression,
-		BuildKind, BuildResources,
+		upload::PrepareFile, upload::PresignedUploadRequest, BuildCompression, BuildKind,
+		BuildNetworkMode, BuildRuntime,
 	},
 	utils,
 };
@@ -18,9 +18,7 @@ pub struct Input {
 	pub content: Content,
 	pub kind: BuildKind,
 	pub compression: BuildCompression,
-	pub allocation_type: BuildAllocationType,
-	pub allocation_total_slots: u32,
-	pub resources: Option<BuildResources>,
+	pub runtime: Option<BuildRuntime>,
 }
 
 #[derive(Debug)]
@@ -48,37 +46,22 @@ pub struct Output {
 }
 
 #[operation]
-pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
+pub async fn build_create(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
+	let dc_id = ctx.config().server()?.rivet.edge()?.datacenter_id;
+
 	ensure_with!(
 		util::check::display_name_long(&input.display_name),
 		BUILD_INVALID,
 		reason = "invalid display name"
 	);
 
-	// Validate allocation and resources
-	match input.allocation_type {
-		BuildAllocationType::None => {
-			ensure_with!(
-				input.resources.is_none(),
-				BUILD_INVALID,
-				reason = "`resources` can only be specified if `allocation_type` = `multi`"
-			);
-		}
-		BuildAllocationType::Single => {
-			ensure_with!(
-				input.resources.is_none(),
-				BUILD_INVALID,
-				reason = "builds with `allocation_type` = `single` cannot have `resources`"
-			);
-		}
-		BuildAllocationType::Multi => {
-			ensure_with!(
-				input.resources.is_some(),
-				BUILD_INVALID,
-				reason = "builds with `allocation_type` = `multi` must specify `resources`"
-			);
-		}
-	}
+	let tier_res = ctx
+		.op(tier::ops::list::Input {
+			datacenter_ids: vec![dc_id],
+			pegboard: true,
+		})
+		.await?;
+	let tier_dc = unwrap!(tier_res.datacenters.into_iter().next());
 
 	// Validate game exists
 	let (game_id, env_id) = match input.owner {
@@ -103,6 +86,100 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 			(None, Some(env_id))
 		}
 	};
+
+	// Validate runtime config
+	if let Some(runtime) = &input.runtime {
+		if let BuildRuntime::Actor { resources, .. } = &runtime {
+			// Find any tier that has more CPU and memory than the requested resources
+			let has_tier = tier_dc.tiers.iter().any(|t| {
+				t.cpu_millicores >= resources.cpu_millicores && t.memory >= resources.memory_mib
+			});
+
+			ensure_with!(
+				has_tier,
+				BUILD_INVALID,
+				reason = "Too many resources allocated."
+			);
+		}
+
+		ensure_with!(
+			runtime.args().len() <= 64,
+			BUILD_INVALID,
+			reason = "Too many arguments (max 64)."
+		);
+
+		for (i, arg) in runtime.args().iter().enumerate() {
+			ensure_with!(
+				arg.len() <= 256,
+				BUILD_INVALID,
+				reason = format!("runtime.args[{i}]: Argument too large (max 256 bytes).")
+			);
+		}
+
+		ensure_with!(
+			runtime.environment().len() <= 64,
+			BUILD_INVALID,
+			reason = "Too many environment variables (max 64)."
+		);
+
+		for (k, v) in runtime.environment() {
+			ensure_with!(
+				k.len() <= 256,
+				BUILD_INVALID,
+				reason = format!(
+					"runtime.environment[{:?}]: Key too large (max 256 bytes).",
+					util::safe_slice(k, 0, 256),
+				)
+			);
+
+			ensure_with!(
+				v.len() <= 1024,
+				BUILD_INVALID,
+				reason = format!("runtime.environment[{k:?}]: Value too large (max 1024 bytes).")
+			);
+		}
+
+		ensure_with!(
+			runtime.ports().len() <= 8,
+			BUILD_INVALID,
+			reason = "Too many ports (max 8)."
+		);
+
+		for (name, port) in runtime.ports() {
+			ensure_with!(
+				name.len() <= 16,
+				BUILD_INVALID,
+				reason = format!(
+					"runtime.ports[{:?}]: Port name too large (max 16 bytes).",
+					util::safe_slice(name, 0, 16),
+				)
+			);
+
+			match runtime.network_mode() {
+				BuildNetworkMode::Bridge => {
+					// NOTE: Temporary validation until we implement bridge networking for isolates
+					if let BuildKind::JavaScript = input.kind {
+						ensure_with!(
+							port.internal_port.is_none(),
+							BUILD_INVALID,
+							reason = format!(
+								"runtime.ports[{name:?}].internal_port: Must be null when `network.mode` = \"bridge\" and using a JS build."
+							)
+						);
+					}
+				}
+				BuildNetworkMode::Host => {
+					ensure_with!(
+						port.internal_port.is_none(),
+						BUILD_INVALID,
+						reason = format!(
+							"runtime.ports[{name:?}].internal_port: Must be null when `network.mode` = \"host\"."
+						)
+					);
+				}
+			}
+		}
+	}
 
 	let (image_tag, upload_id, presigned_requests) = match &input.content {
 		Content::Default { build_kind } => {
@@ -191,13 +268,10 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 				create_ts,
 				kind,
 				compression,
-				allocation_type,
-				allocation_total_slots,
-				resources_cpu_millicores,
-				resources_memory_mib
+				runtime
 			)
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		",
 		build_id,
 		game_id,
@@ -208,10 +282,7 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 		ctx.ts(),
 		input.kind as i32,
 		input.compression as i32,
-		input.allocation_type as i32,
-		input.allocation_total_slots as i64,
-		input.resources.as_ref().map(|x| x.cpu_millicores as i64),
-		input.resources.as_ref().map(|x| x.memory_mib as i64),
+		sqlx::types::Json(&input.runtime),
 	)
 	.await?;
 

@@ -48,7 +48,7 @@ pub async fn get(
 			build_ids: vec![build_id],
 		})
 		.await?;
-	let build = unwrap_with!(builds_res.builds.first(), BUILD_NOT_FOUND);
+	let build = unwrap_with!(builds_res.builds.into_iter().next(), BUILD_NOT_FOUND);
 	ensure_with!(
 		unwrap_with!(build.env_id, BUILD_NOT_FOUND) == env_id,
 		BUILD_NOT_FOUND
@@ -65,22 +65,8 @@ pub async fn get(
 		name: build.display_name.clone(),
 		created_at: timestamp::to_string(build.create_ts)?,
 		content_length: upload.content_length.api_try_into()?,
-		allocation: match build.allocation_type {
-			build::types::BuildAllocationType::None => None,
-			build::types::BuildAllocationType::Single => Some(Box::new(models::BuildsAllocation {
-				single: Some(json!({})),
-				multi: None,
-			})),
-			build::types::BuildAllocationType::Multi => Some(Box::new(models::BuildsAllocation {
-				single: None,
-				multi: Some(Box::new(models::BuildsAllocationMulti {
-					slots: build.allocation_total_slots.try_into()?,
-				})),
-			})),
-		},
-		resources: build
-			.resources
-			.clone()
+		runtime: build
+			.runtime
 			.map(ApiTryInto::api_try_into)
 			.transpose()?
 			.map(Box::new),
@@ -162,7 +148,7 @@ pub async fn list(
 	// Convert the build data structures
 	let mut builds = builds_res
 		.builds
-		.iter()
+		.into_iter()
 		.filter_map(|build| {
 			let proto_upload_id = Some(build.upload_id.into());
 
@@ -180,26 +166,8 @@ pub async fn list(
 					name: build.display_name.clone(),
 					created_at: timestamp::to_string(build.create_ts)?,
 					content_length: upload.content_length.api_try_into()?,
-					allocation: match build.allocation_type {
-						build::types::BuildAllocationType::None => None,
-						build::types::BuildAllocationType::Single => {
-							Some(Box::new(models::BuildsAllocation {
-								single: Some(json!({})),
-								multi: None,
-							}))
-						}
-						build::types::BuildAllocationType::Multi => {
-							Some(Box::new(models::BuildsAllocation {
-								single: None,
-								multi: Some(Box::new(models::BuildsAllocationMulti {
-									slots: build.allocation_total_slots.try_into()?,
-								})),
-							}))
-						}
-					},
-					resources: build
-						.resources
-						.clone()
+					runtime: build
+						.runtime
 						.map(ApiTryInto::api_try_into)
 						.transpose()?
 						.map(Box::new),
@@ -275,7 +243,7 @@ pub async fn patch_tags(
 
 	ensure_with!(
 		tags.as_object().map(|x| x.len()).unwrap_or_default() <= 8,
-		ACTOR_BUILD_INVALID_PATCH_CONFIG,
+		BUILD_INVALID_PATCH_CONFIG,
 		error = "Too many tags (max 8)."
 	);
 
@@ -290,7 +258,7 @@ pub async fn patch_tags(
 		);
 		ensure_with!(
 			k.len() <= 32,
-			ACTOR_BUILD_INVALID_PATCH_CONFIG,
+			BUILD_INVALID_PATCH_CONFIG,
 			error = format!(
 				"tags[{:?}]: Tag label too large (max 32).",
 				util::safe_slice(k, 0, 32),
@@ -303,7 +271,7 @@ pub async fn patch_tags(
 			);
 			ensure_with!(
 				v.len() <= 1024,
-				ACTOR_BUILD_INVALID_PATCH_CONFIG,
+				BUILD_INVALID_PATCH_CONFIG,
 				error = format!("tags[k:?]: Tag value too large (max 1024 bytes).")
 			);
 		}
@@ -393,27 +361,6 @@ pub async fn create_build(
 		),
 	};
 
-	let (allocation_type, allocation_total_slots) = if let Some(alloc) = &body.allocation {
-		match (&alloc.single, &alloc.multi) {
-			(Some(_), None) => (build::types::BuildAllocationType::Single, 1),
-			(None, Some(multi)) => (build::types::BuildAllocationType::Multi, multi.slots),
-			(Some(_), Some(_)) => {
-				bail_with!(
-					API_BAD_BODY,
-					reason = "cannot set both `single` and `multi` in `allocation`"
-				);
-			}
-			(None, None) => {
-				bail_with!(
-					API_BAD_BODY,
-					reason = "must set one of `single` or `multi` in `allocation`"
-				);
-			}
-		}
-	} else {
-		(build::types::BuildAllocationType::None, 1)
-	};
-
 	let create_res = ctx
 		.op(build::ops::create::Input {
 			owner: build::ops::create::Owner::Env(env_id),
@@ -427,9 +374,11 @@ pub async fn create_build(
 				.compression
 				.map(ApiInto::api_into)
 				.unwrap_or(build::types::BuildCompression::None),
-			allocation_type,
-			allocation_total_slots: allocation_total_slots.try_into()?,
-			resources: body.resources.map(|x| (*x).api_try_into()).transpose()?,
+			runtime: body
+				.runtime
+				.map(|x| *x)
+				.map(ApiTryInto::api_try_into)
+				.transpose()?,
 		})
 		.await?;
 
@@ -463,8 +412,7 @@ pub async fn create_build_deprecated(
 				models::ServersBuildKind::DockerImage => models::BuildsKind::DockerImage,
 				models::ServersBuildKind::OciBundle => models::BuildsKind::OciBundle,
 			}),
-			allocation: None,
-			resources: None,
+			runtime: None,
 		},
 		global,
 	)

@@ -64,102 +64,15 @@ func (p *PrepareBuildRequestQuery) MarshalJSON() ([]byte, error) {
 	return json.Marshal(p.Body)
 }
 
-type Allocation struct {
-	Single *AllocationSingle `json:"single,omitempty"`
-	Multi  *AllocationMulti  `json:"multi,omitempty"`
-
-	_rawJSON json.RawMessage
-}
-
-func (a *Allocation) UnmarshalJSON(data []byte) error {
-	type unmarshaler Allocation
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*a = Allocation(value)
-	a._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (a *Allocation) String() string {
-	if len(a._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(a._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(a); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", a)
-}
-
-type AllocationMulti struct {
-	Slots int `json:"slots"`
-
-	_rawJSON json.RawMessage
-}
-
-func (a *AllocationMulti) UnmarshalJSON(data []byte) error {
-	type unmarshaler AllocationMulti
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*a = AllocationMulti(value)
-	a._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (a *AllocationMulti) String() string {
-	if len(a._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(a._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(a); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", a)
-}
-
-type AllocationSingle struct {
-	_rawJSON json.RawMessage
-}
-
-func (a *AllocationSingle) UnmarshalJSON(data []byte) error {
-	type unmarshaler AllocationSingle
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*a = AllocationSingle(value)
-	a._rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (a *AllocationSingle) String() string {
-	if len(a._rawJSON) > 0 {
-		if value, err := core.StringifyJSON(a._rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := core.StringifyJSON(a); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", a)
-}
-
 type Build struct {
 	Id        uuid.UUID     `json:"id"`
 	Name      string        `json:"name"`
 	CreatedAt sdk.Timestamp `json:"created_at"`
 	// Unsigned 64 bit integer.
-	ContentLength int64       `json:"content_length"`
-	Allocation    *Allocation `json:"allocation,omitempty"`
-	Resources     *Resources  `json:"resources,omitempty"`
+	ContentLength int64 `json:"content_length"`
 	// Tags of this build
-	Tags map[string]string `json:"tags,omitempty"`
+	Tags    map[string]string `json:"tags,omitempty"`
+	Runtime *Runtime          `json:"runtime,omitempty"`
 
 	_rawJSON json.RawMessage
 }
@@ -211,6 +124,60 @@ func (c Compression) Ptr() *Compression {
 	return &c
 }
 
+type GuardRouting struct {
+	_rawJSON json.RawMessage
+}
+
+func (g *GuardRouting) UnmarshalJSON(data []byte) error {
+	type unmarshaler GuardRouting
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*g = GuardRouting(value)
+	g._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (g *GuardRouting) String() string {
+	if len(g._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(g._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(g); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", g)
+}
+
+type HostRouting struct {
+	_rawJSON json.RawMessage
+}
+
+func (h *HostRouting) UnmarshalJSON(data []byte) error {
+	type unmarshaler HostRouting
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*h = HostRouting(value)
+	h._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (h *HostRouting) String() string {
+	if len(h._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(h._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(h); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", h)
+}
+
 type Kind string
 
 const (
@@ -218,6 +185,7 @@ const (
 	KindDockerImage Kind = "docker_image"
 	// OCI-compliant bundle.
 	KindOciBundle Kind = "oci_bundle"
+	// **Deprecated**
 	// A JavaScript file.
 	KindJavascript Kind = "javascript"
 )
@@ -239,12 +207,126 @@ func (k Kind) Ptr() *Kind {
 	return &k
 }
 
+type NetworkMode string
+
+const (
+	NetworkModeBridge NetworkMode = "bridge"
+	NetworkModeHost   NetworkMode = "host"
+)
+
+func NewNetworkModeFromString(s string) (NetworkMode, error) {
+	switch s {
+	case "bridge":
+		return NetworkModeBridge, nil
+	case "host":
+		return NetworkModeHost, nil
+	}
+	var t NetworkMode
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (n NetworkMode) Ptr() *NetworkMode {
+	return &n
+}
+
+type PortProtocol string
+
+const (
+	PortProtocolHttp   PortProtocol = "http"
+	PortProtocolHttps  PortProtocol = "https"
+	PortProtocolTcp    PortProtocol = "tcp"
+	PortProtocolTcpTls PortProtocol = "tcp_tls"
+	PortProtocolUdp    PortProtocol = "udp"
+)
+
+func NewPortProtocolFromString(s string) (PortProtocol, error) {
+	switch s {
+	case "http":
+		return PortProtocolHttp, nil
+	case "https":
+		return PortProtocolHttps, nil
+	case "tcp":
+		return PortProtocolTcp, nil
+	case "tcp_tls":
+		return PortProtocolTcpTls, nil
+	case "udp":
+		return PortProtocolUdp, nil
+	}
+	var t PortProtocol
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (p PortProtocol) Ptr() *PortProtocol {
+	return &p
+}
+
+type PortRequest struct {
+	Protocol     PortProtocol `json:"protocol,omitempty"`
+	InternalPort *int         `json:"internal_port,omitempty"`
+	Routing      *PortRouting `json:"routing,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (p *PortRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler PortRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*p = PortRequest(value)
+	p._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (p *PortRequest) String() string {
+	if len(p._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(p._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(p); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", p)
+}
+
+type PortRouting struct {
+	Guard *GuardRouting `json:"guard,omitempty"`
+	Host  *HostRouting  `json:"host,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (p *PortRouting) UnmarshalJSON(data []byte) error {
+	type unmarshaler PortRouting
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*p = PortRouting(value)
+	p._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (p *PortRouting) String() string {
+	if len(p._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(p._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(p); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", p)
+}
+
 type Resources struct {
 	// The number of CPU cores in millicores, or 1/1000 of a core. For example,
 	// 1/8 of a core would be 125 millicores, and 1 core would be 1000
 	// millicores.
 	Cpu int `json:"cpu"`
-	// The amount of memory in megabytes
+	// The amount of memory in mebibytes
 	Memory int `json:"memory"`
 
 	_rawJSON json.RawMessage
@@ -262,6 +344,100 @@ func (r *Resources) UnmarshalJSON(data []byte) error {
 }
 
 func (r *Resources) String() string {
+	if len(r._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(r._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(r); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", r)
+}
+
+type Runtime struct {
+	Container *RuntimeContainer `json:"container,omitempty"`
+	Actor     *RuntimeActor     `json:"actor,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (r *Runtime) UnmarshalJSON(data []byte) error {
+	type unmarshaler Runtime
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*r = Runtime(value)
+	r._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (r *Runtime) String() string {
+	if len(r._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(r._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(r); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", r)
+}
+
+type RuntimeActor struct {
+	Environment map[string]string       `json:"environment,omitempty"`
+	NetworkMode *NetworkMode            `json:"network_mode,omitempty"`
+	Ports       map[string]*PortRequest `json:"ports,omitempty"`
+	Resources   *Resources              `json:"resources,omitempty"`
+	Slots       int                     `json:"slots"`
+
+	_rawJSON json.RawMessage
+}
+
+func (r *RuntimeActor) UnmarshalJSON(data []byte) error {
+	type unmarshaler RuntimeActor
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*r = RuntimeActor(value)
+	r._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (r *RuntimeActor) String() string {
+	if len(r._rawJSON) > 0 {
+		if value, err := core.StringifyJSON(r._rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := core.StringifyJSON(r); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", r)
+}
+
+type RuntimeContainer struct {
+	Environment map[string]string       `json:"environment,omitempty"`
+	NetworkMode *NetworkMode            `json:"network_mode,omitempty"`
+	Ports       map[string]*PortRequest `json:"ports,omitempty"`
+
+	_rawJSON json.RawMessage
+}
+
+func (r *RuntimeContainer) UnmarshalJSON(data []byte) error {
+	type unmarshaler RuntimeContainer
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*r = RuntimeContainer(value)
+	r._rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (r *RuntimeContainer) String() string {
 	if len(r._rawJSON) > 0 {
 		if value, err := core.StringifyJSON(r._rawJSON); err == nil {
 			return value

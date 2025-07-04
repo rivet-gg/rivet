@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use api_helper::{anchor::WatchIndexQuery, ctx::Ctx};
+use build::types::BuildRuntime;
 use chirp_workflow::prelude::*;
 use futures_util::{FutureExt, StreamExt, TryStreamExt};
 use rivet_api::models;
@@ -92,20 +93,15 @@ pub async fn create(
 		)
 		.await?;
 
-	let (game_configs_res, build) = tokio::try_join!(
-		ctx.op(pegboard::ops::game_config::get::Input {
-			game_ids: vec![game_id],
-		}),
-		resolve_build(
-			&ctx,
-			game_id,
-			env_id,
-			body.build,
-			body.build_tags.flatten(),
-			false
-		),
-	)?;
-	let game_config = unwrap!(game_configs_res.game_configs.first());
+	let build = resolve_build(
+		&ctx,
+		game_id,
+		env_id,
+		body.build,
+		body.build_tags.flatten(),
+		false,
+	)
+	.await?;
 
 	let tags = unwrap_with!(
 		serde_json::from_value(body.tags.unwrap_or_default()).ok(),
@@ -113,22 +109,28 @@ pub async fn create(
 		error = "`tags` must be `Map<String, String>`"
 	);
 
-	if let build::types::BuildAllocationType::None = build.allocation_type {
-		// todo unsupported build allocation type, use v1 endpoint.
+	// Validate runtime
+	match build.runtime {
+		None => {
+			bail_with!(
+				ACTOR_FAILED_TO_CREATE,
+				error = "cannot use this build with the v2 endpoint"
+			);
+		}
+		Some(BuildRuntime::Container { .. }) => {}
+		Some(BuildRuntime::Actor { .. }) => {
+			bail_with!(
+				ACTOR_FAILED_TO_CREATE,
+				error =
+					"cannot container build for actor. Use the containers create endpoint instead"
+			);
+		}
 	}
-
-	let network = body.network.unwrap_or_default();
-	let endpoint_type = body
-		.runtime
-		.as_ref()
-		.and_then(|r| r.network.as_ref())
-		.map(|n| n.endpoint_type)
-		.map(ApiInto::api_into);
 
 	let actor_id = util::Id::new_v1(ctx.config().server()?.rivet.edge()?.datacenter_label());
 	tracing::info!(?actor_id, ?tags, "creating container with tags");
 
-	let created_fut = if network.wait_ready.unwrap_or_default() {
+	let created_fut = if body.wait_for_network_ready.unwrap_or_default() {
 		std::future::pending().boxed()
 	} else {
 		let mut created_sub = ctx
@@ -151,66 +153,26 @@ pub async fn create(
 		actor_id,
 		env_id,
 		tags,
-		resources: Some((*body.resources).api_into()),
-		lifecycle: body.lifecycle.map(|x| (*x).api_into()).unwrap_or_else(|| {
-			pegboard::types::ActorLifecycle {
-				kill_timeout_ms: 5000,
-				durable: false,
-			}
-		}),
+		resources: Some((*body.resources).api_try_into()?),
+		lifecycle: pegboard::types::ActorLifecycle {
+			kill_timeout_ms: body.kill_timeout.unwrap_or(5000),
+			durable: body.durable.unwrap_or(false),
+		},
 		image_id: build.build_id,
-		root_user_enabled: game_config.root_user_enabled,
 		// args: body.runtime.arguments.unwrap_or_default(),
 		args: Vec::new(),
-		network_mode: network.mode.unwrap_or_default().api_into(),
-		environment: body.runtime.and_then(|r| r.environment).unwrap_or_default().as_hashable(),
-		network_ports: network
+		environment: body.environment.unwrap_or_default().as_hashable(),
+		network_ports: body
 			.ports
 			.unwrap_or_default()
 			.into_iter()
-			.map(|(s, p)| GlobalResult::Ok((
-				s.clone(),
-				pegboard::workflows::actor::Port {
-					internal_port: p.internal_port.map(TryInto::try_into).transpose()?,
-					routing: if let Some(routing) = p.routing {
-						match *routing {
-							models::ContainersPortRouting {
-								guard: Some(_gg),
-								host: None,
-							} => pegboard::types::Routing::GameGuard {
-								protocol: p.protocol.api_into(),
-							},
-							models::ContainersPortRouting {
-								guard: None,
-								host: Some(_),
-							} => pegboard::types::Routing::Host {
-								protocol: match p.protocol.api_try_into() {
-									Err(err) if GlobalError::is(&err, formatted_error::code::CONTAINER_FAILED_TO_CREATE) => {
-										// Add location
-										bail_with!(
-											CONTAINER_FAILED_TO_CREATE,
-											error = format!("network.ports[{s:?}].protocol: Host port protocol must be either TCP or UDP.")
-										);
-									}
-									x => x?,
-								},
-							},
-							models::ContainersPortRouting { .. } => {
-								bail_with!(
-									CONTAINER_FAILED_TO_CREATE,
-									error = format!("network.ports[{s:?}].routing: Must specify either `guard` or `host` routing type.")
-								);
-							}
-						}
-					} else {
-						pegboard::types::Routing::GameGuard {
-							protocol: p.protocol.api_into(),
-						}
-					}
-				}
-			)))
+			.map(|(s, p)| {
+				let port =
+					pegboard::workflows::actor::convert_port_request_from_api(s.as_str(), p)?;
+				Ok((s, port))
+			})
 			.collect::<GlobalResult<util::serde::HashableMap<_, _>>>()?,
-		endpoint_type,
+		endpoint_type: body.network_endpoint_type.map(ApiInto::api_into),
 	})
 	.tag("actor_id", actor_id)
 	.dispatch()

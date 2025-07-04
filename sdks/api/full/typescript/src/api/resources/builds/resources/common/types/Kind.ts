@@ -10,6 +10,7 @@ export type Kind =
      * OCI-compliant bundle. */
     | "oci_bundle"
     /**
+     * **Deprecated**
      * A JavaScript file. */
     | "javascript";
 export const Kind = {

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use build::types::{BuildAllocationType, BuildKind};
+use build::types::{BuildKind, BuildRuntime};
 use chirp_workflow::prelude::*;
 use fdb_util::{FormalKey, SNAPSHOT};
 use foundationdb::{self as fdb, options::StreamingMode};
@@ -134,9 +134,9 @@ pub async fn run_from_env(
 					.entry(value.image_id)
 					.or_insert_with(|| ImagePendingStats {
 						actors: 0,
-						slots: value.build_allocation_total_slots,
-						cpu: value.cpu,
-						memory: value.memory / 1024 / 1024,
+						slots: value.build_runtime.slots(),
+						cpu: value.selected_cpu,
+						memory: value.selected_mem / 1024 / 1024,
 					});
 
 				entry.actors += 1;
@@ -202,36 +202,36 @@ pub async fn run_from_env(
 			continue;
 		};
 
-		let client_flavor = match build.allocation_type {
-			BuildAllocationType::None => match build.kind {
+		let client_flavor = match build.runtime {
+			None => match build.kind {
 				BuildKind::DockerImage | BuildKind::OciBundle => protocol::ClientFlavor::Container,
 				BuildKind::JavaScript => protocol::ClientFlavor::Isolate,
 			},
-			BuildAllocationType::Single | BuildAllocationType::Multi => {
-				protocol::ClientFlavor::Multi
-			}
+			Some(_) => protocol::ClientFlavor::Multi,
 		};
 
 		let env_usage = usage_by_env_and_flavor
 			.entry((actor.env_id, client_flavor))
 			.or_insert(Usage { cpu: 0, memory: 0 });
 
-		match build.allocation_type {
-			BuildAllocationType::None | BuildAllocationType::Single => {
-				if let Some(resources) = &actor.resources {
+		// NOTE: actor resources here is slightly different from build resources because it is
+		// selected based on tier
+		if let Some(resources) = &actor.resources {
+			match build.runtime {
+				None | Some(BuildRuntime::Container { .. }) => {
 					env_usage.cpu += resources.cpu_millicores as u64;
 					env_usage.memory += resources.memory_mib as u64;
 				}
+				Some(BuildRuntime::Actor {
+					resources, slots, ..
+				}) => {
+					// TODO: This calculates multi runner metrics wrong, it should chunk by runner not divide by
+					// slots
+					env_usage.cpu += (resources.cpu_millicores / slots)  as u64;
+					env_usage.memory += (resources.memory_mib / slots) as u64;
+				}
 			}
-			BuildAllocationType::Multi => {
-				// TODO: This calculates multi runner metrics wrong, it should only add this for the runner
-				// not for each actor in the runner
-				// if let Some(resources) = build.resources {
-				// 	env_usage.cpu += build_resources.cpu_millicores as u64;
-				// 	env_usage.memory += build_resources.memory_mib as u64;
-				// }
-			}
-		};
+		}
 	}
 
 	// Clear old metrics because they will never be set to 0 (due to no actors being present and thus no

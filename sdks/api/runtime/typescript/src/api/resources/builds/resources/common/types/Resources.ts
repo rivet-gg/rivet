@@ -9,6 +9,6 @@ export interface Resources {
      * millicores.
      */
     cpu: number;
-    /** The amount of memory in megabytes */
+    /** The amount of memory in mebibytes */
     memory: number;
 }

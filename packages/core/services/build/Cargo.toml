@@ -37,6 +37,7 @@ game-get.workspace = true
 game-namespace-get.workspace = true
 ip-info.workspace = true
 linode.workspace = true
+tier.workspace = true
 token-create.workspace = true
 upload-get.workspace = true
 upload-prepare.workspace = true

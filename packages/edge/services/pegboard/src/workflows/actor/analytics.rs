@@ -28,7 +28,6 @@ pub struct ActorClickHouseRow {
 	runner_id: Uuid,
 	selected_cpu_millicores: u32,
 	selected_memory_mib: u32,
-	root_user_enabled: bool,
 	env_vars: i64,
 	env_var_bytes: i64,
 	args: i64,
@@ -110,7 +109,6 @@ struct StateRow {
 	image_id: Uuid,
 	build_kind: i64,
 	build_compression: i64,
-	root_user_enabled: bool,
 	args: sqlx::types::Json<Vec<String>>,
 	network_mode: i64,
 	environment: sqlx::types::Json<HashMap<String, String>>,
@@ -159,7 +157,6 @@ pub async fn insert_clickhouse(
 			image_id,
 			build_kind,
 			build_compression,
-			root_user_enabled,
 			json(args) AS args,
 			network_mode,
 			json(environment) AS environment
@@ -281,7 +278,6 @@ pub async fn insert_clickhouse(
 				.selected_resources_cpu_millicores
 				.unwrap_or_default() as u32,
 			selected_memory_mib: state_row.selected_resources_memory_mib.unwrap_or_default() as u32,
-			root_user_enabled: state_row.root_user_enabled,
 			env_vars: state_row.environment.len() as i64,
 			env_var_bytes: state_row
 				.environment

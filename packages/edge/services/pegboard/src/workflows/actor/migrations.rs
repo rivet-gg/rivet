@@ -51,11 +51,9 @@ async fn migrate_init(ctx: &ActivityCtx, _input: &MigrateInitInput) -> GlobalRes
 
 			image_id BLOB NOT NULL, -- UUID
 			args BLOB NOT NULL, -- JSONB, list<string>
-			network_mode INT NOT NULL, -- pegboard::types::NetworkMode
 			environment BLOB NOT NULL, -- JSONB, map<string, string>
 
 			-- Updated later
-			root_user_enabled INT NOT NULL DEFAULT false,
 			build_kind INT NOT NULL DEFAULT -1,
 			build_compression INT NOT NULL DEFAULT -1
 		) STRICT;
