@@ -217,7 +217,7 @@ pub async fn run_from_env(
 		// NOTE: actor resources here is slightly different from build resources because it is
 		// selected based on tier
 		if let Some(resources) = &actor.resources {
-			match build.runtime {
+			match &build.runtime {
 				None | Some(BuildRuntime::Container { .. }) => {
 					env_usage.cpu += resources.cpu_millicores as u64;
 					env_usage.memory += resources.memory_mib as u64;
