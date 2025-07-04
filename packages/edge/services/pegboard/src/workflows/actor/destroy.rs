@@ -1,4 +1,4 @@
-use build::types::BuildAllocationType;
+use build::types::BuildRuntimeKind;
 use chirp_workflow::prelude::*;
 use fdb_util::{end_of_key_range, FormalKey, SERIALIZABLE};
 use foundationdb::{self as fdb, options::ConflictRangeType};
@@ -20,7 +20,7 @@ pub(crate) struct Input {
 	pub actor_id: util::Id,
 	pub generation: u32,
 	pub image_id: Uuid,
-	pub build_allocation_type: Option<BuildAllocationType>,
+	pub build_runtime_kind: Option<BuildRuntimeKind>,
 	/// Whether or not to send signals to the pb actor. In the case that the actor was already stopped
 	/// or exited, signals are unnecessary.
 	pub kill: Option<KillCtx>,
@@ -55,7 +55,7 @@ pub(crate) async fn pegboard_actor_destroy(
 			.activity(UpdateFdbInput {
 				actor_id: input.actor_id,
 				image_id: input.image_id,
-				build_allocation_type: input.build_allocation_type,
+				build_runtime_kind: input.build_runtime_kind,
 				actor,
 			})
 			.await?;
@@ -180,7 +180,7 @@ async fn finish_runner_clickhouse(
 pub struct UpdateFdbInput {
 	actor_id: util::Id,
 	image_id: Uuid,
-	build_allocation_type: Option<BuildAllocationType>,
+	build_runtime_kind: Option<BuildRuntimeKind>,
 	actor: UpdateDbOutput,
 }
 
@@ -231,7 +231,7 @@ pub async fn update_fdb(
 				clear_ports_and_resources(
 					input.actor_id,
 					input.image_id,
-					input.build_allocation_type,
+					input.build_runtime_kind,
 					ingress_ports,
 					input.actor.runner_id,
 					input.actor.client_id,
@@ -254,7 +254,7 @@ pub async fn update_fdb(
 pub(crate) async fn clear_ports_and_resources(
 	actor_id: util::Id,
 	image_id: Uuid,
-	build_allocation_type: Option<BuildAllocationType>,
+	build_runtime_kind: Option<BuildRuntimeKind>,
 	ingress_ports: Vec<(i64, i64)>,
 	runner_id: Option<Uuid>,
 	client_id: Option<Uuid>,
@@ -295,14 +295,14 @@ pub(crate) async fn clear_ports_and_resources(
 
 	// Release client's resources and update allocation index
 	if let (
-		Some(build_allocation_type),
+		Some(build_runtime_kind),
 		Some(runner_id),
 		Some(client_id),
 		Some(client_workflow_id),
 		Some(selected_resources_memory_mib),
 		Some(selected_resources_cpu_millicores),
 	) = (
-		build_allocation_type,
+		build_runtime_kind,
 		runner_id,
 		client_id,
 		client_workflow_id,
@@ -487,7 +487,7 @@ pub(crate) async fn clear_ports_and_resources(
 
 			// Single container per runner allocations don't require explicitly destroying the runner because
 			// it is already stopped; the container = the actor.
-			matches!(build_allocation_type, BuildAllocationType::Multi)
+			matches!(build_runtime_kind, BuildRuntimeKind::Actor)
 		};
 
 		Ok(destroy_runner)

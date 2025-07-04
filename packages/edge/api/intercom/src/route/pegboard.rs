@@ -100,14 +100,14 @@ pub async fn prewarm_image(
 				artifact_size,
 				kind: build.kind.into(),
 				compression: build.compression.into(),
-				allocation_type: match build.allocation_type {
-					build::types::BuildAllocationType::None => {
+				allocation_type: match build.runtime.as_ref().map(|x| x.kind()) {
+					None => {
 						protocol::ImageAllocationType::Single
 					}
-					build::types::BuildAllocationType::Single => {
+					Some(build::types::BuildRuntimeKind::Container) => {
 						protocol::ImageAllocationType::Single
 					}
-					build::types::BuildAllocationType::Multi => {
+					Some(build::types::BuildRuntimeKind::Actor) => {
 						protocol::ImageAllocationType::Multi
 					}
 				},
