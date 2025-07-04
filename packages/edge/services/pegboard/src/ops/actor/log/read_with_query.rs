@@ -7,8 +7,6 @@ use crate::types::LogsStreamType;
 #[derive(Debug)]
 pub struct Input {
 	pub env_id: Uuid,
-	pub actor_ids: Vec<Uuid>,
-	pub stream_types: Vec<LogsStreamType>,
 	pub count: i64,
 	pub order_by: Order,
 	pub query: Query,
@@ -60,9 +58,6 @@ pub async fn pegboard_actor_log_read_with_query(
 ) -> GlobalResult<Output> {
 	let clickhouse = ctx.clickhouse().await?;
 
-	// Convert stream types to a vector of u8
-	let stream_type_values: Vec<u8> = input.stream_types.iter().map(|&st| st as u8).collect();
-
 	// Extract values from query enum
 	let (is_all, is_before, is_after, before_nts, after_nts) = match input.query {
 		Query::All => (true, false, false, None, None),
@@ -87,9 +82,6 @@ pub async fn pegboard_actor_log_read_with_query(
 	} else {
 		(String::new(), None)
 	};
-
-	// Convert actor IDs to strings for the query
-	let actor_id_strings: Vec<String> = input.actor_ids.iter().map(|id| id.to_string()).collect();
 
 	// Build the query
 	let query = formatdoc!(
@@ -130,8 +122,6 @@ pub async fn pegboard_actor_log_read_with_query(
 		.query(&query)
 		.bind(&ctx.config().server()?.rivet.namespace)
 		.bind(input.env_id)
-		.bind(&actor_id_strings)
-		.bind(stream_type_values)
 		// Query type parameters
 		.bind(is_all)
 		.bind(is_before)

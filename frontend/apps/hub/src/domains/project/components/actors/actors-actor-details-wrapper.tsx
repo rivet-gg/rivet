@@ -10,37 +10,30 @@ interface ActorsActorDetailsWrapperProps {
 	onTabChange?: (tab: string) => void;
 }
 
-export function ActorsActorDetailsWrapper({ 
-	tab, 
-	actor, 
-	onTabChange 
+export function ActorsActorDetailsWrapper({
+	tab,
+	actor,
+	onTabChange,
 }: ActorsActorDetailsWrapperProps) {
 	const { nameId: projectNameId } = useProject();
 	const { nameId: environmentNameId } = useEnvironment();
 	const exportMutation = useExportActorLogsMutation();
 
-	const handleExportLogs = async (actorId: string, typeFilter?: string, filter?: string) => {
-		// Build query JSON for the API
-		const query: any = {
-			actorIds: [actorId],
-		};
-
-		// Add stream filter based on typeFilter
-		if (typeFilter === "output") {
-			query.stream = 0; // stdout
-		} else if (typeFilter === "errors") {
-			query.stream = 1; // stderr
-		}
-
-		// Add text search if filter is provided
-		if (filter) {
-			query.searchText = filter;
-		}
-
+	const handleExportLogs = async (
+		actorId: string,
+		_typeFilter?: string,
+		_filter?: string,
+	) => {
+		// TODO: Add above filters
 		const result = await exportMutation.mutateAsync({
 			projectNameId,
 			environmentNameId,
-			queryJson: JSON.stringify(query),
+			queryJson: JSON.stringify({
+				string_equal: {
+					property: "actor_id",
+					value: actorId,
+				},
+			}),
 		});
 
 		// Open the presigned URL in a new tab to download
@@ -57,3 +50,4 @@ export function ActorsActorDetailsWrapper({
 		/>
 	);
 }
+

@@ -694,7 +694,7 @@ export const logsAggregatedQueryOptions = ({
 			client,
 			queryKey: [_, project, __, environment, ___, search],
 		}) => {
-			let query = {};
+			let query = undefined;
 			if (search?.text) {
 				if (search.enableRegex) {
 					query = {
@@ -721,7 +721,9 @@ export const logsAggregatedQueryOptions = ({
 					environment,
 					queryJson: query ? JSON.stringify(query) : undefined,
 				},
-				{ abortSignal },
+				{
+					abortSignal,
+				},
 			);
 
 			// Fetch all actors that appear in the logs

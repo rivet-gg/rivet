@@ -31,12 +31,22 @@ interface ActorsActorDetailsProps {
 	tab?: string;
 	actor: ActorAtom;
 	onTabChange?: (tab: string) => void;
-	onExportLogs?: (actorId: string, typeFilter?: string, filter?: string) => Promise<void>;
+	onExportLogs?: (
+		actorId: string,
+		typeFilter?: string,
+		filter?: string,
+	) => Promise<void>;
 	isExportingLogs?: boolean;
 }
 
 export const ActorsActorDetails = memo(
-	({ tab, onTabChange, actor, onExportLogs, isExportingLogs }: ActorsActorDetailsProps) => {
+	({
+		tab,
+		onTabChange,
+		actor,
+		onExportLogs,
+		isExportingLogs,
+	}: ActorsActorDetailsProps) => {
 		const actorFeatures = useAtomValue(currentActorFeaturesAtom);
 		const supportsConsole = actorFeatures?.includes(ActorFeature.Console);
 
@@ -102,7 +112,11 @@ export function ActorTabs({
 	actor?: ActorAtom;
 	className?: string;
 	children?: ReactNode;
-	onExportLogs?: (actorId: string, typeFilter?: string, filter?: string) => Promise<void>;
+	onExportLogs?: (
+		actorId: string,
+		typeFilter?: string,
+		filter?: string,
+	) => Promise<void>;
 	isExportingLogs?: boolean;
 }) {
 	const supportsState = features?.includes(ActorFeature.State);
@@ -131,10 +145,7 @@ export function ActorTabs({
 							</TabsTrigger>
 						) : null}
 						{supportsConnections ? (
-							<TabsTrigger
-								disabled={disabled}
-								value="connections"
-							>
+							<TabsTrigger disabled={disabled} value="connections">
 								Connections
 							</TabsTrigger>
 						) : null}
@@ -161,10 +172,7 @@ export function ActorTabs({
 							items="center"
 							className="h-[36px] pb-3 pt-2 pr-4"
 						>
-							<AtomizedActorStatus
-								className="text-sm h-auto"
-								actor={actor}
-							/>
+							<AtomizedActorStatus className="text-sm h-auto" actor={actor} />
 							<ActorStopButton actor={actor} />
 						</Flex>
 					) : null}
@@ -173,13 +181,10 @@ export function ActorTabs({
 			{actor ? (
 				<>
 					{supportsLogs ? (
-						<TabsContent
-							value="logs"
-							className="min-h-0 flex-1 mt-0 h-full"
-						>
+						<TabsContent value="logs" className="min-h-0 flex-1 mt-0 h-full">
 							<Suspense fallback={<ActorLogsTab.Skeleton />}>
-								<ActorLogsTab 
-									actor={actor} 
+								<ActorLogsTab
+									actor={actor}
 									onExportLogs={onExportLogs}
 									isExporting={isExportingLogs}
 								/>
@@ -187,34 +192,22 @@ export function ActorTabs({
 						</TabsContent>
 					) : null}
 					{supportsConfig ? (
-						<TabsContent
-							value="config"
-							className="min-h-0 flex-1 mt-0 h-full"
-						>
+						<TabsContent value="config" className="min-h-0 flex-1 mt-0 h-full">
 							<ActorConfigTab actor={actor} />
 						</TabsContent>
 					) : null}
 					{supportsConnections ? (
-						<TabsContent
-							value="connections"
-							className="min-h-0 flex-1 mt-0"
-						>
+						<TabsContent value="connections" className="min-h-0 flex-1 mt-0">
 							<ActorConnectionsTab actor={actor} />
 						</TabsContent>
 					) : null}
 					{supportsState ? (
-						<TabsContent
-							value="state"
-							className="min-h-0 flex-1 mt-0"
-						>
+						<TabsContent value="state" className="min-h-0 flex-1 mt-0">
 							<ActorStateTab actor={actor} />
 						</TabsContent>
 					) : null}
 					{supportsMetrics ? (
-						<TabsContent
-							value="metrics"
-							className="min-h-0 flex-1 mt-0 h-full"
-						>
+						<TabsContent value="metrics" className="min-h-0 flex-1 mt-0 h-full">
 							<ActorMetricsTab actor={actor} />
 						</TabsContent>
 					) : null}

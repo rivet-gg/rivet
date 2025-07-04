@@ -80,7 +80,7 @@ pub async fn pegboard_actor_usage_get(ctx: &OperationCtx, input: &Input) -> Glob
 		let builder = UserDefinedQueryBuilder::new(&ACTOR_SCHEMA, Some(query_expr))
 			.map_err(|e| GlobalError::raw(e))?;
 		let where_clause = format!("AND ({})", builder.where_expr());
-		(builder.where_expr(), Some(builder))
+		(where_clause, Some(builder))
 	} else {
 		(String::new(), None)
 	};

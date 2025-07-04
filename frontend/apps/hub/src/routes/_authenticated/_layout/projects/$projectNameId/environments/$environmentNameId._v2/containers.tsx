@@ -27,6 +27,7 @@ import { useAtomValue } from "jotai";
 import { useDialog } from "@/hooks/use-dialog";
 import { ErrorComponent } from "@/components/error-component";
 import { ActorsProvider } from "@/domains/project/components/actors/actors-provider";
+import { ActorsActorDetailsWrapper } from "@/domains/project/components/actors/actors-actor-details-wrapper";
 import type { Rivet } from "@rivet-gg/api-full";
 import { toRecord } from "@rivet-gg/components";
 
@@ -49,7 +50,7 @@ function Actor() {
 	}
 
 	return (
-		<ActorsActorDetails
+		<ActorsActorDetailsWrapper
 			actor={actor}
 			tab={tab}
 			onTabChange={(tab) => {
