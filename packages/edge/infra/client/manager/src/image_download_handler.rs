@@ -318,8 +318,13 @@ impl ImageDownloadHandler {
 					let docker_image_path = image_path.join("docker-image.tar");
 					tracing::info!(image_id=?image_config.id, "downloading uncompressed docker image using curl");
 
+					// NOTE: The tar command here is just to count the total bytes
 					// Use curl to download directly to file
-					format!("curl -sSfL '{}' -o '{}'", url, docker_image_path.display())
+					format!(
+						"curl -sSfL '{}' -o '{}' && tar -tf '{1}' --totals",
+						url,
+						docker_image_path.display(),
+					)
 				}
 
 				// Docker image with LZ4 compression
@@ -330,11 +335,12 @@ impl ImageDownloadHandler {
 						"downloading and decompressing docker image using curl | lz4",
 					);
 
+					// NOTE: The tar command here is just to count the total bytes
 					// Use curl piped to lz4 for decompression
 					format!(
-						"curl -sSfL '{}' | lz4 -d - '{}'",
+						"curl -sSfL '{}' | lz4 -d - '{}' && tar -tf '{1}' --totals",
 						url,
-						docker_image_path.display()
+						docker_image_path.display(),
 					)
 				}
 
@@ -352,7 +358,7 @@ impl ImageDownloadHandler {
 					format!(
 						"curl -sSfL '{}' | tar -x --totals -C '{}'",
 						url,
-						image_path.display()
+						image_path.display(),
 					)
 				}
 
@@ -370,7 +376,7 @@ impl ImageDownloadHandler {
 					format!(
 						"curl -sSfL '{}' | lz4 -d | tar -x --totals -C '{}'",
 						url,
-						image_path.display()
+						image_path.display(),
 					)
 				}
 			};
@@ -385,11 +391,12 @@ impl ImageDownloadHandler {
 					//
 					// This is an over-estimate since the size on disk is smaller than the actual
 					// tar
+					let stdout = String::from_utf8_lossy(&output.stdout);
 					let stderr = String::from_utf8_lossy(&output.stderr);
 					let bytes_read = match parse_tar_total_bytes(&stderr) {
 						Some(x) => x,
 						None => {
-							tracing::error!(%stderr, "failed to parse bytes read from tar output");
+							tracing::error!(%stdout, %stderr, "failed to parse bytes read from tar output");
 							bail!("failed to parse bytes read from tar output")
 						}
 					};
@@ -443,7 +450,7 @@ impl ImageDownloadHandler {
 			let docker_image_path = image_path.join("docker-image.tar");
 			let oci_image_path = image_path.join("oci-image");
 
-			tracing::info!("converting Docker image -> OCI image",);
+			tracing::info!("converting Docker image -> OCI image");
 			let conversion_start = Instant::now();
 			let cmd_out = Command::new("skopeo")
 				.arg("copy")

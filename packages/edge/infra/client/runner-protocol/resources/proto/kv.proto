@@ -25,6 +25,7 @@ message Request {
 	message Drop {}
 
 	string actor_id = 1;
+	// TODO: Get rid of generation here since kv is the same for all gens
 	uint32 generation = 2;
 	uint32 request_id = 3;
 

@@ -14,7 +14,7 @@ use indexmap::IndexMap;
 pub use key::Key;
 use list_query::ListLimitReached;
 pub use list_query::ListQuery;
-use pegboard_config::runner_protocol::proto::kv;
+use pegboard_runner_protocol::proto::kv;
 use prost::Message;
 use tokio::sync::Mutex;
 use utils::{validate_entries, validate_keys, TransactionExt};

@@ -1,6 +1,6 @@
 use anyhow::*;
 use foundationdb as fdb;
-use pegboard_config::runner_protocol::proto::kv;
+use pegboard_runner_protocol::proto::kv;
 use prost::Message;
 
 use crate::key::Key;

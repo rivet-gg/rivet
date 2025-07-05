@@ -2,6 +2,7 @@ import * as net from "net";
 import * as fs from "fs";
 import { setInterval, clearInterval } from "timers";
 import * as util from "util";
+import { encodeFrame, decodeFrames, types as protocol } from "@rivet-gg/runner-protocol";
 
 export function connectToManager() {
 	const socketPath = process.env.RIVET_MANAGER_SOCKET_PATH;
@@ -25,77 +26,79 @@ export function connectToManager() {
 
 		// Start ping loop to keep connection alive
 		pingInterval = setInterval(() => {
-			const pingMessage = { ping: null };
+			const pingMessage = new protocol.ToManager({
+				ping: new protocol.ToManager.Ping()
+			});
 			client.write(encodeFrame(pingMessage));
 		}, 2000);
 	});
 
 	client.on("data", (data) => {
-		const packets = decodeFrames(data);
+		const packets = decodeFrames(data, protocol.ToRunner);
 
 		for (let packet of packets) {
 			console.log("Received packet from manager:", util.inspect(packet, { depth: null }));
 
 			if (packet.start_actor) {
-				const response = {
-					actor_state_update: {
+				const response = new protocol.ToManager({
+					actor_state_update: new protocol.ToManager.ActorStateUpdate({
 						actor_id: packet.start_actor.actor_id,
 						generation: packet.start_actor.generation,
-						state: {
-							running: null,
-						},
-					},
-				};
+						state: new protocol.ActorState({
+							running: new protocol.ActorState.Running()
+						})
+					})
+				});
 				client.write(encodeFrame(response));
 
 				console.log(`actor_${packet.start_actor.actor_id}`, 'fweh');
 
-				const kvMessage = {
-					kv: {
+				const kvMessage = new protocol.ToManager({
+					kv: new rivet.pegboard.kv.Request({
 						actor_id: packet.start_actor.actor_id,
 						generation: packet.start_actor.generation,
 						request_id: 1,
-						data: {
-							put: {
-								keys: [
-									[[1, 2, 3], [4, 5, 6]],
-								],
-								values: [
-									[11, 12, 13, 14, 15, 16]
-								],
-							}
-						}
-					}
-				};
+						put: new rivet.pegboard.kv.Request.Put({
+							keys: [
+								new rivet.pegboard.kv.Key({
+									segments: [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5, 6])]
+								})
+							],
+							values: [
+								new Uint8Array([11, 12, 13, 14, 15, 16])
+							]
+						})
+					})
+				});
 				client.write(encodeFrame(kvMessage));
 
-				const kvMessage2 = {
-					kv: {
+				const kvMessage2 = new protocol.ToManager({
+					kv: new rivet.pegboard.kv.Request({
 						actor_id: packet.start_actor.actor_id,
 						generation: packet.start_actor.generation,
 						request_id: 2,
-						data: {
-							get: {
-								keys: [
-									[[1, 2, 3], [4, 5, 6]]
-								],
-							}
-						}
-					}
-				};
+						get: new rivet.pegboard.kv.Request.Get({
+							keys: [
+								new rivet.pegboard.kv.Key({
+									segments: [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5, 6])]
+								})
+							]
+						})
+					})
+				});
 				client.write(encodeFrame(kvMessage2));
 			} else if (packet.signal_actor) {
-				const response = {
-					actor_state_update: {
+				const response = new protocol.ToManager({
+					actor_state_update: new protocol.ToManager.ActorStateUpdate({
 						actor_id: packet.signal_actor.actor_id,
 						generation: packet.signal_actor.generation,
-						state: {
-							exited: {
-								exit_code: 0,
-							},
-						},
-					},
-				};
+						state: new protocol.ActorState({
+							exited: new protocol.ActorState.Exited({
+								exit_code: 0
+							})
+						})
+					})
+				});
 				client.write(encodeFrame(response));
 			}
 		}
@@ -115,33 +118,3 @@ export function connectToManager() {
 	});
 }
 
-function encodeFrame(payload: any): Buffer {
-	const json = JSON.stringify(payload);
-	const payloadLength = Buffer.alloc(4);
-	payloadLength.writeUInt32BE(json.length, 0);
-
-	const header = Buffer.alloc(4); // All zeros for now
-
-	return Buffer.concat([payloadLength, header, Buffer.from(json)]);
-}
-
-function decodeFrames(buffer: Buffer): any[] {
-	const packets = [];
-	let offset = 0;
-
-	while (offset < buffer.length) {
-		if (buffer.length - offset < 8) break; // Incomplete frame length + header
-		const payloadLength = buffer.readUInt32BE(offset);
-		offset += 4;
-
-		// Skip the header (4 bytes)
-		offset += 4;
-
-		if (buffer.length - offset < payloadLength) break; // Incomplete frame data
-		const json = buffer.subarray(offset, offset + payloadLength).toString();
-		packets.push(JSON.parse(json));
-		offset += payloadLength;
-	}
-
-	return packets;
-}

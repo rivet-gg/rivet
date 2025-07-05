@@ -1,0 +1,25 @@
+{
+  "name": "@rivet-gg/runner-protocol",
+  "version": "1.0.0",
+  "description": "JavaScript SDK for Rivet Runner Protocol",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "google-protobuf": "^3.21.0"
+  },
+  "devDependencies": {
+    "@types/google-protobuf": "^3.15.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "*.js",
+    "*.d.ts",
+    "*.ts",
+    "!*.test.*"
+  ]
+}
