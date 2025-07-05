@@ -6,7 +6,7 @@
 		"frontend/apps/*",
 		"frontend/packages/*",
 		"addons/packages/*",
-		"cloud/packages/*",
+		"cloud",
 		"site",
 		"sdks/api/runtime/typescript",
 		"sdks/api/full/typescript",
