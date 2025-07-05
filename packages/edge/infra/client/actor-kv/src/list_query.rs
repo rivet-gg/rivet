@@ -1,7 +1,7 @@
 use anyhow::*;
 use foundationdb::tuple::Subspace;
 use indexmap::IndexMap;
-use pegboard_config::runner_protocol::proto::kv;
+use pegboard_runner_protocol::proto::kv;
 
 use crate::{
 	entry::EntryBuilder,
