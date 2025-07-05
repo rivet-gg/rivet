@@ -1,5 +1,5 @@
 import { router } from "@/app";
-import { queryClient, rivetClient } from "@/queries/global";
+import { queryClient } from "@/queries/global";
 import { type FilterValue, toRecord } from "@rivet-gg/components";
 import {
 	currentActorIdAtom,
@@ -17,7 +17,6 @@ import {
 	actorsInternalFilterAtom,
 	type Actor,
 	actorEnvironmentAtom,
-	exportLogsHandlerAtom,
 } from "@rivet-gg/components/actors";
 import {
 	InfiniteQueryObserver,
@@ -85,16 +84,6 @@ export function ActorsProvider({
 		store.set(actorEnvironmentAtom, { projectNameId, environmentNameId });
 	}, [projectNameId, environmentNameId]);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: store is not a dependency
-	useEffect(() => {
-		store.set(exportLogsHandlerAtom, async ({ projectNameId, environmentNameId, queryJson }) => {
-			return rivetClient.actors.logs.export({
-				project: projectNameId,
-				environment: environmentNameId,
-				queryJson,
-			});
-		});
-	}, []);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: store is not a dependency
 	useEffect(() => {
