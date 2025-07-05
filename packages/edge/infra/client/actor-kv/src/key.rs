@@ -1,7 +1,7 @@
 use foundationdb::tuple::{
 	Bytes, PackResult, TupleDepth, TuplePack, TupleUnpack, VersionstampOffset,
 };
-use pegboard_config::runner_protocol::proto::kv;
+use pegboard_runner_protocol::proto::kv;
 use prost::Message;
 
 // TODO: Custom deser impl that uses arrays instead of objects?

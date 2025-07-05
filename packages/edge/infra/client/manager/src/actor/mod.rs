@@ -9,7 +9,7 @@ use indoc::indoc;
 use nix::{sys::signal::Signal, unistd::Pid};
 use pegboard::protocol;
 use pegboard_actor_kv as kv;
-use pegboard_config::runner_protocol;
+use pegboard_runner_protocol as rp;
 
 use crate::{ctx::Ctx, runner, utils};
 
@@ -134,19 +134,17 @@ impl Actor {
 					}
 					protocol::ImageAllocationType::Multi => {
 						self.runner
-							.send(&runner_protocol::proto::ToRunner {
-								message: Some(
-									runner_protocol::proto::to_runner::Message::StartActor(
-										runner_protocol::proto::to_runner::StartActor {
-											actor_id: self.actor_id.to_string(),
-											generation: self.generation,
-											env: self.runner.config().env.clone().into(),
-											metadata: Some(convert_actor_metadata_to_proto(
-												&self.config.metadata.deserialize()?,
-											)),
-										},
-									),
-								),
+							.send(&rp::proto::ToRunner {
+								message: Some(rp::proto::to_runner::Message::StartActor(
+									rp::proto::to_runner::StartActor {
+										actor_id: self.actor_id.to_string(),
+										generation: self.generation,
+										env: self.runner.config().env.clone().into(),
+										metadata: Some(convert_actor_metadata_to_proto(
+											&self.config.metadata.deserialize()?,
+										)),
+									},
+								)),
 							})
 							.await?;
 					}
@@ -161,19 +159,17 @@ impl Actor {
 					}
 					protocol::ImageAllocationType::Multi => {
 						self.runner
-							.send(&runner_protocol::proto::ToRunner {
-								message: Some(
-									runner_protocol::proto::to_runner::Message::StartActor(
-										runner_protocol::proto::to_runner::StartActor {
-											actor_id: self.actor_id.to_string(),
-											generation: self.generation,
-											env: self.runner.config().env.clone().into(),
-											metadata: Some(convert_actor_metadata_to_proto(
-												&self.config.metadata.deserialize()?,
-											)),
-										},
-									),
-								),
+							.send(&rp::proto::ToRunner {
+								message: Some(rp::proto::to_runner::Message::StartActor(
+									rp::proto::to_runner::StartActor {
+										actor_id: self.actor_id.to_string(),
+										generation: self.generation,
+										env: self.runner.config().env.clone().into(),
+										metadata: Some(convert_actor_metadata_to_proto(
+											&self.config.metadata.deserialize()?,
+										)),
+									},
+								)),
 							})
 							.await?;
 					}
@@ -203,9 +199,9 @@ impl Actor {
 					};
 
 					match res {
-						runner_protocol::ToActor::StateUpdate { state } => {
+						rp::ToActor::StateUpdate { state } => {
 							match state.state.context("ActorState.state")? {
-								runner_protocol::proto::actor_state::State::Running(_) => {
+								rp::proto::actor_state::State::Running(_) => {
 									tracing::info!(
 										actor_id=?self.actor_id,
 										generation=?self.generation,
@@ -219,21 +215,21 @@ impl Actor {
 
 									self.set_running(ctx, pid, ports).await?;
 								},
-								runner_protocol::proto::actor_state::State::Exited(state) => {
+								rp::proto::actor_state::State::Exited(state) => {
 									break state.exit_code;
 								}
 							}
 						}
-						runner_protocol::ToActor::Kv(req) => {
+						rp::ToActor::Kv(req) => {
 							// TODO: Add queue and bg thread for processing kv ops
 							// Run kv operation
 							match req.data.context("Request.data")? {
-								runner_protocol::proto::kv::request::Data::Get(body) => {
+								rp::proto::kv::request::Data::Get(body) => {
 									let res = self.kv.get(pegboard_actor_kv::Key::convert_vec(body.keys)).await;
 
-									self.runner.send(&runner_protocol::proto::ToRunner {
-										message: Some(runner_protocol::proto::to_runner::Message::Kv(
-											runner_protocol::proto::kv::Response {
+									self.runner.send(&rp::proto::ToRunner {
+										message: Some(rp::proto::to_runner::Message::Kv(
+											rp::proto::kv::Response {
 												request_id: req.request_id,
 												data: match res {
 													Ok(entries) => {
@@ -241,16 +237,16 @@ impl Actor {
 															.into_iter()
 															.map(|(k, v)| (k.into(), v.into()))
 															.unzip();
-														Some(runner_protocol::proto::kv::response::Data::Get(
-															runner_protocol::proto::kv::response::Get {
+														Some(rp::proto::kv::response::Data::Get(
+															rp::proto::kv::response::Get {
 																keys,
 																values,
 															}
 														))
 													}
 													Err(err) => {
-														Some(runner_protocol::proto::kv::response::Data::Error(
-															runner_protocol::proto::kv::response::Error {
+														Some(rp::proto::kv::response::Data::Error(
+															rp::proto::kv::response::Error {
 																message: err.to_string(),
 															}
 														))
@@ -260,16 +256,16 @@ impl Actor {
 										)),
 									}).await?;
 								}
-								runner_protocol::proto::kv::request::Data::List(body) => {
+								rp::proto::kv::request::Data::List(body) => {
 									let res = self.kv.list(
 										body.query.context("List.query")?.try_into()?,
 										body.reverse,
 										body.limit.map(TryInto::try_into).transpose()?
 									).await;
 
-									self.runner.send(&runner_protocol::proto::ToRunner {
-										message: Some(runner_protocol::proto::to_runner::Message::Kv(
-											runner_protocol::proto::kv::Response {
+									self.runner.send(&rp::proto::ToRunner {
+										message: Some(rp::proto::to_runner::Message::Kv(
+											rp::proto::kv::Response {
 												request_id: req.request_id,
 												data: match res {
 													Ok(entries) => {
@@ -277,16 +273,16 @@ impl Actor {
 															.into_iter()
 															.map(|(k, v)| (k.into(), v.into()))
 															.unzip();
-														Some(runner_protocol::proto::kv::response::Data::List(
-															runner_protocol::proto::kv::response::List {
+														Some(rp::proto::kv::response::Data::List(
+															rp::proto::kv::response::List {
 																keys,
 																values,
 															}
 														))
 													}
 													Err(err) => {
-														Some(runner_protocol::proto::kv::response::Data::Error(
-															runner_protocol::proto::kv::response::Error {
+														Some(rp::proto::kv::response::Data::Error(
+															rp::proto::kv::response::Error {
 																message: err.to_string(),
 															}
 														))
@@ -296,7 +292,7 @@ impl Actor {
 										)),
 									}).await?;
 								}
-								runner_protocol::proto::kv::request::Data::Put(body) => {
+								rp::proto::kv::request::Data::Put(body) => {
 									let res = self.kv.put(
 										body.keys
 											.into_iter()
@@ -305,19 +301,19 @@ impl Actor {
 											.collect()
 									).await;
 
-									self.runner.send(&runner_protocol::proto::ToRunner {
-										message: Some(runner_protocol::proto::to_runner::Message::Kv(
-											runner_protocol::proto::kv::Response {
+									self.runner.send(&rp::proto::ToRunner {
+										message: Some(rp::proto::to_runner::Message::Kv(
+											rp::proto::kv::Response {
 												request_id: req.request_id,
 												data: match res {
 													Ok(_) => {
-														Some(runner_protocol::proto::kv::response::Data::Put(
-															runner_protocol::proto::kv::response::Put {}
+														Some(rp::proto::kv::response::Data::Put(
+															rp::proto::kv::response::Put {}
 														))
 													}
 													Err(err) => {
-														Some(runner_protocol::proto::kv::response::Data::Error(
-															runner_protocol::proto::kv::response::Error {
+														Some(rp::proto::kv::response::Data::Error(
+															rp::proto::kv::response::Error {
 																message: err.to_string(),
 															}
 														))
@@ -327,22 +323,22 @@ impl Actor {
 										)),
 									}).await?;
 								}
-								runner_protocol::proto::kv::request::Data::Delete(body) => {
+								rp::proto::kv::request::Data::Delete(body) => {
 									let res = self.kv.delete(pegboard_actor_kv::Key::convert_vec(body.keys)).await;
 
-									self.runner.send(&runner_protocol::proto::ToRunner {
-										message: Some(runner_protocol::proto::to_runner::Message::Kv(
-											runner_protocol::proto::kv::Response {
+									self.runner.send(&rp::proto::ToRunner {
+										message: Some(rp::proto::to_runner::Message::Kv(
+											rp::proto::kv::Response {
 												request_id: req.request_id,
 												data: match res {
 													Ok(_) => {
-														Some(runner_protocol::proto::kv::response::Data::Delete(
-															runner_protocol::proto::kv::response::Delete {}
+														Some(rp::proto::kv::response::Data::Delete(
+															rp::proto::kv::response::Delete {}
 														))
 													}
 													Err(err) => {
-														Some(runner_protocol::proto::kv::response::Data::Error(
-															runner_protocol::proto::kv::response::Error {
+														Some(rp::proto::kv::response::Data::Error(
+															rp::proto::kv::response::Error {
 																message: err.to_string(),
 															}
 														))
@@ -352,22 +348,22 @@ impl Actor {
 										)),
 									}).await?;
 								}
-								runner_protocol::proto::kv::request::Data::Drop(_) => {
+								rp::proto::kv::request::Data::Drop(_) => {
 									let res = self.kv.delete_all().await;
 
-									self.runner.send(&runner_protocol::proto::ToRunner {
-										message: Some(runner_protocol::proto::to_runner::Message::Kv(
-											runner_protocol::proto::kv::Response {
+									self.runner.send(&rp::proto::ToRunner {
+										message: Some(rp::proto::to_runner::Message::Kv(
+											rp::proto::kv::Response {
 												request_id: req.request_id,
 												data: match res {
 													Ok(_) => {
-														Some(runner_protocol::proto::kv::response::Data::Drop(
-															runner_protocol::proto::kv::response::Drop {}
+														Some(rp::proto::kv::response::Data::Drop(
+															rp::proto::kv::response::Drop {}
 														))
 													}
 													Err(err) => {
-														Some(runner_protocol::proto::kv::response::Data::Error(
-															runner_protocol::proto::kv::response::Error {
+														Some(rp::proto::kv::response::Data::Error(
+															rp::proto::kv::response::Error {
 																message: err.to_string(),
 															}
 														))
@@ -422,9 +418,9 @@ impl Actor {
 			// Send message
 			if self.runner.has_socket() {
 				self.runner
-					.send(&runner_protocol::proto::ToRunner {
-						message: Some(runner_protocol::proto::to_runner::Message::SignalActor(
-							runner_protocol::proto::to_runner::SignalActor {
+					.send(&rp::proto::ToRunner {
+						message: Some(rp::proto::to_runner::Message::SignalActor(
+							rp::proto::to_runner::SignalActor {
 								actor_id: self.actor_id.to_string(),
 								generation: self.generation,
 								signal: signal as i32,
@@ -577,8 +573,8 @@ impl Actor {
 /// Convert from serde ActorMetadata to proto ActorMetadata
 pub fn convert_actor_metadata_to_proto(
 	metadata: &protocol::ActorMetadata,
-) -> runner_protocol::proto::ActorMetadata {
-	use runner_protocol::proto::{
+) -> rp::proto::ActorMetadata {
+	use rp::proto::{
 		actor_metadata, routing, ActorMetadata, GameGuardProtocol, HostProtocol, Port, Routing,
 	};
 

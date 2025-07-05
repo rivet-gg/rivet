@@ -22,6 +22,8 @@
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
 		"@yarnpkg/plugin-exec": "^3.0.1",
+		"protoc-gen-js": "^3.21.2",
+		"protoc-gen-ts": "^0.8.7",
 		"turbo": "^2.0.1"
 	},
 	"resolutions": {

@@ -6,12 +6,15 @@
 	"dependencies": {
 		"@hono/node-server": "^1.13.8",
 		"@hono/node-ws": "^1.1.0",
+		"@rivet-gg/runner-protocol": "file:../../sdks/runner-protocol",
+		"google-protobuf": "^3.21.2",
 		"hono": "^4.6.17"
 	},
 	"devDependencies": {
 		"@rivet-gg/actor-core": "^5.1.2",
 		"@rivet-gg/api": "^24.6.2",
 		"@types/deno": "^2.2.0",
+		"@types/google-protobuf": "^3.15.0",
 		"@types/node": "^22.13.9",
 		"@types/ws": "^8.18.0",
 		"dgram": "^1.0.1",
@@ -21,7 +24,7 @@
 		"ws": "^8.18.1"
 	},
 	"scripts": {
-		"start": "tsx ws.ts",
+		"start": "tsx src/main.ts",
 		"test": "tsx tests/client.ts",
 		"build": "tsc --outDir dist"
 	}
