@@ -1,0 +1,1 @@
+import * as routes from "./routes/index";

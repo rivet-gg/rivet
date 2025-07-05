@@ -1684,6 +1684,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hono/zod-openapi@npm:^0.19.9":
+  version: 0.19.9
+  resolution: "@hono/zod-openapi@npm:0.19.9"
+  dependencies:
+    "@asteasolutions/zod-to-openapi": "npm:^7.3.0"
+    "@hono/zod-validator": "npm:^0.7.0"
+    openapi3-ts: "npm:^4.5.0"
+  peerDependencies:
+    hono: ">=4.3.6"
+    zod: 3.*
+  checksum: 10c0/1b63cac47d3b4307280600843d9d8f79eecee57e4840cae9744d3a9a482e1c6bfe0587c0989d4e9afc2c821c971afd49c8542f0fdc2e190c0410ea31df7401c0
+  languageName: node
+  linkType: hard
+
 "@hono/zod-validator@npm:^0.7.0":
   version: 0.7.0
   resolution: "@hono/zod-validator@npm:0.7.0"
@@ -4457,6 +4471,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@rivet-gg/cloud@workspace:cloud":
+  version: 0.0.0-use.local
+  resolution: "@rivet-gg/cloud@workspace:cloud"
+  dependencies:
+    "@hono/zod-openapi": "npm:^0.19.9"
+    "@types/node": "npm:^24.0.10"
+    hono: "npm:^4.8.3"
+    tsup: "npm:^8.5.0"
+  languageName: unknown
+  linkType: soft
+
 "@rivet-gg/components@workspace:*, @rivet-gg/components@workspace:frontend/packages/components":
   version: 0.0.0-use.local
   resolution: "@rivet-gg/components@workspace:frontend/packages/components"
@@ -6994,6 +7019,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~6.21.0"
   checksum: 10c0/ef7d5dc890da41cfd554d35ab8998bc18be9e3a0caa642e720599ac4410a94a4879766e52b3c9cafa06c66b7b8aebdc51f322cf67df23a6489927890196a316d
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^24.0.10":
+  version: 24.0.10
+  resolution: "@types/node@npm:24.0.10"
+  dependencies:
+    undici-types: "npm:~7.8.0"
+  checksum: 10c0/11dbd869d3e12ee7b7818113588950e538783e45d227122174c763cb05977defbd1e01b44b5ccd4b8997e42c3df7f7b83c6ee05cfa43d924c8882886bc5f6582
   languageName: node
   linkType: hard
 
@@ -11347,6 +11381,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"hono@npm:^4.8.3":
+  version: 4.8.3
+  resolution: "hono@npm:4.8.3"
+  checksum: 10c0/2b64fa612da4f53d1f2bef467a3be06c3f6fdb2dc32543241f0682a1d1a2970c716c5e4a107f5c9bc4a0fade45ae31033d23561302c75b5bdc74f4c6b9a5c3b6
+  languageName: node
+  linkType: hard
+
 "html-url-attributes@npm:^3.0.0":
   version: 3.0.1
   resolution: "html-url-attributes@npm:3.0.1"
@@ -14134,6 +14175,15 @@ __metadata:
   dependencies:
     yaml: "npm:^2.5.0"
   checksum: 10c0/900b834279fc8a43c545728ad75ec7c26934ec5344225b60d1e1c0df44d742d7e7379aea18d9034e03031f079d3308ba5a68600682eece3ed41cdbdd10346a9e
+  languageName: node
+  linkType: hard
+
+"openapi3-ts@npm:^4.5.0":
+  version: 4.5.0
+  resolution: "openapi3-ts@npm:4.5.0"
+  dependencies:
+    yaml: "npm:^2.8.0"
+  checksum: 10c0/97de2d24e9ceffb89e1388e137e4a6e17ee57a02dce0c938a5e98b1338ac72b31e8b2ce8dd28945ad43fae8bee2a145892cb548ba5ae60b0930f1b6b79b0747d
   languageName: node
   linkType: hard
 
@@ -17502,7 +17552,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsup@npm:^8.3.6":
+"tsup@npm:^8.3.6, tsup@npm:^8.5.0":
   version: 8.5.0
   resolution: "tsup@npm:8.5.0"
   dependencies:
@@ -17862,6 +17912,13 @@ __metadata:
   version: 6.21.0
   resolution: "undici-types@npm:6.21.0"
   checksum: 10c0/c01ed51829b10aa72fc3ce64b747f8e74ae9b60eafa19a7b46ef624403508a54c526ffab06a14a26b3120d055e1104d7abe7c9017e83ced038ea5cf52f8d5e04
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~7.8.0":
+  version: 7.8.0
+  resolution: "undici-types@npm:7.8.0"
+  checksum: 10c0/9d9d246d1dc32f318d46116efe3cfca5a72d4f16828febc1918d94e58f6ffcf39c158aa28bf5b4fc52f410446bc7858f35151367bd7a49f21746cab6497b709b
   languageName: node
   linkType: hard
 
@@ -19074,7 +19131,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yaml@npm:^2.3.1, yaml@npm:^2.3.4, yaml@npm:^2.5.0":
+"yaml@npm:^2.3.1, yaml@npm:^2.3.4, yaml@npm:^2.5.0, yaml@npm:^2.8.0":
   version: 2.8.0
   resolution: "yaml@npm:2.8.0"
   bin:

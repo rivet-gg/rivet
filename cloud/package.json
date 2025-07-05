@@ -1,0 +1,20 @@
+{
+	"name": "@rivet-gg/cloud",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"packageManager": "yarn@4.6.0",
+	"scripts": {
+		"start": "node dist/index.cjs",
+		"dev": "tsup --watch --onSuccess 'npm run start'",
+		"build": "tsup"
+	},
+	"devDependencies": {
+		"@types/node": "^24.0.10",
+		"tsup": "^8.5.0"
+	},
+	"dependencies": {
+		"@hono/zod-openapi": "^0.19.9",
+		"hono": "^4.8.3"
+	}
+}
