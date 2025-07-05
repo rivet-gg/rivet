@@ -1,19 +1,10 @@
-use std::{
-	env,
-	io::{Cursor, Write},
-	net::SocketAddr,
-	path::PathBuf,
-	sync::Arc,
-	time::Duration,
-};
+use std::{env, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::*;
-use bytes::Bytes;
 use futures_util::{SinkExt, StreamExt};
-use serde::{de::DeserializeOwned, Serialize};
-use serde_json::json;
+use pegboard_runner_protocol as rp;
 use tokio::{net::UnixStream, sync::Mutex};
-use tokio_util::codec::{Framed, LengthDelimitedCodec};
+use tokio_util::codec::Framed;
 use warp::Filter;
 
 const PING_INTERVAL: Duration = Duration::from_secs(1);
@@ -69,18 +60,7 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 	let stream = UnixStream::connect(socket_path).await?;
 	println!("Socket connection established");
 
-	let codec = LengthDelimitedCodec::builder()
-		.length_field_type::<u32>()
-		.length_field_length(4)
-		// No offset
-		.length_field_offset(0)
-		// Header length is not included in the length calculation
-		.length_adjustment(4)
-		// Skip length, but header is included in the returned bytes
-		.num_skip(4)
-		.new_codec();
-
-	let framed = Framed::new(stream, codec);
+	let framed = Framed::new(stream, rp::codec());
 
 	// Split the stream
 	let (write, mut read) = framed.split();
@@ -92,14 +72,16 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 		loop {
 			tokio::time::sleep(PING_INTERVAL).await;
 
-			let payload = json!({
-				"ping": null
-			});
+			let payload = rp::proto::ToManager {
+				message: Some(rp::proto::to_manager::Message::Ping(
+					rp::proto::to_manager::Ping {},
+				)),
+			};
 
 			if write2
 				.lock()
 				.await
-				.send(encode_frame(&payload).unwrap())
+				.send(rp::encode_frame(&payload).unwrap().into())
 				.await
 				.is_err()
 			{
@@ -110,68 +92,97 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 
 	// Process incoming messages
 	while let Some(frame) = read.next().await.transpose()? {
-		let (_, packet) =
-			decode_frame::<serde_json::Value>(&frame.freeze()).context("failed to decode frame")?;
+		let (_, packet) = rp::decode_frame::<rp::proto::ToRunner>(&frame.freeze())
+			.context("failed to decode frame")?;
 		println!("Received packet: {packet:?}");
 
-		if let Some(packet) = packet.get("start_actor") {
-			let payload = json!({
-				"actor_state_update": {
-					"actor_id": packet["actor_id"],
-					"generation": packet["generation"],
-					"state": {
-						"running": null,
-					},
-				},
-			});
-
-			write
-				.lock()
-				.await
-				.send(encode_frame(&payload).context("failed to encode frame")?)
-				.await?;
-		} else if let Some(packet) = packet.get("signal_actor") {
-			let payload = json!({
-				"actor_state_update": {
-					"actor_id": packet["actor_id"],
-					"generation": packet["generation"],
-					"state": {
-						"exited": {
-							"exit_code": null,
+		match packet.message.context("ToRunner.message")? {
+			rp::proto::to_runner::Message::Init(_) => {}
+			rp::proto::to_runner::Message::Pong(_) => {}
+			rp::proto::to_runner::Message::Close(msg) => {
+				println!("Received close, stopping: {:?}", msg.reason);
+				break;
+			}
+			rp::proto::to_runner::Message::StartActor(msg) => {
+				let payload = rp::proto::ToManager {
+					message: Some(rp::proto::to_manager::Message::ActorStateUpdate(
+						rp::proto::to_manager::ActorStateUpdate {
+							actor_id: msg.actor_id.clone(),
+							generation: msg.generation,
+							state: Some(rp::proto::ActorState {
+								state: Some(rp::proto::actor_state::State::Running(
+									rp::proto::actor_state::Running {},
+								)),
+							}),
 						},
-					},
-				},
-			});
+					)),
+				};
 
-			write.lock().await.send(encode_frame(&payload)?).await?;
+				write
+					.lock()
+					.await
+					.send(
+						rp::encode_frame(&payload)
+							.context("failed to encode frame")?
+							.into(),
+					)
+					.await?;
+
+				// KV get request
+				let payload = rp::proto::ToManager {
+					message: Some(rp::proto::to_manager::Message::Kv(
+						rp::proto::kv::Request {
+							actor_id: msg.actor_id,
+							generation: msg.generation,
+							request_id: 0,
+							data: Some(rp::proto::kv::request::Data::Get(
+								rp::proto::kv::request::Get {
+									keys: vec![rp::proto::kv::Key {
+										segments: vec![vec![0, 1, 2], vec![3, 4, 5]],
+									}],
+								},
+							)),
+						},
+					)),
+				};
+
+				write
+					.lock()
+					.await
+					.send(
+						rp::encode_frame(&payload)
+							.context("failed to encode frame")?
+							.into(),
+					)
+					.await?;
+			}
+			rp::proto::to_runner::Message::SignalActor(msg) => {
+				let payload = rp::proto::ToManager {
+					message: Some(rp::proto::to_manager::Message::ActorStateUpdate(
+						rp::proto::to_manager::ActorStateUpdate {
+							actor_id: msg.actor_id,
+							generation: msg.generation,
+							state: Some(rp::proto::ActorState {
+								state: Some(rp::proto::actor_state::State::Exited(
+									rp::proto::actor_state::Exited { exit_code: None },
+								)),
+							}),
+						},
+					)),
+				};
+
+				write
+					.lock()
+					.await
+					.send(rp::encode_frame(&payload)?.into())
+					.await?;
+			}
+			rp::proto::to_runner::Message::Kv(_msg) => {
+				// TODO:
+			}
 		}
 	}
 
 	println!("Socket connection closed");
 	Ok(())
-}
-
-fn encode_frame<T: Serialize>(payload: &T) -> Result<Bytes> {
-	let mut buf = Vec::with_capacity(4);
-	let mut cursor = Cursor::new(&mut buf);
-
-	cursor.write(&[0u8; 4])?; // header (currently unused)
-
-	serde_json::to_writer(&mut cursor, payload)?;
-
-	cursor.flush()?;
-
-	Ok(buf.into())
-}
-
-fn decode_frame<T: DeserializeOwned>(frame: &Bytes) -> Result<([u8; 4], T)> {
-	ensure!(frame.len() >= 4, "Frame too short");
-
-	// Extract the header (first 4 bytes)
-	let header = [frame[0], frame[1], frame[2], frame[3]];
-
-	// Deserialize the rest of the frame (payload after the header)
-	let payload = serde_json::from_slice(&frame[4..])?;
-
-	Ok((header, payload))
 }
