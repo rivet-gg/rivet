@@ -1,4 +1,5 @@
 import {
+	type Actor as StateActor,
 	ActorFeature,
 	ActorNotFound,
 	ActorsActorDetails,
@@ -25,6 +26,7 @@ import { useAtomValue } from "jotai";
 import { useDialog } from "@/hooks/use-dialog";
 import { ErrorComponent } from "@/components/error-component";
 import { ActorsProvider } from "@/domains/project/components/actors/actors-provider";
+import { toRecord } from "@rivet-gg/components";
 function Actor() {
 	const navigate = Route.useNavigate();
 	const { tab } = Route.useSearch();
@@ -59,6 +61,9 @@ function Actor() {
 	);
 }
 
+const IS_ACTOR_INTERNAL = (actor: StateActor) =>
+	toRecord(actor?.tags)?.type === "function" ||
+	toRecord(actor?.tags)?.function === "rivetkit-server";
 const FIXED_TAGS = {
 	framework: "rivetkit",
 };
@@ -90,6 +95,7 @@ function Content() {
 			environmentNameId={environmentNameId}
 			actorId={actorId}
 			fixedTags={FIXED_TAGS}
+			isActorInternal={IS_ACTOR_INTERNAL}
 			{...filters}
 		>
 			<ActorsListPreview>

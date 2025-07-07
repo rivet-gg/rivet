@@ -108,7 +108,8 @@ const ACTORS_VIEW_CONTEXT = {
 };
 
 const IS_ACTOR_INTERNAL = (actor: StateActor) =>
-	toRecord(actor?.tags)?.type === "function";
+	toRecord(actor?.tags)?.type === "function" ||
+	toRecord(actor?.tags)?.function === "rivetkit-server";
 
 function Content() {
 	const { nameId: projectNameId } = useProject();
