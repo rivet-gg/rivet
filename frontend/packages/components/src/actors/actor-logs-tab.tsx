@@ -3,13 +3,13 @@ import { startTransition, useState } from "react";
 import { ActorDetailsSettingsButton } from "./actor-details-settings-button";
 import { ActorDownloadLogsButton } from "./actor-download-logs-button";
 import { ActorLogs, type LogsTypeFilter } from "./actor-logs";
-import type { ActorAtom } from "./actor-context";
+import type { ActorId } from "./queries";
 
 interface ActorLogsTabProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
-export function ActorLogsTab({ actor }: ActorLogsTabProps) {
+export function ActorLogsTab({ actorId }: ActorLogsTabProps) {
 	const [search, setSearch] = useState("");
 	const [logsFilter, setLogsFilter] = useState<LogsTypeFilter>("all");
 
@@ -61,7 +61,7 @@ export function ActorLogsTab({ actor }: ActorLogsTabProps) {
 						</ToggleGroupItem>
 					</ToggleGroup>
 					<ActorDownloadLogsButton
-						actor={actor}
+						actorId={actorId}
 						typeFilter={logsFilter}
 						filter={search}
 					/>
@@ -70,7 +70,7 @@ export function ActorLogsTab({ actor }: ActorLogsTabProps) {
 			</div>
 			<div className="flex-1 min-h-0 overflow-hidden flex relative">
 				<ActorLogs
-					actor={actor}
+					actorId={actorId}
 					typeFilter={logsFilter}
 					filter={search}
 				/>

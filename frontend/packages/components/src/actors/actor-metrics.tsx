@@ -1,28 +1,24 @@
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import equal from "fast-deep-equal";
 import { useState, useMemo } from "react";
-import type { Actor, ActorAtom } from "./actor-context";
-import { ActorCpuStats } from "./actor-cpu-stats";
-import { ActorMemoryStats } from "./actor-memory-stats";
-import { Dd, Dl, Dt } from "../ui/typography";
-import { Button } from "../ui/button";
-import { Flex } from "../ui/flex";
-
-const selector = (a: Actor) => ({
-	metrics: a.metrics,
-	status: a.status,
-});
+import { Dd, Dl, Dt, Flex, Button } from "@rivet-gg/components";
+import {
+	type ActorId,
+	actorMetricsQueryOptions,
+	actorStatusQueryOptions,
+} from "./queries";
+import { useQuery } from "@tanstack/react-query";
 
 export interface ActorMetricsProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
-export function ActorMetrics({ actor }: ActorMetricsProps) {
-	const { metrics, status } = useAtomValue(
-		selectAtom(actor, selector, equal),
-	);
-	const metricsData = useAtomValue(metrics);
+export function ActorMetrics({ actorId }: ActorMetricsProps) {
+	const { data: status } = useQuery(actorStatusQueryOptions(actorId));
+	const {
+		data: metricsData,
+		isLoading,
+		isError,
+	} = useQuery(actorMetricsQueryOptions(actorId));
+
 	const [showAdvanced, setShowAdvanced] = useState(false);
 
 	const isActorRunning = status === "running";
@@ -111,9 +107,7 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 		return (usage / limit) * 100;
 	};
 
-	const isLoading = metricsData.status === "pending";
-	const hasError = metricsData.status === "error";
-	const data = metricsData.metrics || {};
+	const data = metricsData?.metrics || {};
 
 	if (isLoading) {
 		return (
@@ -124,7 +118,7 @@ export function ActorMetrics({ actor }: ActorMetricsProps) {
 		);
 	}
 
-	if (hasError) {
+	if (isError) {
 		return (
 			<div className="px-4 my-8">
 				<h3 className="mb-2 font-semibold">Metrics</h3>
