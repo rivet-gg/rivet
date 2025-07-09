@@ -3,13 +3,15 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "yarn generate-meta && next dev",
-		"build": "yarn generate-meta && next build && next-sitemap",
+		"dev": "yarn prebuild && next dev",
+		"build": "yarn prebuild && next build && next-sitemap",
 		"lint": "next lint",
 		"format": "prettier --write .",
 		"create-article": "vite-node scripts/generateArticle.js",
 		"generate-favicon": "npx cli-real-favicon generate scripts/faviconConfig.json faviconData.json public/icons",
-		"generate-meta": "node scripts/generateNavigation.mjs"
+		"prebuild": "yarn prebuild:navigation && yarn prebuild:examples",
+		"prebuild:navigation": "node scripts/generateNavigation.mjs",
+		"prebuild:examples": "node scripts/generateExamples.mjs"
 	},
 	"browserslist": "defaults, not ie <= 11",
 	"dependencies": {
@@ -31,6 +33,7 @@
 		"@rivet-gg/icons": "workspace:*",
 		"@shikijs/transformers": "^1.17.6",
 		"@sindresorhus/slugify": "^2.1.1",
+		"@stackblitz/sdk": "^1.11.0",
 		"@tailwindcss/forms": "^0.5.3",
 		"@tailwindcss/typography": "^0.5.8",
 		"@types/json-schema": "^7.0.15",
