@@ -32,5 +32,5 @@ AS SELECT
     a.client_id,
 	a.durable
 FROM actor_logs3 l
-LEFT JOIN db_pegboard_analytics.actors a ON l.namespace = a.namespace AND l.env_id = a.env_id AND l.actor_id = a.actor_id;
+ANY LEFT JOIN db_pegboard_analytics.actors a ON l.namespace = a.namespace AND l.env_id = a.env_id AND l.actor_id = a.actor_id;
 

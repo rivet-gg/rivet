@@ -2,7 +2,6 @@ use chirp_workflow::prelude::*;
 use clickhouse_user_query::{QueryExpr, UserDefinedQueryBuilder};
 
 use crate::schema::ACTOR_LOGS_SCHEMA;
-use crate::types::LogsStreamType;
 
 #[derive(Debug)]
 pub struct Input {
@@ -96,8 +95,6 @@ pub async fn pegboard_actor_log_read_with_query(
 		WHERE
 			namespace = ?
 			AND env_id = ?
-			AND actor_id IN ?
-			AND stream_type IN ?
 			-- Apply timestamp filtering based on query type
 			AND (
 				? -- is_all

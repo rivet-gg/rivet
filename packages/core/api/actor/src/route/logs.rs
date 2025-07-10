@@ -297,6 +297,7 @@ pub async fn export_logs(
 		presigned_endpoint_kind: Some(backend::pkg::upload::prepare::EndpointKind::Internal as i32),
 	})
 	.await?;
+	let upload_id = unwrap!(upload_res.upload_id).as_uuid();
 
 	let presigned_req = unwrap!(upload_res.presigned_requests.first());
 
@@ -332,7 +333,7 @@ pub async fn export_logs(
 	let presigned_req = s3_client
 		.get_object()
 		.bucket(s3_client.bucket())
-		.key(filename)
+		.key(format!("{upload_id}/{filename}"))
 		.presigned(
 			s3_util::aws_sdk_s3::presigning::PresigningConfig::builder()
 				.expires_in(Duration::from_secs(60 * 60))
