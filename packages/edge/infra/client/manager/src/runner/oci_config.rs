@@ -7,6 +7,7 @@ use super::{partial_oci_config::PartialOciConfigUser, seccomp};
 pub struct ConfigOpts<'a> {
 	pub runner_path: &'a Path,
 	pub netns_path: &'a Path,
+	pub socket_path: &'a Path,
 	pub args: Vec<String>,
 	pub env: Vec<String>,
 	pub user: PartialOciConfigUser,
@@ -167,7 +168,7 @@ fn capabilities() -> Vec<&'static str> {
 }
 
 fn mounts(opts: &ConfigOpts) -> Result<serde_json::Value> {
-	Ok(json!([
+	let mounts = json!([
 		{
 			"destination": "/proc",
 			"type": "proc",
@@ -258,7 +259,17 @@ fn mounts(opts: &ConfigOpts) -> Result<serde_json::Value> {
 			"source": opts.actor_path.join("hosts").to_str().context("hosts path")?,
 			"options": ["rbind", "rprivate"]
 		},
-	]))
+
+		// Manager socket
+		{
+			"destination": socket_mount_dest_path().to_str().context("manager.sock dest path")?,
+			"type": "bind",
+			"source": opts.socket_path.to_str().context("manager.sock source path")?,
+			"options": ["bind", "rw"]
+		},
+	]);
+
+	Ok(mounts)
 }
 
 fn linux_resources_devices() -> serde_json::Value {
@@ -334,4 +345,9 @@ fn linux_resources_devices() -> serde_json::Value {
 		"access": "rwm"
 		}
 	])
+}
+
+/// Mounting path of the manager socket inside of the container.
+pub fn socket_mount_dest_path() -> &'static Path {
+	Path::new("/srv/sockets/manager.sock")
 }
