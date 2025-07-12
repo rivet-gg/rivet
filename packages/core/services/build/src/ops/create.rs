@@ -4,7 +4,7 @@ use rivet_operation::prelude::proto::backend;
 const MAX_UPLOAD_SIZE: u64 = util::file_size::gigabytes(8);
 const MAX_JS_BUILD_UPLOAD_SIZE: u64 = util::file_size::megabytes(10);
 use crate::{
-	types::{upload::PrepareFile, upload::PresignedUploadRequest, BuildCompression, BuildKind},
+	types::{upload::PrepareFile, upload::PresignedUploadRequest, BuildCompression, BuildAllocationType, BuildKind},
 	utils,
 };
 
@@ -15,6 +15,8 @@ pub struct Input {
 	pub content: Content,
 	pub kind: BuildKind,
 	pub compression: BuildCompression,
+	pub allocation_type: BuildAllocationType,
+	pub allocation_total_slots: u64,
 }
 
 #[derive(Debug)]
@@ -158,10 +160,12 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 				image_tag,
 				create_ts,
 				kind,
-				compression
+				compression,
+				allocation_type,
+				allocation_total_slots
 			)
 		VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		",
 		build_id,
 		game_id,
@@ -172,6 +176,8 @@ pub async fn get(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 		ctx.ts(),
 		input.kind as i32,
 		input.compression as i32,
+		input.allocation_type as i32,
+		input.allocation_total_slots as i64,
 	)
 	.await?;
 

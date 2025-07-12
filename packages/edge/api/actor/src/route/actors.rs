@@ -150,106 +150,210 @@ pub async fn create(
 		.map(ApiInto::api_into);
 
 	tracing::info!(?actor_id, ?tags, "creating actor with tags");
+	
+	if let build::types::BuildAllocationType::None = build.allocation_type {
+		let allocated_fut = if network.wait_ready.unwrap_or_default() {
+			std::future::pending().boxed()
+		} else {
+			let mut allocated_sub = ctx
+				.subscribe::<pegboard::workflows::actor::Allocated>(("actor_id", actor_id))
+				.await?;
 
-	let allocated_fut = if network.wait_ready.unwrap_or_default() {
-		std::future::pending().boxed()
-	} else {
-		let mut allocated_sub = ctx
-			.subscribe::<pegboard::workflows::actor::Allocated>(("actor_id", actor_id))
+			async move { allocated_sub.next().await }.boxed()
+		};
+		let mut ready_sub = ctx
+			.subscribe::<pegboard::workflows::actor::Ready>(("actor_id", actor_id))
+			.await?;
+		let mut fail_sub = ctx
+			.subscribe::<pegboard::workflows::actor::Failed>(("actor_id", actor_id))
+			.await?;
+		let mut destroy_sub = ctx
+			.subscribe::<pegboard::workflows::actor::DestroyStarted>(("actor_id", actor_id))
 			.await?;
 
-		async move { allocated_sub.next().await }.boxed()
-	};
-	let mut ready_sub = ctx
-		.subscribe::<pegboard::workflows::actor::Ready>(("actor_id", actor_id))
-		.await?;
-	let mut fail_sub = ctx
-		.subscribe::<pegboard::workflows::actor::Failed>(("actor_id", actor_id))
-		.await?;
-	let mut destroy_sub = ctx
-		.subscribe::<pegboard::workflows::actor::DestroyStarted>(("actor_id", actor_id))
-		.await?;
-
-	ctx.workflow(pegboard::workflows::actor::Input {
-		actor_id,
-		env_id,
-		tags,
-		resources,
-		lifecycle: body.lifecycle.map(|x| (*x).api_into()).unwrap_or_else(|| {
-			pegboard::types::ActorLifecycle {
-				kill_timeout_ms: 0,
-				durable: false,
-			}
-		}),
-		image_id: build.build_id,
-		root_user_enabled: game_config.root_user_enabled,
-		// args: body.runtime.arguments.unwrap_or_default(),
-		args: Vec::new(),
-		network_mode: network.mode.unwrap_or_default().api_into(),
-		environment: body.runtime.and_then(|r| r.environment).unwrap_or_default().as_hashable(),
-		network_ports: network
-			.ports
-			.unwrap_or_default()
-			.into_iter()
-			.map(|(s, p)| GlobalResult::Ok((
-				s.clone(),
-				pegboard::workflows::actor::Port {
-					internal_port: p.internal_port.map(TryInto::try_into).transpose()?,
-					routing: if let Some(routing) = p.routing {
-						match *routing {
-							models::ActorsPortRouting {
-								guard: Some(_gg),
-								host: None,
-							} => pegboard::types::Routing::GameGuard {
-								protocol: p.protocol.api_into(),
-							},
-							models::ActorsPortRouting {
-								guard: None,
-								host: Some(_),
-							} => pegboard::types::Routing::Host {
-								protocol: match p.protocol.api_try_into() {
-									Err(err) if GlobalError::is(&err, formatted_error::code::ACTOR_FAILED_TO_CREATE) => {
-										// Add location
-										bail_with!(
-											ACTOR_FAILED_TO_CREATE,
-											error = format!("network.ports[{s:?}].protocol: Host port protocol must be either TCP or UDP.")
-										);
-									}
-									x => x?,
+		ctx.workflow(pegboard::workflows::actor::Input {
+			actor_id,
+			env_id,
+			tags,
+			resources,
+			lifecycle: body.lifecycle.map(|x| (*x).api_into()).unwrap_or_else(|| {
+				pegboard::types::ActorLifecycle {
+					kill_timeout_ms: 0,
+					durable: false,
+				}
+			}),
+			image_id: build.build_id,
+			root_user_enabled: game_config.root_user_enabled,
+			// args: body.runtime.arguments.unwrap_or_default(),
+			args: Vec::new(),
+			network_mode: network.mode.unwrap_or_default().api_into(),
+			environment: body.runtime.and_then(|r| r.environment).unwrap_or_default().as_hashable(),
+			network_ports: network
+				.ports
+				.unwrap_or_default()
+				.into_iter()
+				.map(|(s, p)| GlobalResult::Ok((
+					s.clone(),
+					pegboard::workflows::actor::Port {
+						internal_port: p.internal_port.map(TryInto::try_into).transpose()?,
+						routing: if let Some(routing) = p.routing {
+							match *routing {
+								models::ActorsPortRouting {
+									guard: Some(_gg),
+									host: None,
+								} => pegboard::types::Routing::GameGuard {
+									protocol: p.protocol.api_into(),
 								},
-							},
-							models::ActorsPortRouting { .. } => {
-								bail_with!(
-									ACTOR_FAILED_TO_CREATE,
-									error = format!("network.ports[{s:?}].routing: Must specify either `guard` or `host` routing type.")
-								);
+								models::ActorsPortRouting {
+									guard: None,
+									host: Some(_),
+								} => pegboard::types::Routing::Host {
+									protocol: match p.protocol.api_try_into() {
+										Err(err) if GlobalError::is(&err, formatted_error::code::ACTOR_FAILED_TO_CREATE) => {
+											// Add location
+											bail_with!(
+												ACTOR_FAILED_TO_CREATE,
+												error = format!("network.ports[{s:?}].protocol: Host port protocol must be either TCP or UDP.")
+											);
+										}
+										x => x?,
+									},
+								},
+								models::ActorsPortRouting { .. } => {
+									bail_with!(
+										ACTOR_FAILED_TO_CREATE,
+										error = format!("network.ports[{s:?}].routing: Must specify either `guard` or `host` routing type.")
+									);
+								}
+							}
+						} else {
+							pegboard::types::Routing::GameGuard {
+								protocol: p.protocol.api_into(),
 							}
 						}
-					} else {
-						pegboard::types::Routing::GameGuard {
-							protocol: p.protocol.api_into(),
+					}
+				)))
+				.collect::<GlobalResult<util::serde::HashableMap<_, _>>>()?,
+			endpoint_type,
+		})
+		.tag("actor_id", actor_id)
+		.dispatch()
+		.await?;
+		
+		// Wait for allocated/ready, fail, or destroy
+		tokio::select! {
+			res = allocated_fut => { res?; },
+			res = ready_sub.next() => { res?; },
+			res = fail_sub.next() => {
+				let msg = res?;
+				bail_with!(ACTOR_FAILED_TO_CREATE, error = msg.message);
+			}
+			res = destroy_sub.next() => {
+				res?;
+				bail_with!(ACTOR_FAILED_TO_CREATE, error = "Actor failed before reaching a ready state.");
+			}
+		}
+	} else {
+		let allocated_fut = if network.wait_ready.unwrap_or_default() {
+			std::future::pending().boxed()
+		} else {
+			let mut allocated_sub = ctx
+				.subscribe::<pegboard::workflows::actor2::Allocated>(("actor_id", actor_id))
+				.await?;
+
+			async move { allocated_sub.next().await }.boxed()
+		};
+		let mut ready_sub = ctx
+			.subscribe::<pegboard::workflows::actor2::Ready>(("actor_id", actor_id))
+			.await?;
+		let mut fail_sub = ctx
+			.subscribe::<pegboard::workflows::actor2::Failed>(("actor_id", actor_id))
+			.await?;
+		let mut destroy_sub = ctx
+			.subscribe::<pegboard::workflows::actor2::DestroyStarted>(("actor_id", actor_id))
+			.await?;
+
+		ctx.workflow(pegboard::workflows::actor2::Input {
+			actor_id,
+			env_id,
+			tags,
+			resources,
+			lifecycle: body.lifecycle.map(|x| (*x).api_into()).unwrap_or_else(|| {
+				pegboard::types::ActorLifecycle {
+					kill_timeout_ms: 0,
+					durable: false,
+				}
+			}),
+			image_id: build.build_id,
+			root_user_enabled: game_config.root_user_enabled,
+			// args: body.runtime.arguments.unwrap_or_default(),
+			args: Vec::new(),
+			network_mode: network.mode.unwrap_or_default().api_into(),
+			environment: body.runtime.and_then(|r| r.environment).unwrap_or_default().as_hashable(),
+			network_ports: network
+				.ports
+				.unwrap_or_default()
+				.into_iter()
+				.map(|(s, p)| GlobalResult::Ok((
+					s.clone(),
+					pegboard::workflows::actor2::Port {
+						internal_port: p.internal_port.map(TryInto::try_into).transpose()?,
+						routing: if let Some(routing) = p.routing {
+							match *routing {
+								models::ActorsPortRouting {
+									guard: Some(_gg),
+									host: None,
+								} => pegboard::types::Routing::GameGuard {
+									protocol: p.protocol.api_into(),
+								},
+								models::ActorsPortRouting {
+									guard: None,
+									host: Some(_),
+								} => pegboard::types::Routing::Host {
+									protocol: match p.protocol.api_try_into() {
+										Err(err) if GlobalError::is(&err, formatted_error::code::ACTOR_FAILED_TO_CREATE) => {
+											// Add location
+											bail_with!(
+												ACTOR_FAILED_TO_CREATE,
+												error = format!("network.ports[{s:?}].protocol: Host port protocol must be either TCP or UDP.")
+											);
+										}
+										x => x?,
+									},
+								},
+								models::ActorsPortRouting { .. } => {
+									bail_with!(
+										ACTOR_FAILED_TO_CREATE,
+										error = format!("network.ports[{s:?}].routing: Must specify either `guard` or `host` routing type.")
+									);
+								}
+							}
+						} else {
+							pegboard::types::Routing::GameGuard {
+								protocol: p.protocol.api_into(),
+							}
 						}
 					}
-				}
-			)))
-			.collect::<GlobalResult<HashMap<_, _>>>()?.as_hashable(),
-		endpoint_type,
-	})
-	.tag("actor_id", actor_id)
-	.dispatch()
-	.await?;
-
-	// Wait for allocated/ready, fail, or destroy
-	tokio::select! {
-		res = allocated_fut => { res?; },
-		res = ready_sub.next() => { res?; },
-		res = fail_sub.next() => {
-			let msg = res?;
-			bail_with!(ACTOR_FAILED_TO_CREATE, error = msg.message);
-		}
-		res = destroy_sub.next() => {
-			res?;
-			bail_with!(ACTOR_FAILED_TO_CREATE, error = "Actor failed before reaching a ready state.");
+				)))
+				.collect::<GlobalResult<util::serde::HashableMap<_, _>>>()?,
+			endpoint_type,
+		})
+		.tag("actor_id", actor_id)
+		.dispatch()
+		.await?;
+		
+		// Wait for create/ready, fail, or destroy
+		tokio::select! {
+			res = allocated_fut => { res?; },
+			res = ready_sub.next() => { res?; },
+			res = fail_sub.next() => {
+				let msg = res?;
+				bail_with!(ACTOR_FAILED_TO_CREATE, error = msg.message);
+			}
+			res = destroy_sub.next() => {
+				res?;
+				bail_with!(ACTOR_FAILED_TO_CREATE, error = "Actor failed before reaching a ready state.");
+			}
 		}
 	}
 
