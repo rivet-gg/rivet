@@ -1,7 +1,7 @@
 use chirp_workflow::prelude::*;
 
-use crate::types::Datacenter;
 use crate::ops::datacenter::get::DatacenterRow;
+use crate::types::Datacenter;
 
 #[derive(Debug)]
 pub struct Input {
@@ -14,7 +14,10 @@ pub struct Output {
 }
 
 #[operation]
-pub async fn cluster_datacenter_get_for_label(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
+pub async fn cluster_datacenter_get_for_label(
+	ctx: &OperationCtx,
+	input: &Input,
+) -> GlobalResult<Output> {
 	let datacenters = ctx
 		.cache()
 		.fetch_all_json("cluster.datacenters_get_for_label", input.labels.clone(), {

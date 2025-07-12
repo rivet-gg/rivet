@@ -1,4 +1,5 @@
 pub mod get;
+pub mod get_for_label;
 pub mod list;
 pub mod location_get;
 pub mod resolve_for_name_id;
@@ -6,4 +7,3 @@ pub mod server_discovery;
 pub mod server_spec_get;
 pub mod tls_get;
 pub mod topology_get;
-pub mod get_for_label;
