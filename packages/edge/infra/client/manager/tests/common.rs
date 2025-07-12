@@ -116,6 +116,9 @@ pub async fn start_echo_actor(
 						.collect(),
 					create_ts: 0,
 				},
+				network: Some(protocol::ActorMetadataNetwork {
+					ports: Default::default(),
+				}),
 				project: protocol::ActorMetadataProject {
 					project_id: Uuid::nil(),
 					slug: "foo".to_string(),
@@ -134,7 +137,6 @@ pub async fn start_echo_actor(
 				build: protocol::ActorMetadataBuild {
 					build_id: Uuid::nil(),
 				},
-				network: None,
 			})
 			.unwrap(),
 
@@ -228,6 +230,7 @@ pub async fn init_client(gen_path: &Path, working_path: &Path) -> Config {
 				use_mounts: Some(true),
 				use_resource_constraints: Some(true),
 				container_runner_binary_path: Some(container_runner_binary_path),
+				custom_hosts: None,
 			},
 			images: Images {
 				max_cache_size: None,
@@ -278,6 +281,8 @@ pub async fn start_client(
 
 	let pool = utils::init_sqlite_db(&config).await.unwrap();
 
+	let fdb = utils::fdb::FdbPool::new(&config).await.unwrap();
+
 	// Build WS connection URL
 	let mut url = Url::parse("ws://127.0.0.1").unwrap();
 	url.set_port(Some(port)).unwrap();
@@ -296,7 +301,7 @@ pub async fn start_client(
 
 	tracing::info!("connected");
 
-	let ctx = Ctx::new(config, system, pool, tx);
+	let ctx = Ctx::new(config, system, pool, fdb, tx);
 
 	// Share reference
 	{
@@ -317,6 +322,8 @@ pub async fn start_client(
 }
 
 pub async fn build_binaries(gen_path: &Path) {
+	tracing::info!("building echo server");
+
 	let pkg_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
 	let status = Command::new("docker")
 		.arg("build")
@@ -346,14 +353,14 @@ pub async fn build_binaries(gen_path: &Path) {
 
 	assert!(status.success());
 
-	build_runner(gen_path, "container").await;
+	build_runner(gen_path).await;
 }
 
-async fn build_runner(gen_path: &Path, variant: &str) {
-	tracing::info!("building {variant} runner");
+async fn build_runner(gen_path: &Path) {
+	tracing::info!("building container runner");
 
 	let pkg_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-	let image_name = format!("pegboard-{variant}-runner");
+	let image_name = "pegboard-container-runner";
 
 	// Build runner binary
 	let status = Command::new("docker")
@@ -365,7 +372,7 @@ async fn build_runner(gen_path: &Path, variant: &str) {
 		.arg("-f")
 		.arg(
 			pkg_path
-				.join(format!("{variant}-runner"))
+				.join("container-runner")
 				.join("Dockerfile"),
 		)
 		.arg(pkg_path.join("..").join("..").join("..").join(".."))
@@ -377,8 +384,8 @@ async fn build_runner(gen_path: &Path, variant: &str) {
 
 	tracing::info!("copying runner image");
 
-	let container_name = format!("temp-pegboard-{variant}-runner-container");
-	let binary_path_in_container = format!("/rivet-{variant}-runner");
+	let container_name = format!("temp-pegboard-container-runner-container");
+	let binary_path_in_container = format!("/rivet-container-runner");
 
 	// Create a temporary container
 	let status = Command::new("docker")
@@ -423,8 +430,6 @@ pub async fn serve_binaries(gen_path: PathBuf) {
 
 					let path = if path == "/image" {
 						image_path(&gen_path)
-					} else if path == "/js-image" {
-						js_image_path(&gen_path)
 					} else {
 						panic!("invalid path: {path}");
 					};
@@ -581,10 +586,6 @@ pub fn container_runner_path(gen_path: &Path) -> PathBuf {
 
 pub fn image_path(gen_path: &Path) -> PathBuf {
 	gen_path.join("pegboard-echo-server").to_path_buf()
-}
-
-pub fn js_image_path(gen_path: &Path) -> PathBuf {
-	gen_path.join("pegboard-js-echo-server.js").to_path_buf()
 }
 
 static SETUP_TRACING: Once = Once::new();
