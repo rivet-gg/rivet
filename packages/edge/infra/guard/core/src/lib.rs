@@ -5,7 +5,6 @@ pub mod proxy_service;
 pub mod request_context;
 mod server;
 pub mod types;
-pub mod util;
 
 pub use cert_resolver::CertResolverFn;
 pub use proxy_service::{MiddlewareFn, ProxyService, ProxyState, RouteTarget, RoutingFn};
