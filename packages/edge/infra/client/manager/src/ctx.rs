@@ -38,7 +38,7 @@ use crate::{
 	image_download_handler::ImageDownloadHandler,
 	metrics,
 	runner::{self, Runner},
-	utils::{self, sql::SqlitePoolExt},
+	utils::{self, fdb::FdbPool, sql::SqlitePoolExt},
 };
 
 const PING_INTERVAL: Duration = Duration::from_secs(1);
@@ -82,10 +82,13 @@ pub struct Ctx {
 	config: Config,
 	system: SystemInfo,
 
-	// This requires a RwLock because of the reset functionality which reinitialized the entire database. It
+	// This requires a RwLock because of the reset functionality which reinitializes the entire database. It
 	// should never be written to besides that.
 	pool: RwLock<SqlitePool>,
+	fdb: FdbPool,
+
 	tx: Mutex<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>,
+
 	event_sender: EventSender,
 	pub(crate) image_download_handler: ImageDownloadHandler,
 
@@ -98,6 +101,7 @@ impl Ctx {
 		config: Config,
 		system: SystemInfo,
 		pool: SqlitePool,
+		fdb: FdbPool,
 		tx: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
 	) -> Arc<Self> {
 		Arc::new(Ctx {
@@ -105,7 +109,10 @@ impl Ctx {
 			system,
 
 			pool: RwLock::new(pool),
+			fdb,
+
 			tx: Mutex::new(tx),
+
 			event_sender: EventSender::new(),
 			image_download_handler: ImageDownloadHandler::new(),
 
@@ -400,7 +407,7 @@ impl Ctx {
 						)
 						.await?
 					{
-						let actor = Actor::new(actor_id, generation, *config, runner);
+						let actor = Actor::new(&self.fdb, actor_id, generation, *config, runner);
 
 						// Insert actor
 						actors.insert((actor_id, generation), actor);
@@ -773,7 +780,7 @@ impl Ctx {
 		let mut runners_guard = self.runners.write().await;
 		let mut actors_guard = self.actors.write().await;
 
-		// Start runner observers
+		// Start runner proxies
 		for row in runner_rows {
 			let Some(pid) = row.pid else {
 				continue;
@@ -837,23 +844,23 @@ impl Ctx {
 			// NOTE: No runner sockets are connected yet so there is no race condition with missed state
 			// updates here
 			let generation = row.generation.try_into()?;
-			let actor_observer = if let protocol::ImageAllocationType::Multi =
-				runner.config().image.allocation_type
-			{
-				Some(runner.new_actor_observer(row.actor_id, generation))
-			} else {
-				None
-			};
+			let actor_proxy = runner.new_actor_proxy(row.actor_id, generation);
 
 			let actor = actors_guard
 				.entry((row.actor_id, generation))
-				.or_insert(Actor::new(row.actor_id, generation, config, runner.clone()));
+				.or_insert(Actor::new(
+					&self.fdb,
+					row.actor_id,
+					generation,
+					config,
+					runner.clone(),
+				));
 
 			let actor_id = row.actor_id;
 			let actor = actor.clone();
 			let self2 = self.clone();
 			tokio::spawn(async move {
-				if let Err(err) = actor.observe(&self2, actor_observer).await {
+				if let Err(err) = actor.observe(&self2, actor_proxy).await {
 					tracing::error!(?actor_id, ?err, "observe failed");
 				}
 

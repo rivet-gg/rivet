@@ -76,7 +76,8 @@ pub struct Runner {
 	/// Used instead of polling loops for faster updates.
 	bump_channel: broadcast::Sender<()>,
 
-	actor_observer_tx: broadcast::Sender<(rivet_util::Id, u32, runner_protocol::ActorState)>,
+	// TODO: replace with a single stream for each actor?
+	actor_proxy_tx: broadcast::Sender<(rivet_util::Id, u32, runner_protocol::ToActor)>,
 }
 
 impl Runner {
@@ -87,7 +88,7 @@ impl Runner {
 			config,
 			pid: RwLock::new(None),
 			bump_channel: broadcast::channel(2).0,
-			actor_observer_tx: broadcast::channel(16).0,
+			actor_proxy_tx: broadcast::channel(16).0,
 		}
 	}
 
@@ -103,7 +104,7 @@ impl Runner {
 			config,
 			pid: RwLock::new(Some(pid)),
 			bump_channel: broadcast::channel(1).0,
-			actor_observer_tx: broadcast::channel(16).0,
+			actor_proxy_tx: broadcast::channel(16).0,
 		}
 	}
 
@@ -177,7 +178,8 @@ impl Runner {
 				break Ok(());
 			};
 
-			let (_, packet) = runner_protocol::decode_frame::<runner_protocol::ToManager>(&buf?).context("failed to decode frame")?;
+			let (_, packet) = runner_protocol::decode_frame::<runner_protocol::ToManager>(&buf?)
+				.context("failed to decode frame")?;
 
 			tracing::debug!(?packet, "runner received packet");
 
@@ -197,11 +199,22 @@ impl Runner {
 						}
 						protocol::ImageAllocationType::Multi => {
 							// NOTE: We don't have to verify if the actor id given here is valid because only valid actors
-							// are listening to this runner's `actor_observer_tx`. This means invalid messages are ignored.
+							// are listening to this runner's `actor_proxy_tx`. This means invalid messages are ignored.
 							// NOTE: No receivers is not an error
-							let _ = self.actor_observer_tx.send((actor_id, generation, state));
+							let _ = self.actor_proxy_tx.send((
+								actor_id,
+								generation,
+								runner_protocol::ToActor::StateUpdate { state },
+							));
 						}
 					}
+				}
+				runner_protocol::ToManager::Kv(req) => {
+					let _ = self.actor_proxy_tx.send((
+						req.actor_id,
+						req.generation,
+						runner_protocol::ToActor::Kv(req),
+					));
 				}
 			}
 		}
@@ -240,7 +253,8 @@ impl Runner {
 				})??;
 
 				let socket = guard.as_mut().expect("should exist");
-				let buf = runner_protocol::encode_frame(packet).context("failed to encode frame")?;
+				let buf =
+					runner_protocol::encode_frame(packet).context("failed to encode frame")?;
 				socket
 					.send(buf.into())
 					.await
@@ -454,8 +468,8 @@ impl Runner {
 		Ok(exit_code)
 	}
 
-	pub fn new_actor_observer(&self, actor_id: rivet_util::Id, generation: u32) -> ActorObserver {
-		ActorObserver::new(actor_id, generation, self.actor_observer_tx.subscribe())
+	pub fn new_actor_proxy(&self, actor_id: rivet_util::Id, generation: u32) -> ActorProxy {
+		ActorProxy::new(actor_id, generation, self.actor_proxy_tx.subscribe())
 	}
 
 	pub async fn signal(&self, ctx: &Ctx, signal: Signal) -> Result<()> {
@@ -679,25 +693,25 @@ impl Comms {
 	}
 }
 
-pub struct ActorObserver {
+pub struct ActorProxy {
 	actor_id: rivet_util::Id,
 	generation: u32,
-	sub: broadcast::Receiver<(rivet_util::Id, u32, runner_protocol::ActorState)>,
+	sub: broadcast::Receiver<(rivet_util::Id, u32, runner_protocol::ToActor)>,
 }
 
-impl ActorObserver {
+impl ActorProxy {
 	fn new(
 		actor_id: rivet_util::Id,
 		generation: u32,
-		sub: broadcast::Receiver<(rivet_util::Id, u32, runner_protocol::ActorState)>,
+		sub: broadcast::Receiver<(rivet_util::Id, u32, runner_protocol::ToActor)>,
 	) -> Self {
-		ActorObserver {
+		ActorProxy {
 			actor_id,
 			generation,
 			sub,
 		}
 	}
-	pub async fn next(&mut self) -> Option<runner_protocol::ActorState> {
+	pub async fn next(&mut self) -> Option<runner_protocol::ToActor> {
 		loop {
 			let Ok((other_actor_id, other_generation, state)) = self.sub.recv().await else {
 				tracing::error!("actor observer channel dropped");
