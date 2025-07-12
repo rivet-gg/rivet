@@ -245,6 +245,7 @@ pub struct Resources {
 #[derive(Debug, Serialize, Deserialize, Clone, Hash)]
 pub struct ActorMetadata {
 	pub actor: ActorMetadataActor,
+	// TODO: Make not optional when all old actors are gone
 	#[serde(default)]
 	pub network: Option<ActorMetadataNetwork>,
 	pub project: ActorMetadataProject,
