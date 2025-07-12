@@ -192,6 +192,12 @@ impl<K: Eq + Clone + Hash, V: Clone + Hash> From<HashMap<K, V>> for HashableMap<
 	}
 }
 
+impl<K: Eq + Clone + Hash, V: Clone + Hash> From<HashableMap<K, V>> for HashMap<K, V> {
+	fn from(val: HashableMap<K, V>) -> Self {
+		val.into_iter().collect()
+	}
+}
+
 impl<K: Eq + Hash, V: Hash> FromIterator<(K, V)> for HashableMap<K, V> {
 	fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
 		HashableMap(iter.into_iter().collect())

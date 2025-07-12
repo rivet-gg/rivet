@@ -8,8 +8,7 @@ import * as core from "../../../../core";
 import { PrepareFile } from "../../upload/resources/common/types/PrepareFile";
 import { Kind } from "../resources/common/types/Kind";
 import { Compression } from "../resources/common/types/Compression";
-import { Allocation } from "../resources/common/types/Allocation";
-import { Resources } from "../resources/common/types/Resources";
+import { Runtime } from "../resources/common/types/Runtime";
 
 export const PrepareBuildRequest: core.serialization.ObjectSchema<
     serializers.builds.PrepareBuildRequest.Raw,
@@ -19,8 +18,7 @@ export const PrepareBuildRequest: core.serialization.ObjectSchema<
     imageFile: core.serialization.property("image_file", PrepareFile),
     kind: Kind.optional(),
     compression: Compression.optional(),
-    allocation: Allocation.optional(),
-    resources: Resources.optional(),
+    runtime: Runtime.optional(),
 });
 
 export declare namespace PrepareBuildRequest {
@@ -29,7 +27,6 @@ export declare namespace PrepareBuildRequest {
         image_file: PrepareFile.Raw;
         kind?: Kind.Raw | null;
         compression?: Compression.Raw | null;
-        allocation?: Allocation.Raw | null;
-        resources?: Resources.Raw | null;
+        runtime?: Runtime.Raw | null;
     }
 }

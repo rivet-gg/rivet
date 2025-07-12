@@ -2,6 +2,7 @@
 
 imports:
   commons: ../common.yml
+  buildCommons: ../builds/common.yml
 
 types:
   Container:
@@ -9,59 +10,29 @@ types:
       id: commons.Id
       region: string
       tags: unknown
-      runtime: Runtime
-      network: Network
-      resources: Resources
-      lifecycle: Lifecycle
+      build: uuid
+      arguments: optional<list<string>>
+      environment: optional<map<string, string>>
+      ports: map<string, Port>
+      resources: buildCommons.Resources
+      kill_timeout:
+        docs: >-
+          The duration to wait for in milliseconds before force killing the actor after a DELETE request.
+          This gives the actor time to perform a shutdown sequence before being killed. This should be set to
+          a safe default, and can be overridden during a DELETE request if needed.
+        type: optional<long>
+      durable:
+        docs: >-
+          If true, the actor will try to reschedule itself automatically in the event of a crash or a
+          datacenter failover. The actor will not reschedule if it exits successfully.
+        type: optional<boolean>
       created_at: commons.Timestamp
       started_at: optional<commons.Timestamp>
       destroyed_at: optional<commons.Timestamp>
 
-  Runtime:
-    properties:
-      build: uuid
-      arguments: optional<list<string>>
-      environment: optional<map<string, string>>
-
-  Lifecycle:
-    properties:
-      kill_timeout:
-        docs: >-
-          The duration to wait for in milliseconds before killing the container.
-          This should be set to a safe default, and can be overridden during a
-          DELETE request if needed.
-        type: optional<long>
-      durable:
-        docs: >-
-          If true, the container will try to reschedule itself automatically in the event of a crash or a
-          datacenter failover. The container will not reschedule if it exits successfully.
-        type: optional<boolean>
-
-  Resources:
-    properties:
-      cpu:
-        docs: |
-          The number of CPU cores in millicores, or 1/1000 of a core. For example,
-          1/8 of a core would be 125 millicores, and 1 core would be 1000
-          millicores.
-        type: integer
-      memory:
-        docs: The amount of memory in megabytes
-        type: integer
-
-  Network:
-    properties:
-      mode: NetworkMode
-      ports: map<string, Port>
-
-  NetworkMode:
-    enum:
-      - bridge
-      - host
-
   Port:
     properties:
-      protocol: PortProtocol
+      protocol: buildCommons.PortProtocol
       internal_port: optional<integer>
       hostname: optional<string>
       port: optional<integer>
@@ -70,26 +41,7 @@ types:
         docs: |
           Fully formed connection URL including protocol, hostname, port, and path, if applicable.
         type: optional<string>
-      routing: PortRouting
-
-  PortProtocol:
-    enum:
-      - http
-      - https
-      - tcp
-      - tcp_tls
-      - udp
-
-  PortRouting:
-    properties:
-      guard: optional<GuardRouting>
-      host: optional<HostRouting>
-
-  GuardRouting:
-    properties: {}
-
-  HostRouting:
-    properties: {}
+      routing: buildCommons.PortRouting
 
   EndpointType:
     enum:
