@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [25.5.3](https://github.com/rivet-gg/rivet/compare/v25.5.2...v25.5.3) (2025-07-12)
+
+
+### Features
+
+* expose GET /actors/usage, GET /actors/logs, GET /actors/logs/export, GET /routes/history ([#2716](https://github.com/rivet-gg/rivet/issues/2716)) ([69144d3](https://github.com/rivet-gg/rivet/commit/69144d396852e80788209cc8e9830406c943c0ac))
+* implement `clickhouse-user-query` ([#2554](https://github.com/rivet-gg/rivet/issues/2554)) ([4ceeadd](https://github.com/rivet-gg/rivet/commit/4ceeaddbf407bfa8aa95f30d714772606ff66e77))
+
+
+### Bug Fixes
+
+* **dev-full:** update to use new ports ([#2717](https://github.com/rivet-gg/rivet/issues/2717)) ([74e2654](https://github.com/rivet-gg/rivet/commit/74e26546228d2c1d35b615228a43301b210909cb))
+* gracefully handle prom failure for pb topo ([#2731](https://github.com/rivet-gg/rivet/issues/2731)) ([2840095](https://github.com/rivet-gg/rivet/commit/28400957ef3370d9a85001b36bf22801fb69854e))
+* **pegboard:** include namespace in actor log query ([#2712](https://github.com/rivet-gg/rivet/issues/2712)) ([5cc7d50](https://github.com/rivet-gg/rivet/commit/5cc7d506e002c8433d7157e25b972f7e99b44c98))
+* **toolchain:** dont upgrade for deploys by default ([#2743](https://github.com/rivet-gg/rivet/issues/2743)) ([135d982](https://github.com/rivet-gg/rivet/commit/135d982fc60c81cd5b231bde96b2d09247636977))
+* **toolchain:** fix compat with deploying using podman ([#2571](https://github.com/rivet-gg/rivet/issues/2571)) ([716868c](https://github.com/rivet-gg/rivet/commit/716868c4c3d6ed4e3fc9e68f1ddd29234bb72c73))
+* **toolchain:** mark external deps ([#2713](https://github.com/rivet-gg/rivet/issues/2713)) ([4ca8675](https://github.com/rivet-gg/rivet/commit/4ca8675a3aa10a9709a3ed7c7c2768f70007dbb3))
+* upgrade actors by build name ([#2741](https://github.com/rivet-gg/rivet/issues/2741)) ([9eddbd3](https://github.com/rivet-gg/rivet/commit/9eddbd3f3c409edb594bb5ac5a2d81c37a3906d1))
+* **workflows:** fix signal publish/listen race condition ([#2742](https://github.com/rivet-gg/rivet/issues/2742)) ([cb1d4d7](https://github.com/rivet-gg/rivet/commit/cb1d4d7a5149621fc1f65dea74fb97f401016101))
+
+
+### Chores
+
+* a mess of merging everything together ([#2720](https://github.com/rivet-gg/rivet/issues/2720)) ([4646b83](https://github.com/rivet-gg/rivet/commit/4646b835e137327d7ca61ccdd64e13b5791c2b19))
+* force update hub ([0449ead](https://github.com/rivet-gg/rivet/commit/0449eadac329206f2672126e47586d123407a4b8))
+* **pegboard:** add workaround fetching image size when not using ats ([#2744](https://github.com/rivet-gg/rivet/issues/2744)) ([386da9f](https://github.com/rivet-gg/rivet/commit/386da9f61cefd6ef1c322e29022a368dac348ee5))
+* release 25.5.3 ([a07577d](https://github.com/rivet-gg/rivet/commit/a07577d83a0ca8362f760fd108b461fd5ec6f965))
+* **release:** update version to 25.5.3 ([2380933](https://github.com/rivet-gg/rivet/commit/2380933a8a9730304e1347d5b936ff567db2ba16))
+* update actor-core repo path ([b3cb221](https://github.com/rivet-gg/rivet/commit/b3cb221b65d9549596cc4676565226394b6cc802))
+* update clickhouse user query to dynamically bind subproperties ([#2715](https://github.com/rivet-gg/rivet/issues/2715)) ([ce74063](https://github.com/rivet-gg/rivet/commit/ce74063e925b04eb2c46f8568c8721efa97d548d))
+* update download logs button to use export ([#2718](https://github.com/rivet-gg/rivet/issues/2718)) ([d01af0e](https://github.com/rivet-gg/rivet/commit/d01af0e8f96c0b8086f78cda970d6922b5ae5b15))
+
 ## [25.5.2](https://github.com/rivet-gg/rivet/compare/v25.5.1...v25.5.2) (2025-07-10)
 
 
