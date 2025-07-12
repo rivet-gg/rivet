@@ -250,9 +250,12 @@ impl Runner {
 		Ok(())
 	}
 
+	// `actor_id` is set if this runner has a single allocation type which means there is only one actor
+	// runner on it
 	pub async fn start(
 		self: &Arc<Self>,
 		ctx: &Arc<Ctx>,
+		actor_id: Option<Uuid>,
 	) -> Result<protocol::HashableMap<String, protocol::ProxiedPort>> {
 		tracing::info!(runner_id=?self.runner_id, "starting");
 
@@ -305,7 +308,7 @@ impl Runner {
 		let self2 = self.clone();
 		let ctx2 = ctx.clone();
 		tokio::spawn(async move {
-			match self2.run(&ctx2).await {
+			match self2.run(&ctx2, actor_id).await {
 				Ok(_) => {
 					if let Err(err) = self2.observe(&ctx2, false).await {
 						tracing::error!(runner_id=?self2.runner_id, ?err, "observe failed");
@@ -339,7 +342,12 @@ impl Runner {
 				.to_string(),
 			),
 			("RUNNER_ID", self.runner_id.to_string()),
+			(
+				"ENVIRONMENT_ID",
+				self.metadata.environment.env_id.to_string(),
+			),
 		];
+
 		if let Some(vector) = &ctx.config().vector {
 			runner_env.push(("VECTOR_SOCKET_ADDR", vector.address.to_string()));
 		}
