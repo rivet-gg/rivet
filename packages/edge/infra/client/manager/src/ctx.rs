@@ -371,7 +371,7 @@ impl Ctx {
 
 					self.process_packet(packet).await?;
 				}
-				Message::Pong(_) => tracing::debug!("received pong"),
+				Message::Pong(_) => tracing::trace!("received pong"),
 				Message::Close(Some(close_frame)) => {
 					return Err(RuntimeError::SocketClosed(
 						close_frame.code,
