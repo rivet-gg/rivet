@@ -25,6 +25,7 @@ All URIs are relative to *https://api.rivet.gg*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+<<<<<<< HEAD
 *ActorsApi* | [**actors_create**](docs/ActorsApi.md#actors_create) | **POST** /actors | 
 *ActorsApi* | [**actors_destroy**](docs/ActorsApi.md#actors_destroy) | **DELETE** /actors/{actor} | 
 *ActorsApi* | [**actors_get**](docs/ActorsApi.md#actors_get) | **GET** /actors/{actor} | 
@@ -35,11 +36,29 @@ Class | Method | HTTP request | Description
 *ActorsApi* | [**actors_usage**](docs/ActorsApi.md#actors_usage) | **GET** /actors/usage | 
 *ActorsLogsApi* | [**actors_logs_export**](docs/ActorsLogsApi.md#actors_logs_export) | **POST** /actors/logs/export | 
 *ActorsLogsApi* | [**actors_logs_get**](docs/ActorsLogsApi.md#actors_logs_get) | **GET** /actors/logs | 
+=======
+*ActorsApi* | [**actors_create**](docs/ActorsApi.md#actors_create) | **POST** /v2/actors | 
+*ActorsApi* | [**actors_destroy**](docs/ActorsApi.md#actors_destroy) | **DELETE** /v2/actors/{actor} | 
+*ActorsApi* | [**actors_get**](docs/ActorsApi.md#actors_get) | **GET** /v2/actors/{actor} | 
+*ActorsApi* | [**actors_list**](docs/ActorsApi.md#actors_list) | **GET** /v2/actors | 
+*ActorsApi* | [**actors_upgrade**](docs/ActorsApi.md#actors_upgrade) | **POST** /v2/actors/{actor}/upgrade | 
+*ActorsApi* | [**actors_upgrade_all**](docs/ActorsApi.md#actors_upgrade_all) | **POST** /v2/actors/upgrade | 
+*ActorsLogsApi* | [**actors_logs_get**](docs/ActorsLogsApi.md#actors_logs_get) | **GET** /v2/actors/logs | 
+*ActorsMetricsApi* | [**actors_metrics_get**](docs/ActorsMetricsApi.md#actors_metrics_get) | **GET** /v2/actors/{actor}/metrics/history | 
+>>>>>>> 43e5048bc (fix: api changes)
 *BuildsApi* | [**builds_complete**](docs/BuildsApi.md#builds_complete) | **POST** /builds/{build}/complete | 
 *BuildsApi* | [**builds_get**](docs/BuildsApi.md#builds_get) | **GET** /builds/{build} | 
 *BuildsApi* | [**builds_list**](docs/BuildsApi.md#builds_list) | **GET** /builds | 
 *BuildsApi* | [**builds_patch_tags**](docs/BuildsApi.md#builds_patch_tags) | **PATCH** /builds/{build}/tags | 
 *BuildsApi* | [**builds_prepare**](docs/BuildsApi.md#builds_prepare) | **POST** /builds/prepare | 
+*ContainersApi* | [**containers_create**](docs/ContainersApi.md#containers_create) | **POST** /v1/containers | 
+*ContainersApi* | [**containers_destroy**](docs/ContainersApi.md#containers_destroy) | **DELETE** /v1/containers/{container} | 
+*ContainersApi* | [**containers_get**](docs/ContainersApi.md#containers_get) | **GET** /v1/containers/{container} | 
+*ContainersApi* | [**containers_list**](docs/ContainersApi.md#containers_list) | **GET** /v1/containers | 
+*ContainersApi* | [**containers_upgrade**](docs/ContainersApi.md#containers_upgrade) | **POST** /v1/containers/{container}/upgrade | 
+*ContainersApi* | [**containers_upgrade_all**](docs/ContainersApi.md#containers_upgrade_all) | **POST** /v1/containers/upgrade | 
+*ContainersLogsApi* | [**containers_logs_get**](docs/ContainersLogsApi.md#containers_logs_get) | **GET** /v1/containers/logs | 
+*ContainersMetricsApi* | [**containers_metrics_get**](docs/ContainersMetricsApi.md#containers_metrics_get) | **GET** /v1/containers/{container}/metrics/history | 
 *RegionsApi* | [**regions_list**](docs/RegionsApi.md#regions_list) | **GET** /regions | 
 *RegionsApi* | [**regions_recommend**](docs/RegionsApi.md#regions_recommend) | **GET** /regions/recommend | 
 *RoutesApi* | [**routes_delete**](docs/RoutesApi.md#routes_delete) | **DELETE** /routes/{id} | 
@@ -60,6 +79,7 @@ Class | Method | HTTP request | Description
  - [ActorsEndpointType](docs/ActorsEndpointType.md)
  - [ActorsExportActorLogsResponse](docs/ActorsExportActorLogsResponse.md)
  - [ActorsGetActorLogsResponse](docs/ActorsGetActorLogsResponse.md)
+ - [ActorsGetActorMetricsResponse](docs/ActorsGetActorMetricsResponse.md)
  - [ActorsGetActorResponse](docs/ActorsGetActorResponse.md)
  - [ActorsGetActorUsageResponse](docs/ActorsGetActorUsageResponse.md)
  - [ActorsLifecycle](docs/ActorsLifecycle.md)
@@ -70,8 +90,12 @@ Class | Method | HTTP request | Description
  - [ActorsPort](docs/ActorsPort.md)
  - [ActorsPortProtocol](docs/ActorsPortProtocol.md)
  - [ActorsPortRouting](docs/ActorsPortRouting.md)
+<<<<<<< HEAD
  - [ActorsQueryActorsResponse](docs/ActorsQueryActorsResponse.md)
  - [ActorsResources](docs/ActorsResources.md)
+=======
+ - [ActorsQueryLogStream](docs/ActorsQueryLogStream.md)
+>>>>>>> 43e5048bc (fix: api changes)
  - [ActorsRuntime](docs/ActorsRuntime.md)
  - [ActorsUpgradeActorRequest](docs/ActorsUpgradeActorRequest.md)
  - [ActorsUpgradeAllActorsRequest](docs/ActorsUpgradeAllActorsRequest.md)
@@ -87,6 +111,30 @@ Class | Method | HTTP request | Description
  - [BuildsPrepareBuildRequest](docs/BuildsPrepareBuildRequest.md)
  - [BuildsPrepareBuildResponse](docs/BuildsPrepareBuildResponse.md)
  - [BuildsResources](docs/BuildsResources.md)
+ - [ContainersContainer](docs/ContainersContainer.md)
+ - [ContainersCreateContainerNetworkRequest](docs/ContainersCreateContainerNetworkRequest.md)
+ - [ContainersCreateContainerPortRequest](docs/ContainersCreateContainerPortRequest.md)
+ - [ContainersCreateContainerRequest](docs/ContainersCreateContainerRequest.md)
+ - [ContainersCreateContainerResponse](docs/ContainersCreateContainerResponse.md)
+ - [ContainersCreateContainerRuntimeNetworkRequest](docs/ContainersCreateContainerRuntimeNetworkRequest.md)
+ - [ContainersCreateContainerRuntimeRequest](docs/ContainersCreateContainerRuntimeRequest.md)
+ - [ContainersEndpointType](docs/ContainersEndpointType.md)
+ - [ContainersGetContainerLogsResponse](docs/ContainersGetContainerLogsResponse.md)
+ - [ContainersGetContainerMetricsResponse](docs/ContainersGetContainerMetricsResponse.md)
+ - [ContainersGetContainerResponse](docs/ContainersGetContainerResponse.md)
+ - [ContainersLifecycle](docs/ContainersLifecycle.md)
+ - [ContainersListContainersResponse](docs/ContainersListContainersResponse.md)
+ - [ContainersNetwork](docs/ContainersNetwork.md)
+ - [ContainersNetworkMode](docs/ContainersNetworkMode.md)
+ - [ContainersPort](docs/ContainersPort.md)
+ - [ContainersPortProtocol](docs/ContainersPortProtocol.md)
+ - [ContainersPortRouting](docs/ContainersPortRouting.md)
+ - [ContainersQueryLogStream](docs/ContainersQueryLogStream.md)
+ - [ContainersResources](docs/ContainersResources.md)
+ - [ContainersRuntime](docs/ContainersRuntime.md)
+ - [ContainersUpgradeAllContainersRequest](docs/ContainersUpgradeAllContainersRequest.md)
+ - [ContainersUpgradeAllContainersResponse](docs/ContainersUpgradeAllContainersResponse.md)
+ - [ContainersUpgradeContainerRequest](docs/ContainersUpgradeContainerRequest.md)
  - [ErrorBody](docs/ErrorBody.md)
  - [Pagination](docs/Pagination.md)
  - [RegionsListRegionsResponse](docs/RegionsListRegionsResponse.md)

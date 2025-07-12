@@ -32,6 +32,7 @@ pub enum IdError {
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Id {
+	// TODO: Once all old actors are gone, delete the v0 variant
 	V0(Uuid),
 	V1([u8; 18]),
 }
@@ -237,7 +238,7 @@ impl TuplePack for Id {
 	fn pack<W: std::io::Write>(
 		&self,
 		w: &mut W,
-		tuple_depth: TupleDepth,
+		_tuple_depth: TupleDepth,
 	) -> std::io::Result<VersionstampOffset> {
 		let mut size = 1;
 
@@ -263,7 +264,7 @@ impl TuplePack for Id {
 }
 
 impl<'de> TupleUnpack<'de> for Id {
-	fn unpack(input: &[u8], tuple_depth: TupleDepth) -> PackResult<(&[u8], Self)> {
+	fn unpack(input: &[u8], _tuple_depth: TupleDepth) -> PackResult<(&[u8], Self)> {
 		let input = fdb_util::parse_code(input, fdb_util::codes::ID)?;
 		let (input2, version) = fdb_util::parse_byte(input)?;
 
@@ -336,7 +337,7 @@ impl sqlx::postgres::PgHasArrayType for Id {
 
 impl Default for Id {
 	fn default() -> Self {
-		Id::V0(Uuid::new_v4())
+		Id::V1(Default::default())
 	}
 }
 

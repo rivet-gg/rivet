@@ -6,7 +6,7 @@ imports:
 
 service:
   auth: true
-  base-path: /actors
+  base-path: /v2/actors
   audiences:
     - runtime
   endpoints:

@@ -25,8 +25,6 @@ pub struct ActorsCreateActorRequest {
     pub runtime: Option<Box<crate::models::ActorsCreateActorRuntimeRequest>>,
     #[serde(rename = "network", skip_serializing_if = "Option::is_none")]
     pub network: Option<Box<crate::models::ActorsCreateActorNetworkRequest>>,
-    #[serde(rename = "resources", skip_serializing_if = "Option::is_none")]
-    pub resources: Option<Box<crate::models::ActorsResources>>,
     #[serde(rename = "lifecycle", skip_serializing_if = "Option::is_none")]
     pub lifecycle: Option<Box<crate::models::ActorsLifecycle>>,
 }
@@ -40,7 +38,6 @@ impl ActorsCreateActorRequest {
             build_tags: None,
             runtime: None,
             network: None,
-            resources: None,
             lifecycle: None,
         }
     }

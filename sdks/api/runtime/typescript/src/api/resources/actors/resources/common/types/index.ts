@@ -1,7 +1,6 @@
 export * from "./Actor";
 export * from "./Runtime";
 export * from "./Lifecycle";
-export * from "./Resources";
 export * from "./Network";
 export * from "./NetworkMode";
 export * from "./Port";

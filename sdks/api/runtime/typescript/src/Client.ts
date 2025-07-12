@@ -6,6 +6,7 @@ import * as environments from "./environments";
 import * as core from "./core";
 import { Actors } from "./api/resources/actors/client/Client";
 import { Builds } from "./api/resources/builds/client/Client";
+import { Containers } from "./api/resources/containers/client/Client";
 import { Regions } from "./api/resources/regions/client/Client";
 import { Routes } from "./api/resources/routes/client/Client";
 
@@ -37,6 +38,7 @@ export declare namespace RivetClient {
 export class RivetClient {
     protected _actors: Actors | undefined;
     protected _builds: Builds | undefined;
+    protected _containers: Containers | undefined;
     protected _regions: Regions | undefined;
     protected _routes: Routes | undefined;
 
@@ -48,6 +50,10 @@ export class RivetClient {
 
     public get builds(): Builds {
         return (this._builds ??= new Builds(this._options));
+    }
+
+    public get containers(): Containers {
+        return (this._containers ??= new Containers(this._options));
     }
 
     public get regions(): Regions {

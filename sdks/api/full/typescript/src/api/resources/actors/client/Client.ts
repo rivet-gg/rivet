@@ -8,6 +8,7 @@ import * as Rivet from "../../../index";
 import * as serializers from "../../../../serialization/index";
 import urlJoin from "url-join";
 import * as errors from "../../../../errors/index";
+import { V1 } from "../resources/v1/client/Client";
 import { Logs } from "../resources/logs/client/Client";
 import { Metrics } from "../resources/metrics/client/Client";
 
@@ -37,10 +38,15 @@ export declare namespace Actors {
 }
 
 export class Actors {
+    protected _v1: V1 | undefined;
     protected _logs: Logs | undefined;
     protected _metrics: Metrics | undefined;
 
     constructor(protected readonly _options: Actors.Options = {}) {}
+
+    public get v1(): V1 {
+        return (this._v1 ??= new V1(this._options));
+    }
 
     public get logs(): Logs {
         return (this._logs ??= new Logs(this._options));
@@ -97,7 +103,7 @@ export class Actors {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                `/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}`,
+                `/v2/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}`,
             ),
             method: "GET",
             headers: {
@@ -202,7 +208,7 @@ export class Actors {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetTimeoutError("Timeout exceeded when calling GET /actors/{actor}.");
+                throw new errors.RivetTimeoutError("Timeout exceeded when calling GET /v2/actors/{actor}.");
             case "unknown":
                 throw new errors.RivetError({
                     message: _response.error.errorMessage,
@@ -270,7 +276,7 @@ export class Actors {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                "/actors",
+                "/v2/actors",
             ),
             method: "GET",
             headers: {
@@ -375,7 +381,7 @@ export class Actors {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetTimeoutError("Timeout exceeded when calling GET /actors.");
+                throw new errors.RivetTimeoutError("Timeout exceeded when calling GET /v2/actors.");
             case "unknown":
                 throw new errors.RivetError({
                     message: _response.error.errorMessage,
@@ -421,10 +427,6 @@ export class Actors {
      *                 ports: {},
      *                 waitReady: true
      *             },
-     *             resources: {
-     *                 cpu: 1,
-     *                 memory: 1
-     *             },
      *             lifecycle: {
      *                 killTimeout: 1000000,
      *                 durable: true
@@ -457,7 +459,7 @@ export class Actors {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                "/actors",
+                "/v2/actors",
             ),
             method: "POST",
             headers: {
@@ -563,7 +565,7 @@ export class Actors {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetTimeoutError("Timeout exceeded when calling POST /actors.");
+                throw new errors.RivetTimeoutError("Timeout exceeded when calling POST /v2/actors.");
             case "unknown":
                 throw new errors.RivetError({
                     message: _response.error.errorMessage,
@@ -616,7 +618,7 @@ export class Actors {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                `/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}`,
+                `/v2/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}`,
             ),
             method: "DELETE",
             headers: {
@@ -721,7 +723,7 @@ export class Actors {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetTimeoutError("Timeout exceeded when calling DELETE /actors/{actor}.");
+                throw new errors.RivetTimeoutError("Timeout exceeded when calling DELETE /v2/actors/{actor}.");
             case "unknown":
                 throw new errors.RivetError({
                     message: _response.error.errorMessage,
@@ -775,7 +777,7 @@ export class Actors {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                `/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}/upgrade`,
+                `/v2/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}/upgrade`,
             ),
             method: "POST",
             headers: {
@@ -881,7 +883,7 @@ export class Actors {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetTimeoutError("Timeout exceeded when calling POST /actors/{actor}/upgrade.");
+                throw new errors.RivetTimeoutError("Timeout exceeded when calling POST /v2/actors/{actor}/upgrade.");
             case "unknown":
                 throw new errors.RivetError({
                     message: _response.error.errorMessage,
@@ -936,7 +938,7 @@ export class Actors {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                "/actors/upgrade",
+                "/v2/actors/upgrade",
             ),
             method: "POST",
             headers: {
@@ -1042,7 +1044,7 @@ export class Actors {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetTimeoutError("Timeout exceeded when calling POST /actors/upgrade.");
+                throw new errors.RivetTimeoutError("Timeout exceeded when calling POST /v2/actors/upgrade.");
             case "unknown":
                 throw new errors.RivetError({
                     message: _response.error.errorMessage,

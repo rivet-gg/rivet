@@ -5,7 +5,9 @@ imports:
 
 service:
   auth: true
-  base-path: /actors
+  base-path: /v2/actors
+  audiences:
+    - runtime
   endpoints:
     get:
       path: /{actor}/metrics/history
@@ -15,7 +17,7 @@ service:
       path-parameters:
         actor:
           docs: The id of the actor to destroy
-          type: uuid
+          type: commons.Id
       request:
         name: GetActorMetricsRequestQuery
         query-parameters:
