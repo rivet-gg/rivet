@@ -83,7 +83,7 @@ async fn handle(
 		FROM db_mm_state.lobbies
 		WHERE lobby_id = ANY($1)
 		",
-		lobby_ids,
+		&lobby_ids,
 	)
 	.await?
 	.into_iter()

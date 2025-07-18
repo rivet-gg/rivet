@@ -228,12 +228,12 @@ async fn insert_db_inner(ctx: &ActivityCtx, input: &InsertDbInputV2) -> GlobalRe
 				input.provider as i64,
 				&input.provider_datacenter_id,
 				&input.provider_api_token,
-				pools_buf,
+				&pools_buf,
 				input.build_delivery_method as i64,
 				input.prebakes_enabled,
 				util::timestamp::now(),
-				gph_dns_parent,
-				gph_static
+				&gph_dns_parent,
+				&gph_static,
 			)
 			.await?;
 
