@@ -4,18 +4,21 @@ use fdb_util::{end_of_key_range, FormalKey, SERIALIZABLE};
 use foundationdb::{self as fdb, options::ConflictRangeType};
 use nix::sys::signal::Signal;
 
-use super::{analytics::InsertClickHouseInput, DestroyComplete, DestroyStarted};
+use super::{
+	analytics::InsertClickHouseInput, runtime::ActorRunnerClickhouseRow, DestroyComplete,
+	DestroyStarted,
+};
 use crate::{keys, protocol, types::GameGuardProtocol};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KillCtx {
-	pub generation: u32,
 	pub kill_timeout_ms: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Input {
 	pub actor_id: util::Id,
+	pub generation: u32,
 	pub image_id: Uuid,
 	pub build_allocation_type: Option<BuildAllocationType>,
 	/// Whether or not to send signals to the pb actor. In the case that the actor was already stopped
@@ -36,6 +39,16 @@ pub(crate) async fn pegboard_actor_destroy(
 	let actor = ctx.activity(UpdateDbInput {}).await?;
 
 	if let Some(actor) = actor {
+		if let (Some(start_ts), Some(runner_id)) = (actor.start_ts, actor.runner_id) {
+			ctx.activity(FinishRunnerClickhouseInput {
+				actor_id: input.actor_id,
+				generation: input.generation,
+				start_ts,
+				runner_id,
+			})
+			.await?;
+		}
+
 		let client_workflow_id = actor.client_workflow_id;
 		let runner_id = actor.runner_id;
 
@@ -53,7 +66,7 @@ pub(crate) async fn pegboard_actor_destroy(
 			kill(
 				ctx,
 				input.actor_id,
-				kill_data.generation,
+				input.generation,
 				client_workflow_id,
 				kill_data.kill_timeout_ms,
 				false,
@@ -100,6 +113,7 @@ struct UpdateDbOutput {
 	selected_resources_cpu_millicores: Option<i64>,
 	tags: sqlx::types::Json<util::serde::HashableMap<String, String>>,
 	create_ts: i64,
+	start_ts: Option<i64>,
 	runner_id: Option<Uuid>,
 	client_id: Option<Uuid>,
 	client_workflow_id: Option<Uuid>,
@@ -124,6 +138,7 @@ async fn update_db(
 			selected_resources_cpu_millicores,
 			json(tags) AS tags,
 			create_ts,
+			start_ts,
 			runner_id,
 			client_id,
 			client_workflow_id
@@ -131,6 +146,37 @@ async fn update_db(
 		ctx.ts(),
 	)
 	.await
+}
+
+#[derive(Debug, Serialize, Deserialize, Hash)]
+struct FinishRunnerClickhouseInput {
+	actor_id: util::Id,
+	generation: u32,
+	start_ts: i64,
+	runner_id: Uuid,
+}
+
+#[activity(FinishRunnerClickhouse)]
+async fn finish_runner_clickhouse(
+	ctx: &ActivityCtx,
+	input: &FinishRunnerClickhouseInput,
+) -> GlobalResult<()> {
+	let inserter = ctx.clickhouse_inserter().await?;
+
+	// Set alloc as finished
+	inserter.insert(
+		"db_pegboard_runner",
+		"actor_runners",
+		ActorRunnerClickhouseRow {
+			actor_id: input.actor_id.to_string(),
+			generation: input.generation,
+			runner_id: input.runner_id,
+			started_at: input.start_ts * 1_000_000, // Convert ms to ns for ClickHouse DateTime64(9)
+			finished_at: util::timestamp::now() * 1_000_000, // Convert ms to ns for ClickHouse DateTime64(9)
+		},
+	)?;
+
+	Ok(())
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
