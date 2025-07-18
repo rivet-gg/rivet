@@ -9,7 +9,7 @@ const UUID_PATTERN: &str = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-
 const PORT_NAME_PATTERN: &str = r"[a-zA-Z0-9-_]+";
 
 pub fn build_actor_hostname_and_path(
-	actor_id: Uuid,
+	actor_id: util::Id,
 	port_name: &str,
 	protocol: GameGuardProtocol,
 	endpoint_type: EndpointType,

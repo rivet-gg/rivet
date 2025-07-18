@@ -204,10 +204,10 @@ async fn upload_bundle(
 	build_archive.append_dir_all(".", &push_opts.build_path)?;
 	let build_tar_file = build_archive.into_inner()?;
 
-	let build_kind = models::BuildsBuildKind::Javascript;
+	let build_kind = models::BuildsKind::Javascript;
 	let build_compression = match push_opts.compression {
-		config::build::Compression::None => models::BuildsBuildCompression::None,
-		config::build::Compression::Lz4 => models::BuildsBuildCompression::Lz4,
+		config::build::Compression::None => models::BuildsCompression::None,
+		config::build::Compression::Lz4 => models::BuildsCompression::Lz4,
 	};
 
 	// Compress build
@@ -238,6 +238,7 @@ async fn upload_bundle(
 			kind: Some(build_kind),
 			compression: Some(build_compression),
 			allocation: None,
+			resources: None,
 		},
 		Some(&ctx.project.name_id),
 		Some(&push_opts.env.slug),

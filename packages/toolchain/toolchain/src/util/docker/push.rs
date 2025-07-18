@@ -53,13 +53,13 @@ pub async fn push_tar(
 	));
 
 	let build_kind = match push_opts.bundle {
-		config::build::docker::BundleKind::DockerImage => models::BuildsBuildKind::DockerImage,
-		config::build::docker::BundleKind::OciBundle => models::BuildsBuildKind::OciBundle,
+		config::build::docker::BundleKind::DockerImage => models::BuildsKind::DockerImage,
+		config::build::docker::BundleKind::OciBundle => models::BuildsKind::OciBundle,
 	};
 
 	let build_compression = match push_opts.compression {
-		config::build::Compression::None => models::BuildsBuildCompression::None,
-		config::build::Compression::Lz4 => models::BuildsBuildCompression::Lz4,
+		config::build::Compression::None => models::BuildsCompression::None,
+		config::build::Compression::Lz4 => models::BuildsCompression::Lz4,
 	};
 
 	let build_res = apis::builds_api::builds_prepare(
@@ -74,12 +74,13 @@ pub async fn push_tar(
 			kind: Some(build_kind),
 			compression: Some(build_compression),
 			// TODO: Expose to CLI and config
-			allocation: Some(Box::new(models::BuildsBuildAllocation {
-				// single: Some(serde_json::json!({})),
-				// multi: None,
-				single: None,
-				multi: Some(Box::new(models::BuildsBuildAllocationMulti { slots: 4 })),
+			allocation: Some(Box::new(models::BuildsAllocation {
+				single: Some(serde_json::json!({})),
+				multi: None,
+				// single: None,
+				// multi: Some(Box::new(models::BuildsAllocationMulti { slots: 4 })),
 			})),
+			resources: None,
 		},
 		Some(&ctx.project.name_id),
 		Some(&push_opts.env.slug),

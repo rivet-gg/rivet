@@ -5,6 +5,7 @@
 import * as serializers from "../../../../../index";
 import * as Rivet from "../../../../../../api/index";
 import * as core from "../../../../../../core";
+import { Id } from "../../../../common/types/Id";
 import { Runtime } from "./Runtime";
 import { Network } from "./Network";
 import { Resources } from "./Resources";
@@ -13,7 +14,7 @@ import { Timestamp } from "../../../../common/types/Timestamp";
 
 export const Actor: core.serialization.ObjectSchema<serializers.actors.Actor.Raw, Rivet.actors.Actor> =
     core.serialization.object({
-        id: core.serialization.string(),
+        id: Id,
         region: core.serialization.string(),
         tags: core.serialization.unknown(),
         runtime: Runtime,
@@ -27,7 +28,7 @@ export const Actor: core.serialization.ObjectSchema<serializers.actors.Actor.Raw
 
 export declare namespace Actor {
     export interface Raw {
-        id: string;
+        id: Id.Raw;
         region: string;
         tags?: unknown;
         runtime: Runtime.Raw;
