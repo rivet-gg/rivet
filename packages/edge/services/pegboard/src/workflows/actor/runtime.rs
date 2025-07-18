@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use build::types::{BuildAllocationType, BuildKind};
+use build::types::{BuildKind, BuildNetworkMode, BuildRuntime, BuildRuntimeKind};
 use chirp_workflow::prelude::*;
 use cluster::types::BuildDeliveryMethod;
 use fdb_util::{end_of_key_range, FormalKey, SERIALIZABLE, SNAPSHOT};
@@ -22,7 +22,7 @@ use crate::{
 	keys, metrics,
 	ops::actor::get,
 	protocol,
-	types::{EndpointType, GameGuardProtocol, HostProtocol, NetworkMode, Port, Routing},
+	types::{EndpointType, GameGuardProtocol, HostProtocol, Port, Routing},
 	workflows::client::CLIENT_ELIGIBLE_THRESHOLD_MS,
 };
 
@@ -289,13 +289,38 @@ async fn fetch_ports(ctx: &ActivityCtx, input: &FetchPortsInput) -> GlobalResult
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
+struct FetchRootUserEnabledInput {
+	env_id: Uuid,
+}
+
+#[activity(FetchRootUserEnabled)]
+async fn fetch_root_user_enabled(
+	ctx: &ActivityCtx,
+	input: &FetchRootUserEnabledInput,
+) -> GlobalResult<bool> {
+	let games_res = op!([ctx] game_resolve_namespace_id {
+		namespace_ids: vec![input.env_id.into()],
+	})
+	.await?;
+	let game = unwrap!(games_res.games.first());
+
+	let game_config_res = ctx
+		.op(crate::ops::game_config::get::Input {
+			game_ids: vec![unwrap!(game.game_id).into()],
+		})
+		.await?;
+	let game_config = unwrap!(game_config_res.game_configs.first());
+
+	Ok(game_config.root_user_enabled)
+}
+
+#[derive(Debug, Serialize, Deserialize, Hash)]
 struct AllocateActorInput {
 	actor_id: util::Id,
 	generation: u32,
 	image_id: Uuid,
-	build_allocation_type: BuildAllocationType,
-	build_allocation_total_slots: u32,
-	resources: protocol::Resources,
+	build_runtime: BuildRuntime,
+	selected_resources: protocol::Resources,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -312,10 +337,9 @@ async fn allocate_actor(
 	ctx: &ActivityCtx,
 	input: &AllocateActorInput,
 ) -> GlobalResult<Result<AllocateActorOutput, i64>> {
-	let client_flavor = protocol::ClientFlavor::Multi;
-	let memory_mib = input.resources.memory / 1024 / 1024;
-
 	let start_instant = Instant::now();
+	let client_flavor = protocol::ClientFlavor::Multi;
+	let memory_mib = input.selected_resources.memory / 1024 / 1024;
 
 	// NOTE: This txn should closely resemble the one found in the allocate_pending_actors activity of the
 	// client wf
@@ -324,8 +348,7 @@ async fn allocate_actor(
 		.await?
 		.run(|tx, _mc| async move {
 			// Check for availability amongst existing runners
-			let image_queue_exists = if let BuildAllocationType::Multi = input.build_allocation_type
-			{
+			let image_queue_exists = if let BuildRuntime::Actor { .. } = input.build_runtime {
 				// Check if a queue for this image exists
 				let pending_actor_by_image_subspace = keys::subspace().subspace(
 					&keys::datacenter::PendingActorByImageIdKey::subspace(input.image_id),
@@ -544,7 +567,7 @@ async fn allocate_actor(
 
 					// Update allocated amount
 					let new_remaining_mem = old_client_allocation_key.remaining_mem - memory_mib;
-					let new_remaining_cpu = old_remaining_cpu - input.resources.cpu;
+					let new_remaining_cpu = old_remaining_cpu - input.selected_resources.cpu;
 					let new_allocation_key = keys::datacenter::ClientsByRemainingMemKey::new(
 						client_flavor,
 						new_remaining_mem,
@@ -578,8 +601,8 @@ async fn allocate_actor(
 							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 					);
 
-					let remaining_slots = input.build_allocation_total_slots.saturating_sub(1);
-					let total_slots = input.build_allocation_total_slots;
+					let remaining_slots = input.build_runtime.slots().saturating_sub(1);
+					let total_slots = input.build_runtime.slots();
 
 					// Insert runner records
 					let remaining_slots_key = keys::runner::RemainingSlotsKey::new(runner_id);
@@ -606,9 +629,9 @@ async fn allocate_actor(
 							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 					);
 
-					// Insert runner index key if multi. Single allocation per container runners don't need to be
-					// in the alloc idx because they only have 1 slot
-					if let BuildAllocationType::Multi = input.build_allocation_type {
+					// Insert runner index key if actor. Container actor runners don't need to be in the alloc
+					// idx because they only have 1 slot
+					if let BuildRuntime::Actor { .. } = input.build_runtime {
 						let runner_idx_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
 							input.image_id,
 							remaining_slots,
@@ -651,7 +674,7 @@ async fn allocate_actor(
 			let pending_ts = util::timestamp::now();
 
 			// Write self to image alloc queue
-			if let BuildAllocationType::Multi = input.build_allocation_type {
+			if let BuildRuntime::Actor { .. } = &input.build_runtime {
 				let image_pending_alloc_key = keys::datacenter::PendingActorByImageIdKey::new(
 					input.image_id,
 					pending_ts,
@@ -659,10 +682,9 @@ async fn allocate_actor(
 				);
 				let image_pending_alloc_data = keys::datacenter::PendingActorByImageIdKeyData {
 					generation: input.generation,
-					build_allocation_type: input.build_allocation_type,
-					build_allocation_total_slots: input.build_allocation_total_slots,
-					cpu: input.resources.cpu,
-					memory: input.resources.memory,
+					build_runtime: input.build_runtime.clone(),
+					selected_cpu: input.selected_resources.cpu,
+					selected_mem: input.selected_resources.memory,
 				};
 
 				// NOTE: This will conflict with serializable reads to the alloc queue, which is the behavior we
@@ -682,10 +704,9 @@ async fn allocate_actor(
 			let pending_alloc_data = keys::datacenter::PendingActorKeyData {
 				generation: input.generation,
 				image_id: input.image_id,
-				build_allocation_type: input.build_allocation_type,
-				build_allocation_total_slots: input.build_allocation_total_slots,
-				cpu: input.resources.cpu,
-				memory: input.resources.memory,
+				build_runtime: input.build_runtime.clone(),
+				selected_cpu: input.selected_resources.cpu,
+				selected_mem: input.selected_resources.memory,
 			};
 
 			// NOTE: This will conflict with serializable reads to the alloc queue, which is the behavior we
@@ -1009,9 +1030,8 @@ pub async fn spawn_actor(
 			actor_id: input.actor_id,
 			generation,
 			image_id: actor_setup.image_id,
-			build_allocation_type: actor_setup.meta.build_allocation_type,
-			build_allocation_total_slots: actor_setup.meta.build_allocation_total_slots,
-			resources: actor_setup.resources.clone(),
+			build_runtime: actor_setup.meta.build_runtime.clone(),
+			selected_resources: actor_setup.selected_resources.clone(),
 		})
 		.await?;
 
@@ -1067,7 +1087,7 @@ pub async fn spawn_actor(
 		}
 	};
 
-	let (_, artifacts_res, ports_res) = ctx
+	let (_, artifacts_res, ports_res, root_user_enabled) = ctx
 		.join((
 			activity(UpdateClientAndRunnerInput {
 				client_id: allocate_res.client_id,
@@ -1086,6 +1106,9 @@ pub async fn spawn_actor(
 				actor_id: input.actor_id,
 				endpoint_type: input.endpoint_type,
 			}),
+			activity(FetchRootUserEnabledInput {
+				env_id: input.env_id,
+			}),
 		))
 		.await?;
 
@@ -1102,11 +1125,7 @@ pub async fn spawn_actor(
 			BuildKind::JavaScript => bail!("actors do not support js builds"),
 		},
 		compression: actor_setup.meta.build_compression.into(),
-		allocation_type: match actor_setup.meta.build_allocation_type {
-			BuildAllocationType::None => bail!("actors do not support old builds"),
-			BuildAllocationType::Single => protocol::ImageAllocationType::Single,
-			BuildAllocationType::Multi => protocol::ImageAllocationType::Multi,
-		},
+		allocation_type: actor_setup.meta.build_runtime.kind().into(),
 	};
 	let ports = ports_res
 		.ports
@@ -1139,9 +1158,9 @@ pub async fn spawn_actor(
 			),
 		})
 		.collect::<util::serde::HashableMap<_, _>>();
-	let network_mode = match input.network_mode {
-		NetworkMode::Bridge => protocol::NetworkMode::Bridge,
-		NetworkMode::Host => protocol::NetworkMode::Host,
+	let network_mode = match actor_setup.meta.build_runtime.network_mode() {
+		BuildNetworkMode::Bridge => protocol::NetworkMode::Bridge,
+		BuildNetworkMode::Host => protocol::NetworkMode::Host,
 	};
 
 	ctx.signal(protocol::Command::StartActor {
@@ -1153,9 +1172,17 @@ pub async fn spawn_actor(
 					runner_id: allocate_res.runner_id,
 					config: protocol::RunnerConfig {
 						image: image.clone(),
-						root_user_enabled: input.root_user_enabled,
-						resources: actor_setup.resources.clone(),
-						env: input.environment.clone(),
+						root_user_enabled,
+						resources: actor_setup.selected_resources.clone(),
+						// Merge provided env with build env
+						env: actor_setup
+							.meta
+							.build_runtime
+							.environment()
+							.iter()
+							.chain(&input.environment)
+							.map(|(k, v)| (k.clone(), v.clone()))
+							.collect(),
 						ports: ports.clone(),
 						network_mode,
 					},
@@ -1165,7 +1192,6 @@ pub async fn spawn_actor(
 					runner_id: allocate_res.runner_id,
 				})
 			},
-			env: input.environment.clone(),
 			metadata: util::serde::Raw::new(&protocol::ActorMetadata {
 				actor: protocol::ActorMetadataActor {
 					actor_id: input.actor_id,
@@ -1197,10 +1223,11 @@ pub async fn spawn_actor(
 				},
 			})?,
 
-			// Deprecated
+			// Deprecated, will be removed after old actors are gone
+			env: input.environment.clone(),
 			image,
-			root_user_enabled: input.root_user_enabled,
-			resources: actor_setup.resources.clone(),
+			root_user_enabled,
+			resources: actor_setup.selected_resources.clone(),
 			ports,
 			network_mode,
 		}),
@@ -1390,43 +1417,61 @@ async fn clear_ports_and_resources(
 	input: &ClearPortsAndResourcesInput,
 ) -> GlobalResult<ClearPortsAndResourcesOutput> {
 	let pool = &ctx.sqlite().await?;
+	let mut conn = pool.conn().await?;
+	let mut tx = conn.begin().await?;
 
-	let (
-		build_res,
-		(selected_resources_cpu_millicores, selected_resources_memory_mib),
-		_,
-	) = tokio::try_join!(
-		ctx.op(build::ops::get::Input {
+	let build_res = ctx
+		.op(build::ops::get::Input {
 			build_ids: vec![input.image_id],
-		}),
-		sql_fetch_one!(
-			[ctx, (Option<i64>, Option<i64>), pool]
-			"
-			SELECT selected_resources_cpu_millicores, selected_resources_memory_mib
-			FROM state
-			",
-		),
-		// Idempotent
-		sql_execute!(
-			[ctx, pool]
-			"
-			DELETE FROM ports_proxied
-			",
-		),
-	)?;
+		})
+		.await?;
+
+	let (selected_resources_cpu_millicores, selected_resources_memory_mib) = sql_fetch_one!(
+		[ctx, (Option<i64>, Option<i64>), @tx &mut tx]
+		"
+		SELECT selected_resources_cpu_millicores, selected_resources_memory_mib
+		FROM state
+		",
+	)
+	.await?;
+
+	let ingress_ports = sql_fetch_all!(
+		[ctx, (i64, i64), @tx &mut tx]
+		"
+		DELETE FROM ports_ingress
+		RETURNING protocol, ingress_port_number
+		",
+	)
+	.await?;
+	sql_execute!(
+		[ctx, @tx &mut tx]
+		"
+		DELETE FROM ports_proxied
+		",
+	)
+	.await?;
+	sql_execute!(
+		[ctx, @tx &mut tx]
+		"
+		DELETE FROM ports_host
+		",
+	)
+	.await?;
+
 	let build = unwrap_with!(build_res.builds.first(), BUILD_NOT_FOUND);
+	let build_runtime_kind = unwrap_ref!(build.runtime, "cannot be old build").kind();
 
 	let destroy_runner = ctx
 		.fdb()
 		.await?
 		.run(|tx, _mc| {
+			let ingress_ports = ingress_ports.clone();
 			async move {
 				destroy::clear_ports_and_resources(
 					input.actor_id,
 					input.image_id,
-					Some(build.allocation_type),
-					// NOTE: Ingress ports are not cleared upon reschedule, they are reused
-					Vec::new(),
+					Some(build_runtime_kind),
+					ingress_ports,
 					Some(input.runner_id),
 					Some(input.client_id),
 					Some(input.client_workflow_id),
@@ -1439,6 +1484,8 @@ async fn clear_ports_and_resources(
 		})
 		.custom_instrument(tracing::info_span!("actor_clear_ports_and_resources_tx"))
 		.await?;
+
+	tx.commit().await?;
 
 	Ok(ClearPortsAndResourcesOutput { destroy_runner })
 }
@@ -1465,7 +1512,7 @@ pub async fn set_finished(ctx: &ActivityCtx, input: &SetFinishedInput) -> Global
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash)]
 pub struct ValidateUpgradeInput {
-	pub initial_build_allocation_type: BuildAllocationType,
+	pub initial_build_runtime_kind: BuildRuntimeKind,
 	pub image_id: Uuid,
 }
 
@@ -1495,20 +1542,23 @@ pub async fn validate_upgrade(
 		return Ok(Some("Build upload not complete.".into()));
 	}
 
-	if build.allocation_type != input.initial_build_allocation_type {
-		match input.initial_build_allocation_type {
-			BuildAllocationType::None => {
-				// NOTE: This should be unreachable because if an old build is encountered the old actor wf is used.
-				return Ok(Some("Old builds not supported.".into()));
-			}
-			BuildAllocationType::Single => {
-				return Ok(Some("Cannot use container build for actor.".into()));
-			}
-			BuildAllocationType::Multi => {
-				return Ok(Some("Cannot use actor build for container.".into()));
-			}
+	match (
+		input.initial_build_runtime_kind,
+		unwrap!(build.runtime, "cannot be old build").kind(),
+	) {
+		(BuildRuntimeKind::Actor, BuildRuntimeKind::Container) => {
+			return Ok(Some("Cannot use container build for actor.".into()));
 		}
+		(BuildRuntimeKind::Container, BuildRuntimeKind::Actor) => {
+			return Ok(Some("Cannot use actor build for container.".into()));
+		}
+		_ => {}
 	}
+
+	// TODO: Validate lengths of build env + input env, args, and ports
+
+	// NOTE: We don't have to validate build properties here because they were already validated when the
+	// build was created
 
 	Ok(None)
 }

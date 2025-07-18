@@ -199,6 +199,7 @@ func (l *Lifecycle) String() string {
 }
 
 type Network struct {
+	// **Deprecated**
 	Mode  NetworkMode      `json:"mode,omitempty"`
 	Ports map[string]*Port `json:"ports,omitempty"`
 
@@ -352,7 +353,7 @@ type Resources struct {
 	// 1/8 of a core would be 125 millicores, and 1 core would be 1000
 	// millicores.
 	Cpu int `json:"cpu"`
-	// The amount of memory in megabytes
+	// The amount of memory in mebibytes
 	Memory int `json:"memory"`
 
 	_rawJSON json.RawMessage

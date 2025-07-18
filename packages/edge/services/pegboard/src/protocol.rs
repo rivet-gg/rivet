@@ -108,9 +108,11 @@ pub enum Command {
 pub struct ActorConfig {
 	// TODO: Once old actors are all gone, make this not optional
 	pub runner: Option<ActorRunner>,
-	pub env: HashableMap<String, String>,
 	pub metadata: Raw<ActorMetadata>,
 
+	// TODO: Remove when old actors are gone
+	#[deprecated]
+	pub env: HashableMap<String, String>,
 	#[deprecated]
 	pub image: Image,
 	#[deprecated]
@@ -146,7 +148,7 @@ pub enum ImageKind {
 }
 
 impl From<build::types::BuildKind> for ImageKind {
-	fn from(value: build::types::BuildKind) -> Self {
+	fn from(value: build::types::BuildKind) -> ImageKind {
 		match value {
 			build::types::BuildKind::DockerImage => ImageKind::DockerImage,
 			build::types::BuildKind::OciBundle => ImageKind::OciBundle,
@@ -162,6 +164,15 @@ pub enum ImageAllocationType {
 	Multi,
 }
 
+impl From<build::types::BuildRuntimeKind> for ImageAllocationType {
+	fn from(value: build::types::BuildRuntimeKind) -> ImageAllocationType {
+		match value {
+			build::types::BuildRuntimeKind::Container => ImageAllocationType::Single,
+			build::types::BuildRuntimeKind::Actor => ImageAllocationType::Multi,
+		}
+	}
+}
+
 #[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ImageCompression {
@@ -170,7 +181,7 @@ pub enum ImageCompression {
 }
 
 impl From<build::types::BuildCompression> for ImageCompression {
-	fn from(value: build::types::BuildCompression) -> Self {
+	fn from(value: build::types::BuildCompression) -> ImageCompression {
 		match value {
 			build::types::BuildCompression::None => ImageCompression::None,
 			build::types::BuildCompression::Lz4 => ImageCompression::Lz4,

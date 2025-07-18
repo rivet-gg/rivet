@@ -2205,52 +2205,26 @@ components:
           type: string
           format: uuid
         build_tags: {}
-        runtime:
-          $ref: '#/components/schemas/ActorsCreateActorRuntimeRequest'
-        network:
-          $ref: '#/components/schemas/ActorsCreateActorNetworkRequest'
-        lifecycle:
-          $ref: '#/components/schemas/ActorsLifecycle'
+        network_endpoint_type:
+          $ref: '#/components/schemas/ActorsEndpointType'
+        wait_for_network_ready:
+          type: boolean
+        kill_timeout:
+          type: integer
+          format: int64
+          description: >-
+            The duration to wait for in milliseconds before force killing the
+            actor after a DELETE request. This gives the actor time to perform a
+            shutdown sequence before being killed. This should be set to a safe
+            default, and can be overridden during a DELETE request if needed.
+        durable:
+          type: boolean
+          description: >-
+            If true, the actor will try to reschedule itself automatically in
+            the event of a crash or a datacenter failover. The actor will not
+            reschedule if it exits successfully.
       required:
         - tags
-    ActorsCreateActorRuntimeRequest:
-      type: object
-      properties:
-        environment:
-          type: object
-          additionalProperties:
-            type: string
-        network:
-          $ref: '#/components/schemas/ActorsCreateActorRuntimeNetworkRequest'
-    ActorsCreateActorRuntimeNetworkRequest:
-      type: object
-      properties:
-        endpoint_type:
-          $ref: '#/components/schemas/ActorsEndpointType'
-      required:
-        - endpoint_type
-    ActorsCreateActorNetworkRequest:
-      type: object
-      properties:
-        mode:
-          $ref: '#/components/schemas/ActorsNetworkMode'
-        ports:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/ActorsCreateActorPortRequest'
-        wait_ready:
-          type: boolean
-    ActorsCreateActorPortRequest:
-      type: object
-      properties:
-        protocol:
-          $ref: '#/components/schemas/ActorsPortProtocol'
-        internal_port:
-          type: integer
-        routing:
-          $ref: '#/components/schemas/ActorsPortRouting'
-      required:
-        - protocol
     ActorsCreateActorResponse:
       type: object
       properties:
@@ -2390,10 +2364,8 @@ components:
           $ref: '#/components/schemas/BuildsKind'
         compression:
           $ref: '#/components/schemas/BuildsCompression'
-        allocation:
-          $ref: '#/components/schemas/BuildsAllocation'
-        resources:
-          $ref: '#/components/schemas/BuildsResources'
+        runtime:
+          $ref: '#/components/schemas/BuildsRuntime'
       required:
         - image_file
     BuildsPrepareBuildResponse:
@@ -2426,55 +2398,37 @@ components:
           type: string
           format: uuid
         build_tags: {}
-        runtime:
-          $ref: '#/components/schemas/ContainersCreateContainerRuntimeRequest'
-        network:
-          $ref: '#/components/schemas/ContainersCreateContainerNetworkRequest'
-        resources:
-          $ref: '#/components/schemas/ContainersResources'
-        lifecycle:
-          $ref: '#/components/schemas/ContainersLifecycle'
-      required:
-        - tags
-        - resources
-    ContainersCreateContainerRuntimeRequest:
-      type: object
-      properties:
         environment:
           type: object
           additionalProperties:
             type: string
-        network:
-          $ref: '#/components/schemas/ContainersCreateContainerRuntimeNetworkRequest'
-    ContainersCreateContainerRuntimeNetworkRequest:
-      type: object
-      properties:
-        endpoint_type:
+        network_endpoint_type:
           $ref: '#/components/schemas/ContainersEndpointType'
-      required:
-        - endpoint_type
-    ContainersCreateContainerNetworkRequest:
-      type: object
-      properties:
-        mode:
-          $ref: '#/components/schemas/ContainersNetworkMode'
+        wait_for_network_ready:
+          type: boolean
         ports:
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/ContainersCreateContainerPortRequest'
-        wait_ready:
-          type: boolean
-    ContainersCreateContainerPortRequest:
-      type: object
-      properties:
-        protocol:
-          $ref: '#/components/schemas/ContainersPortProtocol'
-        internal_port:
+            $ref: '#/components/schemas/BuildsPortRequest'
+        resources:
+          $ref: '#/components/schemas/BuildsResources'
+        kill_timeout:
           type: integer
-        routing:
-          $ref: '#/components/schemas/ContainersPortRouting'
+          format: int64
+          description: >-
+            The duration to wait for in milliseconds before force killing the
+            actor after a DELETE request. This gives the actor time to perform a
+            shutdown sequence before being killed. This should be set to a safe
+            default, and can be overridden during a DELETE request if needed.
+        durable:
+          type: boolean
+          description: >-
+            If true, the actor will try to reschedule itself automatically in
+            the event of a crash or a datacenter failover. The actor will not
+            reschedule if it exits successfully.
       required:
-        - protocol
+        - tags
+        - resources
     ContainersCreateContainerResponse:
       type: object
       properties:
@@ -2618,12 +2572,27 @@ components:
         region:
           type: string
         tags: {}
-        runtime:
-          $ref: '#/components/schemas/ActorsRuntime'
-        network:
-          $ref: '#/components/schemas/ActorsNetwork'
-        lifecycle:
-          $ref: '#/components/schemas/ActorsLifecycle'
+        build:
+          type: string
+          format: uuid
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ActorsPort'
+        kill_timeout:
+          type: integer
+          format: int64
+          description: >-
+            The duration to wait for in milliseconds before force killing the
+            actor after a DELETE request. This gives the actor time to perform a
+            shutdown sequence before being killed. This should be set to a safe
+            default, and can be overridden during a DELETE request if needed.
+        durable:
+          type: boolean
+          description: >-
+            If true, the actor will try to reschedule itself automatically in
+            the event of a crash or a datacenter failover. The actor will not
+            reschedule if it exits successfully.
         created_at:
           $ref: '#/components/schemas/Timestamp'
         started_at:
@@ -2634,64 +2603,14 @@ components:
         - id
         - region
         - tags
-        - runtime
-        - network
-        - lifecycle
-        - created_at
-    ActorsRuntime:
-      type: object
-      properties:
-        build:
-          type: string
-          format: uuid
-        arguments:
-          type: array
-          items:
-            type: string
-        environment:
-          type: object
-          additionalProperties:
-            type: string
-      required:
         - build
-    ActorsLifecycle:
-      type: object
-      properties:
-        kill_timeout:
-          type: integer
-          format: int64
-          description: >-
-            The duration to wait for in milliseconds before killing the actor.
-            This should be set to a safe default, and can be overridden during a
-            DELETE request if needed.
-        durable:
-          type: boolean
-          description: >-
-            If true, the actor will try to reschedule itself automatically in
-            the event of a crash or a datacenter failover. The actor will not
-            reschedule if it exits successfully.
-    ActorsNetwork:
-      type: object
-      properties:
-        mode:
-          $ref: '#/components/schemas/ActorsNetworkMode'
-        ports:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/ActorsPort'
-      required:
-        - mode
         - ports
-    ActorsNetworkMode:
-      type: string
-      enum:
-        - bridge
-        - host
+        - created_at
     ActorsPort:
       type: object
       properties:
         protocol:
-          $ref: '#/components/schemas/ActorsPortProtocol'
+          $ref: '#/components/schemas/BuildsPortProtocol'
         internal_port:
           type: integer
         hostname:
@@ -2706,31 +2625,10 @@ components:
             Fully formed connection URL including protocol, hostname, port, and
             path, if applicable.
         routing:
-          $ref: '#/components/schemas/ActorsPortRouting'
+          $ref: '#/components/schemas/BuildsPortRouting'
       required:
         - protocol
         - routing
-    ActorsPortProtocol:
-      type: string
-      enum:
-        - http
-        - https
-        - tcp
-        - tcp_tls
-        - udp
-    ActorsPortRouting:
-      type: object
-      properties:
-        guard:
-          $ref: '#/components/schemas/ActorsGuardRouting'
-        host:
-          $ref: '#/components/schemas/ActorsHostRouting'
-    ActorsGuardRouting:
-      type: object
-      properties: {}
-    ActorsHostRouting:
-      type: object
-      properties: {}
     ActorsEndpointType:
       type: string
       enum:
@@ -2852,15 +2750,13 @@ components:
           type: integer
           format: int64
           description: Unsigned 64 bit integer.
-        allocation:
-          $ref: '#/components/schemas/BuildsAllocation'
-        resources:
-          $ref: '#/components/schemas/BuildsResources'
         tags:
           type: object
           additionalProperties:
             type: string
           description: Tags of this build
+        runtime:
+          $ref: '#/components/schemas/BuildsRuntime'
       required:
         - id
         - name
@@ -2878,23 +2774,78 @@ components:
       enum:
         - none
         - lz4
-    BuildsAllocation:
+    BuildsRuntime:
       type: object
       properties:
-        single:
-          $ref: '#/components/schemas/BuildsAllocationSingle'
-        multi:
-          $ref: '#/components/schemas/BuildsAllocationMulti'
-    BuildsAllocationSingle:
-      type: object
-      properties: {}
-    BuildsAllocationMulti:
+        container:
+          $ref: '#/components/schemas/BuildsRuntimeContainer'
+        actor:
+          $ref: '#/components/schemas/BuildsRuntimeActor'
+    BuildsRuntimeContainer:
       type: object
       properties:
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        network_mode:
+          $ref: '#/components/schemas/BuildsNetworkMode'
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/BuildsPortRequest'
+    BuildsRuntimeActor:
+      type: object
+      properties:
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        network_mode:
+          $ref: '#/components/schemas/BuildsNetworkMode'
+        ports:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/BuildsPortRequest'
+        resources:
+          $ref: '#/components/schemas/BuildsResources'
         slots:
           type: integer
       required:
+        - resources
         - slots
+    BuildsPortProtocol:
+      type: string
+      enum:
+        - http
+        - https
+        - tcp
+        - tcp_tls
+        - udp
+    BuildsPortRouting:
+      type: object
+      properties:
+        guard:
+          $ref: '#/components/schemas/BuildsGuardRouting'
+        host:
+          $ref: '#/components/schemas/BuildsHostRouting'
+    BuildsGuardRouting:
+      type: object
+      properties: {}
+    BuildsHostRouting:
+      type: object
+      properties: {}
+    BuildsPortRequest:
+      type: object
+      properties:
+        protocol:
+          $ref: '#/components/schemas/BuildsPortProtocol'
+        internal_port:
+          type: integer
+        routing:
+          $ref: '#/components/schemas/BuildsPortRouting'
+      required:
+        - protocol
     BuildsResources:
       type: object
       properties:
@@ -2909,10 +2860,15 @@ components:
             millicores.
         memory:
           type: integer
-          description: The amount of memory in megabytes
+          description: The amount of memory in mebibytes
       required:
         - cpu
         - memory
+    BuildsNetworkMode:
+      type: string
+      enum:
+        - bridge
+        - host
     Id:
       type: string
       description: Can be a UUID or base36 encoded binary data.
@@ -2963,32 +2919,6 @@ components:
         region:
           type: string
         tags: {}
-        runtime:
-          $ref: '#/components/schemas/ContainersRuntime'
-        network:
-          $ref: '#/components/schemas/ContainersNetwork'
-        resources:
-          $ref: '#/components/schemas/ContainersResources'
-        lifecycle:
-          $ref: '#/components/schemas/ContainersLifecycle'
-        created_at:
-          $ref: '#/components/schemas/Timestamp'
-        started_at:
-          $ref: '#/components/schemas/Timestamp'
-        destroyed_at:
-          $ref: '#/components/schemas/Timestamp'
-      required:
-        - id
-        - region
-        - tags
-        - runtime
-        - network
-        - resources
-        - lifecycle
-        - created_at
-    ContainersRuntime:
-      type: object
-      properties:
         build:
           type: string
           format: uuid
@@ -3000,64 +2930,45 @@ components:
           type: object
           additionalProperties:
             type: string
-      required:
-        - build
-    ContainersLifecycle:
-      type: object
-      properties:
-        kill_timeout:
-          type: integer
-          format: int64
-          description: >-
-            The duration to wait for in milliseconds before killing the
-            container. This should be set to a safe default, and can be
-            overridden during a DELETE request if needed.
-        durable:
-          type: boolean
-          description: >-
-            If true, the container will try to reschedule itself automatically
-            in the event of a crash or a datacenter failover. The container will
-            not reschedule if it exits successfully.
-    ContainersResources:
-      type: object
-      properties:
-        cpu:
-          type: integer
-          description: >-
-            The number of CPU cores in millicores, or 1/1000 of a core. For
-            example,
-
-            1/8 of a core would be 125 millicores, and 1 core would be 1000
-
-            millicores.
-        memory:
-          type: integer
-          description: The amount of memory in megabytes
-      required:
-        - cpu
-        - memory
-    ContainersNetwork:
-      type: object
-      properties:
-        mode:
-          $ref: '#/components/schemas/ContainersNetworkMode'
         ports:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/ContainersPort'
+        resources:
+          $ref: '#/components/schemas/BuildsResources'
+        kill_timeout:
+          type: integer
+          format: int64
+          description: >-
+            The duration to wait for in milliseconds before force killing the
+            actor after a DELETE request. This gives the actor time to perform a
+            shutdown sequence before being killed. This should be set to a safe
+            default, and can be overridden during a DELETE request if needed.
+        durable:
+          type: boolean
+          description: >-
+            If true, the actor will try to reschedule itself automatically in
+            the event of a crash or a datacenter failover. The actor will not
+            reschedule if it exits successfully.
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        started_at:
+          $ref: '#/components/schemas/Timestamp'
+        destroyed_at:
+          $ref: '#/components/schemas/Timestamp'
       required:
-        - mode
+        - id
+        - region
+        - tags
+        - build
         - ports
-    ContainersNetworkMode:
-      type: string
-      enum:
-        - bridge
-        - host
+        - resources
+        - created_at
     ContainersPort:
       type: object
       properties:
         protocol:
-          $ref: '#/components/schemas/ContainersPortProtocol'
+          $ref: '#/components/schemas/BuildsPortProtocol'
         internal_port:
           type: integer
         hostname:
@@ -3072,31 +2983,10 @@ components:
             Fully formed connection URL including protocol, hostname, port, and
             path, if applicable.
         routing:
-          $ref: '#/components/schemas/ContainersPortRouting'
+          $ref: '#/components/schemas/BuildsPortRouting'
       required:
         - protocol
         - routing
-    ContainersPortProtocol:
-      type: string
-      enum:
-        - http
-        - https
-        - tcp
-        - tcp_tls
-        - udp
-    ContainersPortRouting:
-      type: object
-      properties:
-        guard:
-          $ref: '#/components/schemas/ContainersGuardRouting'
-        host:
-          $ref: '#/components/schemas/ContainersHostRouting'
-    ContainersGuardRouting:
-      type: object
-      properties: {}
-    ContainersHostRouting:
-      type: object
-      properties: {}
     ContainersEndpointType:
       type: string
       enum:

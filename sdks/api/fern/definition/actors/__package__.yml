@@ -163,30 +163,19 @@ types:
       tags: unknown
       build: optional<uuid>
       build_tags: optional<unknown>
-      # arguments: optional<list<string>>
-      environment: optional<map<string, string>>
-      network_mode: optional<localCommons.NetworkMode>
-      network_endpoint_type: localCommons.EndpointType
-      ports: optional<map<string, CreateActorPortRequest>>
+      network_endpoint_type: optional<localCommons.EndpointType>
       wait_for_network_ready: optional<boolean>
-      resources: optional<localCommons.Resources>
       kill_timeout:
         docs: >-
-          The duration to wait for in milliseconds before killing the actor.
-          This should be set to a safe default, and can be overridden during a
-          DELETE request if needed.
+          The duration to wait for in milliseconds before force killing the actor after a DELETE request.
+          This gives the actor time to perform a shutdown sequence before being killed. This should be set to
+          a safe default, and can be overridden during a DELETE request if needed.
         type: optional<long>
       durable:
         docs: >-
           If true, the actor will try to reschedule itself automatically in the event of a crash or a
           datacenter failover. The actor will not reschedule if it exits successfully.
         type: optional<boolean>
-
-  CreateActorPortRequest:
-    properties:
-      protocol: localCommons.PortProtocol
-      internal_port: optional<integer>
-      routing: optional<localCommons.PortRouting>
 
   CreateActorResponse:
     properties:

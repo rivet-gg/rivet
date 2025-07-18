@@ -46,12 +46,15 @@ types:
           millicores.
         type: integer
       memory:
-        docs: The amount of memory in megabytes
+        docs: The amount of memory in mebibytes
         type: integer
 
   Network:
     properties:
-      mode: NetworkMode
+      mode:
+        docs: |
+          **Deprecated**
+        type: NetworkMode
       ports: map<string, Port>
 
   NetworkMode:
