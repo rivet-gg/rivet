@@ -6,6 +6,7 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
+ipnet = { version = "2.10.1", features = ["serde"] }
 schemars = { version = "0.8.21", features = ["url", "uuid1"] }
 serde = { version = "1.0.195", features = ["derive"] }
 url = "2.2.2"

@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use build::types::BuildKind;
+use build::types::{BuildAllocationType, BuildCompression, BuildKind};
 use chirp_workflow::prelude::*;
 use fdb_util::{end_of_key_range, FormalKey, SERIALIZABLE, SNAPSHOT};
 use foundationdb::{
@@ -8,13 +8,12 @@ use foundationdb::{
 	options::{ConflictRangeType, StreamingMode},
 };
 use futures_util::{FutureExt, TryStreamExt};
-use rivet_api::models::actors_endpoint_type;
 use sqlx::Acquire;
+use util::serde::AsHashableExt;
 
 use super::{
 	destroy::{self, KillCtx},
 	setup, Destroy, Input, ACTOR_START_THRESHOLD_MS, BASE_RETRY_TIMEOUT_MS,
-	RETRY_RESET_DURATION_MS,
 };
 use crate::{
 	keys, metrics,
@@ -27,41 +26,32 @@ use crate::{
 #[derive(Deserialize, Serialize)]
 pub struct State {
 	pub generation: u32,
-
+	pub runner_id: Uuid,
 	pub client_id: Uuid,
 	pub client_workflow_id: Uuid,
-	pub image_id: Option<Uuid>,
-
+	pub image_id: Uuid,
 	pub drain_timeout_ts: Option<i64>,
 	pub gc_timeout_ts: Option<i64>,
-
-	#[serde(default)]
-	reschedule_state: RescheduleState,
 }
 
 impl State {
-	pub fn new(client_id: Uuid, client_workflow_id: Uuid, image_id: Uuid) -> Self {
+	pub fn new(runner_id: Uuid, client_id: Uuid, client_workflow_id: Uuid, image_id: Uuid) -> Self {
 		State {
 			generation: 0,
 			client_id,
 			client_workflow_id,
-			image_id: Some(image_id),
+			runner_id,
+			image_id,
 			drain_timeout_ts: None,
 			gc_timeout_ts: Some(util::timestamp::now() + ACTOR_START_THRESHOLD_MS),
-			reschedule_state: RescheduleState::default(),
 		}
 	}
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct StateRes {
+pub struct LifecycleRes {
+	pub image_id: Uuid,
 	pub kill: Option<KillCtx>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Default)]
-struct RescheduleState {
-	last_retry_ts: i64,
-	retry_count: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
@@ -95,7 +85,7 @@ async fn update_client(ctx: &ActivityCtx, input: &UpdateClientInput) -> GlobalRe
 		",
 		input.client_id,
 		input.client_workflow_id,
-		&client_wan_hostname,
+		client_wan_hostname,
 	)
 	.await?;
 
@@ -185,8 +175,7 @@ async fn fetch_ports(ctx: &ActivityCtx, input: &FetchPortsInput) -> GlobalResult
 				true,
 				wan_hostname.as_deref(),
 				&row,
-				// Placeholder, will be replaced in the isolate runner when building
-				// metadata
+				// Placeholder, will be replaced by the manager when building metadata
 				Some(&get::PortProxied {
 					port_name: String::new(),
 					source: 0,
@@ -205,52 +194,29 @@ async fn fetch_ports(ctx: &ActivityCtx, input: &FetchPortsInput) -> GlobalResult
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash)]
-struct AllocateActorInputV1 {
-	actor_id: Uuid,
-	build_kind: BuildKind,
-	resources: protocol::Resources,
-}
-
-#[activity(AllocateActorV1)]
-async fn allocate_actor(
-	ctx: &ActivityCtx,
-	input: &AllocateActorInputV1,
-) -> GlobalResult<Option<AllocateActorOutputV2>> {
-	AllocateActorV2::run(
-		ctx,
-		&AllocateActorInputV2 {
-			actor_id: input.actor_id,
-			generation: 0,
-			build_kind: input.build_kind,
-			resources: input.resources.clone(),
-		},
-	)
-	.await
-}
-
-#[derive(Debug, Serialize, Deserialize, Hash)]
-struct AllocateActorInputV2 {
+struct AllocateActorInput {
 	actor_id: Uuid,
 	generation: u32,
-	build_kind: BuildKind,
+	image_id: Uuid,
+	build_allocation_type: BuildAllocationType,
+	build_allocation_total_slots: u64,
 	resources: protocol::Resources,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct AllocateActorOutputV2 {
+pub struct AllocateActorOutput {
+	pub runner_id: Uuid,
+	pub new_runner: bool,
 	pub client_id: Uuid,
 	pub client_workflow_id: Uuid,
 }
 
-#[activity(AllocateActorV2)]
-async fn allocate_actor_v2(
+#[activity(AllocateActor)]
+async fn allocate_actor(
 	ctx: &ActivityCtx,
-	input: &AllocateActorInputV2,
-) -> GlobalResult<Option<AllocateActorOutputV2>> {
-	let client_flavor = match input.build_kind {
-		BuildKind::DockerImage | BuildKind::OciBundle => protocol::ClientFlavor::Container,
-		BuildKind::JavaScript => protocol::ClientFlavor::Isolate,
-	};
+	input: &AllocateActorInput,
+) -> GlobalResult<Option<AllocateActorOutput>> {
+	let client_flavor = protocol::ClientFlavor::Multi;
 	let memory_mib = input.resources.memory / 1024 / 1024;
 
 	let start_instant = Instant::now();
@@ -259,6 +225,99 @@ async fn allocate_actor_v2(
 		.fdb()
 		.await?
 		.run(|tx, _mc| async move {
+			// Select a range that only includes runners that have enough remaining slots to allocate this actor
+			let start = keys::subspace().pack(
+				&keys::datacenter::RunnersByRemainingSlotsKey::subspace_with_slots(
+					input.image_id,
+					1,
+				),
+			);
+			let runner_allocation_subspace =
+				keys::datacenter::RunnersByRemainingSlotsKey::subspace(input.image_id);
+			let end = keys::subspace()
+				.subspace(&runner_allocation_subspace)
+				.range()
+				.1;
+
+			let mut stream = tx.get_ranges_keyvalues(
+				fdb::RangeOption {
+					mode: StreamingMode::Iterator,
+					// Containers bin pack so we reverse the order
+					reverse: true,
+					..(start, end).into()
+				},
+				// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys, just
+				// the one we choose
+				SNAPSHOT,
+			);
+
+			if let BuildAllocationType::Multi = input.build_allocation_type {
+				loop {
+					let Some(entry) = stream.try_next().await? else {
+						return Ok(None);
+					};
+
+					let old_runner_allocation_key = keys::subspace()
+						.unpack::<keys::datacenter::RunnersByRemainingSlotsKey>(entry.key())
+						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+					let data = old_runner_allocation_key
+						.deserialize(entry.value())
+						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+					// Add read conflict only for this key
+					tx.add_conflict_range(
+						entry.key(),
+						&end_of_key_range(entry.key()),
+						ConflictRangeType::Read,
+					)?;
+
+					// Clear old entry
+					tx.clear(entry.key());
+
+					let new_remaining_slots =
+						old_runner_allocation_key.remaining_slots.saturating_sub(1);
+
+					// Write new allocation key with 1 less slot
+					let new_allocation_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
+						input.image_id,
+						new_remaining_slots,
+						old_runner_allocation_key.runner_id,
+					);
+					tx.set(&keys::subspace().pack(&new_allocation_key), entry.value());
+
+					// Update runner record
+					let remaining_slots_key =
+						keys::runner::RemainingSlotsKey::new(old_runner_allocation_key.runner_id);
+					tx.set(
+						&keys::subspace().pack(&remaining_slots_key),
+						&remaining_slots_key
+							.serialize(new_remaining_slots)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					// Insert actor index key
+					let client_actor_key =
+						keys::client::ActorKey::new(data.client_id, input.actor_id);
+					tx.set(
+						&keys::subspace().pack(&client_actor_key),
+						&client_actor_key
+							.serialize(input.generation)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					return Ok(Some(AllocateActorOutput {
+						runner_id: old_runner_allocation_key.runner_id,
+						new_runner: false,
+						client_id: data.client_id,
+						client_workflow_id: data.client_workflow_id,
+					}));
+				}
+			}
+
+			// No available runner found, create a new one
+			let runner_id = Uuid::new_v4();
+
 			let ping_threshold_ts = util::timestamp::now() - CLIENT_ELIGIBLE_THRESHOLD_MS;
 
 			// Select a range that only includes clients that have enough remaining mem to allocate this actor
@@ -279,7 +338,7 @@ async fn allocate_actor_v2(
 				fdb::RangeOption {
 					mode: StreamingMode::Iterator,
 					// Containers bin pack so we reverse the order
-					reverse: matches!(client_flavor, protocol::ClientFlavor::Container),
+					reverse: true,
 					..(start, end).into()
 				},
 				// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys, just
@@ -292,16 +351,16 @@ async fn allocate_actor_v2(
 					return Ok(None);
 				};
 
-				let old_allocation_key = keys::subspace()
+				let old_client_allocation_key = keys::subspace()
 					.unpack::<keys::datacenter::ClientsByRemainingMemKey>(entry.key())
 					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
 				// Scan by last ping
-				if old_allocation_key.last_ping_ts < ping_threshold_ts {
+				if old_client_allocation_key.last_ping_ts < ping_threshold_ts {
 					continue;
 				}
 
-				let client_workflow_id = old_allocation_key
+				let client_workflow_id = old_client_allocation_key
 					.deserialize(entry.value())
 					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
@@ -317,7 +376,7 @@ async fn allocate_actor_v2(
 
 				// Read old cpu
 				let remaining_cpu_key =
-					keys::client::RemainingCpuKey::new(old_allocation_key.client_id);
+					keys::client::RemainingCpuKey::new(old_client_allocation_key.client_id);
 				let remaining_cpu_key_buf = keys::subspace().pack(&remaining_cpu_key);
 				let remaining_cpu_entry = tx.get(&remaining_cpu_key_buf, SERIALIZABLE).await?;
 				let old_remaining_cpu = remaining_cpu_key
@@ -329,27 +388,27 @@ async fn allocate_actor_v2(
 					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
 				// Update allocated amount
-				let new_remaining_mem = old_allocation_key.remaining_mem - memory_mib;
+				let new_remaining_mem = old_client_allocation_key.remaining_mem - memory_mib;
 				let new_remaining_cpu = old_remaining_cpu - input.resources.cpu;
 				let new_allocation_key = keys::datacenter::ClientsByRemainingMemKey::new(
 					client_flavor,
 					new_remaining_mem,
-					old_allocation_key.last_ping_ts,
-					old_allocation_key.client_id,
+					old_client_allocation_key.last_ping_ts,
+					old_client_allocation_key.client_id,
 				);
 				tx.set(&keys::subspace().pack(&new_allocation_key), entry.value());
 
 				tracing::debug!(
-					old_mem=%old_allocation_key.remaining_mem,
+					old_mem=%old_client_allocation_key.remaining_mem,
 					old_cpu=%old_remaining_cpu,
 					new_mem=%new_remaining_mem,
 					new_cpu=%new_remaining_cpu,
-					"allocating resources"
+					"allocating runner resources"
 				);
 
 				// Update client record
 				let remaining_mem_key =
-					keys::client::RemainingMemoryKey::new(old_allocation_key.client_id);
+					keys::client::RemainingMemoryKey::new(old_client_allocation_key.client_id);
 				tx.set(
 					&keys::subspace().pack(&remaining_mem_key),
 					&remaining_mem_key
@@ -364,9 +423,49 @@ async fn allocate_actor_v2(
 						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 				);
 
+				if let BuildAllocationType::Multi = input.build_allocation_type {
+					let remaining_slots = input.build_allocation_total_slots.saturating_sub(1);
+					let total_slots = input.build_allocation_total_slots;
+
+					// Insert runner records
+					let remaining_slots_key = keys::runner::RemainingSlotsKey::new(runner_id);
+					tx.set(
+						&keys::subspace().pack(&remaining_slots_key),
+						&remaining_slots_key
+							.serialize(remaining_slots)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					let total_slots_key = keys::runner::TotalSlotsKey::new(runner_id);
+					tx.set(
+						&keys::subspace().pack(&total_slots_key),
+						&total_slots_key
+							.serialize(total_slots)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					// Insert runner index key
+					let runner_idx_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
+						input.image_id,
+						remaining_slots,
+						runner_id,
+					);
+					tx.set(
+						&keys::subspace().pack(&runner_idx_key),
+						&runner_idx_key
+							.serialize(keys::datacenter::RunnersByRemainingSlotsKeyData {
+								client_id: old_client_allocation_key.client_id,
+								client_workflow_id,
+							})
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+				}
+
 				// Insert actor index key
-				let client_actor_key =
-					keys::client::ActorKey::new(old_allocation_key.client_id, input.actor_id);
+				let client_actor_key = keys::client::ActorKey::new(
+					old_client_allocation_key.client_id,
+					input.actor_id,
+				);
 				tx.set(
 					&keys::subspace().pack(&client_actor_key),
 					&client_actor_key
@@ -374,8 +473,10 @@ async fn allocate_actor_v2(
 						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 				);
 
-				return Ok(Some(AllocateActorOutputV2 {
-					client_id: old_allocation_key.client_id,
+				return Ok(Some(AllocateActorOutput {
+					runner_id,
+					new_runner: true,
+					client_id: old_client_allocation_key.client_id,
 					client_workflow_id,
 				}));
 			}
@@ -618,46 +719,23 @@ pub async fn insert_ports_fdb(ctx: &ActivityCtx, input: &InsertPortsFdbInput) ->
 	Ok(())
 }
 
-#[derive(Debug, Serialize, Deserialize, Hash)]
-struct CompareRetryInput {
-	last_retry_ts: i64,
-}
-
-#[activity(CompareRetry)]
-async fn compare_retry(ctx: &ActivityCtx, input: &CompareRetryInput) -> GlobalResult<(i64, bool)> {
-	let now = util::timestamp::now();
-
-	// If the last retry ts is more than RETRY_RESET_DURATION_MS, reset retry count
-	Ok((now, input.last_retry_ts < now - RETRY_RESET_DURATION_MS))
-}
-
 /// Returns whether or not there was availability to spawn the actor.
 pub async fn spawn_actor(
 	ctx: &mut WorkflowCtx,
 	input: &Input,
 	actor_setup: &setup::ActorSetupCtx,
 	generation: u32,
-) -> GlobalResult<Option<AllocateActorOutputV2>> {
-	let res = match ctx.check_version(2).await? {
-		1 => {
-			ctx.activity(AllocateActorInputV1 {
-				actor_id: input.actor_id,
-				build_kind: actor_setup.meta.build_kind,
-				resources: actor_setup.resources.clone(),
-			})
-			.await?
-		}
-		_ => {
-			ctx.v(2)
-				.activity(AllocateActorInputV2 {
-					actor_id: input.actor_id,
-					generation,
-					build_kind: actor_setup.meta.build_kind,
-					resources: actor_setup.resources.clone(),
-				})
-				.await?
-		}
-	};
+) -> GlobalResult<Option<AllocateActorOutput>> {
+	let res = ctx
+		.activity(AllocateActorInput {
+			actor_id: input.actor_id,
+			generation,
+			image_id: actor_setup.image_id,
+			build_allocation_type: actor_setup.meta.build_allocation_type,
+			build_allocation_total_slots: actor_setup.meta.build_allocation_total_slots,
+			resources: actor_setup.resources.clone(),
+		})
+		.await?;
 
 	let Some(res) = res else {
 		return Ok(None);
@@ -678,63 +756,87 @@ pub async fn spawn_actor(
 
 	let cluster_id = ctx.config().server()?.rivet.edge()?.cluster_id;
 
+	let image = protocol::Image {
+		id: actor_setup.image_id,
+		artifact_url_stub: actor_setup.artifact_url_stub.clone(),
+		fallback_artifact_url: actor_setup.fallback_artifact_url.clone(),
+		kind: match actor_setup.meta.build_kind {
+			BuildKind::DockerImage => protocol::ImageKind::DockerImage,
+			BuildKind::OciBundle => protocol::ImageKind::OciBundle,
+			BuildKind::JavaScript => bail!("actors do not support js builds"),
+		},
+		compression: match actor_setup.meta.build_compression {
+			BuildCompression::None => protocol::ImageCompression::None,
+			BuildCompression::Lz4 => protocol::ImageCompression::Lz4,
+		},
+		allocation_type: match actor_setup.meta.build_allocation_type {
+			BuildAllocationType::None => bail!("actors do not support old builds"),
+			BuildAllocationType::Single => protocol::ImageAllocationType::Single,
+			BuildAllocationType::Multi => protocol::ImageAllocationType::Multi,
+		},
+	};
+	let ports = ports_res
+		.ports
+		.iter()
+		.map(|port| match port.port.routing {
+			Routing::GameGuard { protocol } => (
+				crate::util::pegboard_normalize_port_name(&port.name),
+				protocol::Port {
+					target: port.port_number,
+					protocol: match protocol {
+						GameGuardProtocol::Http
+						| GameGuardProtocol::Https
+						| GameGuardProtocol::Tcp
+						| GameGuardProtocol::TcpTls => protocol::TransportProtocol::Tcp,
+						GameGuardProtocol::Udp => protocol::TransportProtocol::Udp,
+					},
+					routing: protocol::PortRouting::GameGuard,
+				},
+			),
+			Routing::Host { protocol } => (
+				crate::util::pegboard_normalize_port_name(&port.name),
+				protocol::Port {
+					target: port.port_number,
+					protocol: match protocol {
+						HostProtocol::Tcp => protocol::TransportProtocol::Tcp,
+						HostProtocol::Udp => protocol::TransportProtocol::Udp,
+					},
+					routing: protocol::PortRouting::Host,
+				},
+			),
+		})
+		.collect::<util::serde::HashableMap<_, _>>();
+	let network_mode = match input.network_mode {
+		NetworkMode::Bridge => protocol::NetworkMode::Bridge,
+		NetworkMode::Host => protocol::NetworkMode::Host,
+	};
+
 	ctx.signal(protocol::Command::StartActor {
 		actor_id: input.actor_id,
 		generation,
 		config: Box::new(protocol::ActorConfig {
-			image: protocol::Image {
-				id: actor_setup.image_id,
-				artifact_url_stub: actor_setup.artifact_url_stub.clone(),
-				fallback_artifact_url: actor_setup.fallback_artifact_url.clone(),
-				artifact_size_bytes: actor_setup.artifact_size_bytes,
-				kind: actor_setup.meta.build_kind.into(),
-				compression: actor_setup.meta.build_compression.into(),
-				// Always single, this is the old actor wf
-				allocation_type: protocol::ImageAllocationType::Single,
-			},
-			root_user_enabled: input.root_user_enabled,
-			env: input.environment.as_hashable(),
-			runner: None,
-			ports: ports_res
-				.ports
-				.iter()
-				.map(|port| match port.port.routing {
-					Routing::GameGuard { protocol } => (
-						crate::util::pegboard_normalize_port_name(&port.name),
-						protocol::Port {
-							target: port.port_number,
-							protocol: match protocol {
-								GameGuardProtocol::Http
-								| GameGuardProtocol::Https
-								| GameGuardProtocol::Tcp
-								| GameGuardProtocol::TcpTls => protocol::TransportProtocol::Tcp,
-								GameGuardProtocol::Udp => protocol::TransportProtocol::Udp,
-							},
-							routing: protocol::PortRouting::GameGuard,
-						},
-					),
-					Routing::Host { protocol } => (
-						crate::util::pegboard_normalize_port_name(&port.name),
-						protocol::Port {
-							target: port.port_number,
-							protocol: match protocol {
-								HostProtocol::Tcp => protocol::TransportProtocol::Tcp,
-								HostProtocol::Udp => protocol::TransportProtocol::Udp,
-							},
-							routing: protocol::PortRouting::Host,
-						},
-					),
+			runner: if res.new_runner {
+				Some(protocol::ActorRunner::New {
+					runner_id: res.runner_id,
+					config: protocol::RunnerConfig {
+						image: image.clone(),
+						root_user_enabled: input.root_user_enabled,
+						resources: actor_setup.resources.clone(),
+						env: input.environment.as_hashable(),
+						ports: ports.clone(),
+						network_mode,
+					},
 				})
-				.collect(),
-			network_mode: match input.network_mode {
-				NetworkMode::Bridge => protocol::NetworkMode::Bridge,
-				NetworkMode::Host => protocol::NetworkMode::Host,
+			} else {
+				Some(protocol::ActorRunner::Existing {
+					runner_id: res.runner_id,
+				})
 			},
-			resources: actor_setup.resources.clone(),
+			env: input.environment.as_hashable(),
 			metadata: util::serde::Raw::new(&protocol::ActorMetadata {
 				actor: protocol::ActorMetadataActor {
 					actor_id: input.actor_id,
-					tags: input.tags.clone(),
+					tags: input.tags.as_hashable(),
 					create_ts: ctx.ts(),
 				},
 				network: Some(protocol::ActorMetadataNetwork {
@@ -758,9 +860,16 @@ pub async fn spawn_actor(
 				},
 				cluster: protocol::ActorMetadataCluster { cluster_id },
 				build: protocol::ActorMetadataBuild {
-					build_id: input.image_id,
+					build_id: actor_setup.image_id,
 				},
 			})?,
+
+			// Deprecated
+			image,
+			root_user_enabled: input.root_user_enabled,
+			resources: actor_setup.resources.clone(),
+			ports,
+			network_mode,
 		}),
 	})
 	.to_workflow_id(res.client_workflow_id)
@@ -781,6 +890,7 @@ pub async fn reschedule_actor(
 	ctx.activity(ClearPortsAndResourcesInput {
 		actor_id: input.actor_id,
 		image_id,
+		runner_id: state.runner_id,
 		client_id: state.client_id,
 		client_workflow_id: state.client_workflow_id,
 	})
@@ -792,7 +902,7 @@ pub async fn reschedule_actor(
 
 	// Waits for the actor to be ready (or destroyed) and automatically retries if failed to allocate.
 	let res = ctx
-		.loope(state.reschedule_state.clone(), |ctx, state| {
+		.loope(RescheduleState::default(), |ctx, state| {
 			let input = input.clone();
 			let actor_setup = actor_setup.clone();
 
@@ -801,14 +911,14 @@ pub async fn reschedule_actor(
 				let mut backoff =
 					util::Backoff::new_at(8, None, BASE_RETRY_TIMEOUT_MS, 500, state.retry_count);
 
-				let (now, reset) = ctx
-					.v(2)
-					.activity(CompareRetryInput {
-						last_retry_ts: state.last_retry_ts,
-					})
-					.await?;
-
-				state.retry_count = if reset { 0 } else { state.retry_count + 1 };
+				// If the last retry ts is more than 2 * backoff ago, reset retry count to 0
+				let now = util::timestamp::now();
+				state.retry_count =
+					if state.last_retry_ts < now - i64::try_from(2 * backoff.current_duration())? {
+						0
+					} else {
+						state.retry_count + 1
+					};
 				state.last_retry_ts = now;
 
 				// Don't sleep for first retry
@@ -820,14 +930,14 @@ pub async fn reschedule_actor(
 						.listen_with_timeout::<Destroy>(Instant::from(next) - Instant::now())
 						.await?
 					{
-						tracing::debug!("destroying before actor reschedule");
+						tracing::debug!("destroying before actor start");
 
 						return Ok(Loop::Break(Err(sig)));
 					}
 				}
 
 				if let Some(res) = spawn_actor(ctx, &input, &actor_setup, next_generation).await? {
-					Ok(Loop::Break(Ok((state.clone(), res))))
+					Ok(Loop::Break(Ok(res)))
 				} else {
 					tracing::debug!(actor_id=?input.actor_id, "failed to reschedule actor, retrying");
 
@@ -840,13 +950,11 @@ pub async fn reschedule_actor(
 
 	// Update loop state
 	match res {
-		Ok((reschedule_state, res)) => {
+		Ok(res) => {
 			state.generation = next_generation;
+			state.runner_id = res.runner_id;
 			state.client_id = res.client_id;
 			state.client_workflow_id = res.client_workflow_id;
-
-			// Save reschedule state in global state
-			state.reschedule_state = reschedule_state;
 
 			// Reset gc timeout once allocated
 			state.gc_timeout_ts = Some(util::timestamp::now() + ACTOR_START_THRESHOLD_MS);
@@ -857,10 +965,17 @@ pub async fn reschedule_actor(
 	}
 }
 
+#[derive(Serialize, Deserialize, Default)]
+struct RescheduleState {
+	last_retry_ts: i64,
+	retry_count: usize,
+}
+
 #[derive(Debug, Serialize, Deserialize, Hash)]
 struct ClearPortsAndResourcesInput {
 	actor_id: Uuid,
 	image_id: Uuid,
+	runner_id: Uuid,
 	client_id: Uuid,
 	client_workflow_id: Uuid,
 }
@@ -912,8 +1027,10 @@ async fn clear_ports_and_resources(
 			async move {
 				destroy::clear_ports_and_resources(
 					input.actor_id,
-					Some(build.kind),
+					input.image_id,
+					Some(build.allocation_type),
 					ingress_ports,
+					Some(input.runner_id),
 					Some(input.client_id),
 					Some(input.client_workflow_id),
 					selected_resources_memory_mib,
