@@ -11,7 +11,7 @@ types:
       tags: unknown
       runtime: Runtime
       network: Network
-      resources: Resources
+      resources: optional<Resources>
       lifecycle: Lifecycle
       created_at: commons.Timestamp
       started_at: optional<commons.Timestamp>
