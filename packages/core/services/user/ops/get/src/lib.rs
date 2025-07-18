@@ -66,7 +66,7 @@ pub async fn handle(
 						FROM db_user.users
 						WHERE user_id = ANY($1)
 						",
-						user_ids
+						&user_ids,
 					)
 					.await?;
 

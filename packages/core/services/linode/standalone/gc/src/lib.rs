@@ -106,7 +106,7 @@ async fn run_for_linode_account(
 			complete_ts IS NULL
 		RETURNING image_id
 		",
-		image_ids,
+		&image_ids,
 		util::timestamp::now(),
 	)
 	.await?;

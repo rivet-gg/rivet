@@ -30,7 +30,7 @@ async fn handle(
 							WHERE game_id = $1 AND name_id = ANY($2)
 							",
 							game_id,
-							name_ids.into_iter().map(|(_, name_id)| name_id).collect::<Vec<_>>(),
+							name_ids.iter().map(|(_, name_id)| name_id).collect::<Vec<_>>(),
 						)
 						.await?;
 

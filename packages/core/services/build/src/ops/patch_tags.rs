@@ -133,7 +133,7 @@ pub async fn patch_tags(ctx: &OperationCtx, input: &Input) -> GlobalResult<Outpu
 					WHERE b.build_id = f2.build_id
 					",
 					build_id,
-					exclusive_tags_json,
+					&exclusive_tags_json,
 				)
 				.await?;
 			}
@@ -147,7 +147,7 @@ pub async fn patch_tags(ctx: &OperationCtx, input: &Input) -> GlobalResult<Outpu
 				WHERE build_id = $1
 				",
 				build_id,
-				tags_json,
+				&tags_json,
 			)
 			.await?;
 

@@ -104,7 +104,7 @@ async fn exec(ctx: OperationContext<()>) -> GlobalResult<()> {
 		sql_fetch_one!(
 			[ctx, (String,)]
 			"SELECT display_name FROM db_user.users WHERE user_id = ANY($1)",
-			user_ids,
+			&user_ids,
 		),
 		sql_fetch_all!(
 			[ctx, (Uuid, String, i64)]

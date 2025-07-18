@@ -37,7 +37,7 @@ async fn handle(
 			tm.team_id = q.team_id AND
 			tm.user_id = q.user_id
 		",
-		serde_json::to_value(members)?,
+		serde_json::to_value(&members)?,
 	)
 	.await?;
 

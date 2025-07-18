@@ -32,7 +32,7 @@ async fn handle(
 		FROM db_cloud.game_configs
 		WHERE game_id = ANY($1)
 		",
-		game_ids,
+		&game_ids,
 	)
 	.await?
 	.into_iter()

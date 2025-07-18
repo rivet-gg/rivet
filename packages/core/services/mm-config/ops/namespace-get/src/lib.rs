@@ -36,7 +36,7 @@ async fn handle(
 		FROM db_mm_config.game_namespaces
 		WHERE namespace_id = ANY($1)
 		",
-		namespace_ids,
+		&namespace_ids,
 	)
 	.await?
 	.into_iter()

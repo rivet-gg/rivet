@@ -43,7 +43,7 @@ async fn handle(
 		FROM db_mm_state.players
 		WHERE player_id = ANY($1)
 		",
-		player_ids,
+		&player_ids,
 	)
 	.await?
 	.into_iter()

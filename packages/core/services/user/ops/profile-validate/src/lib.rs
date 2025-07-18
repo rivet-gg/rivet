@@ -76,7 +76,7 @@ async fn handle(
 				WHERE display_name = $1 and account_number = $2
 			)
 			",
-			display_name,
+			&display_name,
 			account_number as i64,
 		)
 		.await?;

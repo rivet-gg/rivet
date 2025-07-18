@@ -32,7 +32,7 @@ async fn worker(
 		RETURNING version_display_name;
 		"#,
 		game_id,
-		date_prefix,
+		&date_prefix,
 		ctx.ts(),
 	)
 	.await?;

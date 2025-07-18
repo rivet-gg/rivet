@@ -168,7 +168,7 @@ async fn run_for_linode_account(
 			($5 IS NULL OR s.pool_type = ANY($5)) AND
 			($6 IS NULL OR s.public_ip = ANY($6))
 		",
-		server_ids,
+		&server_ids,
 		&filter.server_ids,
 		&filter.datacenter_ids,
 		&filter.cluster_ids,

@@ -111,7 +111,7 @@ pub async fn upsert(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 					input_route_subpaths,
 					input_strip_prefix,
 					0, // Actors type
-					actors_selector_tags_json,
+					&actors_selector_tags_json,
 					now,
 					existing_id,
 					input_namespace_id
@@ -140,7 +140,7 @@ pub async fn upsert(ctx: &OperationCtx, input: &Input) -> GlobalResult<Output> {
 					input_route_subpaths,
 					input_strip_prefix,
 					0, // Actors type
-					actors_selector_tags_json,
+					&actors_selector_tags_json,
 					now,
 					now
 				)

@@ -33,7 +33,7 @@ pub async fn handle(
 		FROM db_mm_state.lobbies
 		WHERE run_id = ANY($1)
 		",
-		run_ids,
+		&run_ids,
 	)
 	.await?
 	.into_iter()

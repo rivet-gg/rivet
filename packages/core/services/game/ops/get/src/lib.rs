@@ -68,7 +68,7 @@ async fn handle(ctx: OperationContext<game::get::Request>) -> GlobalResult<game:
 						FROM db_game.games
 						WHERE game_id = ANY($1)
 						",
-						game_ids,
+						&game_ids,
 					)
 					.await?;
 

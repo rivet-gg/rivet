@@ -24,7 +24,7 @@ async fn handle(
 		FROM db_cloud.game_namespaces
 		WHERE namespace_id = ANY($1)
 		",
-		namespace_ids,
+		&namespace_ids,
 	)
 	.await?;
 

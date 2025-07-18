@@ -27,7 +27,7 @@ async fn handle(
 		FROM db_cdn.sites
 		WHERE site_id = ANY($1)
 		",
-		site_ids,
+		&site_ids,
 	)
 	.await?
 	.into_iter()
