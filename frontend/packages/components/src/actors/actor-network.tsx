@@ -84,7 +84,9 @@ export function ActorNetwork({ actor }: ActorNetworkProps) {
 													className="max-w-full min-w-0"
 													value={port.hostname || ""}
 												>
-													{port.hostname}
+													<span className=" min-w-0 truncate flex-1">
+														{port.hostname}
+													</span>
 												</DiscreteCopyButton>
 											</Dd>
 											{port.url ? (
