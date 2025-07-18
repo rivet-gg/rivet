@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-
+use analytics::InsertClickHouseInput;
 use chirp_workflow::prelude::*;
 use destroy::KillCtx;
 use futures_util::FutureExt;
-use util::serde::AsHashableExt;
 
 use crate::{
 	protocol,
 	types::{ActorLifecycle, ActorResources, EndpointType, NetworkMode, Routing},
 };
 
+mod analytics;
 pub mod destroy;
 mod migrations;
 mod runtime;
@@ -26,20 +25,24 @@ const ACTOR_START_THRESHOLD_MS: i64 = util::duration::seconds(30);
 const ACTOR_STOP_THRESHOLD_MS: i64 = util::duration::seconds(30);
 /// How long to wait after stopped and not receiving an exit state before setting actor as lost.
 const ACTOR_EXIT_THRESHOLD_MS: i64 = util::duration::seconds(5);
+/// How long an actor goes without retries before it's retry count is reset to 0, effectively resetting its
+/// backoff to 0.
+const RETRY_RESET_DURATION_MS: i64 = util::duration::minutes(10);
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Hash)]
 pub struct Input {
 	pub actor_id: util::Id,
 	pub env_id: Uuid,
-	pub tags: HashMap<String, String>,
+	pub tags: util::serde::HashableMap<String, String>,
+	/// Used to override image resources.
 	pub resources: Option<ActorResources>,
 	pub lifecycle: ActorLifecycle,
 	pub image_id: Uuid,
 	pub root_user_enabled: bool,
 	pub args: Vec<String>,
 	pub network_mode: NetworkMode,
-	pub environment: HashMap<String, String>,
-	pub network_ports: HashMap<String, Port>,
+	pub environment: util::serde::HashableMap<String, String>,
+	pub network_ports: util::serde::HashableMap<String, Port>,
 	pub endpoint_type: Option<EndpointType>,
 }
 
@@ -57,14 +60,14 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 	let validation_res = ctx
 		.activity(setup::ValidateInput {
 			env_id: input.env_id,
-			tags: input.tags.as_hashable(),
+			tags: input.tags.clone(),
 			resources: input.resources.clone(),
 			image_id: input.image_id,
 			root_user_enabled: input.root_user_enabled,
 			args: input.args.clone(),
 			network_mode: input.network_mode,
-			environment: input.environment.as_hashable(),
-			network_ports: input.network_ports.as_hashable(),
+			environment: input.environment.clone(),
+			network_ports: input.network_ports.clone(),
 		})
 		.await?;
 
@@ -82,7 +85,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 	let network_ports = ctx
 		.activity(setup::DisableTlsPortsInput {
-			network_ports: input.network_ports.as_hashable(),
+			network_ports: input.network_ports.clone(),
 		})
 		.await?;
 
@@ -120,6 +123,12 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 		}
 	};
 
+	ctx.v(2)
+		.activity(InsertClickHouseInput {
+			actor_id: input.actor_id,
+		})
+		.await?;
+
 	ctx.msg(CreateComplete {})
 		.tag("actor_id", input.actor_id)
 		.send()
@@ -145,6 +154,14 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 		return Ok(());
 	};
+
+	ctx.v(2)
+		.msg(Allocated {
+			client_id: allocate_res.client_id,
+		})
+		.tag("actor_id", input.actor_id)
+		.send()
+		.await?;
 
 	let lifecycle_res = ctx
 		.loope(
@@ -259,6 +276,12 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 									let updated = ctx
 										.activity(runtime::SetConnectableInput {
 											connectable: true,
+										})
+										.await?;
+
+									ctx.v(2)
+										.activity(InsertClickHouseInput {
+											actor_id: input.actor_id,
 										})
 										.await?;
 
@@ -448,6 +471,11 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 #[message("pegboard_actor_create_complete")]
 pub struct CreateComplete {}
 
+#[message("pegboard_actor_allocated")]
+pub struct Allocated {
+	pub client_id: Uuid,
+}
+
 #[message("pegboard_actor_failed")]
 pub struct Failed {
 	pub message: String,
@@ -500,14 +528,3 @@ join_signal!(Main {
 	Undrain,
 	Destroy,
 });
-
-// Stub definition
-#[derive(Debug, Serialize, Deserialize, Hash)]
-pub struct WaitForTraefikPollInput {}
-#[activity(WaitForTraefikPoll)]
-pub async fn wait_for_traefik_poll(
-	_ctx: &ActivityCtx,
-	_input: &WaitForTraefikPollInput,
-) -> GlobalResult<()> {
-	Ok(())
-}
