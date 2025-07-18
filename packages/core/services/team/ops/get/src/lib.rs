@@ -38,7 +38,7 @@ async fn handle(ctx: OperationContext<team::get::Request>) -> GlobalResult<team:
 		FROM db_team.teams
 		WHERE team_id = ANY($1)
 		",
-		team_ids,
+		&team_ids,
 	)
 	.await?;
 

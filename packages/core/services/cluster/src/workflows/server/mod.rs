@@ -597,7 +597,7 @@ async fn get_vlan_ip(ctx: &ActivityCtx, input: &GetVlanIpInput) -> GlobalResult<
 		// Choose a random index to start from for better index spread
 		rand::thread_rng().gen_range(0i64..max_idx),
 		max_idx,
-		shared_net_pool_types,
+		&shared_net_pool_types,
 		input.datacenter_id,
 		input.server_id,
 	)
