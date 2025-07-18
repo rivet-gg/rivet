@@ -687,11 +687,12 @@ pub async fn spawn_actor(
 				fallback_artifact_url: actor_setup.fallback_artifact_url.clone(),
 				kind: actor_setup.meta.build_kind.into(),
 				compression: actor_setup.meta.build_compression.into(),
-				// Always single, this is the old actor wf
-				allocation_type: protocol::ImageAllocationType::Single,
-
+				
 				// Calculated on the manager for old actors
 				artifact_size: 0,
+
+				// Always single, this is the old actor wf
+				allocation_type: protocol::ImageAllocationType::Single,
 			},
 			root_user_enabled: input.root_user_enabled,
 			env: input.environment.clone(),
