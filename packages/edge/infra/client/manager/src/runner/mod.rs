@@ -18,7 +18,7 @@ use nix::{
 	unistd::Pid,
 };
 use pegboard::protocol;
-use pegboard_config::runner_protocol;
+use pegboard_runner_protocol as rp;
 use sqlx::Acquire;
 use tokio::{
 	fs,
@@ -77,7 +77,7 @@ pub struct Runner {
 	bump_channel: broadcast::Sender<()>,
 
 	// TODO: replace with a single stream for each actor?
-	actor_proxy_tx: broadcast::Sender<(rivet_util::Id, u32, runner_protocol::ToActor)>,
+	actor_proxy_tx: broadcast::Sender<(rivet_util::Id, u32, rp::ToActor)>,
 }
 
 impl Runner {
@@ -124,9 +124,9 @@ impl Runner {
 					tracing::info!(runner_id=?self.runner_id, "runner received another socket, closing old one");
 
 					// Close the old socket
-					let buf = runner_protocol::encode_frame(&runner_protocol::proto::ToRunner {
-						message: Some(runner_protocol::proto::to_runner::Message::Close(
-							runner_protocol::proto::to_runner::Close {
+					let buf = rp::encode_frame(&rp::proto::ToRunner {
+						message: Some(rp::proto::to_runner::Message::Close(
+							rp::proto::to_runner::Close {
 								reason: Some("replacing with new socket".into()),
 							},
 						)),
@@ -142,7 +142,7 @@ impl Runner {
 				}
 
 				// Wrap the stream in a framed transport
-				let framed = Framed::new(stream, runner_protocol::codec());
+				let framed = Framed::new(stream, rp::codec());
 				let (tx, rx) = framed.split();
 
 				*guard = Some(tx);
@@ -182,23 +182,22 @@ impl Runner {
 				break Ok(());
 			};
 
-			let (_, packet) =
-				runner_protocol::decode_frame::<runner_protocol::proto::ToManager>(&buf?)
-					.context("failed to decode frame")?;
+			let (_, packet) = rp::decode_frame::<rp::proto::ToManager>(&buf?)
+				.context("failed to decode frame")?;
 
 			tracing::debug!(?packet, "runner received packet");
 
 			match packet.message.context("ToManager.message")? {
-				runner_protocol::proto::to_manager::Message::Ping(_) => {
+				rp::proto::to_manager::Message::Ping(_) => {
 					// TODO: Rate limit?
-					self.send(&runner_protocol::proto::ToRunner {
-						message: Some(runner_protocol::proto::to_runner::Message::Pong(
-							runner_protocol::proto::to_runner::Pong {},
+					self.send(&rp::proto::ToRunner {
+						message: Some(rp::proto::to_runner::Message::Pong(
+							rp::proto::to_runner::Pong {},
 						)),
 					})
 					.await?;
 				}
-				runner_protocol::proto::to_manager::Message::ActorStateUpdate(msg) => {
+				rp::proto::to_manager::Message::ActorStateUpdate(msg) => {
 					match self.config.image.allocation_type {
 						protocol::ImageAllocationType::Single => {
 							tracing::debug!("unexpected state update from non-multi runner");
@@ -210,25 +209,25 @@ impl Runner {
 							let _ = self.actor_proxy_tx.send((
 								rivet_util::Id::parse(&msg.actor_id)?,
 								msg.generation,
-								runner_protocol::ToActor::StateUpdate {
+								rp::ToActor::StateUpdate {
 									state: msg.state.context("ActorStateUpdate.state")?,
 								},
 							));
 						}
 					}
 				}
-				runner_protocol::proto::to_manager::Message::Kv(msg) => {
+				rp::proto::to_manager::Message::Kv(msg) => {
 					let _ = self.actor_proxy_tx.send((
 						rivet_util::Id::parse(&msg.actor_id)?,
 						msg.generation,
-						runner_protocol::ToActor::Kv(msg),
+						rp::ToActor::Kv(msg),
 					));
 				}
 			}
 		}
 	}
 
-	pub async fn send(&self, packet: &runner_protocol::proto::ToRunner) -> Result<()> {
+	pub async fn send(&self, packet: &rp::proto::ToRunner) -> Result<()> {
 		match &self.comms {
 			Comms::Basic => bail!("cannot send socket message to basic runner"),
 			Comms::Socket(socket) => {
@@ -261,8 +260,7 @@ impl Runner {
 				})??;
 
 				let socket = guard.as_mut().expect("should exist");
-				let buf =
-					runner_protocol::encode_frame(packet).context("failed to encode frame")?;
+				let buf = rp::encode_frame(packet).context("failed to encode frame")?;
 				socket
 					.send(buf.into())
 					.await
@@ -704,14 +702,14 @@ impl Comms {
 pub struct ActorProxy {
 	actor_id: rivet_util::Id,
 	generation: u32,
-	sub: broadcast::Receiver<(rivet_util::Id, u32, runner_protocol::ToActor)>,
+	sub: broadcast::Receiver<(rivet_util::Id, u32, rp::ToActor)>,
 }
 
 impl ActorProxy {
 	fn new(
 		actor_id: rivet_util::Id,
 		generation: u32,
-		sub: broadcast::Receiver<(rivet_util::Id, u32, runner_protocol::ToActor)>,
+		sub: broadcast::Receiver<(rivet_util::Id, u32, rp::ToActor)>,
 	) -> Self {
 		ActorProxy {
 			actor_id,
@@ -719,7 +717,7 @@ impl ActorProxy {
 			sub,
 		}
 	}
-	pub async fn next(&mut self) -> Option<runner_protocol::ToActor> {
+	pub async fn next(&mut self) -> Option<rp::ToActor> {
 		loop {
 			let Ok((other_actor_id, other_generation, state)) = self.sub.recv().await else {
 				tracing::error!("actor observer channel dropped");

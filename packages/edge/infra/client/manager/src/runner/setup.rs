@@ -626,13 +626,15 @@ impl Runner {
 						.context("failed to set scheduling policy")?;
 
 						// Exit immediately on fail in order to not leak process
-						let err = std::process::Command::new("sh")
-							.args(&runner_args)
-							.envs(env.iter().cloned())
-							.stdin(Stdio::null())
-							.stdout(Stdio::null())
-							.stderr(Stdio::null())
-							.exec();
+						let err = std::process::Command::new(
+							&ctx.config().runner.container_runner_binary_path(),
+						)
+						.args(&runner_args)
+						.envs(env.iter().cloned())
+						.stdin(Stdio::null())
+						.stdout(Stdio::null())
+						.stderr(Stdio::null())
+						.exec();
 						eprintln!("exec failed: {err:?}");
 						std::process::exit(1);
 					}
