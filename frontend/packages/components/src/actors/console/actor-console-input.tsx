@@ -1,12 +1,12 @@
 import { Button, ScrollArea } from "@rivet-gg/components";
 import { useRef } from "react";
-import { useActorRpcs, useActorWorker } from "../worker/actor-worker-context";
+import { useActorWorker } from "../worker/actor-worker-context";
 import { ActorConsoleMessage } from "./actor-console-message";
 import { ReplInput, type ReplInputRef, replaceCode } from "./repl-input";
 
 export function ActorConsoleInput() {
 	const worker = useActorWorker();
-	const rpcs = useActorRpcs();
+	const rpcs = [] as string[];
 	const ref = useRef<ReplInputRef>(null);
 
 	return (

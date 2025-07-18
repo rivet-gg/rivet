@@ -1,8 +1,53 @@
 import { toast } from "@rivet-gg/components";
-import { broadcastQueryClient } from "@tanstack/query-broadcast-client-experimental";
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
-import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
-import superjson from "superjson";
+import {
+	MutationCache,
+	QueryCache,
+	QueryClient,
+	queryOptions,
+} from "@tanstack/react-query";
+import {
+	createManagerInspectorClient,
+	actorsDataProvider,
+} from "@rivet-gg/components/actors";
+
+const inspectorManager = createManagerInspectorClient(
+	"http://localhost:6420/registry/inspect",
+);
+
+actorsDataProvider.set({
+	getActors: async ({ cursor }, { signal }) => {
+		const response = await inspectorManager.actors.$get({
+			query: {
+				cursor,
+				limit: 10,
+			},
+			signal,
+		});
+
+		if (!response.ok) {
+			throw new Error("Failed to fetch actors");
+		}
+
+		return await response.json();
+	},
+	getActor: async (id, { signal }) => {
+		const response = await inspectorManager.actor[":id"].$get({
+			param: { id },
+		});
+
+		if (!response.ok) {
+			throw new Error("Failed to fetch actor");
+		}
+
+		return await response.json();
+	},
+	getActorLogs: async (id, { signal }) => {
+		throw new Error("Not implemented");
+	},
+	getRegions: async () => {
+		return [{ id: "local", name: "Local" }];
+	},
+});
 
 const queryCache = new QueryCache();
 
@@ -21,9 +66,9 @@ export const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
 			staleTime: 5 * 1000,
-			gcTime: 1000 * 60 * 60 * 24,
-			retry: 2,
-			refetchOnWindowFocus: false,
+			gcTime: 60 * 1000,
+			retry: 3,
+			refetchOnWindowFocus: true,
 			refetchOnReconnect: false,
 		},
 	},
@@ -31,13 +76,12 @@ export const queryClient = new QueryClient({
 	mutationCache,
 });
 
-export const queryClientPersister = createSyncStoragePersister({
-	storage: window.localStorage,
-	serialize: superjson.stringify,
-	deserialize: superjson.parse,
-});
-
-broadcastQueryClient({
-	queryClient,
-	broadcastChannel: "rivet-gg-hub",
-});
+export const managerStatusQueryOptions = () =>
+	queryOptions({
+		queryKey: ["managerStatus"],
+		refetchInterval: 1000,
+		retry: 0,
+		queryFn: async () => {
+			return inspectorManager.ping.$get();
+		},
+	});

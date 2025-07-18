@@ -1,39 +1,32 @@
-import equal from "fast-deep-equal";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
 import { Suspense } from "react";
+import { ActorBuild } from "./actor-build";
+import { ActorObjectInspector } from "./console/actor-inspector";
+import { ACTOR_FRAMEWORK_TAG_VALUE } from "./actor-tags";
+import { Dd, Dl, Dt } from "../ui/typography";
+import { Flex } from "../ui/flex";
 import { formatDuration } from "../lib/formatter";
 import { toRecord } from "../lib/utils";
-import { Flex } from "../ui/flex";
 import { Skeleton } from "../ui/skeleton";
-import { Dd, Dl, Dt } from "../ui/typography";
-import { ActorBuild } from "./actor-build";
+import { useQuery } from "@tanstack/react-query";
 import {
-	type Actor,
-	type ActorAtom,
 	ActorFeature,
-	currentActorFeaturesAtom,
-} from "./actor-context";
-import { ACTOR_FRAMEWORK_TAG_VALUE } from "./actor-tags";
-import { ActorObjectInspector } from "./console/actor-inspector";
-
-const selector = (a: Actor) => ({
-	lifecycle: a.lifecycle,
-	resources: a.resources,
-	runtime: a.runtime,
-	tags: a.tags,
-});
+	actorFeaturesQueryOptions,
+	type ActorId,
+	actorRuntimeQueryOptions,
+} from "./queries";
 
 export interface ActorRuntimeProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
-export function ActorRuntime({ actor }: ActorRuntimeProps) {
-	const { lifecycle, resources, runtime, tags } = useAtomValue(
-		selectAtom(actor, selector, equal),
-	);
+export function ActorRuntime({ actorId }: ActorRuntimeProps) {
+	const {
+		data: { lifecycle, resources, runtime, tags } = {},
+	} = useQuery(actorRuntimeQueryOptions(actorId));
 
-	const features = useAtomValue(currentActorFeaturesAtom);
+	const { data: features = [] } = useQuery(
+		actorFeaturesQueryOptions(actorId),
+	);
 
 	return (
 		<>
@@ -83,7 +76,7 @@ export function ActorRuntime({ actor }: ActorRuntimeProps) {
 			<Suspense
 				fallback={<Skeleton className="w-full h-32 col-span-2" />}
 			>
-				<ActorBuild actor={actor} />
+				<ActorBuild actorId={actorId} />
 			</Suspense>
 		</>
 	);

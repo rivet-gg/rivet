@@ -1,10 +1,5 @@
 import { Actors } from "@/components/actors";
 import {
-	connectionEffect,
-	connectionStateAtom,
-	initiallyConnectedAtom,
-} from "@/stores/manager";
-import {
 	Button,
 	Card,
 	CardContent,
@@ -20,10 +15,6 @@ import {
 	Strong,
 } from "@rivet-gg/components";
 import {
-	ActorsListFiltersSchema,
-	currentActorIdAtom,
-} from "@rivet-gg/components/actors";
-import {
 	Icon,
 	faBrave,
 	faChrome,
@@ -34,7 +25,6 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 import { z } from "zod";
 // @ts-expect-error types are missing
@@ -52,6 +42,12 @@ import devBun, {
 	source as devBunSource,
 	// @ts-expect-error types are missing
 } from "../../content/dev-bun.sh?shiki";
+import {
+	type ActorId,
+	ActorsListFiltersSchema,
+	actorsQueryOptions,
+} from "@rivet-gg/components/actors";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_layout/")({
 	component: RouteComponent,
@@ -66,22 +62,14 @@ export const Route = createFileRoute("/_layout/")({
 });
 
 function RouteComponent() {
-	useAtom(connectionEffect);
-
-	const isInitiallyConnected = useAtomValue(initiallyConnectedAtom);
-	const status = useAtomValue(connectionStateAtom);
-
 	const { actorId } = Route.useSearch();
 
-	const setCurrentActorId = useSetAtom(currentActorIdAtom);
-
-	useEffect(() => {
-		setCurrentActorId(actorId);
-	}, [actorId, setCurrentActorId]);
+	// const queryClient = useQueryClient();
 
 	return (
 		<AnimatePresence initial={false}>
-			{status === "disconnected" && !isInitiallyConnected ? (
+			{
+				/* {status === "disconnected" && !isInitiallyConnected ? (
 				<motion.div
 					initial={{ opacity: 0, scale: 0.95 }}
 					animate={{ opacity: 1, scale: 1 }}
@@ -214,9 +202,10 @@ function RouteComponent() {
 						</CardFooter>
 					</Card>
 				</motion.div>
-			) : (
+			) : (*/
 				<Actors actorId={actorId} />
-			)}
+				/*	)} */
+			}
 		</AnimatePresence>
 	);
 }

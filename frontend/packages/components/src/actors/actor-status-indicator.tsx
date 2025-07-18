@@ -1,57 +1,24 @@
 import { Ping, cn } from "@rivet-gg/components";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
 import type { ComponentPropsWithRef } from "react";
-import type { Actor, ActorAtom } from "./actor-context";
+import { useQuery } from "@tanstack/react-query";
+import {
+	type ActorId,
+	type ActorStatus,
+	actorStatusQueryOptions,
+} from "./queries";
 
-export type ActorStatus =
-	| "starting"
-	| "running"
-	| "stopped"
-	| "crashed"
-	| "unknown";
-
-export function getActorStatus(
-	actor: Pick<Actor, "createdAt" | "startedAt" | "destroyedAt">,
-): ActorStatus {
-	const { createdAt, startedAt, destroyedAt } = actor;
-
-	if (createdAt && !startedAt && !destroyedAt) {
-		return "starting";
-	}
-
-	if (createdAt && startedAt && !destroyedAt) {
-		return "running";
-	}
-
-	if (createdAt && startedAt && destroyedAt) {
-		return "stopped";
-	}
-
-	if (createdAt && !startedAt && destroyedAt) {
-		return "crashed";
-	}
-
-	return "unknown";
-}
-
-interface AtomizedActorStatusIndicatorProps
-	extends ComponentPropsWithRef<"span"> {
-	actor: ActorAtom;
-}
-
-export const AtomizedActorStatusIndicator = ({
-	actor,
+export const QueriedActorStatusIndicator = ({
+	actorId,
 	...props
-}: AtomizedActorStatusIndicatorProps) => {
-	const status = useAtomValue(selectAtom(actor, selector));
+}: {
+	actorId: ActorId;
+} & ComponentPropsWithRef<"span">) => {
+	const { data: status } = useQuery(actorStatusQueryOptions(actorId));
 	return <ActorStatusIndicator status={status} {...props} />;
 };
 
-const selector = ({ status }: Actor) => status;
-
 interface ActorStatusIndicatorProps extends ComponentPropsWithRef<"span"> {
-	status: ReturnType<typeof getActorStatus>;
+	status: ActorStatus | undefined;
 }
 
 export const ActorStatusIndicator = ({

@@ -1,7 +1,5 @@
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import type { Actor, ActorAtom } from "./actor-context";
-import type { ActorStatus } from "./actor-status-indicator";
+import { useQuery } from "@tanstack/react-query";
+import { type ActorStatus, actorStatusQueryOptions } from "./queries";
 
 export const ACTOR_STATUS_LABEL_MAP = {
 	unknown: "Unknown",
@@ -15,13 +13,11 @@ export const ActorStatusLabel = ({ status }: { status: ActorStatus }) => {
 	return <span>{ACTOR_STATUS_LABEL_MAP[status]}</span>;
 };
 
-const selector = (a: Actor) => a.status;
-
-export const AtomizedActorStatusLabel = ({
-	actor,
+export const QueriedActorStatusLabel = ({
+	actorId,
 }: {
-	actor: ActorAtom;
+	actorId: string;
 }) => {
-	const status = useAtomValue(selectAtom(actor, selector));
+	const { data: status } = useQuery(actorStatusQueryOptions(actorId));
 	return <ActorStatusLabel status={status} />;
 };

@@ -9,10 +9,15 @@ import {
 	useState,
 	useSyncExternalStore,
 } from "react";
-import { toast } from "sonner";
-import { assertNonNullable } from "../../lib/utils";
-import { type Actor, type ActorAtom, ActorFeature } from "../actor-context";
 import { ActorWorkerContainer } from "./actor-worker-container";
+import { assertNonNullable } from "../../lib/utils";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import {
+	ActorFeature,
+	type ActorId,
+	actorWorkerQueryOptions,
+} from "../queries";
 
 export const ActorWorkerContext = createContext<ActorWorkerContainer | null>(
 	null,
@@ -24,31 +29,23 @@ export const useActorWorker = () => {
 	return value;
 };
 
-const selector = (a: Actor) => ({
-	actorId: a.id,
-	endpoint: a.endpoint,
-	enabled:
-		!a.destroyedAt &&
-		a.endpoint !== null &&
-		a.startedAt !== null &&
-		a.features?.includes(ActorFeature.Console),
-});
-
 interface ActorWorkerContextProviderProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 	children: ReactNode;
-	notifyOnReconnect?: boolean;
 }
-
-// FIXME: rewrite with jotai
 export const ActorWorkerContextProvider = ({
 	children,
-	actor,
-	notifyOnReconnect,
+	actorId,
 }: ActorWorkerContextProviderProps) => {
-	const { actorId, endpoint, enabled } = useAtomValue(
-		selectAtom(actor, selector),
-	);
+	const {
+		data: { endpoint, features, destroyedAt, startedAt } = {},
+	} = useQuery(actorWorkerQueryOptions(actorId));
+
+	const enabled =
+		(features?.includes(ActorFeature.Console) &&
+			!destroyedAt &&
+			startedAt) ??
+		false;
 
 	const [container] = useState<ActorWorkerContainer>(
 		() => new ActorWorkerContainer(),
@@ -61,8 +58,6 @@ export const ActorWorkerContextProvider = ({
 		if (enabled && endpoint) {
 			container.init({
 				actorId,
-				endpoint,
-				notifyOnReconnect,
 				signal: ctrl.signal,
 			});
 		} else {
@@ -108,51 +103,6 @@ export function useActorWorkerStatus() {
 		),
 		useCallback(() => {
 			return container.getStatus();
-		}, [container]),
-	);
-}
-
-export function useActorRpcs() {
-	const container = useActorWorker();
-	return useSyncExternalStore(
-		useCallback(
-			(cb) => {
-				return container.subscribe(cb);
-			},
-			[container],
-		),
-		useCallback(() => {
-			return container.getRpcs();
-		}, [container]),
-	);
-}
-
-export function useActorState() {
-	const container = useActorWorker();
-	return useSyncExternalStore(
-		useCallback(
-			(cb) => {
-				return container.subscribe(cb);
-			},
-			[container],
-		),
-		useCallback(() => {
-			return container.getState();
-		}, [container]),
-	);
-}
-
-export function useActorConnections() {
-	const container = useActorWorker();
-	return useSyncExternalStore(
-		useCallback(
-			(cb) => {
-				return container.subscribe(cb);
-			},
-			[container],
-		),
-		useCallback(() => {
-			return container.getConnections();
 		}, [container]),
 	);
 }

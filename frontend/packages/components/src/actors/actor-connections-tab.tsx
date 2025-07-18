@@ -1,63 +1,63 @@
 import { LiveBadge, ScrollArea } from "@rivet-gg/components";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import type { Actor, ActorAtom } from "./actor-context";
 import { ActorObjectInspector } from "./console/actor-inspector";
+import { useQuery } from "@tanstack/react-query";
 import {
-	useActorConnections,
-	useActorWorkerStatus,
-} from "./worker/actor-worker-context";
-
-const selector = (a: Actor) => a.destroyedAt;
+  actorConnectionsQueryOptions,
+  actorDestroyedAtQueryOptions,
+  ActorId,
+} from "./queries";
 
 interface ActorConnectionsTabProps {
-	actor: ActorAtom;
+  actorId: ActorId;
 }
 
-export function ActorConnectionsTab({ actor }: ActorConnectionsTabProps) {
-	const destroyedAt = useAtomValue(selectAtom(actor, selector));
-	const status = useActorWorkerStatus();
+export function ActorConnectionsTab({ actorId }: ActorConnectionsTabProps) {
+  const { data: destroyedAt } = useQuery(actorDestroyedAtQueryOptions(actorId));
 
-	const connections = useActorConnections();
+  const {
+    data: { connections } = {},
+    isError,
+    isLoading,
+  } = useQuery(actorConnectionsQueryOptions(actorId));
 
-	if (destroyedAt) {
-		return (
-			<div className="flex-1 flex items-center justify-center h-full text-xs text-center">
-				Connections Preview is unavailable for inactive Actors.
-			</div>
-		);
-	}
+  if (destroyedAt) {
+    return (
+      <div className="flex-1 flex items-center justify-center h-full text-xs text-center">
+        Connections Preview is unavailable for inactive Actors.
+      </div>
+    );
+  }
 
-	if (status.type === "error") {
-		return (
-			<div className="flex-1 flex items-center justify-center h-full text-xs text-center">
-				Connections Preview is currently unavailable.
-				<br />
-				See console/logs for more details.
-			</div>
-		);
-	}
+  if (isError) {
+    return (
+      <div className="flex-1 flex items-center justify-center h-full text-xs text-center">
+        Connections Preview is currently unavailable.
+        <br />
+        See console/logs for more details.
+      </div>
+    );
+  }
 
-	if (status.type !== "ready") {
-		return (
-			<div className="flex-1 flex items-center justify-center h-full text-xs text-center">
-				Loading connections...
-			</div>
-		);
-	}
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center h-full text-xs text-center">
+        Loading connections...
+      </div>
+    );
+  }
 
-	return (
-		<ScrollArea className="flex-1 w-full min-h-0 h-full">
-			<div className="flex  justify-between items-center gap-1 border-b sticky top-0 p-2 bg-card z-[1]">
-				<LiveBadge />
-			</div>
-			<div className="p-2">
-				<ActorObjectInspector
-					name="connections"
-					data={Object.fromEntries(connections.map((c) => [c.id, c]))}
-					expandPaths={["$"]}
-				/>
-			</div>
-		</ScrollArea>
-	);
+  return (
+    <ScrollArea className="flex-1 w-full min-h-0 h-full">
+      <div className="flex  justify-between items-center gap-1 border-b sticky top-0 p-2 bg-card z-[1]">
+        <LiveBadge />
+      </div>
+      <div className="p-2">
+        <ActorObjectInspector
+          name="connections"
+          data={connections}
+          expandPaths={["$"]}
+        />
+      </div>
+    </ScrollArea>
+  );
 }

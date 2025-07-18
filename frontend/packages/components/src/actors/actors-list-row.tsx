@@ -4,35 +4,31 @@ import {
 	SmallText,
 	WithTooltip,
 	cn,
-	toRecord,
 } from "@rivet-gg/components";
 import { Icon, faTag, faTags } from "@rivet-gg/icons";
 import { Link } from "@tanstack/react-router";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
 import { memo } from "react";
-import {
-	type Actor,
-	type ActorAtom,
-	isCurrentActorAtom,
-} from "./actor-context";
 import { ActorRegion } from "./actor-region";
-import { AtomizedActorStatusIndicator } from "./actor-status-indicator";
-import { AtomizedActorStatusLabel } from "./actor-status-label";
 import { ActorTags } from "./actor-tags";
+import {
+	actorRegionQueryOptions,
+	actorTagsQueryOptions,
+	actorCreatedAtQueryOptions,
+	actorDestroyedAtQueryOptions,
+	type ActorId,
+} from "./queries";
+import { useQuery } from "@tanstack/react-query";
+import { QueriedActorStatusLabel } from "./actor-status-label";
+import { QueriedActorStatusIndicator } from "./actor-status-indicator";
 
 interface ActorsListRowProps {
 	className?: string;
-	actor: ActorAtom;
+	actorId: ActorId;
+	isCurrent?: boolean;
 }
 
-const selector = (actor: Actor) => actor.id;
-
 export const ActorsListRow = memo(
-	({ className, actor }: ActorsListRowProps) => {
-		const id = useAtomValue(selectAtom(actor, selector));
-		const isCurrent = useAtomValue(isCurrentActorAtom(actor));
-
+	({ className, actorId, isCurrent }: ActorsListRowProps) => {
 		return (
 			<Button
 				className={cn(
@@ -46,34 +42,48 @@ export const ActorsListRow = memo(
 					to="."
 					search={(search: Record<string, unknown>) => ({
 						...search,
-						actorId: id,
+						actorId,
 					})}
 					className="min-w-0 flex-wrap gap-2"
 				>
 					<WithTooltip
 						trigger={
 							<div className="w-full flex justify-center">
-								<AtomizedActorStatusIndicator actor={actor} />
+								<QueriedActorStatusIndicator
+									actorId={actorId}
+								/>
 							</div>
 						}
-						content={<AtomizedActorStatusLabel actor={actor} />}
+						content={<QueriedActorStatusLabel actorId={actorId} />}
 					/>
-					<Region actor={actor} />
-					<SmallText>{id.split("-")[0]}</SmallText>
-					<Tags actor={actor} />
+					<Region actorId={actorId} />
+					<Id actorId={actorId} />
+					<Tags actorId={actorId} />
 
-					<CreatedAt actor={actor} />
-					<DestroyedAt actor={actor} />
+					<CreatedAt actorId={actorId} />
+					<DestroyedAt actorId={actorId} />
 				</Link>
 			</Button>
 		);
 	},
 );
 
-const regionSelector = (actor: Actor) => actor.region;
+function Id({ actorId }: { actorId: ActorId }) {
+	return (
+		<SmallText>
+			{actorId.includes("-")
+				? actorId.split("-")[0]
+				: actorId.substring(0, 8)}
+		</SmallText>
+	);
+}
 
-function Region({ actor }: { actor: ActorAtom }) {
-	const regionId = useAtomValue(selectAtom(actor, regionSelector));
+function Region({ actorId }: { actorId: ActorId }) {
+	const { data: regionId } = useQuery(actorRegionQueryOptions(actorId));
+
+	if (!regionId) {
+		return <SmallText className="text-muted-foreground">-</SmallText>;
+	}
 
 	return (
 		<ActorRegion
@@ -84,10 +94,8 @@ function Region({ actor }: { actor: ActorAtom }) {
 	);
 }
 
-const tagsSelector = (actor: Actor) => toRecord(actor.tags);
-
-function Tags({ actor }: { actor: ActorAtom }) {
-	const tags = useAtomValue(selectAtom(actor, tagsSelector));
+function Tags({ actorId }: { actorId: ActorId }) {
+	const { data: tags = {} } = useQuery(actorTagsQueryOptions(actorId));
 
 	const tagCount = Object.keys(tags).length;
 
@@ -130,10 +138,8 @@ function Tags({ actor }: { actor: ActorAtom }) {
 	);
 }
 
-const createdAtSelector = (actor: Actor) => actor.createdAt;
-
-function CreatedAt({ actor }: { actor: ActorAtom }) {
-	const createdAt = useAtomValue(selectAtom(actor, createdAtSelector));
+function CreatedAt({ actorId }: { actorId: ActorId }) {
+	const { data: createdAt } = useQuery(actorCreatedAtQueryOptions(actorId));
 
 	return (
 		<SmallText className="mx-1">
@@ -149,9 +155,10 @@ function CreatedAt({ actor }: { actor: ActorAtom }) {
 	);
 }
 
-const destroyedAtSelector = (actor: Actor) => actor.destroyedAt;
-function DestroyedAt({ actor }: { actor: ActorAtom }) {
-	const destroyedAt = useAtomValue(selectAtom(actor, destroyedAtSelector));
+function DestroyedAt({ actorId }: { actorId: ActorId }) {
+	const { data: destroyedAt } = useQuery(
+		actorDestroyedAtQueryOptions(actorId),
+	);
 
 	return (
 		<SmallText className="mx-1">
