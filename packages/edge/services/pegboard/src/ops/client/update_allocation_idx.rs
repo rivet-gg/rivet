@@ -2,7 +2,7 @@ use chirp_workflow::prelude::*;
 use fdb_util::{end_of_key_range, FormalKey, SERIALIZABLE};
 use foundationdb::{self as fdb, options::ConflictRangeType};
 
-use crate::{keys, protocol};
+use crate::{keys, protocol, workflows::client::CLIENT_ELIGIBLE_THRESHOLD_MS};
 
 #[derive(Debug)]
 pub enum Action {
@@ -19,11 +19,12 @@ pub struct Input {
 	pub action: Action,
 }
 
+// Returns true if the ping was updated and the last ping was over the eligibility period ago
 #[operation]
 pub async fn pegboard_client_update_allocation_idx(
 	ctx: &OperationCtx,
 	input: &Input,
-) -> GlobalResult<()> {
+) -> GlobalResult<bool> {
 	ctx.fdb()
 		.await?
 		.run(|tx, _mc| async move {
@@ -54,7 +55,7 @@ pub async fn pegboard_client_update_allocation_idx(
 			// 		))?,
 			// 	)
 			// 	.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
-			let last_ping_ts = last_ping_ts_key
+			let old_last_ping_ts = last_ping_ts_key
 				.deserialize(&last_ping_ts_entry.ok_or(fdb::FdbBindingError::CustomError(
 					format!("key should exist: {last_ping_ts_key:?}").into(),
 				))?)
@@ -63,7 +64,7 @@ pub async fn pegboard_client_update_allocation_idx(
 			let old_allocation_key = keys::datacenter::ClientsByRemainingMemKey::new(
 				input.flavor,
 				remaining_mem,
-				last_ping_ts,
+				old_last_ping_ts,
 				input.client_id,
 			);
 			let old_allocation_key_buf = keys::subspace().pack(&old_allocation_key);
@@ -78,6 +79,8 @@ pub async fn pegboard_client_update_allocation_idx(
 			match input.action {
 				Action::ClearIdx => {
 					tx.clear(&old_allocation_key_buf);
+
+					Ok(false)
 				}
 				Action::AddIdx => {
 					tx.set(
@@ -86,6 +89,8 @@ pub async fn pegboard_client_update_allocation_idx(
 							.serialize(input.client_workflow_id)
 							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 					);
+
+					Ok(false)
 				}
 				// TODO: Could be improved somehow to not require another `.get`
 				Action::UpdatePing => {
@@ -122,11 +127,14 @@ pub async fn pegboard_client_update_allocation_idx(
 								.serialize(input.client_workflow_id)
 								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
 						);
+
+						Ok(last_ping_ts.saturating_sub(old_last_ping_ts)
+							> CLIENT_ELIGIBLE_THRESHOLD_MS)
+					} else {
+						Ok(false)
 					}
 				}
 			}
-
-			Ok(())
 		})
 		.custom_instrument(tracing::info_span!("client_update_alloc_idx_tx"))
 		.await

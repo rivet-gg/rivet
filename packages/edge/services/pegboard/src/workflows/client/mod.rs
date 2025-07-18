@@ -1,8 +1,12 @@
 use std::convert::TryInto;
 
+use ::build::types::BuildAllocationType;
 use chirp_workflow::prelude::*;
-use fdb_util::{FormalKey, SERIALIZABLE, SNAPSHOT};
-use foundationdb::{self as fdb, options::StreamingMode};
+use fdb_util::{end_of_key_range, FormalKey, SERIALIZABLE, SNAPSHOT};
+use foundationdb::{
+	self as fdb,
+	options::{ConflictRangeType, StreamingMode},
+};
 use futures_util::{FutureExt, StreamExt, TryStreamExt};
 use nix::sys::signal::Signal;
 use rivet_api::{
@@ -15,7 +19,10 @@ use rivet_api::{
 use rivet_operation::prelude::proto::{self, backend::pkg::*};
 use sqlx::Acquire;
 
-use crate::{client_config, keys, metrics, protocol, protocol::ClientFlavor, system_info};
+use crate::{
+	client_config, keys, metrics, protocol, protocol::ClientFlavor, system_info,
+	workflows::actor2::Allocate,
+};
 
 mod migrations;
 
@@ -99,21 +106,36 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 								.await?;
 							}
 
-							ctx.join((
-								activity(InsertFdbInput {
-									client_id,
-									flavor,
-									config,
-									system,
-								}),
-								activity(UpdateMetricsInput {
-									client_id,
-									flavor,
-									draining: state.drain_timeout_ts.is_some(),
-									clear: false,
-								}),
-							))
+							ctx.activity(InsertFdbInput {
+								client_id,
+								flavor,
+								config,
+								system,
+							})
 							.await?;
+
+							let (res, _) = ctx
+								.join((
+									// Check for pending actors as soon as connected
+									v(2).activity(AllocatePendingActorsInput {}),
+									activity(UpdateMetricsInput {
+										client_id,
+										flavor,
+										draining: state.drain_timeout_ts.is_some(),
+										clear: false,
+									}),
+								))
+								.await?;
+
+							// Dispatch pending allocs
+							for alloc in res.allocations {
+								ctx.v(2)
+									.signal(alloc.signal)
+									.to_workflow::<crate::workflows::actor2::Workflow>()
+									.tag("actor_id", alloc.actor_id)
+									.send()
+									.await?;
+							}
 						}
 						// Events are in order by index
 						protocol::ToServer::Events(events) => {
@@ -144,7 +166,7 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 								{
 									// Try actor2 first
 									let res = ctx
-										.signal(crate::workflows::actor::StateUpdate {
+										.signal(crate::workflows::actor2::StateUpdate {
 											generation,
 											state: state.clone(),
 										})
@@ -248,21 +270,61 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 					// Undrain all remaining actors
 					for actor_id in actor_ids {
+						// Try actor2 first
 						let res = ctx
-							.signal(crate::workflows::actor::Undrain {})
-							.to_workflow::<crate::workflows::actor::Workflow>()
+							.signal(crate::workflows::actor2::Undrain {})
+							.to_workflow::<crate::workflows::actor2::Workflow>()
 							.tag("actor_id", actor_id)
 							.send()
 							.await;
 
 						if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
-							tracing::debug!(
-								?actor_id,
-								"actor workflow not found to undrain, likely already stopped"
-							);
+							// Try old actors
+							let res = ctx
+								.signal(crate::workflows::actor::Undrain {})
+								.to_workflow::<crate::workflows::actor::Workflow>()
+								.tag("actor_id", actor_id)
+								.send()
+								.await;
+
+							if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
+								tracing::debug!(
+									?actor_id,
+									"actor workflow not found to undrain, likely already stopped"
+								);
+							} else {
+								res?;
+							}
 						} else {
 							res?;
 						}
+					}
+
+					// Check for pending actors
+					let res = ctx.v(2).activity(AllocatePendingActorsInput {}).await?;
+
+					// Dispatch pending allocs
+					for alloc in res.allocations {
+						ctx.v(2)
+							.signal(alloc.signal)
+							.to_workflow::<crate::workflows::actor2::Workflow>()
+							.tag("actor_id", alloc.actor_id)
+							.send()
+							.await?;
+					}
+				}
+				Some(Main::CheckQueue(_)) => {
+					// Check for pending actors
+					let res = ctx.v(2).activity(AllocatePendingActorsInput {}).await?;
+
+					// Dispatch pending allocs
+					for alloc in res.allocations {
+						ctx.v(2)
+							.signal(alloc.signal)
+							.to_workflow::<crate::workflows::actor2::Workflow>()
+							.tag("actor_id", alloc.actor_id)
+							.send()
+							.await?;
 					}
 				}
 				None => {
@@ -300,21 +362,37 @@ pub async fn pegboard_client(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 	// Set all remaining actors as lost
 	for (actor_id, generation) in actors {
+		// Try actor2 first
 		let res = ctx
-			.signal(crate::workflows::actor::StateUpdate {
+			.signal(crate::workflows::actor2::StateUpdate {
 				generation,
 				state: protocol::ActorState::Lost,
 			})
-			.to_workflow::<crate::workflows::actor::Workflow>()
+			.to_workflow::<crate::workflows::actor2::Workflow>()
 			.tag("actor_id", actor_id)
 			.send()
 			.await;
 
 		if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
-			tracing::warn!(
-				?actor_id,
-				"actor workflow not found, likely already stopped"
-			);
+			// Try old actors
+			let res = ctx
+				.signal(crate::workflows::actor::StateUpdate {
+					generation,
+					state: protocol::ActorState::Lost,
+				})
+				.to_workflow::<crate::workflows::actor::Workflow>()
+				.tag("actor_id", actor_id)
+				.send()
+				.await;
+
+			if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
+				tracing::warn!(
+					?actor_id,
+					"actor workflow not found, likely already stopped"
+				);
+			} else {
+				res?;
+			}
 		} else {
 			res?;
 		}
@@ -756,11 +834,24 @@ pub async fn handle_commands(
 				// If this start actor command was received after the client started draining, immediately
 				// inform the actor wf that it is draining
 				if let Some(drain_timeout_ts) = drain_timeout_ts {
-					ctx.signal(crate::workflows::actor::Drain { drain_timeout_ts })
-						.to_workflow::<crate::workflows::actor::Workflow>()
+					// Try actor2 first
+					let res = ctx
+						.signal(crate::workflows::actor2::Drain { drain_timeout_ts })
+						.to_workflow::<crate::workflows::actor2::Workflow>()
 						.tag("actor_id", actor_id)
 						.send()
-						.await?;
+						.await;
+
+					if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
+						// Try old actors
+						ctx.signal(crate::workflows::actor::Drain { drain_timeout_ts })
+							.to_workflow::<crate::workflows::actor::Workflow>()
+							.tag("actor_id", actor_id)
+							.send()
+							.await?;
+					} else {
+						res?;
+					}
 				}
 			}
 			protocol::Command::SignalActor {
@@ -770,21 +861,37 @@ pub async fn handle_commands(
 				..
 			} => {
 				if matches!(signal.try_into()?, Signal::SIGTERM | Signal::SIGKILL) {
+					// Try actor2 first
 					let res = ctx
-						.signal(crate::workflows::actor::StateUpdate {
+						.signal(crate::workflows::actor2::StateUpdate {
 							generation,
 							state: protocol::ActorState::Stopping,
 						})
-						.to_workflow::<crate::workflows::actor::Workflow>()
+						.to_workflow::<crate::workflows::actor2::Workflow>()
 						.tag("actor_id", actor_id)
 						.send()
 						.await;
 
 					if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
-						tracing::warn!(
-							?actor_id,
-							"actor workflow not found, likely already stopped"
-						);
+						// Try old actors
+						let res = ctx
+							.signal(crate::workflows::actor::StateUpdate {
+								generation,
+								state: protocol::ActorState::Stopping,
+							})
+							.to_workflow::<crate::workflows::actor::Workflow>()
+							.tag("actor_id", actor_id)
+							.send()
+							.await;
+
+						if let Some(WorkflowError::WorkflowNotFound) = res.as_workflow_error() {
+							tracing::warn!(
+								?actor_id,
+								"actor workflow not found, likely already stopped"
+							);
+						} else {
+							res?;
+						}
 					} else {
 						res?;
 					}
@@ -925,8 +1032,8 @@ async fn fetch_remaining_actors(
 			))
 			.map(|res| match res {
 				Ok(entry) => {
-					if let Ok(key) = keys::subspace()
-					.unpack::<keys::client::Actor2Key>(entry.key()) {
+					if let Ok(key) = keys::subspace().unpack::<keys::client::Actor2Key>(entry.key())
+					{
 						let generation = key
 							.deserialize(entry.value())
 							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
@@ -982,6 +1089,374 @@ async fn check_expired(ctx: &ActivityCtx, input: &CheckExpiredInput) -> GlobalRe
 		.await?;
 
 	Ok(last_ping_ts < util::timestamp::now() - CLIENT_LOST_THRESHOLD_MS)
+}
+
+#[derive(Debug, Serialize, Deserialize, Hash)]
+pub(crate) struct AllocatePendingActorsInput {}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct AllocatePendingActorsOutput {
+	pub allocations: Vec<ActorAllocation>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct ActorAllocation {
+	pub actor_id: util::Id,
+	pub signal: Allocate,
+}
+
+#[activity(AllocatePendingActors)]
+pub(crate) async fn allocate_pending_actors(
+	ctx: &ActivityCtx,
+	input: &AllocatePendingActorsInput,
+) -> GlobalResult<AllocatePendingActorsOutput> {
+	let client_flavor = protocol::ClientFlavor::Multi;
+
+	// NOTE: This txn should closely resemble the one found in the allocate_actor activity of the actor2 wf
+	let res = ctx
+		.fdb()
+		.await?
+		.run(|tx, _mc| async move {
+			let mut results = Vec::new();
+
+			let pending_actor_subspace =
+				keys::subspace().subspace(&keys::datacenter::PendingActorKey::subspace());
+			let mut queue_stream = tx.get_ranges_keyvalues(
+				fdb::RangeOption {
+					mode: StreamingMode::Iterator,
+					..(&pending_actor_subspace).into()
+				},
+				// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys, just
+				// the one we choose
+				SNAPSHOT,
+			);
+
+			'queue_loop: loop {
+				let Some(queue_entry) = queue_stream.try_next().await? else {
+					break;
+				};
+
+				let queue_key = keys::subspace()
+					.unpack::<keys::datacenter::PendingActorKey>(queue_entry.key())
+					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+				let queue_value = queue_key
+					.deserialize(queue_entry.value())
+					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+				let memory_mib = queue_value.memory / 1024 / 1024;
+
+				// Check for availability amongst existing runners
+				if let BuildAllocationType::Multi = queue_value.build_allocation_type {
+					// Select a range that only includes runners that have enough remaining slots to allocate
+					// this actor
+					let start = keys::subspace().pack(
+						&keys::datacenter::RunnersByRemainingSlotsKey::subspace_with_slots(
+							queue_value.image_id,
+							1,
+						),
+					);
+					let runner_allocation_subspace =
+						keys::datacenter::RunnersByRemainingSlotsKey::subspace(
+							queue_value.image_id,
+						);
+					let end = keys::subspace()
+						.subspace(&runner_allocation_subspace)
+						.range()
+						.1;
+
+					// NOTE: This range read will include runners that were just inserted by the below code
+					// because fdb supports read-your-writes by default. This is the behavior we want.
+					let mut stream = tx.get_ranges_keyvalues(
+						fdb::RangeOption {
+							mode: StreamingMode::Iterator,
+							// Containers bin pack so we reverse the order
+							reverse: true,
+							..(start, end).into()
+						},
+						// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the
+						// keys, just the one we choose
+						SNAPSHOT,
+					);
+
+					loop {
+						let Some(entry) = stream.try_next().await? else {
+							break;
+						};
+
+						let old_runner_allocation_key = keys::subspace()
+							.unpack::<keys::datacenter::RunnersByRemainingSlotsKey>(entry.key())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+						let data = old_runner_allocation_key
+							.deserialize(entry.value())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+						// Add read conflict only for this key
+						tx.add_conflict_range(
+							entry.key(),
+							&end_of_key_range(entry.key()),
+							ConflictRangeType::Read,
+						)?;
+
+						// Clear old entry
+						tx.clear(entry.key());
+
+						let new_remaining_slots =
+							old_runner_allocation_key.remaining_slots.saturating_sub(1);
+
+						// Write new allocation key with 1 less slot
+						let new_allocation_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
+							queue_value.image_id,
+							new_remaining_slots,
+							old_runner_allocation_key.runner_id,
+						);
+						tx.set(&keys::subspace().pack(&new_allocation_key), entry.value());
+
+						// Update runner record
+						let remaining_slots_key = keys::runner::RemainingSlotsKey::new(
+							old_runner_allocation_key.runner_id,
+						);
+						tx.set(
+							&keys::subspace().pack(&remaining_slots_key),
+							&remaining_slots_key
+								.serialize(new_remaining_slots)
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
+
+						// Insert actor index key
+						let client_actor_key =
+							keys::client::Actor2Key::new(data.client_id, queue_key.actor_id);
+						tx.set(
+							&keys::subspace().pack(&client_actor_key),
+							&client_actor_key
+								.serialize(queue_value.generation)
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
+
+						// Add read conflict for the queue key
+						tx.add_conflict_range(
+							queue_entry.key(),
+							&end_of_key_range(queue_entry.key()),
+							ConflictRangeType::Read,
+						)?;
+						tx.clear(queue_entry.key());
+						// Clear sister queue key
+						tx.clear(&keys::subspace().pack(&queue_key.sister(queue_value.image_id)));
+
+						results.push(ActorAllocation {
+							actor_id: queue_key.actor_id,
+							signal: Allocate {
+								runner_id: old_runner_allocation_key.runner_id,
+								new_runner: false,
+								client_id: data.client_id,
+								client_workflow_id: data.client_workflow_id,
+							},
+						});
+						continue 'queue_loop;
+					}
+				}
+
+				// No available runner found, create a new one
+
+				let runner_id = Uuid::new_v4();
+
+				let ping_threshold_ts = util::timestamp::now() - CLIENT_ELIGIBLE_THRESHOLD_MS;
+
+				// Select a range that only includes clients that have enough remaining mem to allocate this
+				// actor
+				let start = keys::subspace().pack(
+					&keys::datacenter::ClientsByRemainingMemKey::subspace_with_mem(
+						client_flavor,
+						memory_mib,
+					),
+				);
+				let client_allocation_subspace =
+					keys::datacenter::ClientsByRemainingMemKey::subspace(client_flavor);
+				let end = keys::subspace()
+					.subspace(&client_allocation_subspace)
+					.range()
+					.1;
+
+				let mut stream = tx.get_ranges_keyvalues(
+					fdb::RangeOption {
+						mode: StreamingMode::Iterator,
+						// Containers bin pack so we reverse the order
+						reverse: true,
+						..(start, end).into()
+					},
+					// NOTE: This is not SERIALIZABLE because we don't want to conflict with all of the keys,
+					// just the one we choose
+					SNAPSHOT,
+				);
+
+				loop {
+					let Some(entry) = stream.try_next().await? else {
+						break;
+					};
+
+					let old_client_allocation_key = keys::subspace()
+						.unpack::<keys::datacenter::ClientsByRemainingMemKey>(entry.key())
+						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+					// Scan by last ping
+					if old_client_allocation_key.last_ping_ts < ping_threshold_ts {
+						continue;
+					}
+
+					let client_workflow_id =
+						old_client_allocation_key
+							.deserialize(entry.value())
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+					// Add read conflict only for this key
+					tx.add_conflict_range(
+						entry.key(),
+						&end_of_key_range(entry.key()),
+						ConflictRangeType::Read,
+					)?;
+
+					// Clear old entry
+					tx.clear(entry.key());
+
+					// Read old cpu
+					let remaining_cpu_key =
+						keys::client::RemainingCpuKey::new(old_client_allocation_key.client_id);
+					let remaining_cpu_key_buf = keys::subspace().pack(&remaining_cpu_key);
+					let remaining_cpu_entry = tx.get(&remaining_cpu_key_buf, SERIALIZABLE).await?;
+					let old_remaining_cpu = remaining_cpu_key
+						.deserialize(&remaining_cpu_entry.ok_or(
+							fdb::FdbBindingError::CustomError(
+								format!("key should exist: {remaining_cpu_key:?}").into(),
+							),
+						)?)
+						.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+					// Update allocated amount
+					let new_remaining_mem = old_client_allocation_key.remaining_mem - memory_mib;
+					let new_remaining_cpu = old_remaining_cpu - queue_value.cpu;
+					let new_allocation_key = keys::datacenter::ClientsByRemainingMemKey::new(
+						client_flavor,
+						new_remaining_mem,
+						old_client_allocation_key.last_ping_ts,
+						old_client_allocation_key.client_id,
+					);
+					tx.set(&keys::subspace().pack(&new_allocation_key), entry.value());
+
+					tracing::debug!(
+						old_mem=%old_client_allocation_key.remaining_mem,
+						old_cpu=%old_remaining_cpu,
+						new_mem=%new_remaining_mem,
+						new_cpu=%new_remaining_cpu,
+						"allocating runner resources"
+					);
+
+					// Update client record
+					let remaining_mem_key =
+						keys::client::RemainingMemoryKey::new(old_client_allocation_key.client_id);
+					tx.set(
+						&keys::subspace().pack(&remaining_mem_key),
+						&remaining_mem_key
+							.serialize(new_remaining_mem)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					tx.set(
+						&remaining_cpu_key_buf,
+						&remaining_cpu_key
+							.serialize(new_remaining_cpu)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					let remaining_slots =
+						queue_value.build_allocation_total_slots.saturating_sub(1);
+					let total_slots = queue_value.build_allocation_total_slots;
+
+					// Insert runner records
+					let remaining_slots_key = keys::runner::RemainingSlotsKey::new(runner_id);
+					tx.set(
+						&keys::subspace().pack(&remaining_slots_key),
+						&remaining_slots_key
+							.serialize(remaining_slots)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					let total_slots_key = keys::runner::TotalSlotsKey::new(runner_id);
+					tx.set(
+						&keys::subspace().pack(&total_slots_key),
+						&total_slots_key
+							.serialize(total_slots)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					let image_id_key = keys::runner::ImageIdKey::new(runner_id);
+					tx.set(
+						&keys::subspace().pack(&image_id_key),
+						&image_id_key
+							.serialize(queue_value.image_id)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					// Insert runner index key if multi. Single allocation per container runners don't need to be
+					// in the alloc idx because they only have 1 slot
+					if let BuildAllocationType::Multi = queue_value.build_allocation_type {
+						let runner_idx_key = keys::datacenter::RunnersByRemainingSlotsKey::new(
+							queue_value.image_id,
+							remaining_slots,
+							runner_id,
+						);
+						tx.set(
+							&keys::subspace().pack(&runner_idx_key),
+							&runner_idx_key
+								.serialize(keys::datacenter::RunnersByRemainingSlotsKeyData {
+									client_id: old_client_allocation_key.client_id,
+									client_workflow_id,
+								})
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+						);
+					}
+
+					// Insert actor index key
+					let client_actor_key = keys::client::Actor2Key::new(
+						old_client_allocation_key.client_id,
+						queue_key.actor_id,
+					);
+					tx.set(
+						&keys::subspace().pack(&client_actor_key),
+						&client_actor_key
+							.serialize(queue_value.generation)
+							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?,
+					);
+
+					// Add read conflict for the queue key
+					tx.add_conflict_range(
+						queue_entry.key(),
+						&end_of_key_range(queue_entry.key()),
+						ConflictRangeType::Read,
+					)?;
+					tx.clear(queue_entry.key());
+					// Clear sister queue key
+					tx.clear(&keys::subspace().pack(&queue_key.sister(queue_value.image_id)));
+
+					results.push(ActorAllocation {
+						actor_id: queue_key.actor_id,
+						signal: Allocate {
+							runner_id,
+							new_runner: true,
+							client_id: old_client_allocation_key.client_id,
+							client_workflow_id,
+						},
+					});
+
+					continue 'queue_loop;
+				}
+			}
+
+			Ok(results)
+		})
+		.custom_instrument(tracing::info_span!("client_allocate_pending_actors_tx"))
+		.await?;
+
+	Ok(AllocatePendingActorsOutput { allocations: res })
 }
 
 // TODO: This is called fairly frequently
@@ -1186,6 +1661,10 @@ pub struct ToWs {
 pub struct PrewarmImage2 {
 	pub image: protocol::Image,
 }
+
+#[signal("pegboard_client_check_queue")]
+pub struct CheckQueue {}
+
 #[message("pegboard_client_close_ws")]
 pub struct CloseWs {
 	pub client_id: Uuid,
@@ -1204,6 +1683,7 @@ join_signal!(Main {
 	// Forwarded from the ws to this workflow
 	Forward(protocol::ToServer),
 	PrewarmImage2,
+	CheckQueue,
 	Drain,
 	Undrain,
 });
