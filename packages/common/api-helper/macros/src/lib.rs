@@ -36,6 +36,7 @@ const ENDPOINT_ARGUMENTS: &[&str] = &[
 ];
 
 struct EndpointRouter {
+	name: Option<syn::Ident>,
 	routes: Punctuated<Endpoint, Token![,]>,
 	cors_config: Option<syn::Expr>,
 	mounts: Punctuated<Mount, Token![,]>,
@@ -44,6 +45,7 @@ struct EndpointRouter {
 
 impl Parse for EndpointRouter {
 	fn parse(input: ParseStream) -> syn::Result<Self> {
+		let mut name = None;
 		let mut routes = None;
 		let mut cors_config = None;
 		let mut mounts = None;
@@ -60,6 +62,16 @@ impl Parse for EndpointRouter {
 
 			// Parse various keys
 			match key.to_string().as_str() {
+				"name" => {
+					if name.is_none() {
+						name = Some(input.parse()?);
+					} else {
+						return Err(syn::Error::new(
+							key.span(),
+							format!("Duplicate key `{}`.", key),
+						));
+					}
+				}
 				"routes" => {
 					if routes.is_none() {
 						let routes_content;
@@ -134,6 +146,7 @@ impl Parse for EndpointRouter {
 		let mounts = mounts.unwrap_or_default();
 
 		Ok(EndpointRouter {
+			name,
 			routes,
 			cors_config,
 			mounts,
@@ -144,6 +157,12 @@ impl Parse for EndpointRouter {
 
 impl EndpointRouter {
 	fn render(self) -> syn::Result<TokenStream2> {
+		let name = if let Some(name) = self.name {
+			name.to_token_stream()
+		} else {
+			quote! { Router }
+		};
+
 		let endpoints = self
 			.routes
 			.into_iter()
@@ -186,8 +205,8 @@ impl EndpointRouter {
 			.collect::<Vec<_>>();
 
 		Ok(quote! {
-			pub struct Router;
-			impl Router {
+			pub struct #name;
+			impl #name {
 				#[doc(hidden)]
 				#[tracing::instrument(level="debug", name = "router_matcher", skip_all)]
 				pub async fn __inner(

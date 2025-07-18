@@ -57,7 +57,7 @@ func (e *ExportActorLogsResponse) String() string {
 
 type GetActorLogsResponse struct {
 	// List of actor IDs in these logs. The order of these correspond to the index in the log entry.
-	ActorIds []sdk.Id `json:"actor_ids,omitempty"`
+	ActorIds []string `json:"actor_ids,omitempty"`
 	// Sorted old to new.
 	Lines []string `json:"lines,omitempty"`
 	// Sorted old to new.

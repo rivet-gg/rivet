@@ -5,8 +5,8 @@
 import * as environments from "../../../../../../environments";
 import * as core from "../../../../../../core";
 import * as Rivet from "../../../../../index";
-import urlJoin from "url-join";
 import * as serializers from "../../../../../../serialization/index";
+import urlJoin from "url-join";
 import * as errors from "../../../../../../errors/index";
 
 export declare namespace Metrics {
@@ -40,7 +40,7 @@ export class Metrics {
     /**
      * Returns the metrics for a given actor.
      *
-     * @param {string} actor - The id of the actor to destroy
+     * @param {Rivet.Id} actor - The id of the actor to destroy
      * @param {Rivet.actors.GetActorMetricsRequestQuery} request
      * @param {Metrics.RequestOptions} requestOptions - Request-specific configuration.
      *
@@ -52,7 +52,7 @@ export class Metrics {
      * @throws {@link Rivet.BadRequestError}
      *
      * @example
-     *     await client.actors.metrics.get("d5e9c84f-c2b2-4bf4-b4b0-7ffd7a9ffc32", {
+     *     await client.actors.metrics.get("string", {
      *         project: "string",
      *         environment: "string",
      *         start: 1,
@@ -61,7 +61,7 @@ export class Metrics {
      *     })
      */
     public async get(
-        actor: string,
+        actor: Rivet.Id,
         request: Rivet.actors.GetActorMetricsRequestQuery,
         requestOptions?: Metrics.RequestOptions,
     ): Promise<Rivet.actors.GetActorMetricsResponse> {
@@ -83,7 +83,7 @@ export class Metrics {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                `/actors/${encodeURIComponent(actor)}/metrics/history`,
+                `/v2/actors/${encodeURIComponent(serializers.Id.jsonOrThrow(actor))}/metrics/history`,
             ),
             method: "GET",
             headers: {
@@ -189,7 +189,7 @@ export class Metrics {
                 });
             case "timeout":
                 throw new errors.RivetTimeoutError(
-                    "Timeout exceeded when calling GET /actors/{actor}/metrics/history.",
+                    "Timeout exceeded when calling GET /v2/actors/{actor}/metrics/history.",
                 );
             case "unknown":
                 throw new errors.RivetError({

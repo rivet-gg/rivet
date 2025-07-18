@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/main/fern.schema.json
+
+imports:
+  commons: ../common.yml
+
+service:
+  auth: true
+  base-path: /v1/containers
+  audiences:
+    - runtime
+  endpoints:
+    get:
+      path: /{container}/metrics/history
+      method: GET
+      docs: >-
+        Returns the metrics for a given container.
+      path-parameters:
+        container:
+          docs: The id of the container to destroy
+          type: commons.Id
+      request:
+        name: GetContainerMetricsRequestQuery
+        query-parameters:
+          project: optional<string>
+          environment: optional<string>
+          start: integer
+          end: integer
+          interval: integer
+      response: GetContainerMetricsResponse
+
+types:
+  GetContainerMetricsResponse:
+    properties:
+      container_ids: list<string>
+      metric_names: list<string>
+      metric_attributes: list<map<string, string>>
+      metric_types: list<string>
+      metric_values: list<list<float>>
