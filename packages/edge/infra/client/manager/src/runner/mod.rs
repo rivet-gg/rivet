@@ -251,12 +251,9 @@ impl Runner {
 		Ok(())
 	}
 
-	// `actor_id` is set if this runner has a single allocation type which means there is only one actor
-	// runner on it
 	pub async fn start(
 		self: &Arc<Self>,
 		ctx: &Arc<Ctx>,
-		actor_id: Option<rivet_util::Id>,
 	) -> Result<protocol::HashableMap<String, protocol::ProxiedPort>> {
 		tracing::info!(runner_id=?self.runner_id, "starting");
 
@@ -311,7 +308,7 @@ impl Runner {
 		let self2 = self.clone();
 		let ctx2 = ctx.clone();
 		tokio::spawn(async move {
-			match self2.run(&ctx2, actor_id).await {
+			match self2.run(&ctx2).await {
 				Ok(_) => {
 					if let Err(err) = self2.observe(&ctx2, false).await {
 						tracing::error!(runner_id=?self2.runner_id, ?err, "observe failed");
@@ -331,7 +328,7 @@ impl Runner {
 		Ok(proxied_ports)
 	}
 
-	async fn run(&self, ctx: &Ctx, actor_id: Option<rivet_util::Id>) -> Result<()> {
+	async fn run(&self, ctx: &Ctx) -> Result<()> {
 		// NOTE: This is the env that goes to the container-runner process, NOT the env that is inserted into
 		// the container.
 		let mut runner_env = vec![
@@ -350,10 +347,6 @@ impl Runner {
 				self.metadata.environment.env_id.to_string(),
 			),
 		];
-
-		if let Some(actor_id) = actor_id {
-			runner_env.push(("ACTOR_ID", actor_id.to_string()));
-		}
 
 		if let Some(vector) = &ctx.config().vector {
 			runner_env.push(("VECTOR_SOCKET_ADDR", vector.address.to_string()));
