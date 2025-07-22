@@ -58,6 +58,13 @@ lazy_static::lazy_static! {
 		*REGISTRY,
 	).unwrap();
 
+	pub static ref DOWNLOAD_IMAGE_RATE: GaugeVec = register_gauge_vec_with_registry!(
+		"download_image_rate",
+		"Rate of image download in bytes/sec",
+		&["bucket"],
+		*REGISTRY,
+	).unwrap();
+
 	// MARK: Actor setup step duration metrics
 	pub static ref SETUP_TOTAL_DURATION: Histogram = register_histogram_with_registry!(
 		"actor_setup_total_duration",

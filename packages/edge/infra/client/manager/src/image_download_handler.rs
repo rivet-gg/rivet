@@ -280,6 +280,10 @@ impl ImageDownloadHandler {
 		let image_size = self.download_inner(ctx, image_config).await?;
 		let download_duration = download_start_instant.elapsed().as_secs_f64();
 
+		crate::metrics::DOWNLOAD_IMAGE_RATE
+			.with_label_values(&[&(start_instant.elapsed().as_nanos() % 100).to_string()])
+			.set(image_download_size as f64 / download_duration);
+
 		let convert_start_instant = Instant::now();
 		self.convert(ctx, image_config).await?;
 		let convert_duration = convert_start_instant.elapsed().as_secs_f64();
@@ -531,12 +535,16 @@ impl ImageDownloadHandler {
 		ctx: &Ctx,
 		image_config: &protocol::Image,
 	) -> Result<Vec<String>> {
-		// Get hash from image id
-		let mut hasher = DefaultHasher::new();
-		hasher.write(image_config.id.as_bytes());
-		let hash = hasher.finish();
+		// // Get hash from image id
+		// let mut hasher = DefaultHasher::new();
+		// hasher.write(image_config.id.as_bytes());
+		// let hash = hasher.finish();
 
-		let mut rng = ChaCha12Rng::seed_from_u64(hash);
+		// let mut rng = ChaCha12Rng::seed_from_u64(hash);
+
+		// TODO: Replaced hash based randomizer with complete randomness for now
+		let mut rng =
+			rand::rngs::StdRng::from_rng(&mut rand::thread_rng()).context("failed creating rng")?;
 
 		// Shuffle based on hash
 		let mut addresses = self
