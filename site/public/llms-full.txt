@@ -5440,6 +5440,10 @@ Rivet provides seamless integrations with popular frameworks and tools to help y
 
   End-to-end type-safe API development
 
+## AI
+
+  AI agents framework with tools and persistent memory
+
 ## Auth
 
   Modern authentication library with TypeScript support
@@ -5447,6 +5451,152 @@ Rivet provides seamless integrations with popular frameworks and tools to help y
 ## Misc
 
   Fast unit testing framework for JavaScript and TypeScript
+## Mastra
+
+# Mastra
+
+Integrate Rivet with Mastra for AI agents
+
+Mastra provides AI agents with tools. This integration stores agent conversations and tool data in Rivet Actors.
+
+	Check out the complete example
+
+## Installation
+
+Install Mastra alongside Rivet:
+
+```bash
+npm install @mastra/core @ai-sdk/openai ai zod hono @hono/node-server dotenv
+npm install -D tsx
+```
+
+	This example requires an OpenAI API key. Set it as `OPENAI_API_KEY` in your environment.
+
+## Basic Setup
+
+Set up your Rivet Actor:
+
+```typescript src/actor.ts
+dotenv.config();
+
+const aiAgent = actor(,
+    toolData: 
+  },
+
+  onCreate: (c) => ,
+
+  actions: ;
+      }
+
+      const userMessage: Message = ;
+      c.state.messages.push(userMessage);
+      
+      if (c.state.messages.length > 50) 
+
+      try ;
+        c.state.messages.push(assistantMessage);
+
+        return ;
+
+      } catch (error) `,
+          timestamp: Date.now()
+        };
+        c.state.messages.push(errorResponse);
+
+        return ;
+      }
+    },
+
+    getHistory: (c, limit?: number) => ;
+    },
+
+    clear: (c) => ;
+      c.state.toolData = ;
+      logActorCleared(c.name);
+      return ;
+    }
+  }
+});
+```
+
+Set up your Mastra agent with tools:
+
+```typescript src/agents/chat-agent.ts
+function createChatAgent(state: AgentState, actorName: string) ;
+  
+  const chatAgent = new Agent(
+  });
+
+  return new Mastra(
+  });
+}
+```
+
+Create an HTTP server that uses your persistent AI agents:
+
+```typescript src/server.ts
+// Set up Rivet Actor registry
+const registry = setup(
+});
+
+const  = registry.createServer();
+const app = new Hono();
+
+// Chat with AI agent
+app.post("/chat", async (c) =>  = await c.req.json();
+  
+  // Get or create persistent AI agent for this user
+  const actor = await client.aiAgent.getOrCreate([userId]);
+  const result = await actor.chat(message);
+  
+  return c.json(result);
+});
+
+// Get conversation history
+app.get("/chat/:userId/history", async (c) =>  = c.req.param();
+  const actor = await client.aiAgent.getOrCreate([userId]);
+  const result = await actor.getHistory();
+  
+  return c.json(result);
+});
+
+// Clear conversation
+app.delete("/chat/:userId", async (c) =>  = c.req.param();
+  const actor = await client.aiAgent.getOrCreate([userId]);
+  const result = await actor.clear();
+  
+  return c.json(result);
+});
+
+// Start server with Rivet integration
+serve(app);
+```
+
+## Usage Examples
+
+```bash
+# Start a conversation
+curl -X POST http://localhost:8080/chat \
+  -H "Content-Type: application/json" \
+  -d ''
+
+# Get conversation history  
+curl http://localhost:8080/chat/user123/history
+
+# Clear conversation
+curl -X DELETE http://localhost:8080/chat/user123
+```
+
+The AI agent will remember previous conversations, weather queries, and any information you tell it to remember - all persisted automatically by Rivet Actors.
+
+## Production Deployment
+
+For production, configure your OpenAI API key and deploy to any Node.js hosting platform:
+
+```bash
+OPENAI_API_KEY=your-production-openai-key
+NODE_ENV=production
+``
 ## tRPC
 
 # tRPC

@@ -50,6 +50,7 @@ import {
     faPaintbrush,
     faPalette,
     faLayerGroup,
+    faSparkles,
 } from "@rivet-gg/icons";
 
 // Goals:
@@ -293,6 +294,17 @@ export const sitemap = [
 							{
 								title: "Better Auth",
 								href: "/docs/integrations/better-auth",
+							},
+						],
+					},
+					{
+						title: "AI",
+						icon: faSparkles,
+						collapsible: true,
+						pages: [
+							{
+								title: "Mastra",
+								href: "/docs/integrations/mastra",
 							},
 						],
 					},
