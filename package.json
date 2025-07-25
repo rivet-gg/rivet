@@ -1,6 +1,6 @@
 {
 	"private": true,
-	"packageManager": "yarn@4.6.0",
+	"packageManager": "yarn@4.2.2",
 	"name": "rivet",
 	"workspaces": [
 		"frontend/apps/*",
@@ -28,6 +28,18 @@
 		"react": "^19",
 		"react-dom": "^19",
 		"esbuild": "^0.25.5",
-		"actor-core": "file:./frontend/packages/actor-core.tgz"
+		"@rivetkit/core": "file:frontend/packages/rivetkit-core.tgz",
+		"@rivetkit/actor": "file:frontend/packages/rivetkit-actor.tgz",
+		"zod": "3.25.32",
+		"@tanstack/query-core": "^5.81.5",
+		"@tanstack/react-query": "^5.81.5",
+		"@tanstack/react-table": "^8.21.2",
+		"@tanstack/react-virtual": "^3.10.8",
+		"@tanstack/react-query-devtools": "^5.81.5",
+		"@tanstack/react-router": "^1.114.25",
+		"@tanstack/router-devtools": "^1.114.25",
+		"@tanstack/router-plugin": "^1.114.25",
+		"@tanstack/zod-adapter": "^1.114.25",
+		"@tanstack/query-broadcast-client-experimental": "^5.56.2"
 	}
 }

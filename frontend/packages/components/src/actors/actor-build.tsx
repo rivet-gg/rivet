@@ -1,30 +1,16 @@
 import { Dd, DiscreteCopyButton, Dl, Dt, Flex } from "@rivet-gg/components";
 import { formatISO } from "date-fns";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import { useCallback } from "react";
-import { type Actor, type ActorAtom, actorBuildsAtom } from "./actor-context";
-import { ActorTags } from "./actor-tags";
-
-const buildIdSelector = (a: Actor) => a.runtime?.build;
+import { useQuery } from "@tanstack/react-query";
+import { type ActorId } from "./queries";
+import { useManagerQueries } from "./manager-queries-context";
 
 interface ActorBuildProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 }
 
-export function ActorBuild({ actor }: ActorBuildProps) {
-	const buildId = useAtomValue(selectAtom(actor, buildIdSelector));
-
-	const data = useAtomValue(
-		selectAtom(
-			actorBuildsAtom,
-			useCallback(
-				(builds) => {
-					return builds.find((build) => build.id === buildId);
-				},
-				[buildId],
-			),
-		),
+export function ActorBuild({ actorId }: ActorBuildProps) {
+	const { data } = useQuery(
+		useManagerQueries().actorBuildQueryOptions(actorId),
 	);
 
 	if (!data) {
@@ -40,11 +26,7 @@ export function ActorBuild({ actor }: ActorBuildProps) {
 				<Dl>
 					<Dt>ID</Dt>
 					<Dd>
-						<DiscreteCopyButton
-							size="xs"
-							value={data.id}
-							className="truncate"
-						>
+						<DiscreteCopyButton size="xs" value={data.id} className="truncate">
 							{data.id}
 						</DiscreteCopyButton>
 					</Dd>
@@ -60,12 +42,7 @@ export function ActorBuild({ actor }: ActorBuildProps) {
 					</Dd>
 					<Dt>Tags</Dt>
 					<Dd>
-						<Flex
-							direction="col"
-							gap="2"
-							className="flex-1 min-w-0"
-							w="full"
-						>
+						<Flex direction="col" gap="2" className="flex-1 min-w-0" w="full">
 							<ActorTags
 								className="justify-start text-foreground"
 								truncate={false}

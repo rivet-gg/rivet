@@ -1,4 +1,10 @@
-import { Badge, Button, WithTooltip } from "@rivet-gg/components";
+import {
+	Badge,
+	Button,
+	LiveBadge,
+	PauseBadge,
+	WithTooltip,
+} from "@rivet-gg/components";
 import {
 	type CodeMirrorRef,
 	EditorView,
@@ -8,8 +14,12 @@ import { Icon, faRotateLeft, faSave } from "@rivet-gg/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
 import { ActorStateChangeIndicator } from "./actor-state-change-indicator";
-import type { ContainerState } from "./worker/actor-worker-container";
 import { useActorWorker } from "./worker/actor-worker-context";
+import {
+	type ActorId,
+	useActorStatePatchMutation,
+	useActorStateStream,
+} from "./queries";
 
 const isValidJson = (json: string | null): json is string => {
 	if (!json) return false;
@@ -22,27 +32,36 @@ const isValidJson = (json: string | null): json is string => {
 };
 
 interface ActorEditableStateProps {
-	state: ContainerState["state"];
+	actorId: ActorId;
+	state: unknown;
 }
 
-export function ActorEditableState({ state }: ActorEditableStateProps) {
-	const container = useActorWorker();
+export function ActorEditableState({
+	state,
+	actorId,
+}: ActorEditableStateProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [value, setValue] = useState<string | null>(null);
 
 	const ref = useRef<CodeMirrorRef>(null);
 
 	const formatted = useMemo(() => {
-		return JSON.stringify(state.value || "{}", null, 2);
-	}, [state.value]);
+		return JSON.stringify(state || "{}", null, 2);
+	}, [state]);
 
 	const isValid = isValidJson(value) ? JSON.parse(value) : false;
 
+	const { mutate, isPending } = useActorStatePatchMutation(actorId);
+
+	useActorStateStream(actorId);
+
 	return (
 		<>
-			<div className="flex justify-between items-center border-b gap-1 p-2">
+			<div className="flex justify-between items-center border-b gap-1 p-2 h-[45px]">
 				<div className="flex items-center justify-start gap-1">
-					<ActorStateChangeIndicator state={state.value} />
+					{isEditing ? <PauseBadge /> : <LiveBadge />}
+
+					<ActorStateChangeIndicator state={state} />
 				</div>
 				<div className="flex gap-2">
 					<AnimatePresence>
@@ -68,9 +87,10 @@ export function ActorEditableState({ state }: ActorEditableStateProps) {
 							<Button
 								size="icon-sm"
 								variant="outline"
+								isLoading={isPending}
 								disabled={!isValid || !isEditing}
 								onClick={() => {
-									container.setState(value || "");
+									mutate(JSON.parse(value || ""));
 									setIsEditing(false);
 									setValue(null);
 								}}

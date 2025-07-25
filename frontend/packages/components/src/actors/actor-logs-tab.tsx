@@ -4,22 +4,13 @@ import type { ActorAtom } from "./actor-context";
 import { ActorDetailsSettingsButton } from "./actor-details-settings-button";
 import { ActorDownloadLogsButton } from "./actor-download-logs-button";
 import { ActorLogs, type LogsTypeFilter } from "./actor-logs";
+import type { ActorId } from "./queries";
 
 interface ActorLogsTabProps {
-	actor: ActorAtom;
-	onExportLogs?: (
-		actorId: string,
-		typeFilter?: string,
-		filter?: string,
-	) => Promise<void>;
-	isExporting?: boolean;
+	actorId: ActorId;
 }
 
-export function ActorLogsTab({
-	actor,
-	onExportLogs,
-	isExporting,
-}: ActorLogsTabProps) {
+export function ActorLogsTab({ actorId }: ActorLogsTabProps) {
 	const [search, setSearch] = useState("");
 	const [logsFilter, setLogsFilter] = useState<LogsTypeFilter>("all");
 
@@ -71,18 +62,18 @@ export function ActorLogsTab({
 						</ToggleGroupItem>
 					</ToggleGroup>
 					<ActorDownloadLogsButton
-						actor={actor}
+						actorId={actorId}
 						typeFilter={logsFilter}
 						filter={search}
-						onExportLogs={onExportLogs}
-						isExporting={isExporting}
+						// onExportLogs={onExportLogs}
+						// isExporting={isExporting}
 					/>
-					<ActorDetailsSettingsButton />
+					<ActorDetailsSettingsButton className="ml-2" />
 				</div>
 			</div>
 			<div className="flex-1 min-h-0 overflow-hidden flex relative">
 				<ActorLogs
-					actor={actor}
+					actorId={actorId}
 					typeFilter={logsFilter}
 					filter={search}
 				/>
