@@ -33,7 +33,7 @@ async fn handle(
 		FROM db_mm_config.lobby_groups AS lg
 		WHERE lobby_group_id = ANY($1)
 		",
-		lobby_group_ids,
+		&lobby_group_ids,
 	)
 	.await?;
 

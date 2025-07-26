@@ -24,7 +24,7 @@ async fn handle(
 		FROM db_cloud.game_versions
 		WHERE version_id = ANY($1)
 	",
-		req_version_ids,
+		&req_version_ids,
 	)
 	.await?;
 

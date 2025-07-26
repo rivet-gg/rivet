@@ -36,7 +36,7 @@ async fn handle(
 		FROM db_cf_custom_hostname.custom_hostnames
 		WHERE identifier = ANY($1)
 		",
-		identifiers,
+		&identifiers,
 	)
 	.await?;
 
