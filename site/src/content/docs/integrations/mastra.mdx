@@ -1,0 +1,309 @@
+# Mastra
+
+Integrate Rivet with Mastra for AI agents
+
+Mastra provides AI agents with tools. This integration stores agent conversations and tool data in Rivet Actors.
+
+<CardGroup>
+<Card title="View Example on GitHub" icon="github" href="https://github.com/rivet-gg/rivet-mastra-example">
+	Check out the complete example
+</Card>
+</CardGroup>
+
+## Installation
+
+Install Mastra alongside Rivet:
+
+```bash
+npm install @mastra/core @ai-sdk/openai ai zod hono @hono/node-server @hono/node-ws @hono/zod-openapi @rivetkit/actor dotenv
+npm install -D tsx typescript @types/node
+```
+
+<Note>
+	This example requires an OpenAI API key. Set it as `OPENAI_API_KEY` in your environment.
+</Note>
+
+## Basic Setup
+
+<Steps>
+<Step title="Create Your Registry">
+Set up your Rivet Actor registry:
+
+```typescript src/registry.ts
+import { actor, setup } from "@rivetkit/actor";
+import dotenv from "dotenv";
+import { createChatAgent } from "./agents/chat-agent.js";
+import type { AgentState, ChatResponse, Message } from "./types/index.js";
+import {
+	logActorCleared,
+	logActorCreated,
+	logMastraAgentComplete,
+	logMastraAgentStart,
+} from "./utils/logging.js";
+
+// Load environment variables
+dotenv.config();
+
+export const aiAgent = actor({
+	state: <AgentState>{
+		messages: [],
+		userMemory: {},
+		toolData: {},
+	},
+
+	onAuth: () => {
+		return true;
+	},
+
+	onCreate: (c) => {
+		c.state.userMemory.createdAt = Date.now();
+		logActorCreated(c.name);
+	},
+
+	actions: {
+		chat: async (c, message: string): Promise<ChatResponse> => {
+			if (!process.env.OPENAI_API_KEY) {
+				return {
+					response:
+						"OpenAI API key not configured. Please set OPENAI_API_KEY in your .env file",
+					messageId: crypto.randomUUID(),
+					timestamp: Date.now(),
+				};
+			}
+
+			const userMessage: Message = {
+				id: crypto.randomUUID(),
+				role: "user",
+				content: message,
+				timestamp: Date.now(),
+			};
+			c.state.messages.push(userMessage);
+
+			// Keep conversation history manageable
+			if (c.state.messages.length > 50) {
+				c.state.messages = c.state.messages.slice(-50);
+			}
+
+			try {
+				logMastraAgentStart(c.name);
+
+				// Create Mastra agent with tools that access actor state
+				const mastra = createChatAgent(c.state, c.name);
+				const agent = await mastra.getAgent("ChatAgent");
+				const result = await agent.generate(message);
+
+				logMastraAgentComplete(c.name, !!result.text);
+
+				const assistantMessage: Message = {
+					id: crypto.randomUUID(),
+					role: "assistant",
+					content: result.text,
+					timestamp: Date.now(),
+				};
+				c.state.messages.push(assistantMessage);
+
+				return {
+					response: result.text,
+					messageId: assistantMessage.id,
+					timestamp: assistantMessage.timestamp,
+					toolCalls: result.toolCalls?.length || 0,
+				};
+			} catch (error) {
+				console.error("Mastra Agent error inside Rivet Actor:", error);
+
+				let errorMessage = `Mastra Agent error: ${(error as Error).message}`;
+				if (
+					(error as Error).message &&
+					(error as Error).message.includes("quota")
+				) {
+					errorMessage =
+						"OpenAI quota exceeded. Please check your API credits.";
+				}
+
+				const errorResponse: Message = {
+					id: crypto.randomUUID(),
+					role: "assistant",
+					content: errorMessage,
+					timestamp: Date.now(),
+				};
+				c.state.messages.push(errorResponse);
+
+				return {
+					response: errorResponse.content,
+					messageId: errorResponse.id,
+					timestamp: errorResponse.timestamp,
+				};
+			}
+		},
+
+		getHistory: (c, limit?: number) => {
+			const messages = limit
+				? c.state.messages.slice(-limit)
+				: c.state.messages;
+			return {
+				history: messages,
+				total: c.state.messages.length,
+				actorName: c.name,
+				hasMemory: Object.keys(c.state.userMemory).length > 1,
+				toolData: Object.keys(c.state.toolData),
+			};
+		},
+
+		clear: (c) => {
+			c.state.messages = [];
+			c.state.userMemory = { createdAt: Date.now() };
+			c.state.toolData = {};
+			logActorCleared(c.name);
+			return { success: true, message: "Rivet Actor + Mastra Agent cleared." };
+		},
+
+		getMetadata: (c) => ({
+			userMemory: c.state.userMemory,
+			toolData: c.state.toolData,
+			actorName: c.name,
+			messageCount: c.state.messages.length,
+		}),
+	},
+});
+
+export const registry = setup({
+	use: { aiAgent },
+});
+```
+</Step>
+
+<Step title="Create Mastra Agent">
+Set up your Mastra agent with tools:
+
+```typescript src/agents/chat-agent.ts
+import { Agent, Mastra } from "@mastra/core";
+import { openai } from "@ai-sdk/openai";
+import { createWeatherTool, createMemoryTool, createRecallTool } from "../tools/index.js";
+import type { AgentState } from "../types/index.js";
+
+export function createChatAgent(state: AgentState, actorName: string) {
+  const toolContext = { state, actorName };
+  
+  const chatAgent = new Agent({
+    name: "ChatAgent",
+    instructions: `You are an AI assistant with persistent memory and tools.
+
+Available tools:
+- get-weather: Get current weather for any location
+- remember: Save information to memory
+- recall: Retrieve saved information
+
+Your conversations and data persist between sessions. Use tools when helpful and provide clear, concise responses.`,
+    model: openai('gpt-4o-mini'),
+    tools: { 
+      weatherTool: createWeatherTool(toolContext),
+      memoryTool: createMemoryTool(toolContext),
+      recallTool: createRecallTool(toolContext)
+    }
+  });
+
+  return new Mastra({
+    agents: { ChatAgent: chatAgent }
+  });
+}
+```
+</Step>
+
+<Step title="Setup Server">
+Create an HTTP server that uses your persistent AI agents:
+
+```typescript src/server.ts
+import { setup } from "@rivetkit/actor";
+import { aiAgent } from "./actor.js";
+import { Hono } from "hono";
+
+// Set up Rivet Actor registry
+const registry = setup({ 
+  use: { aiAgent }
+});
+
+const { client, serve } = registry.createServer();
+const app = new Hono();
+
+// Chat with AI agent
+app.post("/chat", async (c) => {
+	try {
+		const { message, userId } = await c.req.json();
+
+		// Get or create persistent AI agent for this user
+		const actor = await client.aiAgent.getOrCreate([userId]);
+		const result = await actor.chat(message);
+
+		return c.json(result);
+	} catch (error) {
+		console.error("Chat endpoint error:", error);
+		return c.json({ error: "Internal server error" }, 500);
+	}
+});
+
+// Get conversation history
+app.get("/chat/:userId/history", async (c) => {
+	try {
+		const { userId } = c.req.param();
+		const actor = await client.aiAgent.getOrCreate([userId]);
+		const result = await actor.getHistory();
+
+		return c.json(result);
+	} catch (error) {
+		console.error("History endpoint error:", error);
+		// Return empty history if actor doesn't exist yet
+		const { userId } = c.req.param();
+		return c.json({ 
+			history: [], 
+			total: 0, 
+			actorName: userId,
+			hasMemory: false,
+			toolData: []
+		});
+	}
+});
+
+// Clear conversation
+app.delete("/chat/:userId", async (c) => {
+	try {
+		const { userId } = c.req.param();
+		const actor = await client.aiAgent.getOrCreate([userId]);
+		const result = await actor.clear();
+
+		return c.json(result);
+	} catch (error) {
+		console.error("Clear endpoint error:", error);
+		return c.json({ error: "Internal server error" }, 500);
+	}
+});
+
+// Start server with Rivet integration
+serve(app);
+```
+</Step>
+</Steps>
+
+## Usage Examples
+
+```bash
+# Start a conversation
+curl -X POST http://localhost:8080/chat \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "user123", "message": "What\'s the weather in Tokyo?"}'
+
+# Get conversation history  
+curl http://localhost:8080/chat/user123/history
+
+# Clear conversation
+curl -X DELETE http://localhost:8080/chat/user123
+```
+
+The AI agent will remember previous conversations, weather queries, and any information you tell it to remember - all persisted automatically by Rivet Actors.
+
+## Features
+
+- **Persistent Conversations**: Chat history automatically saved and restored
+- **Memory Tools**: AI can remember and recall information across sessions
+- **Weather Integration**: Real-time weather data for any location
+- **Web Interface**: Built-in chat interface for testing (visit http://localhost:8080)
+- **Error Handling**: Graceful handling of API errors and quota limits
