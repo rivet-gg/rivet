@@ -86,6 +86,9 @@ export default async function BlogPage() {
 		(article) => article.category.id !== "changelog",
 	);
 
+	// Ensure the following slugs are included in the posts array:
+	// '2025-03-15-cli-installation-fixes', '2025-1-12-rivet-inspector', '2025-07-01-introducing-rivetkit-backend-libraries-that-replace-saas', '2024-12-21-rivet-actors-launch', '2025-06-10-rivet-functions-launch'
+
 	return (
 		<div
 			className="mx-auto mt-20 w-full max-w-6xl px-8 md:mt-32"

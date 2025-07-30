@@ -8,7 +8,7 @@ const withMDX = nextMDX(config);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	output: "export",
-	trailingSlash: true, // Required for Vercel
+	trailingSlash: true,
 	reactStrictMode: true,
 	transpilePackages: ["@rivet-gg/components", "@rivet-gg/icons"],
 	typescript: {
@@ -168,6 +168,12 @@ const nextConfig = {
 				permanent: false,
 			},
 
+			// Handle talk-to-an-engineer typo in CSV
+			{
+				source: '/talk-to-an-engineer%20/',
+				destination: '/talk-to-an-engineer',
+				permanent: false,
+			},
 
 			// Handle specific API variants without trailing slash that may not be caught by :slug* pattern
 			{
@@ -220,6 +226,16 @@ const nextConfig = {
 
 			// Missing documentation pages
 			{
+				source: '/docs/troubleshooting',
+				destination: '/docs/cloud/troubleshooting',
+				permanent: false,
+			},
+			{
+				source: '/docs/container-runtime',
+				destination: '/docs/cloud/containers',
+				permanent: false,
+			},
+			{
 				source: '/docs/functions',
 				destination: '/docs/cloud/functions',
 				permanent: false,
@@ -234,14 +250,108 @@ const nextConfig = {
 				destination: '/docs/cloud/durability',
 				permanent: false,
 			},
-
-			// Discord redirect
 			{
-				source: '/discord',
-				destination: 'https://discord.gg/aXYfyNxYVn',
+				source: '/docs/networking',
+				destination: '/docs/cloud/networking',
+				permanent: false,
+			},
+			{
+				source: '/docs/pricing',
+				destination: '/docs/cloud/pricing',
+				permanent: false,
+			},
+			{
+				source: '/docs/tokens',
+				destination: '/docs/cloud/tokens',
 				permanent: false,
 			},
 
+			// Client documentation
+			{
+				source: '/clients/javascript',
+				destination: '/docs/clients/javascript',
+				permanent: false,
+			},
+			{
+				source: '/docs/api/actors/upgrade',
+				destination: '/docs/cloud/api/actors/upgrade',
+				permanent: true,
+			},
+			{
+				source: '/docs/api/actors/upgrade-all',
+				destination: '/docs/cloud/api/actors/upgrade-all',
+				permanent: true,
+			},
+			{
+				source: '/docs/api/actors/create',
+				destination: '/docs/cloud/api/actors/create',
+				permanent: true,
+			},
+			{
+				source: '/docs/api/regions/list',
+				destination: '/docs/cloud/api/regions/list',
+				permanent: true,
+			},
+			{
+				source: '/docs/api/routes/update',
+				destination: '/docs/cloud/api/routes/update',
+				permanent: true,
+			},
+			{
+				source: '/docs/api/actors/destroy',
+				destination: '/docs/cloud/api/actors/destroy',
+				permanent: true,
+			},
+			{
+				source: '/docs/api',
+				destination: '/docs/cloud/api',
+				permanent: true,
+			},
+			{
+				source: '/docs/functions',
+				destination: '/docs/cloud/functions',
+				permanent: true,
+			},
+			{
+				source: '/docs/self-hosting/single-container',
+				destination: '/docs/cloud/self-hosting/single-container',
+				permanent: true,
+			},
+			{
+				source: '/docs/container-runtime',
+				destination: '/docs/cloud/containers',
+				permanent: true,
+			},
+			{
+				source: '/docs/durability',
+				destination: '/docs/cloud/durability',
+				permanent: true,
+			},
+			{
+				source: '/docs/networking',
+				destination: '/docs/cloud/networking',
+				permanent: true,
+			},
+			{
+				source: '/docs/edge',
+				destination: '/docs/cloud/edge',
+				permanent: true,
+			},
+			{
+				source: '/docs/troubleshooting',
+				destination: '/docs/cloud/troubleshooting',
+				permanent: true,
+			},
+			{
+				source: '/docs/config',
+				destination: '/docs/cloud/config',
+				permanent: true,
+			},
+			{
+				source: '/docs/javascript-runtime',
+				destination: '/docs/cloud/actors',
+				permanent: true,
+			},
 		];
 	},
 	webpack: (config) => {
