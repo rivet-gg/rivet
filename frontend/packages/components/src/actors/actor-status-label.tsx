@@ -1,7 +1,6 @@
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
-import type { Actor, ActorAtom } from "./actor-context";
-import type { ActorStatus } from "./actor-status-indicator";
+import { useQuery } from "@tanstack/react-query";
+import type { ActorId, ActorStatus } from "./queries";
+import { useManagerQueries } from "./manager-queries-context";
 
 export const ACTOR_STATUS_LABEL_MAP = {
 	unknown: "Unknown",
@@ -11,17 +10,13 @@ export const ACTOR_STATUS_LABEL_MAP = {
 	crashed: "Crashed",
 } satisfies Record<ActorStatus, string>;
 
-export const ActorStatusLabel = ({ status }: { status: ActorStatus }) => {
-	return <span>{ACTOR_STATUS_LABEL_MAP[status]}</span>;
+export const ActorStatusLabel = ({ status }: { status?: ActorStatus }) => {
+	return <span>{status ? ACTOR_STATUS_LABEL_MAP[status] : "Unknown"}</span>;
 };
 
-const selector = (a: Actor) => a.status;
-
-export const AtomizedActorStatusLabel = ({
-	actor,
-}: {
-	actor: ActorAtom;
-}) => {
-	const status = useAtomValue(selectAtom(actor, selector));
-	return <ActorStatusLabel status={status} />;
+export const QueriedActorStatusLabel = ({ actorId }: { actorId: ActorId }) => {
+	const { data: status, isError } = useQuery(
+		useManagerQueries().actorStatusQueryOptions(actorId),
+	);
+	return <ActorStatusLabel status={isError ? "unknown" : status} />;
 };

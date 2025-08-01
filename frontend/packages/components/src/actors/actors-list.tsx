@@ -1,55 +1,30 @@
 import {
 	Button,
-	Checkbox,
-	CommandGroup,
-	CommandItem,
 	DocsSheet,
 	FilterCreator,
-	type FilterDefinitions,
-	FilterOp,
 	type OnFiltersChange,
-	type OptionsProviderProps,
 	ScrollArea,
 	ShimmerLine,
 	SmallText,
-	cn,
-	createFiltersPicker,
-	createFiltersSchema,
 } from "@rivet-gg/components";
+import { ActorsListRow } from "./actors-list-row";
+import { CreateActorButton } from "./create-actor-button";
+import { GoToActorButton } from "./go-to-actor-button";
+import { useSearch, useNavigate } from "@tanstack/react-router";
 import {
 	Icon,
 	faActors,
-	faCalendarCircleMinus,
-	faCalendarCirclePlus,
 	faCalendarMinus,
 	faCalendarPlus,
-	faCode,
 	faGlobe,
+	faNodeJs,
 	faReact,
-	faSignalBars,
-	faTag,
-	faTs,
 } from "@rivet-gg/icons";
-import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useMemo } from "react";
-import {
-	actorFiltersAtom,
-	actorFiltersCountAtom,
-	actorRegionsAtom,
-	actorTagsAtom,
-	actorsAtomsAtom,
-	actorsPaginationAtom,
-	actorsQueryAtom,
-	filteredActorsCountAtom,
-} from "./actor-context";
-import { ActorStatus } from "./actor-status";
-import type { ActorStatus as ActorStatusType } from "./actor-status-indicator";
-import { ActorTag } from "./actor-tags";
-import { ActorsListRow } from "./actors-list-row";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useActorsView } from "./actors-view-context-provider";
-import { CreateActorButton } from "./create-actor-button";
-import { GoToActorButton } from "./go-to-actor-button";
+import { useManagerQueries } from "./manager-queries-context";
+import { useActorsFilters } from "./actor-filters-context";
 
 export function ActorsList() {
 	return (
@@ -58,7 +33,7 @@ export function ActorsList() {
 				<div className="grid grid-cols-[2rem_1rem_1fr_1fr_1fr_1fr] @lg/main:grid-cols-[2rem_min-content_min-content_minmax(1rem,2fr)_minmax(min-content,1fr)_minmax(min-content,1fr)] items-center justify-center gap-x-4 w-full min-w-[450px] @container/table">
 					<div className="grid grid-cols-subgrid col-span-full sticky top-0 z-[1] bg-card">
 						<div className="col-span-full border-b justify-between flex px-2 py-2 gap-1 relative h-[45px]">
-							<Filters />
+							{/* <Filters /> */}
 							<div className="flex gap-1">
 								<GoToActorButton />
 								<CreateActorButton />
@@ -104,27 +79,40 @@ export function ActorsList() {
 }
 
 function LoadingIndicator() {
-	const state = useAtomValue(actorsQueryAtom);
-	if (state.isLoading) {
+	const { isLoading } = useInfiniteQuery(
+		useManagerQueries().actorsListQueryOptions(),
+	);
+	if (isLoading) {
 		return <ShimmerLine className="bottom-0" />;
 	}
 	return null;
 }
 
 function List() {
-	const actors = useAtomValue(actorsAtomsAtom);
+	const { data: actorIds = [] } = useInfiniteQuery(
+		useManagerQueries().actorsListQueryOptions(),
+	);
+
+	const actorId = useSearch({ select: (state) => state.actorId });
+
 	return (
 		<>
-			{actors.map((actor) => (
-				<ActorsListRow key={`${actor}`} actor={actor} />
+			{actorIds.map((id) => (
+				<ActorsListRow
+					key={id}
+					actorId={id}
+					isCurrent={actorId === id}
+				/>
 			))}
 		</>
 	);
 }
 
 function Pagination() {
-	const { hasNextPage, isFetchingNextPage, fetchNextPage } =
-		useAtomValue(actorsPaginationAtom);
+	const { hasNextPage, isFetchingNextPage, fetchNextPage, data } =
+		useInfiniteQuery(
+			useManagerQueries().actorsListPaginationQueryOptions(),
+		);
 
 	if (hasNextPage) {
 		return (
@@ -141,14 +129,25 @@ function Pagination() {
 		);
 	}
 
-	return <EmptyState />;
+	return <EmptyState count={data || 0} />;
 }
 
-function EmptyState() {
-	const count = useAtomValue(filteredActorsCountAtom);
-	const filtersCount = useAtomValue(actorFiltersCountAtom);
-	const setFilters = useSetAtom(actorFiltersAtom);
-	const { copy } = useActorsView();
+function EmptyState({ count }: { count: number }) {
+	const navigate = useNavigate();
+	const { copy, links } = useActorsView();
+	const { remove, pick } = useActorsFilters();
+
+	const filtersCount = useSearch({
+		select: (state) => Object.values(pick(state)).length,
+	});
+
+	const clearFilters = () => {
+		navigate({
+			search: (prev) => ({
+				...remove(prev),
+			}),
+		});
+	};
 
 	return (
 		<div className=" col-span-full my-4 flex flex-col items-center gap-2 justify-center">
@@ -167,24 +166,24 @@ function EmptyState() {
 							</SmallText>
 							<div className="flex gap-2">
 								<DocsSheet
-									path="https://rivetkit.org/actors/quickstart-backend"
-									title="Node.js & Bun Quick Start"
+									path={links.gettingStarted.node}
+									title="Node.js & Bun Quickstart"
 								>
 									<Button
+										className="flex-1"
 										variant="outline"
-										size="sm"
-										startIcon={<Icon icon={faTs} />}
+										startIcon={<Icon icon={faNodeJs} />}
 									>
-										TypeScript
+										Node.js & Bun
 									</Button>
 								</DocsSheet>
 								<DocsSheet
-									path="https://rivetkit.org/actors/quickstart-frontend"
-									title="React Quick Start"
+									path={links.gettingStarted.react}
+									title="React Quickstart"
 								>
 									<Button
+										className="flex-1"
 										variant="outline"
-										size="sm"
 										startIcon={<Icon icon={faReact} />}
 									>
 										React
@@ -198,20 +197,7 @@ function EmptyState() {
 						<SmallText className="text-foreground text-center mt-8 mb-2">
 							{copy.noActorsMatchFilter}
 						</SmallText>
-						<Button
-							variant="outline"
-							mx="4"
-							onClick={() =>
-								setFilters({
-									tags: undefined,
-									region: undefined,
-									createdAt: undefined,
-									destroyedAt: undefined,
-									status: undefined,
-									devMode: undefined,
-								})
-							}
-						>
+						<Button variant="outline" mx="4" onClick={clearFilters}>
 							Clear filters
 						</Button>
 					</>
@@ -225,97 +211,34 @@ function EmptyState() {
 	);
 }
 
-const FILTER_DEFINITIONS = {
-	tags: {
-		type: "select",
-		label: "Tags",
-		icon: faTag,
-		options: TagsOptions,
-		operators: {
-			[FilterOp.EQUAL]: "is one of",
-			[FilterOp.NOT_EQUAL]: "is not one of",
-		},
-	},
-	createdAt: {
-		type: "date",
-		label: "Created",
-		icon: faCalendarCirclePlus,
-	},
-	destroyedAt: {
-		type: "date",
-		label: "Destroyed",
-		icon: faCalendarCircleMinus,
-	},
-	status: {
-		type: "select",
-		label: "Status",
-		icon: faSignalBars,
-		options: StatusOptions,
-		display: ({ value }) => {
-			if (value.length > 1) {
-				return <span>{value.length} statuses</span>;
-			}
-			return (
-				<ActorStatus
-					className="border-0 p-0"
-					status={value[0] as ActorStatusType}
-				/>
-			);
-		},
-	},
-	region: {
-		type: "select",
-		label: "Region",
-		icon: faGlobe,
-		options: RegionOptions,
-		display: ({ value }) => {
-			if (value.length > 1) {
-				return <span>{value.length} regions</span>;
-			}
-			const region = useAtomValue(actorRegionsAtom).find(
-				(region) => region.id === value[0],
-			);
-			return <span>{region?.name}</span>;
-		},
-		operators: {
-			[FilterOp.EQUAL]: "is one of",
-			[FilterOp.NOT_EQUAL]: "is not one of",
-		},
-	},
-	devMode: {
-		type: "boolean",
-		label: "Show hidden actors",
-		icon: faCode,
-	},
-} satisfies FilterDefinitions;
-
-export const ActorsListFiltersSchema = createFiltersSchema(FILTER_DEFINITIONS);
-
-export const pickActorListFilters = createFiltersPicker(FILTER_DEFINITIONS);
-
 function Filters() {
 	const navigate = useNavigate();
 	const filters = useSearch({ strict: false });
+
+	const { pick, remove } = useActorsFilters();
 
 	const onFiltersChange: OnFiltersChange = useCallback(
 		(fnOrValue) => {
 			if (typeof fnOrValue === "function") {
 				navigate({
-					search: ({ actorId, tab, ...filters }) => ({
-						actorId,
-						tab,
-						...Object.fromEntries(
-							Object.entries(fnOrValue(filters)).filter(
-								([, filter]) => filter.value.length > 0,
+					search: (old) => {
+						const filters = pick(old);
+						const prev = remove(old);
+
+						return {
+							...prev,
+							...Object.fromEntries(
+								Object.entries(fnOrValue(filters)).filter(
+									([, filter]) => filter.value.length > 0,
+								),
 							),
-						),
-					}),
+						};
+					},
 				});
 			} else {
 				navigate({
 					search: (value) => ({
-						actorId: value.actorId,
-						tab: value.tab,
+						...remove(value),
 						...Object.fromEntries(
 							Object.entries(fnOrValue).filter(
 								([, filter]) => filter.value.length > 0,
@@ -325,21 +248,23 @@ function Filters() {
 				});
 			}
 		},
-		[navigate],
+		[navigate, pick],
 	);
 
 	const { copy } = useActorsView();
 
+	const { definitions } = useActorsFilters();
+
 	const filtersDefs = useMemo(() => {
 		return {
-			...FILTER_DEFINITIONS,
+			...definitions,
 			devMode: {
-				...FILTER_DEFINITIONS.devMode,
+				...definitions.devMode,
 				hidden: true,
 				label: copy.showHiddenActors,
 			},
 		};
-	}, [copy.showHiddenActors]);
+	}, [copy.showHiddenActors, definitions]);
 
 	return (
 		<FilterCreator
@@ -347,143 +272,5 @@ function Filters() {
 			onChange={onFiltersChange}
 			definitions={filtersDefs}
 		/>
-	);
-}
-
-function TagsOptions({ onSelect, value: filterValue }: OptionsProviderProps) {
-	const tags = useAtomValue(actorTagsAtom);
-
-	const values = filterValue.map((filter) => filter.split("="));
-
-	return (
-		<CommandGroup>
-			{tags.map(({ key, value }) => {
-				const isSelected = values.some(
-					([filterKey, filterValue]) =>
-						filterKey === key && filterValue === value,
-				);
-				return (
-					<CommandItem
-						key={`${key}-${value}`}
-						className="group flex gap-2 items-center"
-						value={`${key}=${value}`}
-						onSelect={() => {
-							if (isSelected) {
-								onSelect(
-									values
-										.filter(
-											([filterKey, filterValue]) =>
-												filterKey !== key ||
-												filterValue !== value,
-										)
-										.map((pair) => pair.join("=")),
-									{ closeAfter: true },
-								);
-								return;
-							}
-							onSelect([...filterValue, `${key}=${value}`], {
-								closeAfter: true,
-							});
-						}}
-					>
-						<Checkbox
-							checked={isSelected}
-							className={cn({
-								"opacity-0 group-data-[selected=true]:opacity-100":
-									!isSelected,
-							})}
-						/>
-						<ActorTag className="text-foreground">
-							<span className="break-all">
-								{key}={value}
-							</span>
-						</ActorTag>
-					</CommandItem>
-				);
-			})}
-		</CommandGroup>
-	);
-}
-
-function StatusOptions({ onSelect, value: filterValue }: OptionsProviderProps) {
-	return (
-		<CommandGroup>
-			{["running", "starting", "crashed", "stopped"].map((key) => {
-				const isSelected = filterValue.some((val) => val === key);
-				return (
-					<CommandItem
-						key={key}
-						className="group flex gap-2 items-center"
-						value={key}
-						onSelect={() => {
-							if (isSelected) {
-								onSelect(
-									filterValue.filter(
-										(filterKey) => filterKey !== key,
-									),
-									{ closeAfter: true },
-								);
-								return;
-							}
-
-							onSelect([...filterValue, key], {
-								closeAfter: true,
-							});
-						}}
-					>
-						<Checkbox
-							checked={isSelected}
-							className={cn({
-								"opacity-0 group-data-[selected=true]:opacity-100":
-									!isSelected,
-							})}
-						/>
-						<ActorStatus status={key as ActorStatusType} />
-					</CommandItem>
-				);
-			})}
-		</CommandGroup>
-	);
-}
-
-function RegionOptions({ onSelect, value: filterValue }: OptionsProviderProps) {
-	const regions = useAtomValue(actorRegionsAtom);
-	return (
-		<CommandGroup>
-			{regions.map(({ id, name }) => {
-				const isSelected = filterValue.some((val) => val === id);
-				return (
-					<CommandItem
-						key={id}
-						className="group flex gap-2 items-center"
-						value={id}
-						onSelect={() => {
-							if (isSelected) {
-								onSelect(
-									filterValue.filter(
-										(filterKey) => filterKey !== id,
-									),
-									{ closeAfter: true },
-								);
-								return;
-							}
-
-							onSelect([...filterValue, id], {
-								closeAfter: true,
-							});
-						}}
-					>
-						<Checkbox
-							checked={isSelected}
-							className={cn({
-								"opacity-0 group-data-[selected=true]:opacity-100":
-									!isSelected,
-							})}
-						/>
-						<SmallText>{name}</SmallText>
-					</CommandItem>
-				);
-			})}
-		</CommandGroup>
 	);
 }

@@ -1,8 +1,14 @@
 import { Badge } from "@rivet-gg/components";
-import { motion } from "framer-motion";
 import { useEffect, useRef } from "react";
+import equal from "fast-deep-equal";
 
-const EMPTY_OBJECT = {};
+function usePreviousState<T>(state: T) {
+	const ref = useRef<T>(state);
+	useEffect(() => {
+		ref.current = state;
+	}, [state]);
+	return ref.current;
+}
 
 interface ActorStateChangeIndicatorProps {
 	state: unknown | undefined;
@@ -11,29 +17,29 @@ interface ActorStateChangeIndicatorProps {
 export function ActorStateChangeIndicator({
 	state,
 }: ActorStateChangeIndicatorProps) {
-	const isMounted = useRef(false);
-	const oldState = useRef<unknown>();
+	const oldState = usePreviousState(state);
+	const hasChanged = !equal(state, oldState);
 
+	const ref = useRef<HTMLDivElement>(null);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: its okay, we only want to run this when state changes
 	useEffect(() => {
-		isMounted.current = true;
-	}, []);
-
-	useEffect(() => {
-		oldState.current = state || EMPTY_OBJECT;
-	}, [state]);
-
-	const hasChanged = state !== oldState.current;
-	const shouldUpdate = hasChanged && isMounted.current;
+		if (hasChanged && ref.current) {
+			ref.current?.animate(
+				[{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }],
+				{
+					duration: 500,
+					easing: "ease-in",
+				},
+			);
+		}
+	}, [state, hasChanged]);
 
 	return (
 		<Badge asChild>
-			<motion.div
-				key={JSON.stringify(state)}
-				initial={{ opacity: shouldUpdate ? 1 : 0 }}
-				animate={{ opacity: 0, transition: { delay: 1 } }}
-			>
+			<div ref={ref} className="opacity-0">
 				State changed
-			</motion.div>
+			</div>
 		</Badge>
 	);
 }

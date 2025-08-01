@@ -1,11 +1,69 @@
 import { Button, WithTooltip } from "@rivet-gg/components";
 import { Icon, faSave } from "@rivet-gg/icons";
-import { useAtomValue } from "jotai";
-import type { ActorAtom } from "./actor-context";
-import type { LogsTypeFilter } from "./actor-logs";
+import saveAs from "file-saver";
+import {
+	type Settings,
+	useActorDetailsSettings,
+} from "./actor-details-settings";
+import { type LogsTypeFilter, filterLogs } from "./actor-logs";
+import type { ActorAtom, LogsAtom } from "./actor-context";
+import { selectAtom } from "jotai/utils";
+import { type Atom, atom, useAtom } from "jotai";
+import type { ActorId } from "./queries";
+
+// const downloadLogsAtom = atom(
+// 	null,
+// 	async (
+// 		get,
+// 		_set,
+// 		{
+// 			actorId,
+// 			typeFilter,
+// 			filter,
+// 		}: {
+// 			actorId: string;
+// 			typeFilter?: LogsTypeFilter;
+// 			filter?: string;
+// 		},
+// 	) => {
+// 		const environment = get(actorEnvironmentAtom);
+// 		const exportHandler = get(exportLogsHandlerAtom);
+
+// 		if (!environment || !exportHandler) {
+// 			throw new Error("Environment or export handler not available");
+// 		}
+
+// 		// Build query JSON for the API
+// 		// Based on the GET logs endpoint usage, we need to build a query
+// 		const query: any = {
+// 			actorIds: [actorId],
+// 		};
+
+// 		// Add stream filter based on typeFilter
+// 		if (typeFilter === "output") {
+// 			query.stream = 0; // stdout
+// 		} else if (typeFilter === "errors") {
+// 			query.stream = 1; // stderr
+// 		}
+
+// 		// Add text search if filter is provided
+// 		if (filter) {
+// 			query.searchText = filter;
+// 		}
+
+// 		const result = await exportHandler({
+// 			projectNameId: environment.projectNameId,
+// 			environmentNameId: environment.environmentNameId,
+// 			queryJson: JSON.stringify(query),
+// 		});
+
+// 		// Open the presigned URL in a new tab to download
+// 		window.open(result.url, "_blank");
+// 	},
+// );
 
 interface ActorDownloadLogsButtonProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 	typeFilter?: LogsTypeFilter;
 	filter?: string;
 	onExportLogs?: (
@@ -17,26 +75,33 @@ interface ActorDownloadLogsButtonProps {
 }
 
 export function ActorDownloadLogsButton({
-	actor,
+	actorId,
 	typeFilter,
 	filter,
 	onExportLogs,
 	isExporting = false,
 }: ActorDownloadLogsButtonProps) {
-	const actorData = useAtomValue(actor);
+	// const [isDownloading, setIsDownloading] = useState(false);
+	// const [, downloadLogs] = useAtom(downloadLogsAtom);
+	// const actorData = useAtomValue(actor);
 
-	const handleDownload = async () => {
-		if (!onExportLogs) {
-			console.warn("No export handler provided");
-			return;
-		}
+	// const handleDownload = async () => {
+	// 	try {
+	// 		setIsDownloading(true);
+	// 		await downloadLogs({
+	// 			actorId: actorData.id,
+	// 			typeFilter,
+	// 			filter,
+	// 		});
+	// 	} catch (error) {
+	// 		console.error("Failed to download logs:", error);
+	// 	} finally {
+	// 		setIsDownloading(false);
+	// 	}
+	// };
+	// const [settings] = useActorDetailsSettings();
 
-		try {
-			await onExportLogs(actorData.id, typeFilter, filter);
-		} catch (error) {
-			console.error("Failed to export logs:", error);
-		}
-	};
+	// const [, downloadLogs] = useAtom(downloadLogsAtom);
 
 	return (
 		<WithTooltip
@@ -47,12 +112,12 @@ export function ActorDownloadLogsButton({
 					variant="outline"
 					aria-label="Export logs"
 					size="icon-sm"
-					onClick={handleDownload}
-					disabled={isExporting || !onExportLogs}
+					// onClick={handleDownload}
+					// disabled={isDownloading}
 				>
 					<Icon
 						icon={faSave}
-						className={isExporting ? "animate-pulse" : ""}
+						// className={isDownloading ? "animate-pulse" : ""}
 					/>
 				</Button>
 			}

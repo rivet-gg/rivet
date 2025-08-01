@@ -1,6 +1,7 @@
 import twContainerQueries from "@tailwindcss/container-queries";
 import twTypography from "@tailwindcss/typography";
 import twAnmiate from "tailwindcss-animate";
+import plugin from "tailwindcss/plugin";
 import type { Config } from "tailwindcss/types/config";
 import * as styleHelpers from "./ui/helpers/index";
 
@@ -170,7 +171,18 @@ const config = {
 			},
 		},
 	},
-	plugins: [twAnmiate, twContainerQueries, twTypography()],
+	plugins: [
+		twAnmiate,
+		twContainerQueries,
+		twTypography(),
+		plugin(({ addUtilities }) => {
+			addUtilities({
+				".field-sizing-content": {
+					"field-sizing": "content",
+				},
+			});
+		}),
+	],
 } satisfies Config;
 
 export default config;

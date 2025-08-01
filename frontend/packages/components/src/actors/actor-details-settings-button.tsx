@@ -1,5 +1,6 @@
 import {
 	Button,
+	cn,
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
@@ -9,7 +10,13 @@ import {
 import { Icon, faCog } from "@rivet-gg/icons";
 import { useActorDetailsSettings } from "./actor-details-settings";
 
-export function ActorDetailsSettingsButton() {
+interface ActorDetailsSettingsButtonProps {
+	className?: string;
+}
+
+export function ActorDetailsSettingsButton({
+	className,
+}: ActorDetailsSettingsButtonProps) {
 	const [settings, setSettings] = useActorDetailsSettings();
 
 	return (
@@ -18,7 +25,7 @@ export function ActorDetailsSettingsButton() {
 				trigger={
 					<DropdownMenuTrigger asChild>
 						<Button
-							className="ml-2 place-self-center"
+							className={cn("place-self-center", className)}
 							variant="outline"
 							aria-label="Settings"
 							size="icon-sm"

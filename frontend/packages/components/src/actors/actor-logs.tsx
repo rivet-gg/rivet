@@ -1,25 +1,23 @@
 import { ShimmerLine, VirtualScrollArea } from "@rivet-gg/components";
 import type { Virtualizer } from "@tanstack/react-virtual";
-import { useAtomValue } from "jotai";
-import { selectAtom } from "jotai/utils";
 import { memo, useCallback, useEffect, useRef } from "react";
 import { useResizeObserver } from "usehooks-ts";
-import type { Actor, ActorAtom, Logs } from "./actor-context";
 import { useActorDetailsSettings } from "./actor-details-settings";
 import { ActorConsoleMessage } from "./console/actor-console-message";
+import { useQuery } from "@tanstack/react-query";
+import { type ActorId, type ActorLogEntry } from "./queries";
+import { useManagerQueries } from "./manager-queries-context";
 
 export type LogsTypeFilter = "all" | "output" | "errors";
 
-const selector = (a: Actor) => a.logs;
-
 interface ActorLogsProps {
-	actor: ActorAtom;
+	actorId: ActorId;
 	typeFilter?: LogsTypeFilter;
 	filter?: string;
 }
 
 export const ActorLogs = memo(
-	({ typeFilter, actor, filter }: ActorLogsProps) => {
+	({ typeFilter, actorId, filter }: ActorLogsProps) => {
 		const [settings] = useActorDetailsSettings();
 		const follow = useRef(true);
 		const shouldFollow = () => settings.autoFollowLogs && follow.current;
@@ -41,14 +39,19 @@ export const ActorLogs = memo(
 			},
 		});
 
-		const logsAtom = useAtomValue(selectAtom(actor, selector));
-
-		const { logs, status } = useAtomValue(logsAtom);
+		const { data: status } = useQuery(
+			useManagerQueries().actorStatusQueryOptions(actorId),
+		);
+		const {
+			data: logs = [],
+			isFetching,
+			isError,
+		} = useQuery(useManagerQueries().actorLogsQueryOptions(actorId));
 
 		const combined = filterLogs({
 			typeFilter: typeFilter ?? "all",
 			filter: filter ?? "",
-			logs,
+			logs: logs ?? [],
 		});
 
 		// Scroll to the bottom when new logs are added
@@ -86,18 +89,6 @@ export const ActorLogs = memo(
 			[],
 		);
 
-		// if (isStdOutLoading || isStdErrLoading) {
-		// 	return (
-		// 		<div className="w-full flex-1 min-h-0">
-		// 			<ActorConsoleMessage variant="warn">
-		// 				Loading logs...
-		// 			</ActorConsoleMessage>
-		// 		</div>
-		// 	);
-		// }
-
-		// const status = getActorStatus({ createdAt, startedAt, destroyedAt });
-
 		if (status === "starting" && combined.length === 0) {
 			return (
 				<div className="w-full flex-1 min-h-0">
@@ -108,7 +99,7 @@ export const ActorLogs = memo(
 			);
 		}
 
-		if (status === "pending") {
+		if (isFetching) {
 			return (
 				<>
 					<ShimmerLine />
@@ -122,16 +113,15 @@ export const ActorLogs = memo(
 		}
 
 		if (combined.length === 0) {
-			// if (!isStdOutSuccess || !isStdErrSuccess) {
-			// 	return (
-			// 		<div className="w-full flex-1 min-h-0">
-			// 			<ActorConsoleMessage variant="error">
-			// 				[SYSTEM]: Couldn't find the logs. Please try again
-			// 				later.
-			// 			</ActorConsoleMessage>
-			// 		</div>
-			// 	);
-			// }
+			if (isError) {
+				return (
+					<div className="w-full flex-1 min-h-0">
+						<ActorConsoleMessage variant="error">
+							[SYSTEM]: Couldn't find the logs. Please try again later.
+						</ActorConsoleMessage>
+					</div>
+				);
+			}
 			return (
 				<div className="w-full flex-1 min-h-0">
 					<ActorConsoleMessage variant="debug">
@@ -150,11 +140,12 @@ export const ActorLogs = memo(
 					className="w-full flex-1 min-h-0"
 					getRowData={(index) => ({
 						...combined[index],
-						children:
-							combined[index].message || combined[index].line,
-						variant: combined[index].level,
+						children: combined[index].message,
+						variant: combined[index].level as "debug" | "error" | "info",
 						timestamp: settings.showTimestamps
 							? combined[index].timestamp
+								? new Date(combined[index].timestamp)
+								: undefined
 							: undefined,
 					})}
 					onChange={handleChange}
@@ -178,12 +169,9 @@ function Scroller({ virtualizer }: ScrollerProps) {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: scroll on mount, no need to run this effect again
 	useEffect(() => {
 		// https://github.com/TanStack/virtual/issues/537
-		virtualizer.current?.scrollToIndex(
-			virtualizer.current.options.count - 1,
-			{
-				align: "end",
-			},
-		);
+		virtualizer.current?.scrollToIndex(virtualizer.current.options.count - 1, {
+			align: "end",
+		});
 	}, []);
 
 	return null;
@@ -193,7 +181,11 @@ export function filterLogs({
 	typeFilter,
 	filter,
 	logs,
-}: { typeFilter: LogsTypeFilter; filter: string; logs: Logs }) {
+}: {
+	typeFilter: LogsTypeFilter;
+	filter: string;
+	logs: ActorLogEntry[];
+}) {
 	const output = logs?.filter((log) => {
 		if (typeFilter === "errors") {
 			return log.level === "error";
@@ -211,8 +203,7 @@ export function filterLogs({
 			: output;
 
 	const sorted = filtered.toSorted(
-		(a, b) =>
-			new Date(a.timestamp).valueOf() - new Date(b.timestamp).valueOf(),
+		(a, b) => new Date(a.timestamp).valueOf() - new Date(b.timestamp).valueOf(),
 	);
 
 	return sorted;
