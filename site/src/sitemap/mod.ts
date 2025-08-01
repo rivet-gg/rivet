@@ -53,6 +53,7 @@ import {
 	faPaintbrush,
 	faPalette,
 	faLayerGroup,
+	faVercel,
 } from "@rivet-gg/icons";
 
 // Goals:
@@ -95,6 +96,11 @@ export const sitemap = [
 								title: "React",
 								href: "/docs/actors/quickstart/react",
 								icon: faReact,
+							},
+							{
+								title: "Next.js",
+								href: "/docs/actors/quickstart/next-js",
+								icon: faVercel,
 							},
 						],
 					},
@@ -389,7 +395,7 @@ export const sitemap = [
 					{
 						title: "System Architecture",
 						href: "/docs/general/system-architecture",
-						icon: faLayerGroup
+						icon: faLayerGroup,
 					},
 					{
 						title: "More",
