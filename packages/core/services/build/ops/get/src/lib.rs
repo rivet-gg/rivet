@@ -43,7 +43,7 @@ async fn handle(ctx: OperationContext<build::get::Request>) -> GlobalResult<buil
 		WHERE
 			build_id = ANY($1)
 		",
-		build_ids,
+		&build_ids,
 	)
 	.await?
 	.into_iter()

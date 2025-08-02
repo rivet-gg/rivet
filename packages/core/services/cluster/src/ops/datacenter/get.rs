@@ -102,7 +102,7 @@ async fn get_dcs(ctx: OperationCtx, datacenter_ids: Vec<Uuid>) -> GlobalResult<V
 		FROM db_cluster.datacenters
 		WHERE datacenter_id = ANY($1)
 		",
-		datacenter_ids,
+		&datacenter_ids,
 	)
 	.await?;
 
