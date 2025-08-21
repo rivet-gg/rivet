@@ -154,7 +154,7 @@ pub async fn route_via_route_config(
 #[tracing::instrument(skip_all)]
 async fn find_actor_targets(
 	ctx: &StandaloneCtx,
-	actor_id: &Uuid,
+	actor_id: &util::Id,
 	_dc_id: Uuid, // Unused but kept for API compatibility
 	path_to_forward: &str,
 ) -> GlobalResult<Option<Vec<RouteTarget>>> {
@@ -163,22 +163,47 @@ async fn find_actor_targets(
 		.fdb()
 		.await?
 		.run(|tx, _mc| async move {
-			// NOTE: This is not SERIALIZABLE because we don't want to conflict with port updates
-			// and its not important if its slightly stale
-			let proxied_ports_key = pegboard::keys::actor::ProxiedPortsKey::new(*actor_id);
-			let raw = tx
-				.get(
-					&pegboard::keys::subspace().pack(&proxied_ports_key),
-					fdb_util::SNAPSHOT,
-				)
-				.await?;
-			if let Some(raw) = raw {
-				let proxied_ports = proxied_ports_key
-					.deserialize(&raw)
-					.map_err(|x| foundationdb::FdbBindingError::CustomError(x.into()))?;
-				Ok(Some(proxied_ports))
+			if let Some(actor_id) = actor_id.as_v0() {
+				// NOTE: This is not SERIALIZABLE because we don't want to conflict with port updates
+				// and its not important if its slightly stale
+				let proxied_ports_key = pegboard::keys::actor::ProxiedPortsKey::new(actor_id);
+				let raw = tx
+					.get(
+						&pegboard::keys::subspace().pack(&proxied_ports_key),
+						fdb_util::SNAPSHOT,
+					)
+					.await?;
+				if let Some(raw) = raw {
+					let proxied_ports = proxied_ports_key
+						.deserialize(&raw)
+						.map_err(|x| foundationdb::FdbBindingError::CustomError(x.into()))?;
+					Ok(Some(
+						proxied_ports
+							.into_iter()
+							.map(Into::into)
+							.collect::<Vec<_>>(),
+					))
+				} else {
+					Ok(None)
+				}
 			} else {
-				Ok(None)
+				// NOTE: This is not SERIALIZABLE because we don't want to conflict with port updates
+				// and its not important if its slightly stale
+				let proxied_ports_key = pegboard::keys::actor2::ProxiedPortsKey::new(*actor_id);
+				let raw = tx
+					.get(
+						&pegboard::keys::subspace().pack(&proxied_ports_key),
+						fdb_util::SNAPSHOT,
+					)
+					.await?;
+				if let Some(raw) = raw {
+					let proxied_ports = proxied_ports_key
+						.deserialize(&raw)
+						.map_err(|x| foundationdb::FdbBindingError::CustomError(x.into()))?;
+					Ok(Some(proxied_ports))
+				} else {
+					Ok(None)
+				}
 			}
 		})
 		.await?;

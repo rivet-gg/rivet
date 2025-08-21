@@ -9,7 +9,7 @@ import API_SCHEMA from './../spec.json';
 # actors.get
 
 ## Description
-Gets a dynamic actor.
+Gets a actor.
 
 ## Code Examples
 
@@ -33,5 +33,5 @@ await RIVET.actors.get({
 </CodeGroup>
 
 ## Schema
-<JsonSchemaPreview className='not-prose mt-4' title='Request Parameters' schema={{"type":"object","properties":{"actor":{"in":"path","type":"string","format":"uuid"},"project":{"in":"query","type":"string"},"environment":{"in":"query","type":"string"},"endpoint_type":{"in":"query","$ref":"#/components/schemas/ActorsEndpointType"}},"required":["actor"]}} defs={API_SCHEMA.definitions}/>
+<JsonSchemaPreview className='not-prose mt-4' title='Request Parameters' schema={{"type":"object","properties":{"actor":{"in":"path","$ref":"#/components/schemas/Id"},"project":{"in":"query","type":"string"},"environment":{"in":"query","type":"string"},"endpoint_type":{"in":"query","$ref":"#/components/schemas/ActorsEndpointType"}},"required":["actor"]}} defs={API_SCHEMA.definitions}/>
 <JsonSchemaPreview className='not-prose mt-4' title='Response' schema={{"$ref":"#/components/schemas/ActorsGetActorResponse"}} defs={API_SCHEMA.definitions}/>

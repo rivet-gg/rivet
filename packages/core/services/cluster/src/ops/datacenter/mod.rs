@@ -6,3 +6,4 @@ pub mod server_discovery;
 pub mod server_spec_get;
 pub mod tls_get;
 pub mod topology_get;
+pub mod get_for_label;

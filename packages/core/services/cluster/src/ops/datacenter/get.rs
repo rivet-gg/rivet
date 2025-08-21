@@ -15,7 +15,7 @@ pub struct Output {
 }
 
 #[derive(sqlx::FromRow)]
-struct DatacenterRow {
+pub(crate) struct DatacenterRow {
 	datacenter_id: Uuid,
 	cluster_id: Uuid,
 	name_id: String,
@@ -32,7 +32,7 @@ struct DatacenterRow {
 }
 
 impl DatacenterRow {
-	fn into_datacenter(self, config: &rivet_config::Config) -> GlobalResult<Datacenter> {
+	pub(crate) fn into_datacenter(self, config: &rivet_config::Config) -> GlobalResult<Datacenter> {
 		Ok(Datacenter {
 			datacenter_id: self.datacenter_id,
 			cluster_id: self.cluster_id,

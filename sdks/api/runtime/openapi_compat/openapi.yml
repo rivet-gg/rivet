@@ -5,7 +5,7 @@ info:
 paths:
   '/actors/{actor}':
     get:
-      description: Gets a dynamic actor.
+      description: Gets a actor.
       operationId: actors_get
       tags:
         - Actors
@@ -15,8 +15,7 @@ paths:
           description: The id of the actor to destroy
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Id'
         - name: project
           in: query
           required: false
@@ -78,7 +77,7 @@ paths:
       security: &ref_0
         - BearerAuth: []
     delete:
-      description: Destroy a dynamic actor.
+      description: Destroy a actor.
       operationId: actors_destroy
       tags:
         - Actors
@@ -88,8 +87,7 @@ paths:
           description: The id of the actor to destroy
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Id'
         - name: project
           in: query
           required: false
@@ -238,7 +236,7 @@ paths:
                 $ref: '#/components/schemas/ErrorBody'
       security: *ref_0
     post:
-      description: Create a new dynamic actor.
+      description: Create a new actor.
       operationId: actors_create
       tags:
         - Actors
@@ -310,7 +308,7 @@ paths:
               $ref: '#/components/schemas/ActorsCreateActorRequest'
   '/actors/{actor}/upgrade':
     post:
-      description: Upgrades a dynamic actor.
+      description: Upgrades a actor.
       operationId: actors_upgrade
       tags:
         - Actors
@@ -320,8 +318,7 @@ paths:
           description: The id of the actor to upgrade
           required: true
           schema:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Id'
         - name: project
           in: query
           required: false
@@ -384,7 +381,7 @@ paths:
               $ref: '#/components/schemas/ActorsUpgradeActorRequest'
   /actors/upgrade:
     post:
-      description: Upgrades a dynamic actor.
+      description: Upgrades all actors matching the given tags.
       operationId: actors_upgradeAll
       tags:
         - Actors
@@ -1833,8 +1830,7 @@ components:
       type: object
       properties:
         id:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/Id'
         region:
           type: string
         tags: {}
@@ -2104,6 +2100,9 @@ components:
       required:
         - cpu
         - memory
+    Id:
+      type: string
+      description: Can be a UUID or base36 encoded binary data.
     WatchResponse:
       type: object
       description: Provided by watchable endpoints used in blocking loops.
