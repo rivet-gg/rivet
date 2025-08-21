@@ -11,6 +11,5 @@ export interface CreateActorRequest {
     buildTags?: unknown;
     runtime?: Rivet.actors.CreateActorRuntimeRequest;
     network?: Rivet.actors.CreateActorNetworkRequest;
-    resources?: Rivet.actors.Resources;
     lifecycle?: Rivet.actors.Lifecycle;
 }

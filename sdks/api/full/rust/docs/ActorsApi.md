@@ -4,6 +4,7 @@ All URIs are relative to *https://api.rivet.gg*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+<<<<<<< HEAD
 [**actors_create**](ActorsApi.md#actors_create) | **POST** /actors | 
 [**actors_destroy**](ActorsApi.md#actors_destroy) | **DELETE** /actors/{actor} | 
 [**actors_get**](ActorsApi.md#actors_get) | **GET** /actors/{actor} | 
@@ -12,6 +13,14 @@ Method | HTTP request | Description
 [**actors_upgrade**](ActorsApi.md#actors_upgrade) | **POST** /actors/{actor}/upgrade | 
 [**actors_upgrade_all**](ActorsApi.md#actors_upgrade_all) | **POST** /actors/upgrade | 
 [**actors_usage**](ActorsApi.md#actors_usage) | **GET** /actors/usage | 
+=======
+[**actors_create**](ActorsApi.md#actors_create) | **POST** /v2/actors | 
+[**actors_destroy**](ActorsApi.md#actors_destroy) | **DELETE** /v2/actors/{actor} | 
+[**actors_get**](ActorsApi.md#actors_get) | **GET** /v2/actors/{actor} | 
+[**actors_list**](ActorsApi.md#actors_list) | **GET** /v2/actors | 
+[**actors_upgrade**](ActorsApi.md#actors_upgrade) | **POST** /v2/actors/{actor}/upgrade | 
+[**actors_upgrade_all**](ActorsApi.md#actors_upgrade_all) | **POST** /v2/actors/upgrade | 
+>>>>>>> 43e5048bc (fix: api changes)
 
 
 

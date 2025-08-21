@@ -25,7 +25,9 @@ types:
       - value: oci_bundle
         docs: OCI-compliant bundle.
       - value: javascript
-        docs: A JavaScript file.
+        docs: |
+          **Deprecated**
+          A JavaScript file.
 
   Compression:
     enum:

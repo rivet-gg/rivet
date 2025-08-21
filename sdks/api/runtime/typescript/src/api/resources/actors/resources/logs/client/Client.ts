@@ -85,7 +85,7 @@ export class Logs {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.RivetEnvironment.Production,
-                "/actors/logs",
+                "/v2/actors/logs",
             ),
             method: "GET",
             headers: {
@@ -190,7 +190,7 @@ export class Logs {
                     body: _response.error.rawBody,
                 });
             case "timeout":
-                throw new errors.RivetTimeoutError("Timeout exceeded when calling GET /actors/logs.");
+                throw new errors.RivetTimeoutError("Timeout exceeded when calling GET /v2/actors/logs.");
             case "unknown":
                 throw new errors.RivetError({
                     message: _response.error.errorMessage,

@@ -30,10 +30,6 @@ import * as Rivet from "../../../../index";
  *                 ports: {},
  *                 waitReady: true
  *             },
- *             resources: {
- *                 cpu: 1,
- *                 memory: 1
- *             },
  *             lifecycle: {
  *                 killTimeout: 1000000,
  *                 durable: true

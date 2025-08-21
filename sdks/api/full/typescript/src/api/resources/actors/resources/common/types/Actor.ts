@@ -10,7 +10,6 @@ export interface Actor {
     tags?: unknown;
     runtime: Rivet.actors.Runtime;
     network: Rivet.actors.Network;
-    resources?: Rivet.actors.Resources;
     lifecycle: Rivet.actors.Lifecycle;
     createdAt: Rivet.Timestamp;
     startedAt?: Rivet.Timestamp;

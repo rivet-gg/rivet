@@ -13,10 +13,10 @@ Returns the metrics for a given actor.
 
 ## Code Examples
 
-<CodeGroup title='Request' tag='GET' label='https://api.rivet.gg/actors/{actor}/metrics/history'>
+<CodeGroup title='Request' tag='GET' label='https://api.rivet.gg/v2/actors/{actor}/metrics/history'>
 
 ```bash {{ "title": "cURL" }}
-curl -X GET 'https://api.rivet.gg/actors/{actor}/metrics/history'
+curl -X GET 'https://api.rivet.gg/v2/actors/{actor}/metrics/history'
 ```
 
 ```ts
@@ -33,5 +33,5 @@ await RIVET.actors.metrics.get({
 </CodeGroup>
 
 ## Schema
-<JsonSchemaPreview className='not-prose mt-4' title='Request Parameters' schema={{"type":"object","properties":{"actor":{"in":"path","type":"string","format":"uuid"},"project":{"in":"query","type":"string"},"environment":{"in":"query","type":"string"},"start":{"in":"query","type":"integer"},"end":{"in":"query","type":"integer"},"interval":{"in":"query","type":"integer"}},"required":["actor","start","end","interval"]}} defs={API_SCHEMA.definitions}/>
+<JsonSchemaPreview className='not-prose mt-4' title='Request Parameters' schema={{"type":"object","properties":{"actor":{"in":"path","$ref":"#/components/schemas/Id"},"project":{"in":"query","type":"string"},"environment":{"in":"query","type":"string"},"start":{"in":"query","type":"integer"},"end":{"in":"query","type":"integer"},"interval":{"in":"query","type":"integer"}},"required":["actor","start","end","interval"]}} defs={API_SCHEMA.definitions}/>
 <JsonSchemaPreview className='not-prose mt-4' title='Response' schema={{"$ref":"#/components/schemas/ActorsGetActorMetricsResponse"}} defs={API_SCHEMA.definitions}/>
