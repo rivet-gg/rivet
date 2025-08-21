@@ -27,6 +27,7 @@ nix.workspace = true
 notify = { version = "6.1.1", default-features = false, features = ["serde", "fsevent-sys"] }
 pegboard-actor-kv.workspace = true
 pegboard-config.workspace = true
+pegboard-runner-protocol.workspace = true
 pegboard.workspace = true
 prometheus = "0.13"
 rand = "0.8"

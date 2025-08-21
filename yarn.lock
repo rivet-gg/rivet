@@ -4536,6 +4536,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@rivet-gg/runner-protocol@file:../../sdks/runner-protocol::locator=system-test-container%40workspace%3Aexamples%2Fsystem-test-actor":
+  version: 1.0.0
+  resolution: "@rivet-gg/runner-protocol@file:../../sdks/runner-protocol#../../sdks/runner-protocol::hash=3263e1&locator=system-test-container%40workspace%3Aexamples%2Fsystem-test-actor"
+  dependencies:
+    google-protobuf: "npm:^3.21.0"
+  checksum: 10c0/b6c92f6d634eac885af3812bee67f905bbcab9edd7c32558540e0037703bb3dd273754e7282044a47aeedf980dfefb50f7828a144f4c5fe4a6b54099c973d7d8
+  languageName: node
+  linkType: hard
+
 "@rivet-gg/studio@workspace:frontend/apps/studio":
   version: 0.0.0-use.local
   resolution: "@rivet-gg/studio@workspace:frontend/apps/studio"
@@ -6642,6 +6651,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/google-protobuf@npm:^3.15.0":
+  version: 3.15.12
+  resolution: "@types/google-protobuf@npm:3.15.12"
+  checksum: 10c0/721783234e627f367dd710c345a1eaa9dca4ac64910032cef0c851c1821e05d06ffb51e9d1693080f1c0797a8674f89130fa56a390395ec7791ea8506d2f3bfb
+  languageName: node
+  linkType: hard
+
 "@types/hast@npm:^2.0.0":
   version: 2.3.10
   resolution: "@types/hast@npm:2.3.10"
@@ -7512,6 +7528,13 @@ __metadata:
   bin:
     actor-core: ./dist/cli/mod.cjs
   checksum: 10c0/7dbe3885982d29a4709cdeb019e18ca38ccbd256ad11a47c56240208ab3e0f9e18b92a551d42bbbd1efec24db12e0539f0ab1495049778c5da7ef8c18cd60c73
+  languageName: node
+  linkType: hard
+
+"adm-zip@npm:0.5.10":
+  version: 0.5.10
+  resolution: "adm-zip@npm:0.5.10"
+  checksum: 10c0/1f391a4e02940688b6ca6d4b3ea96cc82a9dbe1596671d7dbc052f9a53ed2efa6ba9ba253f032ea16e70081f22d6ddd1af2d65d6be700853cdee9c2fc925c20e
   languageName: node
   linkType: hard
 
@@ -10785,6 +10808,13 @@ __metadata:
   peerDependencies:
     csstype: ^3.0.10
   checksum: 10c0/f4c8256bf9c27873d47c1443f348779ac7f322516cb80a5dc647a6ebe790ce6bb9d3f487a0fb8be0b583fb96b9b2f6b7463f7fea3cd680306f95fa6fc9db1f6a
+  languageName: node
+  linkType: hard
+
+"google-protobuf@npm:^3.21.0, google-protobuf@npm:^3.21.2":
+  version: 3.21.4
+  resolution: "google-protobuf@npm:3.21.4"
+  checksum: 10c0/28f2800f7fe1a8fc55eb58ba76e158268407bfb3b90646eaf8a177dd92a2e522459b773f8132ae546e60ac3b6f5947557a1cf3d963a05bb594f43bcde640f54f
   languageName: node
   linkType: hard
 
@@ -14715,6 +14745,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"protoc-gen-js@npm:^3.21.2":
+  version: 3.21.3
+  resolution: "protoc-gen-js@npm:3.21.3"
+  dependencies:
+    adm-zip: "npm:0.5.10"
+  bin:
+    protoc-gen-js: cli.js
+  checksum: 10c0/19818ba6c23cef580e605391115c0615cd88bd4094c9e9c7ce46f3980d17b6ef1008ea8e0db440db8df6f95db52c7db901b53a66db16786b75e46ffd449de5f4
+  languageName: node
+  linkType: hard
+
+"protoc-gen-ts@npm:^0.8.7":
+  version: 0.8.7
+  resolution: "protoc-gen-ts@npm:0.8.7"
+  bin:
+    protoc-gen-ts: protoc-gen-ts.js
+  checksum: 10c0/1af3ce3c31b81f374b3fc704a770715432ebf7f8caeb5b22e68fb6e378159a659afa3c88ca6d81540f324c3db31efec19877c41c800895cbbbf4926392c234a6
+  languageName: node
+  linkType: hard
+
 "proxy-from-env@npm:^1.1.0":
   version: 1.1.0
   resolution: "proxy-from-env@npm:1.1.0"
@@ -15701,6 +15751,8 @@ __metadata:
   dependencies:
     "@biomejs/biome": "npm:^1.9.4"
     "@yarnpkg/plugin-exec": "npm:^3.0.1"
+    protoc-gen-js: "npm:^3.21.2"
+    protoc-gen-ts: "npm:^0.8.7"
     turbo: "npm:^2.0.1"
   languageName: unknown
   linkType: soft
@@ -16898,10 +16950,13 @@ __metadata:
     "@hono/node-ws": "npm:^1.1.0"
     "@rivet-gg/actor-core": "npm:^5.1.2"
     "@rivet-gg/api": "npm:^24.6.2"
+    "@rivet-gg/runner-protocol": "file:../../sdks/runner-protocol"
     "@types/deno": "npm:^2.2.0"
+    "@types/google-protobuf": "npm:^3.15.0"
     "@types/node": "npm:^22.13.9"
     "@types/ws": "npm:^8.18.0"
     dgram: "npm:^1.0.1"
+    google-protobuf: "npm:^3.21.2"
     hono: "npm:^4.6.17"
     node-fetch: "npm:^3.3.2"
     tsx: "npm:^4.7.0"
