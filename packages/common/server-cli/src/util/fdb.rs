@@ -36,6 +36,8 @@ impl SimpleTupleValue {
 			SimpleTupleValue::F64(v)
 		} else if let Ok(v) = Uuid::from_str(value) {
 			SimpleTupleValue::Uuid(v)
+		} else if let Ok(v) = rivet_util::Id::from_str(value) {
+			SimpleTupleValue::Id(v)
 		} else {
 			SimpleTupleValue::String(unescape(value))
 		}

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use build::types::{BuildAllocationType, BuildKind};
 use chirp_workflow::prelude::*;
-use fdb_util::SNAPSHOT;
+use fdb_util::{FormalKey, SNAPSHOT};
 use foundationdb::{self as fdb, options::StreamingMode};
 use futures_util::{StreamExt, TryStreamExt};
 use pegboard::{keys, protocol};
@@ -12,6 +12,13 @@ struct Usage {
 	pub cpu: u64,
 	/// MiB.
 	pub memory: u64,
+}
+
+struct ImagePendingStats {
+	actors: u32,
+	slots: u32,
+	cpu: u64,
+	memory: u64,
 }
 
 pub async fn start(config: rivet_config::Config, pools: rivet_pools::Pools) -> GlobalResult<()> {
@@ -51,7 +58,7 @@ pub async fn run_from_env(
 	}
 
 	// List all actor ids that are currently running
-	let actor_ids = ctx
+	let (actor_ids, pending_cpu, pending_mem) = ctx
 		.fdb()
 		.await?
 		.run(|tx, _mc| async move {
@@ -60,42 +67,105 @@ pub async fn run_from_env(
 			let actor2_subspace =
 				keys::subspace().subspace(&keys::client::Actor2Key::entire_subspace());
 
-			tx.get_ranges_keyvalues(
-				fdb::RangeOption {
-					mode: StreamingMode::WantAll,
-					..(&actor2_subspace).into()
-				},
-				// Not serializable because we don't want to interfere with normal operations
-				SNAPSHOT,
-			)
-			.chain(tx.get_ranges_keyvalues(
-				fdb::RangeOption {
-					mode: StreamingMode::WantAll,
-					..(&actor_subspace).into()
-				},
-				// Not serializable because we don't want to interfere with normal operations
-				SNAPSHOT,
-			))
-			.map(|res| match res {
-				Ok(entry) => {
-					if let Ok(key) = keys::subspace().unpack::<keys::client::Actor2Key>(entry.key())
-					{
-						Ok(key.actor_id)
-					} else {
-						let key = keys::subspace()
-							.unpack::<keys::client::ActorKey>(entry.key())
-							.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+			let actor_ids = tx
+				.get_ranges_keyvalues(
+					fdb::RangeOption {
+						mode: StreamingMode::WantAll,
+						..(&actor2_subspace).into()
+					},
+					// Not serializable because we don't want to interfere with normal operations
+					SNAPSHOT,
+				)
+				.chain(tx.get_ranges_keyvalues(
+					fdb::RangeOption {
+						mode: StreamingMode::WantAll,
+						..(&actor_subspace).into()
+					},
+					// Not serializable because we don't want to interfere with normal operations
+					SNAPSHOT,
+				))
+				.map(|res| match res {
+					Ok(entry) => {
+						if let Ok(key) =
+							keys::subspace().unpack::<keys::client::Actor2Key>(entry.key())
+						{
+							Ok(key.actor_id)
+						} else {
+							let key = keys::subspace()
+								.unpack::<keys::client::ActorKey>(entry.key())
+								.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
 
-						Ok(util::Id::from(key.actor_id))
+							Ok(util::Id::from(key.actor_id))
+						}
 					}
-				}
-				Err(err) => Err(Into::<fdb::FdbBindingError>::into(err)),
-			})
-			.try_collect::<Vec<_>>()
-			.await
+					Err(err) => Err(Into::<fdb::FdbBindingError>::into(err)),
+				})
+				.try_collect::<Vec<_>>()
+				.await?;
+
+			let pending_actor_subspace =
+				keys::subspace().subspace(&keys::datacenter::PendingActorKey::subspace());
+			let mut pending_resources_by_image_id = HashMap::new();
+
+			// Read all pending actor keys
+			let mut stream = tx.get_ranges_keyvalues(
+				fdb::RangeOption {
+					mode: StreamingMode::WantAll,
+					..(&pending_actor_subspace).into()
+				},
+				// Not serializable because we don't want to interfere with normal operations
+				SNAPSHOT,
+			);
+
+			loop {
+				let Some(entry) = stream.try_next().await? else {
+					break;
+				};
+
+				let key = keys::subspace()
+					.unpack::<keys::datacenter::PendingActorKey>(entry.key())
+					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+				let value = key
+					.deserialize(entry.value())
+					.map_err(|x| fdb::FdbBindingError::CustomError(x.into()))?;
+
+				let entry = pending_resources_by_image_id
+					.entry(value.image_id)
+					.or_insert_with(|| ImagePendingStats {
+						actors: 0,
+						slots: value.build_allocation_total_slots,
+						cpu: value.cpu,
+						memory: value.memory / 1024 / 1024,
+					});
+
+				entry.actors += 1;
+			}
+
+			// Calculate how many runners we need based on image
+			let (pending_cpu, pending_mem) =
+				pending_resources_by_image_id
+					.into_iter()
+					.fold((0, 0), |s, (_, stats)| {
+						let runner_count = stats.actors.div_ceil(stats.slots) as u64;
+
+						(
+							s.0 + stats.cpu * runner_count,
+							s.1 + stats.memory * runner_count,
+						)
+					});
+
+			Ok((actor_ids, pending_cpu, pending_mem))
 		})
 		.custom_instrument(tracing::info_span!("fetch_running_actors_tx"))
 		.await?;
+
+	pegboard::metrics::ACTOR_CPU_PENDING_ALLOCATION
+		.with_label_values(&[])
+		.set(pending_cpu.try_into()?);
+	pegboard::metrics::ACTOR_MEMORY_PENDING_ALLOCATION
+		.with_label_values(&[])
+		.set(pending_mem.try_into()?);
 
 	let actors_res = ctx
 		.op(pegboard::ops::actor::get::Input {
@@ -146,7 +216,7 @@ pub async fn run_from_env(
 			.entry((actor.env_id, client_flavor))
 			.or_insert(Usage { cpu: 0, memory: 0 });
 
-		let resources = match build.allocation_type {
+		match build.allocation_type {
 			BuildAllocationType::None | BuildAllocationType::Single => {
 				if let Some(resources) = &actor.resources {
 					env_usage.cpu += resources.cpu_millicores as u64;

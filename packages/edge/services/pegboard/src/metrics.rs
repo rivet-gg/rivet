@@ -8,6 +8,13 @@ lazy_static::lazy_static! {
 		*REGISTRY
 	).unwrap();
 
+	pub static ref CLIENT_CPU_TOTAL: IntGaugeVec = register_int_gauge_vec_with_registry!(
+		"pegboard_client_cpu_total",
+		"Total millicores of cpu available on a client.",
+		&["client_id", "flavor", "state"],
+		*REGISTRY
+	).unwrap();
+
 	pub static ref CLIENT_MEMORY_TOTAL: IntGaugeVec = register_int_gauge_vec_with_registry!(
 		"pegboard_client_memory_total",
 		"Total MiB of memory available on a client.",
@@ -15,9 +22,9 @@ lazy_static::lazy_static! {
 		*REGISTRY
 	).unwrap();
 
-	pub static ref CLIENT_CPU_TOTAL: IntGaugeVec = register_int_gauge_vec_with_registry!(
-		"pegboard_client_cpu_total",
-		"Total millicores of cpu available on a client.",
+	pub static ref CLIENT_CPU_ALLOCATED: IntGaugeVec = register_int_gauge_vec_with_registry!(
+		"pegboard_client_cpu_allocated",
+		"Total millicores of cpu allocated on a client.",
 		&["client_id", "flavor", "state"],
 		*REGISTRY
 	).unwrap();
@@ -29,10 +36,17 @@ lazy_static::lazy_static! {
 		*REGISTRY
 	).unwrap();
 
-	pub static ref CLIENT_CPU_ALLOCATED: IntGaugeVec = register_int_gauge_vec_with_registry!(
-		"pegboard_client_cpu_allocated",
-		"Total millicores of cpu allocated on a client.",
-		&["client_id", "flavor", "state"],
+	pub static ref ACTOR_CPU_PENDING_ALLOCATION: IntGaugeVec = register_int_gauge_vec_with_registry!(
+		"pegboard_actor_cpu_pending_allocation",
+		"Total actor cpu waiting for availability.",
+		&[],
+		*REGISTRY
+	).unwrap();
+
+	pub static ref ACTOR_MEMORY_PENDING_ALLOCATION: IntGaugeVec = register_int_gauge_vec_with_registry!(
+		"pegboard_actor_memory_pending_allocation",
+		"Total actor memory waiting for availability.",
+		&[],
 		*REGISTRY
 	).unwrap();
 
@@ -52,16 +66,16 @@ lazy_static::lazy_static! {
 		*REGISTRY,
 	).unwrap();
 
-	pub static ref ENV_MEMORY_USAGE: IntGaugeVec = register_int_gauge_vec_with_registry!(
-		"pegboard_env_memory_usage",
-		"Total MiB of memory used by an environment.",
+	pub static ref ENV_CPU_USAGE: IntGaugeVec = register_int_gauge_vec_with_registry!(
+		"pegboard_env_cpu_usage",
+		"Total millicores used by an environment.",
 		&["env_id", "flavor"],
 		*REGISTRY,
 	).unwrap();
 
-	pub static ref ENV_CPU_USAGE: IntGaugeVec = register_int_gauge_vec_with_registry!(
-		"pegboard_env_cpu_usage",
-		"Total millicores used by an environment.",
+	pub static ref ENV_MEMORY_USAGE: IntGaugeVec = register_int_gauge_vec_with_registry!(
+		"pegboard_env_memory_usage",
+		"Total MiB of memory used by an environment.",
 		&["env_id", "flavor"],
 		*REGISTRY,
 	).unwrap();
