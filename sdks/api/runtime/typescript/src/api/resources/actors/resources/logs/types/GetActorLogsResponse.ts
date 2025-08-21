@@ -6,7 +6,7 @@ import * as Rivet from "../../../../../index";
 
 export interface GetActorLogsResponse {
     /** List of actor IDs in these logs. The order of these correspond to the index in the log entry. */
-    actorIds: string[];
+    actorIds: Rivet.Id[];
     /** Sorted old to new. */
     lines: string[];
     /** Sorted old to new. */
@@ -18,6 +18,8 @@ export interface GetActorLogsResponse {
      * 1 = stderr
      */
     streams: number[];
+    /** List of flags denoting if this log is not directly from the actor. */
+    foreigns: boolean[];
     /** Index of the actor that this log was for. Use this index to look the full ID in `actor_ids`. */
     actorIndices: number[];
     watch: Rivet.WatchResponse;

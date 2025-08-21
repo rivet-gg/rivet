@@ -1,4 +1,11 @@
-use std::{env, io::{Write, Cursor}, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+	env,
+	io::{Cursor, Write},
+	net::SocketAddr,
+	path::PathBuf,
+	sync::Arc,
+	time::Duration,
+};
 
 use anyhow::*;
 use bytes::Bytes;
@@ -103,7 +110,8 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 
 	// Process incoming messages
 	while let Some(frame) = read.next().await.transpose()? {
-		let (_, packet) = decode_frame::<serde_json::Value>(&frame.freeze()).context("failed to decode frame")?;
+		let (_, packet) =
+			decode_frame::<serde_json::Value>(&frame.freeze()).context("failed to decode frame")?;
 		println!("Received packet: {packet:?}");
 
 		if let Some(packet) = packet.get("start_actor") {
@@ -117,7 +125,11 @@ async fn run_socket_client(socket_path: PathBuf) -> Result<()> {
 				},
 			});
 
-			write.lock().await.send(encode_frame(&payload).context("failed to encode frame")?).await?;
+			write
+				.lock()
+				.await
+				.send(encode_frame(&payload).context("failed to encode frame")?)
+				.await?;
 		} else if let Some(packet) = packet.get("signal_actor") {
 			let payload = json!({
 				"actor_state_update": {
@@ -148,7 +160,7 @@ fn encode_frame<T: Serialize>(payload: &T) -> Result<Bytes> {
 	serde_json::to_writer(&mut cursor, payload)?;
 
 	cursor.flush()?;
-	
+
 	Ok(buf.into())
 }
 
