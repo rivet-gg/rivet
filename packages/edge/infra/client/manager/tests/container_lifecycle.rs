@@ -8,7 +8,6 @@ use pegboard::protocol;
 use pegboard_manager::Ctx;
 use tokio::{net::TcpStream, sync::Mutex};
 use tokio_tungstenite::tungstenite::protocol::Message;
-use uuid::Uuid;
 
 mod common;
 use common::*;

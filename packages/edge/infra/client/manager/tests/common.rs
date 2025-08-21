@@ -59,7 +59,7 @@ pub async fn send_init_packet(tx: &mut SplitSink<WebSocketStream<tokio::net::Tcp
 		tx,
 		protocol::ToClient::Init {
 			last_event_idx: utils::now(),
-			workflow_id: Uuid::new_v4(),
+			workflow_id: Uuid::nil(),
 		},
 	)
 	.await
@@ -80,6 +80,7 @@ pub async fn start_echo_actor(
 						id: Uuid::nil(),
 						artifact_url_stub: "/image".into(),
 						fallback_artifact_url: None,
+						artifact_size: 0,
 						kind: protocol::ImageKind::DockerImage,
 						compression: protocol::ImageCompression::None,
 						allocation_type: protocol::ImageAllocationType::Multi,
@@ -107,9 +108,6 @@ pub async fn start_echo_actor(
 					network_mode: protocol::NetworkMode::Host,
 				},
 			}),
-			env: [("FOO".to_string(), "bar".to_string())]
-				.into_iter()
-				.collect(),
 			metadata: protocol::Raw::new(&protocol::ActorMetadata {
 				actor: protocol::ActorMetadataActor {
 					actor_id,
@@ -145,6 +143,7 @@ pub async fn start_echo_actor(
 				id: Uuid::nil(),
 				artifact_url_stub: "/image".into(),
 				fallback_artifact_url: None,
+				artifact_size: 0,
 				kind: protocol::ImageKind::DockerImage,
 				compression: protocol::ImageCompression::None,
 				allocation_type: protocol::ImageAllocationType::Multi,
@@ -204,7 +203,7 @@ pub fn start_server<F, Fut>(
 pub async fn init_client(gen_path: &Path, working_path: &Path) -> Config {
 	let container_runner_binary_path = working_path.join("bin").join("container-runner");
 
-	tokio::fs::create_dir(working_path.join("bin"))
+	tokio::fs::create_dir_all(working_path.join("bin"))
 		.await
 		.unwrap();
 
@@ -226,9 +225,8 @@ pub async fn init_client(gen_path: &Path, working_path: &Path) -> Config {
 				api_endpoint: Url::parse("http://127.0.0.1").unwrap(),
 			},
 			runner: Runner {
-				ip: None,
-				port: None,
 				use_mounts: Some(true),
+				use_resource_constraints: Some(true),
 				container_runner_binary_path: Some(container_runner_binary_path),
 			},
 			images: Images {
@@ -278,8 +276,6 @@ pub async fn start_client(
 ) {
 	let system = system_info::fetch().await.unwrap();
 
-	let secret = utils::load_secret(&config).await.unwrap();
-
 	let pool = utils::init_sqlite_db(&config).await.unwrap();
 
 	// Build WS connection URL
@@ -300,7 +296,7 @@ pub async fn start_client(
 
 	tracing::info!("connected");
 
-	let ctx = Ctx::new(config, system, secret, pool, tx);
+	let ctx = Ctx::new(config, system, pool, tx);
 
 	// Share reference
 	{
