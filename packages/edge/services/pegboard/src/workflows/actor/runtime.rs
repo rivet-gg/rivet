@@ -1393,20 +1393,12 @@ async fn clear_ports_and_resources(
 
 	let (
 		build_res,
-		ingress_ports,
 		(selected_resources_cpu_millicores, selected_resources_memory_mib),
 		_,
 	) = tokio::try_join!(
 		ctx.op(build::ops::get::Input {
 			build_ids: vec![input.image_id],
 		}),
-		sql_fetch_all!(
-			[ctx, (i64, i64), pool]
-			"
-			SELECT protocol, ingress_port_number
-			FROM ports_ingress
-			",
-		),
 		sql_fetch_one!(
 			[ctx, (Option<i64>, Option<i64>), pool]
 			"
@@ -1428,13 +1420,13 @@ async fn clear_ports_and_resources(
 		.fdb()
 		.await?
 		.run(|tx, _mc| {
-			let ingress_ports = ingress_ports.clone();
 			async move {
 				destroy::clear_ports_and_resources(
 					input.actor_id,
 					input.image_id,
 					Some(build.allocation_type),
-					ingress_ports,
+					// NOTE: Ingress ports are not cleared upon reschedule, they are reused
+					Vec::new(),
 					Some(input.runner_id),
 					Some(input.client_id),
 					Some(input.client_workflow_id),
