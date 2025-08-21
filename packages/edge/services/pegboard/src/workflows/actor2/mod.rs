@@ -111,6 +111,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 			ctx.workflow(destroy::Input {
 				actor_id: input.actor_id,
+				generation: 0,
 				image_id: input.image_id,
 				build_allocation_type: None,
 				kill: None,
@@ -145,6 +146,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 		ctx.workflow(destroy::Input {
 			actor_id: input.actor_id,
+			generation: 0,
 			image_id: input.image_id,
 			build_allocation_type: Some(initial_actor_setup.meta.build_allocation_type),
 			kill: None,
@@ -202,9 +204,9 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 							{
 								// Destroyed early
 								return Ok(Loop::Break(runtime::LifecycleRes {
+									generation: state.generation,
 									image_id: state.image_id,
 									kill: Some(KillCtx {
-										generation: state.generation,
 										kill_timeout_ms: sig
 											.override_kill_timeout_ms
 											.unwrap_or(input.lifecycle.kill_timeout_ms),
@@ -216,9 +218,9 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 							}
 						} else {
 							return Ok(Loop::Break(runtime::LifecycleRes {
+								generation: state.generation,
 								image_id: state.image_id,
 								kill: Some(KillCtx {
-									generation: state.generation,
 									kill_timeout_ms: input.lifecycle.kill_timeout_ms,
 								}),
 							}));
@@ -351,6 +353,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 										{
 											// Destroyed early
 											return Ok(Loop::Break(runtime::LifecycleRes {
+												generation: state.generation,
 												image_id: state.image_id,
 												// None here because if we received the destroy signal, it is
 												// guaranteed that we did not allocate another actor.
@@ -372,13 +375,11 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 										}
 
 										return Ok(Loop::Break(runtime::LifecycleRes {
+											generation: state.generation,
 											image_id: state.image_id,
 											// No need to kill if already exited
 											kill: matches!(sig.state, protocol::ActorState::Lost)
-												.then_some(KillCtx {
-													generation: state.generation,
-													kill_timeout_ms: 0,
-												}),
+												.then_some(KillCtx { kill_timeout_ms: 0 }),
 										}));
 									}
 								}
@@ -416,9 +417,9 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 							{
 								// Destroyed early
 								return Ok(Loop::Break(runtime::LifecycleRes {
+									generation: state.generation,
 									image_id: input.image_id,
 									kill: Some(KillCtx {
-										generation: state.generation,
 										kill_timeout_ms: sig
 											.override_kill_timeout_ms
 											.unwrap_or(input.lifecycle.kill_timeout_ms),
@@ -442,9 +443,9 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 						}
 						Main::Destroy(sig) => {
 							return Ok(Loop::Break(runtime::LifecycleRes {
+								generation: state.generation,
 								image_id: input.image_id,
 								kill: Some(KillCtx {
-									generation: state.generation,
 									kill_timeout_ms: sig
 										.override_kill_timeout_ms
 										.unwrap_or(input.lifecycle.kill_timeout_ms),
@@ -462,6 +463,7 @@ pub async fn pegboard_actor2(ctx: &mut WorkflowCtx, input: &Input) -> GlobalResu
 
 	ctx.workflow(destroy::Input {
 		actor_id: input.actor_id,
+		generation: lifecycle_res.generation,
 		image_id: lifecycle_res.image_id,
 		build_allocation_type: Some(initial_actor_setup.meta.build_allocation_type),
 		kill: lifecycle_res.kill,
