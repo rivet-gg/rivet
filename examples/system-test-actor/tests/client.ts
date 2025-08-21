@@ -49,6 +49,13 @@ async function run() {
 								guard: {},
 							},
 						},
+						http2: {
+							protocol: "http",
+							internalPort: 8085,
+							routing: {
+								guard: {},
+							},
+						},
 						udp: {
 							protocol: "udp",
 							// internalPort: 80,
