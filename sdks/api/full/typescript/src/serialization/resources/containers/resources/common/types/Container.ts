@@ -6,10 +6,8 @@ import * as serializers from "../../../../../index";
 import * as Rivet from "../../../../../../api/index";
 import * as core from "../../../../../../core";
 import { Id } from "../../../../common/types/Id";
-import { Runtime } from "./Runtime";
-import { Network } from "./Network";
-import { Resources } from "./Resources";
-import { Lifecycle } from "./Lifecycle";
+import { Port } from "./Port";
+import { Resources } from "../../../../builds/resources/common/types/Resources";
 import { Timestamp } from "../../../../common/types/Timestamp";
 
 export const Container: core.serialization.ObjectSchema<
@@ -19,10 +17,13 @@ export const Container: core.serialization.ObjectSchema<
     id: Id,
     region: core.serialization.string(),
     tags: core.serialization.unknown(),
-    runtime: Runtime,
-    network: Network,
+    build: core.serialization.string(),
+    arguments: core.serialization.list(core.serialization.string()).optional(),
+    environment: core.serialization.record(core.serialization.string(), core.serialization.string()).optional(),
+    ports: core.serialization.record(core.serialization.string(), Port),
     resources: Resources,
-    lifecycle: Lifecycle,
+    killTimeout: core.serialization.property("kill_timeout", core.serialization.number().optional()),
+    durable: core.serialization.boolean().optional(),
     createdAt: core.serialization.property("created_at", Timestamp),
     startedAt: core.serialization.property("started_at", Timestamp.optional()),
     destroyedAt: core.serialization.property("destroyed_at", Timestamp.optional()),
@@ -33,10 +34,13 @@ export declare namespace Container {
         id: Id.Raw;
         region: string;
         tags?: unknown;
-        runtime: Runtime.Raw;
-        network: Network.Raw;
+        build: string;
+        arguments?: string[] | null;
+        environment?: Record<string, string> | null;
+        ports: Record<string, Port.Raw>;
         resources: Resources.Raw;
-        lifecycle: Lifecycle.Raw;
+        kill_timeout?: number | null;
+        durable?: boolean | null;
         created_at: Timestamp.Raw;
         started_at?: Timestamp.Raw | null;
         destroyed_at?: Timestamp.Raw | null;

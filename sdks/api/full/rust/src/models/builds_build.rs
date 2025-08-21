@@ -20,13 +20,11 @@ pub struct BuildsBuild {
 	/// Unsigned 64 bit integer.
 	#[serde(rename = "content_length")]
 	pub content_length: i64,
-	#[serde(rename = "allocation", skip_serializing_if = "Option::is_none")]
-	pub allocation: Option<Box<crate::models::BuildsAllocation>>,
-	#[serde(rename = "resources", skip_serializing_if = "Option::is_none")]
-	pub resources: Option<Box<crate::models::BuildsResources>>,
 	/// Tags of this build
 	#[serde(rename = "tags")]
 	pub tags: ::std::collections::HashMap<String, String>,
+	#[serde(rename = "runtime", skip_serializing_if = "Option::is_none")]
+	pub runtime: Option<Box<crate::models::BuildsRuntime>>,
 }
 
 impl BuildsBuild {
@@ -42,9 +40,8 @@ impl BuildsBuild {
 			name,
 			created_at,
 			content_length,
-			allocation: None,
-			resources: None,
 			tags,
+			runtime: None,
 		}
 	}
 }

@@ -134,8 +134,7 @@ type PrepareBuildRequest struct {
 	ImageFile   *upload.PrepareFile `json:"image_file,omitempty"`
 	Kind        *Kind               `json:"kind,omitempty"`
 	Compression *Compression        `json:"compression,omitempty"`
-	Allocation  *Allocation         `json:"allocation,omitempty"`
-	Resources   *Resources          `json:"resources,omitempty"`
+	Runtime     *Runtime            `json:"runtime,omitempty"`
 
 	_rawJSON json.RawMessage
 }

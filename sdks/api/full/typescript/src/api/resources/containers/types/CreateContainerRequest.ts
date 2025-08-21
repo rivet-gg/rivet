@@ -9,8 +9,13 @@ export interface CreateContainerRequest {
     tags?: unknown;
     build?: string;
     buildTags?: unknown;
-    runtime?: Rivet.containers.CreateContainerRuntimeRequest;
-    network?: Rivet.containers.CreateContainerNetworkRequest;
-    resources: Rivet.containers.Resources;
-    lifecycle?: Rivet.containers.Lifecycle;
+    environment?: Record<string, string>;
+    networkEndpointType?: Rivet.containers.EndpointType;
+    waitForNetworkReady?: boolean;
+    ports?: Record<string, Rivet.builds.PortRequest>;
+    resources: Rivet.builds.Resources;
+    /** The duration to wait for in milliseconds before force killing the actor after a DELETE request. This gives the actor time to perform a shutdown sequence before being killed. This should be set to a safe default, and can be overridden during a DELETE request if needed. */
+    killTimeout?: number;
+    /** If true, the actor will try to reschedule itself automatically in the event of a crash or a datacenter failover. The actor will not reschedule if it exits successfully. */
+    durable?: boolean;
 }

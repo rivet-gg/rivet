@@ -7,18 +7,24 @@ import (
 	fmt "fmt"
 	uuid "github.com/google/uuid"
 	sdk "sdk"
+	builds "sdk/builds"
 	core "sdk/core"
 )
 
 type CreateContainerRequest struct {
-	Region    *string                        `json:"region,omitempty"`
-	Tags      interface{}                    `json:"tags,omitempty"`
-	Build     *uuid.UUID                     `json:"build,omitempty"`
-	BuildTags interface{}                    `json:"build_tags,omitempty"`
-	Runtime   *CreateContainerRuntimeRequest `json:"runtime,omitempty"`
-	Network   *CreateContainerNetworkRequest `json:"network,omitempty"`
-	Resources *Resources                     `json:"resources,omitempty"`
-	Lifecycle *Lifecycle                     `json:"lifecycle,omitempty"`
+	Region              *string                        `json:"region,omitempty"`
+	Tags                interface{}                    `json:"tags,omitempty"`
+	Build               *uuid.UUID                     `json:"build,omitempty"`
+	BuildTags           interface{}                    `json:"build_tags,omitempty"`
+	Environment         map[string]string              `json:"environment,omitempty"`
+	NetworkEndpointType *EndpointType                  `json:"network_endpoint_type,omitempty"`
+	WaitForNetworkReady *bool                          `json:"wait_for_network_ready,omitempty"`
+	Ports               map[string]*builds.PortRequest `json:"ports,omitempty"`
+	Resources           *builds.Resources              `json:"resources,omitempty"`
+	// The duration to wait for in milliseconds before force killing the actor after a DELETE request. This gives the actor time to perform a shutdown sequence before being killed. This should be set to a safe default, and can be overridden during a DELETE request if needed.
+	KillTimeout *int64 `json:"kill_timeout,omitempty"`
+	// If true, the actor will try to reschedule itself automatically in the event of a crash or a datacenter failover. The actor will not reschedule if it exits successfully.
+	Durable *bool `json:"durable,omitempty"`
 
 	_rawJSON json.RawMessage
 }

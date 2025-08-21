@@ -20,12 +20,16 @@ pub struct ActorsActor {
     pub region: String,
     #[serde(rename = "tags", deserialize_with = "Option::deserialize")]
     pub tags: Option<serde_json::Value>,
-    #[serde(rename = "runtime")]
-    pub runtime: Box<crate::models::ActorsRuntime>,
-    #[serde(rename = "network")]
-    pub network: Box<crate::models::ActorsNetwork>,
-    #[serde(rename = "lifecycle")]
-    pub lifecycle: Box<crate::models::ActorsLifecycle>,
+    #[serde(rename = "build")]
+    pub build: uuid::Uuid,
+    #[serde(rename = "ports")]
+    pub ports: ::std::collections::HashMap<String, crate::models::ActorsPort>,
+    /// The duration to wait for in milliseconds before force killing the actor after a DELETE request. This gives the actor time to perform a shutdown sequence before being killed. This should be set to a safe default, and can be overridden during a DELETE request if needed.
+    #[serde(rename = "kill_timeout", skip_serializing_if = "Option::is_none")]
+    pub kill_timeout: Option<i64>,
+    /// If true, the actor will try to reschedule itself automatically in the event of a crash or a datacenter failover. The actor will not reschedule if it exits successfully.
+    #[serde(rename = "durable", skip_serializing_if = "Option::is_none")]
+    pub durable: Option<bool>,
     /// RFC3339 timestamp
     #[serde(rename = "created_at")]
     pub created_at: String,
@@ -38,14 +42,15 @@ pub struct ActorsActor {
 }
 
 impl ActorsActor {
-    pub fn new(id: String, region: String, tags: Option<serde_json::Value>, runtime: crate::models::ActorsRuntime, network: crate::models::ActorsNetwork, lifecycle: crate::models::ActorsLifecycle, created_at: String) -> ActorsActor {
+    pub fn new(id: String, region: String, tags: Option<serde_json::Value>, build: uuid::Uuid, ports: ::std::collections::HashMap<String, crate::models::ActorsPort>, created_at: String) -> ActorsActor {
         ActorsActor {
             id,
             region,
             tags,
-            runtime: Box::new(runtime),
-            network: Box::new(network),
-            lifecycle: Box::new(lifecycle),
+            build,
+            ports,
+            kill_timeout: None,
+            durable: None,
             created_at,
             started_at: None,
             destroyed_at: None,

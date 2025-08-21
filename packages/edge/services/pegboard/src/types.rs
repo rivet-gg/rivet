@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt};
 
 use chirp_workflow::prelude::*;
 use rivet_api::models;
-use rivet_convert::{ApiFrom, ApiInto, ApiTryFrom};
+use rivet_convert::{ApiFrom, ApiInto, ApiTryFrom, ApiTryInto};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use strum::FromRepr;
@@ -22,7 +22,8 @@ pub struct Actor {
 	pub lifecycle: ActorLifecycle,
 	pub resources: Option<ActorResources>,
 	pub args: Vec<String>,
-	pub network_mode: NetworkMode,
+	/// Deprecated, will be removed
+	pub network_mode: Option<NetworkMode>,
 	pub environment: HashMap<String, String>,
 	pub network_ports: HashMap<String, Port>,
 }
@@ -50,8 +51,9 @@ pub struct ActorLifecycle {
 	pub durable: bool,
 }
 
-#[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq, FromRepr)]
+#[derive(Serialize, Default, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq, FromRepr)]
 pub enum NetworkMode {
+	#[default]
 	Bridge = 0,
 	Host = 1,
 }
@@ -72,6 +74,19 @@ pub enum Routing {
 	Host { protocol: HostProtocol },
 }
 
+impl From<build::types::PortRouting> for Routing {
+	fn from(value: build::types::PortRouting) -> Routing {
+		match value {
+			build::types::PortRouting::GameGuard { protocol } => Routing::GameGuard {
+				protocol: protocol.into(),
+			},
+			build::types::PortRouting::Host { protocol } => Routing::Host {
+				protocol: protocol.into(),
+			},
+		}
+	}
+}
+
 #[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq, FromRepr)]
 pub enum GameGuardProtocol {
 	Http = 0,
@@ -79,6 +94,18 @@ pub enum GameGuardProtocol {
 	Tcp = 2,
 	TcpTls = 3,
 	Udp = 4,
+}
+
+impl From<build::types::GameGuardProtocol> for GameGuardProtocol {
+	fn from(value: build::types::GameGuardProtocol) -> GameGuardProtocol {
+		match value {
+			build::types::GameGuardProtocol::Http => GameGuardProtocol::Http,
+			build::types::GameGuardProtocol::Https => GameGuardProtocol::Https,
+			build::types::GameGuardProtocol::Tcp => GameGuardProtocol::Tcp,
+			build::types::GameGuardProtocol::TcpTls => GameGuardProtocol::TcpTls,
+			build::types::GameGuardProtocol::Udp => GameGuardProtocol::Udp,
+		}
+	}
 }
 
 impl fmt::Display for GameGuardProtocol {
@@ -97,6 +124,15 @@ impl fmt::Display for GameGuardProtocol {
 pub enum HostProtocol {
 	Tcp = 0,
 	Udp = 1,
+}
+
+impl From<build::types::HostProtocol> for HostProtocol {
+	fn from(value: build::types::HostProtocol) -> HostProtocol {
+		match value {
+			build::types::HostProtocol::Tcp => HostProtocol::Tcp,
+			build::types::HostProtocol::Udp => HostProtocol::Udp,
+		}
+	}
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -172,56 +208,47 @@ pub fn convert_actor_to_api(
 			.map(util::timestamp::to_string)
 			.transpose()?,
 		tags: Some(serde_json::to_value(value.tags)?),
-		runtime: Box::new(models::ActorsRuntime {
-			build: value.image_id,
-			arguments: Some(value.args),
-			environment: Some(value.environment),
-		}),
-		network: Box::new(models::ActorsNetwork {
-			mode: value.network_mode.api_into(),
-			ports: value
-				.network_ports
-				.into_iter()
-				.map(|(s, p)| (s, p.api_into()))
-				.collect::<HashMap<_, _>>(),
-		}),
-		lifecycle: Box::new(value.lifecycle.api_into()),
+		build: value.image_id,
+		ports: value
+			.network_ports
+			.into_iter()
+			.map(|(s, p)| (s, p.api_into()))
+			.collect::<HashMap<_, _>>(),
+		kill_timeout: Some(value.lifecycle.kill_timeout_ms),
+		durable: Some(value.lifecycle.durable),
 	})
 }
 
-impl ApiFrom<models::ActorsLifecycle> for ActorLifecycle {
-	fn api_from(value: models::ActorsLifecycle) -> ActorLifecycle {
-		ActorLifecycle {
-			kill_timeout_ms: value.kill_timeout.unwrap_or_default(),
-			durable: value.durable.unwrap_or_default(),
-		}
+impl ApiTryFrom<models::BuildsResources> for ActorResources {
+	type Error = GlobalError;
+
+	fn api_try_from(value: models::BuildsResources) -> GlobalResult<Self> {
+		ensure_with!(
+			value.cpu >= 0,
+			API_BAD_BODY,
+			reason = "`resources.cpu` must be positive"
+		);
+		ensure_with!(
+			value.memory >= 0,
+			API_BAD_BODY,
+			reason = "`resources.memory` must be positive"
+		);
+
+		Ok(ActorResources {
+			cpu_millicores: value.cpu.try_into()?,
+			memory_mib: value.memory.try_into()?,
+		})
 	}
 }
 
-impl ApiFrom<ActorLifecycle> for models::ActorsLifecycle {
-	fn api_from(value: ActorLifecycle) -> models::ActorsLifecycle {
-		models::ActorsLifecycle {
-			kill_timeout: Some(value.kill_timeout_ms),
-			durable: Some(value.durable),
-		}
-	}
-}
+impl ApiTryFrom<ActorResources> for models::BuildsResources {
+	type Error = GlobalError;
 
-impl ApiFrom<models::ActorsNetworkMode> for NetworkMode {
-	fn api_from(value: models::ActorsNetworkMode) -> NetworkMode {
-		match value {
-			models::ActorsNetworkMode::Bridge => NetworkMode::Bridge,
-			models::ActorsNetworkMode::Host => NetworkMode::Host,
-		}
-	}
-}
-
-impl ApiFrom<NetworkMode> for models::ActorsNetworkMode {
-	fn api_from(value: NetworkMode) -> models::ActorsNetworkMode {
-		match value {
-			NetworkMode::Bridge => models::ActorsNetworkMode::Bridge,
-			NetworkMode::Host => models::ActorsNetworkMode::Host,
-		}
+	fn api_try_from(value: ActorResources) -> GlobalResult<Self> {
+		Ok(models::BuildsResources {
+			cpu: value.cpu_millicores.try_into()?,
+			memory: value.memory_mib.try_into()?,
+		})
 	}
 }
 
@@ -262,7 +289,7 @@ impl ApiFrom<Port> for models::ActorsPort {
 
 				(
 					(*protocol).api_into(),
-					models::ActorsPortRouting {
+					models::BuildsPortRouting {
 						guard: Some(json!({})),
 						..Default::default()
 					},
@@ -271,7 +298,7 @@ impl ApiFrom<Port> for models::ActorsPort {
 			}
 			Routing::Host { protocol } => (
 				(*protocol).api_into(),
-				models::ActorsPortRouting {
+				models::BuildsPortRouting {
 					host: Some(json!({})),
 					..Default::default()
 				},
@@ -291,36 +318,36 @@ impl ApiFrom<Port> for models::ActorsPort {
 	}
 }
 
-impl ApiFrom<models::ActorsPortProtocol> for GameGuardProtocol {
-	fn api_from(value: models::ActorsPortProtocol) -> GameGuardProtocol {
+impl ApiFrom<models::BuildsPortProtocol> for GameGuardProtocol {
+	fn api_from(value: models::BuildsPortProtocol) -> GameGuardProtocol {
 		match value {
-			models::ActorsPortProtocol::Udp => GameGuardProtocol::Udp,
-			models::ActorsPortProtocol::Tcp => GameGuardProtocol::Tcp,
-			models::ActorsPortProtocol::Http => GameGuardProtocol::Http,
-			models::ActorsPortProtocol::Https => GameGuardProtocol::Https,
-			models::ActorsPortProtocol::TcpTls => GameGuardProtocol::TcpTls,
+			models::BuildsPortProtocol::Udp => GameGuardProtocol::Udp,
+			models::BuildsPortProtocol::Tcp => GameGuardProtocol::Tcp,
+			models::BuildsPortProtocol::Http => GameGuardProtocol::Http,
+			models::BuildsPortProtocol::Https => GameGuardProtocol::Https,
+			models::BuildsPortProtocol::TcpTls => GameGuardProtocol::TcpTls,
 		}
 	}
 }
 
-impl ApiFrom<GameGuardProtocol> for models::ActorsPortProtocol {
-	fn api_from(value: GameGuardProtocol) -> models::ActorsPortProtocol {
+impl ApiFrom<GameGuardProtocol> for models::BuildsPortProtocol {
+	fn api_from(value: GameGuardProtocol) -> models::BuildsPortProtocol {
 		match value {
-			GameGuardProtocol::Udp => models::ActorsPortProtocol::Udp,
-			GameGuardProtocol::Tcp => models::ActorsPortProtocol::Tcp,
-			GameGuardProtocol::Http => models::ActorsPortProtocol::Http,
-			GameGuardProtocol::Https => models::ActorsPortProtocol::Https,
-			GameGuardProtocol::TcpTls => models::ActorsPortProtocol::TcpTls,
+			GameGuardProtocol::Udp => models::BuildsPortProtocol::Udp,
+			GameGuardProtocol::Tcp => models::BuildsPortProtocol::Tcp,
+			GameGuardProtocol::Http => models::BuildsPortProtocol::Http,
+			GameGuardProtocol::Https => models::BuildsPortProtocol::Https,
+			GameGuardProtocol::TcpTls => models::BuildsPortProtocol::TcpTls,
 		}
 	}
 }
 
-impl ApiTryFrom<models::ActorsPortProtocol> for HostProtocol {
+impl ApiTryFrom<models::BuildsPortProtocol> for HostProtocol {
 	type Error = GlobalError;
-	fn api_try_from(value: models::ActorsPortProtocol) -> GlobalResult<HostProtocol> {
+	fn api_try_from(value: models::BuildsPortProtocol) -> GlobalResult<HostProtocol> {
 		Ok(match value {
-			models::ActorsPortProtocol::Udp => HostProtocol::Udp,
-			models::ActorsPortProtocol::Tcp => HostProtocol::Tcp,
+			models::BuildsPortProtocol::Udp => HostProtocol::Udp,
+			models::BuildsPortProtocol::Tcp => HostProtocol::Tcp,
 			_ => {
 				bail_with!(
 					ACTOR_FAILED_TO_CREATE,
@@ -331,11 +358,11 @@ impl ApiTryFrom<models::ActorsPortProtocol> for HostProtocol {
 	}
 }
 
-impl ApiFrom<HostProtocol> for models::ActorsPortProtocol {
-	fn api_from(value: HostProtocol) -> models::ActorsPortProtocol {
+impl ApiFrom<HostProtocol> for models::BuildsPortProtocol {
+	fn api_from(value: HostProtocol) -> models::BuildsPortProtocol {
 		match value {
-			HostProtocol::Udp => models::ActorsPortProtocol::Udp,
-			HostProtocol::Tcp => models::ActorsPortProtocol::Tcp,
+			HostProtocol::Udp => models::BuildsPortProtocol::Udp,
+			HostProtocol::Tcp => models::BuildsPortProtocol::Tcp,
 		}
 	}
 }
@@ -379,76 +406,20 @@ pub fn convert_container_to_api(
 			.map(util::timestamp::to_string)
 			.transpose()?,
 		tags: Some(serde_json::to_value(value.tags)?),
-		runtime: Box::new(models::ContainersRuntime {
-			build: value.image_id,
-			arguments: Some(value.args),
-			environment: Some(value.environment),
-		}),
-		network: Box::new(models::ContainersNetwork {
-			mode: value.network_mode.api_into(),
-			ports: value
-				.network_ports
-				.into_iter()
-				.map(|(s, p)| (s, p.api_into()))
-				.collect::<HashMap<_, _>>(),
-		}),
-		lifecycle: Box::new(value.lifecycle.api_into()),
-		resources: Box::new(unwrap!(value.resources, "container should have resources").api_into()),
+		build: value.image_id,
+		arguments: Some(value.args),
+		environment: Some(value.environment),
+		ports: value
+			.network_ports
+			.into_iter()
+			.map(|(s, p)| (s, p.api_into()))
+			.collect::<HashMap<_, _>>(),
+		kill_timeout: Some(value.lifecycle.kill_timeout_ms),
+		durable: Some(value.lifecycle.durable),
+		resources: Box::new(
+			unwrap!(value.resources, "container should have resources").api_try_into()?,
+		),
 	})
-}
-
-impl ApiFrom<models::ContainersResources> for ActorResources {
-	fn api_from(value: models::ContainersResources) -> ActorResources {
-		ActorResources {
-			cpu_millicores: value.cpu as u32,
-			memory_mib: value.memory as u32,
-		}
-	}
-}
-
-impl ApiFrom<ActorResources> for models::ContainersResources {
-	fn api_from(value: ActorResources) -> models::ContainersResources {
-		models::ContainersResources {
-			cpu: value.cpu_millicores as i32,
-			memory: value.memory_mib as i32,
-		}
-	}
-}
-
-impl ApiFrom<models::ContainersLifecycle> for ActorLifecycle {
-	fn api_from(value: models::ContainersLifecycle) -> ActorLifecycle {
-		ActorLifecycle {
-			kill_timeout_ms: value.kill_timeout.unwrap_or_default(),
-			durable: value.durable.unwrap_or_default(),
-		}
-	}
-}
-
-impl ApiFrom<ActorLifecycle> for models::ContainersLifecycle {
-	fn api_from(value: ActorLifecycle) -> models::ContainersLifecycle {
-		models::ContainersLifecycle {
-			kill_timeout: Some(value.kill_timeout_ms),
-			durable: Some(value.durable),
-		}
-	}
-}
-
-impl ApiFrom<models::ContainersNetworkMode> for NetworkMode {
-	fn api_from(value: models::ContainersNetworkMode) -> NetworkMode {
-		match value {
-			models::ContainersNetworkMode::Bridge => NetworkMode::Bridge,
-			models::ContainersNetworkMode::Host => NetworkMode::Host,
-		}
-	}
-}
-
-impl ApiFrom<NetworkMode> for models::ContainersNetworkMode {
-	fn api_from(value: NetworkMode) -> models::ContainersNetworkMode {
-		match value {
-			NetworkMode::Bridge => models::ContainersNetworkMode::Bridge,
-			NetworkMode::Host => models::ContainersNetworkMode::Host,
-		}
-	}
 }
 
 impl ApiFrom<Port> for models::ContainersPort {
@@ -488,7 +459,7 @@ impl ApiFrom<Port> for models::ContainersPort {
 
 				(
 					(*protocol).api_into(),
-					models::ContainersPortRouting {
+					models::BuildsPortRouting {
 						guard: Some(json!({})),
 						..Default::default()
 					},
@@ -497,7 +468,7 @@ impl ApiFrom<Port> for models::ContainersPort {
 			}
 			Routing::Host { protocol } => (
 				(*protocol).api_into(),
-				models::ContainersPortRouting {
+				models::BuildsPortRouting {
 					host: Some(json!({})),
 					..Default::default()
 				},
@@ -513,55 +484,6 @@ impl ApiFrom<Port> for models::ContainersPort {
 			path: value.public_path,
 			url,
 			routing: Box::new(routing),
-		}
-	}
-}
-
-impl ApiFrom<models::ContainersPortProtocol> for GameGuardProtocol {
-	fn api_from(value: models::ContainersPortProtocol) -> GameGuardProtocol {
-		match value {
-			models::ContainersPortProtocol::Udp => GameGuardProtocol::Udp,
-			models::ContainersPortProtocol::Tcp => GameGuardProtocol::Tcp,
-			models::ContainersPortProtocol::Http => GameGuardProtocol::Http,
-			models::ContainersPortProtocol::Https => GameGuardProtocol::Https,
-			models::ContainersPortProtocol::TcpTls => GameGuardProtocol::TcpTls,
-		}
-	}
-}
-
-impl ApiFrom<GameGuardProtocol> for models::ContainersPortProtocol {
-	fn api_from(value: GameGuardProtocol) -> models::ContainersPortProtocol {
-		match value {
-			GameGuardProtocol::Udp => models::ContainersPortProtocol::Udp,
-			GameGuardProtocol::Tcp => models::ContainersPortProtocol::Tcp,
-			GameGuardProtocol::Http => models::ContainersPortProtocol::Http,
-			GameGuardProtocol::Https => models::ContainersPortProtocol::Https,
-			GameGuardProtocol::TcpTls => models::ContainersPortProtocol::TcpTls,
-		}
-	}
-}
-
-impl ApiTryFrom<models::ContainersPortProtocol> for HostProtocol {
-	type Error = GlobalError;
-	fn api_try_from(value: models::ContainersPortProtocol) -> GlobalResult<HostProtocol> {
-		Ok(match value {
-			models::ContainersPortProtocol::Udp => HostProtocol::Udp,
-			models::ContainersPortProtocol::Tcp => HostProtocol::Tcp,
-			_ => {
-				bail_with!(
-					CONTAINER_FAILED_TO_CREATE,
-					error = "Host port protocol must be either TCP or UDP."
-				);
-			}
-		})
-	}
-}
-
-impl ApiFrom<HostProtocol> for models::ContainersPortProtocol {
-	fn api_from(value: HostProtocol) -> models::ContainersPortProtocol {
-		match value {
-			HostProtocol::Udp => models::ContainersPortProtocol::Udp,
-			HostProtocol::Tcp => models::ContainersPortProtocol::Tcp,
 		}
 	}
 }
@@ -614,7 +536,7 @@ pub mod v1 {
 				environment: Some(value.environment),
 			}),
 			network: Box::new(models::ActorsV1Network {
-				mode: value.network_mode.api_into(),
+				mode: value.network_mode.unwrap_or_default().api_into(),
 				ports: value
 					.network_ports
 					.into_iter()
