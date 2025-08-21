@@ -37,6 +37,8 @@ fn main() -> Result<()> {
 		.transpose()
 		.context("failed to parse vector socket addr")?;
 	let runner_id = var("RUNNER_ID")?;
+	// Only set if this is a single allocation runner (one actor running on it)
+	let actor_id = var("ACTOR_ID").ok();
 	let env_id = Uuid::parse_str(&var("ENVIRONMENT_ID")?)?;
 	println!("Starting runner_id={runner_id} env_id={env_id} vector_socket_addr={} root_user_enabled={root_user_enabled}", vector_socket_addr.as_ref().map(|x| x.as_str()).unwrap_or("?"));
 
@@ -51,6 +53,7 @@ fn main() -> Result<()> {
 			msg_rx,
 			vector_socket_addr,
 			runner_id,
+			actor_id,
 			env_id,
 		};
 		let log_shipper_thread = log_shipper.spawn();
