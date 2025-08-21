@@ -203,18 +203,58 @@ macro_rules! __sql_query {
 	};
 	([$ctx:expr, @tx $tx:expr] $sql:expr, $($bind:expr),* $(,)?) => {
 		async {
-			let query = sqlx::query($crate::__opt_indoc!($sql))
-			$(
-				.bind($bind)
-			)*;
-
 			// Execute query
 			$crate::__sql_query_metrics_acquire!(_acquire);
 			$crate::__sql_query_metrics_start!($ctx, execute, _acquire, _start);
-			let res = query.execute(&mut **$tx).await.map_err(Into::<GlobalError>::into);
+
+			let mut backoff = $crate::__rivet_util::Backoff::new(
+				4,
+				None,
+				$crate::utils::sql_query_macros::QUERY_RETRY_MS,
+				50
+			);
+			let mut i = 0;
+
+			// Retry loop
+			let res = loop {
+				let query = sqlx::query($crate::__opt_indoc!($sql))
+				$(
+					.bind($bind)
+				)*;
+
+				match query.execute(&mut **$tx).await {
+					Err(err) => {
+						i += 1;
+						if i > $crate::utils::sql_query_macros::MAX_QUERY_RETRIES {
+							break Err(
+								sqlx::Error::Io(
+									std::io::Error::new(
+										std::io::ErrorKind::Other,
+										$crate::utils::sql_query_macros::Error::MaxSqlRetries(err),
+									)
+								)
+							);
+						}
+
+						use sqlx::Error::*;
+						match &err {
+							// Retry other errors with a backoff
+							Database(_) | Io(_) | Tls(_) | Protocol(_) | PoolTimedOut | PoolClosed
+							| WorkerCrashed => {
+								tracing::warn!(?err, "query retry ({i}/{})", $crate::utils::sql_query_macros::MAX_QUERY_RETRIES);
+								backoff.tick().await;
+							}
+							// Throw error
+							_ => break Err(err),
+						}
+					}
+					x => break x,
+				}
+			};
+
 			$crate::__sql_query_metrics_finish!($ctx, execute, _start);
 
-			res
+			res.map_err(Into::<GlobalError>::into)
 		}
 		.instrument(tracing::info_span!("sql_query"))
 	};
@@ -229,11 +269,6 @@ macro_rules! __sql_query_as {
 		async {
 			use sqlx::Acquire;
 
-			let query = sqlx::query_as::<_, $rv>($crate::__opt_indoc!($sql))
-			$(
-				.bind($bind)
-			)*;
-
 			// Acquire connection
 			$crate::__sql_query_metrics_acquire!(_acquire);
 			let driver = $driver;
@@ -241,27 +276,112 @@ macro_rules! __sql_query_as {
 
 			// Execute query
 			$crate::__sql_query_metrics_start!($ctx, $action, _acquire, _start);
-			let res = query.$action(&mut *conn).await.map_err(Into::<GlobalError>::into);
+
+			let mut backoff = $crate::__rivet_util::Backoff::new(
+				4,
+				None,
+				$crate::utils::sql_query_macros::QUERY_RETRY_MS,
+				50
+			);
+			let mut i = 0;
+
+			// Retry loop
+			let res = loop {
+				let query = sqlx::query_as::<_, $rv>($crate::__opt_indoc!($sql))
+				$(
+					.bind($bind)
+				)*;
+
+				match query.$action(&mut *conn).await {
+					Err(err) => {
+						i += 1;
+						if i > $crate::utils::sql_query_macros::MAX_QUERY_RETRIES {
+							break Err(
+								sqlx::Error::Io(
+									std::io::Error::new(
+										std::io::ErrorKind::Other,
+										$crate::utils::sql_query_macros::Error::MaxSqlRetries(err),
+									)
+								)
+							);
+						}
+
+						use sqlx::Error::*;
+						match &err {
+							// Retry other errors with a backoff
+							Database(_) | Io(_) | Tls(_) | Protocol(_) | PoolTimedOut | PoolClosed
+							| WorkerCrashed => {
+								tracing::warn!(?err, "query retry ({i}/{})", $crate::utils::sql_query_macros::MAX_QUERY_RETRIES);
+								backoff.tick().await;
+							}
+							// Throw error
+							_ => break Err(err),
+						}
+					}
+					x => break x,
+				}
+			};
+
 			$crate::__sql_query_metrics_finish!($ctx, $action, _start);
 
-			res
+			res.map_err(Into::<GlobalError>::into)
 		}
 		.instrument(tracing::info_span!("sql_query_as"))
 	};
 	([$ctx:expr, $rv:ty, $action:ident, @tx $tx:expr] $sql:expr, $($bind:expr),* $(,)?) => {
 		async {
-			let query = sqlx::query_as::<_, $rv>($crate::__opt_indoc!($sql))
-			$(
-				.bind($bind)
-			)*;
-
 			// Execute query
 			$crate::__sql_query_metrics_acquire!(_acquire);
 			$crate::__sql_query_metrics_start!($ctx, $action, _acquire, _start);
-			let res = query.$action(&mut **$tx).await.map_err(Into::<GlobalError>::into);
+
+			let mut backoff = $crate::__rivet_util::Backoff::new(
+				4,
+				None,
+				$crate::utils::sql_query_macros::QUERY_RETRY_MS,
+				50
+			);
+			let mut i = 0;
+
+			// Retry loop
+			let res = loop {
+				let query = sqlx::query_as::<_, $rv>($crate::__opt_indoc!($sql))
+				$(
+					.bind($bind)
+				)*;
+
+				match query.$action(&mut **$tx).await {
+					Err(err) => {
+						i += 1;
+						if i > $crate::utils::sql_query_macros::MAX_QUERY_RETRIES {
+							break Err(
+								sqlx::Error::Io(
+									std::io::Error::new(
+										std::io::ErrorKind::Other,
+										$crate::utils::sql_query_macros::Error::MaxSqlRetries(err),
+									)
+								)
+							);
+						}
+
+						use sqlx::Error::*;
+						match &err {
+							// Retry other errors with a backoff
+							Database(_) | Io(_) | Tls(_) | Protocol(_) | PoolTimedOut | PoolClosed
+							| WorkerCrashed => {
+								tracing::warn!(?err, "query retry ({i}/{})", $crate::utils::sql_query_macros::MAX_QUERY_RETRIES);
+								backoff.tick().await;
+							}
+							// Throw error
+							_ => break Err(err),
+						}
+					}
+					x => break x,
+				}
+			};
+
 			$crate::__sql_query_metrics_finish!($ctx, $action, _start);
 
-			res
+			res.map_err(Into::<GlobalError>::into)
 		}
 		.instrument(tracing::info_span!("sql_query_as"))
 	};

@@ -127,7 +127,7 @@ async fn prune_linode(
 			provider_api_token IS NOT NULL AND
 			datacenter_id = ANY($1)
 		",
-		dc_ids,
+		&dc_ids,
 	)
 	.await?
 	.into_iter()
