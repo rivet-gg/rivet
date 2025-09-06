@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [25.6.1](https://github.com/rivet-gg/engine/compare/v25.6.0...v25.6.1) (2025-09-06)
+
+
+### Bug Fixes
+
+* **inspector:** use proper status indicator ([#2849](https://github.com/rivet-gg/engine/issues/2849)) ([e0d3cc0](https://github.com/rivet-gg/engine/commit/e0d3cc0cb19b9fc5b986e0b0d672bd74a21ebfdb))
+* proper turbo ([#2852](https://github.com/rivet-gg/engine/issues/2852)) ([e3ba990](https://github.com/rivet-gg/engine/commit/e3ba990dff34c48082b39bc34d48fcc8ba4bf5f6))
+* **runner:** remove top level await ([#2848](https://github.com/rivet-gg/engine/issues/2848)) ([c7919fa](https://github.com/rivet-gg/engine/commit/c7919faa8da6aca61c03bb2f7707af0b78f118a8))
+
+
+### Chores
+
+* changelog Rivet v2.0 ([#2870](https://github.com/rivet-gg/engine/issues/2870)) ([e03d55f](https://github.com/rivet-gg/engine/commit/e03d55f0b5e2dafa0288a806e07b4bc9712e5b53))
+* **site:** document self-hosting ([#2854](https://github.com/rivet-gg/engine/issues/2854)) ([f1c054d](https://github.com/rivet-gg/engine/commit/f1c054db74707f06454ea6072da81cfbdc31873d))
+* update postgres and railway logo ([#2876](https://github.com/rivet-gg/engine/issues/2876)) ([b9309a2](https://github.com/rivet-gg/engine/commit/b9309a2205515272a3d7a3f8654816b25358c385))
+* updated region list ([#2867](https://github.com/rivet-gg/engine/issues/2867)) ([91e1c25](https://github.com/rivet-gg/engine/commit/91e1c25359293eb396af54a62bbc0f5f8e84ec87))
+* website language update ([#2860](https://github.com/rivet-gg/engine/issues/2860)) ([bdccba7](https://github.com/rivet-gg/engine/commit/bdccba7065d61e792e6f5dcefe90bd1551e0dc1c))
+
 ## [25.6.0](https://github.com/rivet-gg/rivet/compare/v25.5.2...v25.6.0) (2025-09-02)
 
 
