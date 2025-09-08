@@ -1,7 +1,7 @@
 import { faPowerOff, Icon } from "@rivet-gg/icons";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useMatch } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import { useInspectorCredentials } from "@/app/credentials-context";
 import { createEngineActorContext } from "@/queries/actor-engine";
 import { createInspectorActorContext } from "@/queries/actor-inspector";
@@ -12,7 +12,7 @@ import {
 import { DiscreteCopyButton } from "../copy-area";
 import { Button } from "../ui/button";
 import { useFiltersValue } from "./actor-filters-context";
-import { ActorProvider, useActor } from "./actor-queries-context";
+import { ActorProvider } from "./actor-queries-context";
 import { Info } from "./actor-state-tab";
 import { useManager } from "./manager-context";
 import type { ActorId } from "./queries";
@@ -111,10 +111,14 @@ function useActorRunner({ actorId }: { actorId: ActorId }) {
 	);
 
 	const match = useMatch({
-		from: "/_layout/ns/$namespace",
+		from:
+			__APP_TYPE__ === "engine"
+				? "/_layout/ns/$namespace"
+				: "/_layout/orgs/$organization/projects/$project/ns/$namespace/",
+		shouldThrow: false,
 	});
 
-	if (!match.params.namespace || !actor.runner) {
+	if (!match?.params.namespace || !actor.runner) {
 		throw new Error("Actor is missing required fields");
 	}
 
