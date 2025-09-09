@@ -6338,6 +6338,7 @@ dependencies = [
  "rivet-error",
  "rivet-test-deps-docker",
  "rivet-ups-protocol",
+ "rivet-util",
  "serde",
  "serde_json",
  "sha2",

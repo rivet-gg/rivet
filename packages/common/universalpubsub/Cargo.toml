@@ -14,6 +14,7 @@ deadpool-postgres.workspace = true
 futures-util.workspace = true
 rivet-error.workspace = true
 rivet-ups-protocol.workspace = true
+rivet-util.workspace = true
 serde_json.workspace = true
 versioned-data-util.workspace = true
 serde.workspace = true
