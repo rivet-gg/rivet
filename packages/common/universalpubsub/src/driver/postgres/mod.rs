@@ -112,21 +112,23 @@ impl PostgresDriver {
 		client: Arc<Mutex<Option<Arc<tokio_postgres::Client>>>>,
 		ready_tx: tokio::sync::watch::Sender<bool>,
 	) {
-		let mut backoff = Backoff::new(8, None, 1_000, 1_000);
+		let mut backoff = Backoff::default();
 
 		loop {
 			match tokio_postgres::connect(&conn_str, tokio_postgres::NoTls).await {
 				Result::Ok((new_client, conn)) => {
 					tracing::info!("postgres listen connection established");
 					// Reset backoff on successful connection
-					backoff = Backoff::new(8, None, 1_000, 1_000);
+					backoff = Backoff::default();
 
 					let new_client = Arc::new(new_client);
 
-					// Update the client reference immediately
-					*client.lock().await = Some(new_client.clone());
-					// Notify that client is ready
-					let _ = ready_tx.send(true);
+					// Spawn the polling task immediately
+					// This must be done before any operations on the client
+					let subscriptions_clone = subscriptions.clone();
+					let poll_handle = tokio::spawn(async move {
+						Self::poll_connection(conn, subscriptions_clone).await;
+					});
 
 					// Get channels to re-subscribe to
 					let channels: Vec<String> =
@@ -135,38 +137,41 @@ impl PostgresDriver {
 
 					if needs_resubscribe {
 						tracing::debug!(
-							?channels,
+							channels=?channels.len(),
 							"will re-subscribe to channels after connection starts"
 						);
 					}
 
-					// Spawn a task to re-subscribe after a short delay
+					// Re-subscribe to channels
 					if needs_resubscribe {
-						let client_for_resub = new_client.clone();
-						let channels_clone = channels.clone();
-						tokio::spawn(async move {
-							tracing::debug!(
-								?channels_clone,
-								"re-subscribing to channels after reconnection"
-							);
-							for channel in &channels_clone {
-								if let Result::Err(e) = client_for_resub
-									.execute(&format!("LISTEN \"{}\"", channel), &[])
-									.await
-								{
-									tracing::error!(?e, %channel, "failed to re-subscribe to channel");
-								} else {
-									tracing::debug!(%channel, "successfully re-subscribed to channel");
-								}
+						tracing::debug!(
+							channels=?channels.len(),
+							"re-subscribing to channels after reconnection"
+						);
+						for channel in &channels {
+							tracing::info!(?channel, "re-subscribing to channel");
+							if let Result::Err(e) = new_client
+								.execute(&format!("LISTEN \"{}\"", channel), &[])
+								.await
+							{
+								tracing::error!(?e, %channel, "failed to re-subscribe to channel");
+							} else {
+								tracing::debug!(%channel, "successfully re-subscribed to channel");
 							}
-						});
+						}
 					}
 
-					// Poll the connection until it closes
-					Self::poll_connection(conn, subscriptions.clone()).await;
+					// Update the client reference and signal ready
+					// Do this AFTER re-subscribing to ensure LISTEN is complete
+					*client.lock().await = Some(new_client.clone());
+					let _ = ready_tx.send(true);
+
+					// Wait for the polling task to complete (when the connection closes)
+					let _ = poll_handle.await;
 
 					// Clear the client reference on disconnect
 					*client.lock().await = None;
+
 					// Notify that client is disconnected
 					let _ = ready_tx.send(false);
 				}
@@ -208,12 +213,12 @@ impl PostgresDriver {
 					// Ignore other async messages
 				}
 				Some(std::result::Result::Err(err)) => {
-					tracing::error!(?err, "postgres connection error, reconnecting");
-					break; // Exit loop to reconnect
+					tracing::error!(?err, "postgres connection error");
+					break;
 				}
 				None => {
-					tracing::warn!("postgres connection closed, reconnecting");
-					break; // Exit loop to reconnect
+					tracing::warn!("postgres connection closed");
+					break;
 				}
 			}
 		}
@@ -224,19 +229,16 @@ impl PostgresDriver {
 		let mut ready_rx = self.client_ready.clone();
 		tokio::time::timeout(tokio::time::Duration::from_secs(5), async {
 			loop {
-				// Subscribe to changed before attempting to access client
-				let changed_fut = ready_rx.changed();
-
 				// Check if client is already available
 				if let Some(client) = self.client.lock().await.clone() {
 					return Ok(client);
 				}
 
-				// Wait for change, will return client if exists on next iteration
-				changed_fut
+				// Wait for the ready signal to change
+				ready_rx
+					.changed()
 					.await
 					.map_err(|_| anyhow!("connection lifecycle task ended"))?;
-				tracing::debug!("client does not exist immediately after receive ready");
 			}
 		})
 		.await
@@ -288,13 +290,25 @@ impl PubSubDriver for PostgresDriver {
 
 				// Execute LISTEN command on the async client (for receiving notifications)
 				// This only needs to be done once per channel
-				// Wait for client to be connected with retry logic
-				let client = self.wait_for_client().await?;
-				let span = tracing::trace_span!("pg_listen");
-				client
-					.execute(&format!("LISTEN \"{hashed}\""), &[])
-					.instrument(span)
-					.await?;
+				// Try to LISTEN if client is available, but don't fail if disconnected
+				// The reconnection logic will handle re-subscribing
+				if let Some(client) = self.client.lock().await.clone() {
+					let span = tracing::trace_span!("pg_listen");
+					match client
+						.execute(&format!("LISTEN \"{hashed}\""), &[])
+						.instrument(span)
+						.await
+					{
+						Result::Ok(_) => {
+							tracing::debug!(%hashed, "successfully subscribed to channel");
+						}
+						Result::Err(e) => {
+							tracing::warn!(?e, %hashed, "failed to LISTEN, will retry on reconnection");
+						}
+					}
+				} else {
+					tracing::debug!(%hashed, "client not connected, will LISTEN on reconnection");
+				}
 
 				// Spawn a single cleanup task for this subscription waiting on its token
 				let driver = self.clone();
@@ -333,14 +347,66 @@ impl PubSubDriver for PostgresDriver {
 
 		// Encode payload to base64 and send NOTIFY
 		let encoded = BASE64.encode(payload);
-		let conn = self.pool.get().await?;
 		let hashed = self.hash_subject(subject);
-		let span = tracing::trace_span!("pg_notify");
-		conn.execute(&format!("NOTIFY \"{hashed}\", '{encoded}'"), &[])
-			.instrument(span)
-			.await?;
 
-		Ok(())
+		tracing::debug!("attempting to get connection for publish");
+
+		// Wait for listen connection to be ready first if this channel has subscribers
+		// This ensures that if we're reconnecting, the LISTEN is re-registered before NOTIFY
+		if self.subscriptions.lock().await.contains_key(&hashed) {
+			self.wait_for_client().await?;
+		}
+
+		// Retry getting a connection from the pool with backoff in case the connection is
+		// currently disconnected
+		let mut backoff = Backoff::default();
+		let mut last_error = None;
+
+		loop {
+			match self.pool.get().await {
+				Result::Ok(conn) => {
+					// Test the connection with a simple query before using it
+					match conn.execute("SELECT 1", &[]).await {
+						Result::Ok(_) => {
+							// Connection is good, use it for NOTIFY
+							let span = tracing::trace_span!("pg_notify");
+							match conn
+								.execute(&format!("NOTIFY \"{hashed}\", '{encoded}'"), &[])
+								.instrument(span)
+								.await
+							{
+								Result::Ok(_) => return Ok(()),
+								Result::Err(e) => {
+									tracing::debug!(
+										?e,
+										"NOTIFY failed, retrying with new connection"
+									);
+									last_error = Some(e.into());
+								}
+							}
+						}
+						Result::Err(e) => {
+							tracing::debug!(
+								?e,
+								"connection test failed, retrying with new connection"
+							);
+							last_error = Some(e.into());
+						}
+					}
+				}
+				Result::Err(e) => {
+					tracing::debug!(?e, "failed to get connection from pool, retrying");
+					last_error = Some(e.into());
+				}
+			}
+
+			// Check if we should continue retrying
+			if !backoff.tick().await {
+				return Err(
+					last_error.unwrap_or_else(|| anyhow!("failed to publish after retries"))
+				);
+			}
+		}
 	}
 
 	async fn flush(&self) -> Result<()> {
