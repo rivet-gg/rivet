@@ -60,7 +60,7 @@ Get started with Rivet by following a quickstart guide:
 
 ## Features
 
-Rivet Actors are a primitive of RivetKit provide everything you need to build fast, scalable, and real-time applications without the complexity. Rivet Engine is the core of self-hosting and is used for orchestrating actors at scale.
+Rivet Actors, a primitive of RivetKit, provide everything you need to build fast, scalable, and real-time applications without the complexity. Rivet Engine is the core of self-hosting and is used for orchestrating actors at scale.
 
 - **Long-Lived, Stateful Compute**: Like AWS Lambda but with memory and no timeouts
 - **Blazing-Fast Reads & Writes**: State stored on same machine as compute  
