@@ -1,20 +1,16 @@
-import { faPowerOff, Icon } from "@rivet-gg/icons";
+import { faPowerOff, faSpinnerThird, Icon } from "@rivet-gg/icons";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useMatch } from "@tanstack/react-router";
 import { type ReactNode, useMemo } from "react";
 import { useInspectorCredentials } from "@/app/credentials-context";
 import { createEngineActorContext } from "@/queries/actor-engine";
 import { createInspectorActorContext } from "@/queries/actor-inspector";
-import {
-	type NamespaceNameId,
-	runnerByNameQueryOptions,
-} from "@/queries/manager-engine";
 import { DiscreteCopyButton } from "../copy-area";
 import { Button } from "../ui/button";
 import { useFiltersValue } from "./actor-filters-context";
 import { ActorProvider } from "./actor-queries-context";
 import { Info } from "./actor-state-tab";
-import { useManager } from "./manager-context";
+import { useDataProvider, useEngineCompatDataProvider } from "./data-provider";
 import type { ActorId } from "./queries";
 
 interface GuardConnectableInspectorProps {
@@ -30,7 +26,7 @@ export function GuardConnectableInspector({
 	const {
 		data: { destroyedAt, sleepingAt, pendingAllocationAt, startedAt } = {},
 	} = useQuery({
-		...useManager().actorQueryOptions(actorId),
+		...useDataProvider().actorQueryOptions(actorId),
 		refetchInterval: 1000,
 	});
 
@@ -88,7 +84,9 @@ function ActorInspectorProvider({
 	actorId: ActorId;
 	children: ReactNode;
 }) {
-	const { data } = useSuspenseQuery(useManager().actorQueryOptions(actorId));
+	const { data } = useSuspenseQuery(
+		useDataProvider().actorQueryOptions(actorId),
+	);
 	const { credentials } = useInspectorCredentials();
 
 	if (!credentials?.url || !credentials?.token) {
@@ -107,14 +105,14 @@ function ActorInspectorProvider({
 
 function useActorRunner({ actorId }: { actorId: ActorId }) {
 	const { data: actor } = useSuspenseQuery(
-		useManager().actorQueryOptions(actorId),
+		useDataProvider().actorQueryOptions(actorId),
 	);
 
 	const match = useMatch({
 		from:
 			__APP_TYPE__ === "engine"
-				? "/_layout/ns/$namespace"
-				: "/_layout/orgs/$organization/projects/$project/ns/$namespace/",
+				? "/_context/_engine/ns/$namespace"
+				: "/_context/_cloud/orgs/$organization/projects/$project/ns/$namespace/",
 		shouldThrow: false,
 	});
 
@@ -123,9 +121,9 @@ function useActorRunner({ actorId }: { actorId: ActorId }) {
 	}
 
 	const { data: runner } = useQuery({
-		...runnerByNameQueryOptions({
+		...useEngineCompatDataProvider().runnerByNameQueryOptions({
 			runnerName: actor.runner,
-			namespace: match.params.namespace as NamespaceNameId,
+			namespace: match.params.namespace,
 		}),
 		refetchInterval: 1000,
 	});
@@ -156,25 +154,29 @@ function ActorEngineProvider({
 
 	if (!runner || !actor.runner) {
 		return (
-			<Info>
-				<p>There are no runners connected to run this Actor.</p>
-				<p>
-					Check that your application is running and the
-					runner&nbsp;name&nbsp;is&nbsp;
-					<DiscreteCopyButton
-						value={actor.runner}
-						className="inline-block p-0 h-auto px-0.5 -mx-0.5"
-					>
-						<span className="font-mono-console">
-							{actor.runner}
-						</span>
-					</DiscreteCopyButton>
-				</p>
-			</Info>
+			<NoRunnerInfo runner={runner?.name || actor.runner || "unknown"} />
 		);
 	}
 
 	return <ActorProvider value={actorContext}>{children}</ActorProvider>;
+}
+
+function NoRunnerInfo({ runner }: { runner: string }) {
+	return (
+		<Info>
+			<p>There are no runners connected to run this Actor.</p>
+			<p>
+				Check that your application is running and the
+				runner&nbsp;name&nbsp;is&nbsp;
+				<DiscreteCopyButton
+					value={runner || ""}
+					className="inline-block p-0 h-auto px-0.5 -mx-0.5"
+				>
+					<span className="font-mono-console">{runner}</span>
+				</DiscreteCopyButton>
+			</p>
+		</Info>
+	);
 }
 
 function WakeUpActorButton({ actorId }: { actorId: ActorId }) {
@@ -198,7 +200,7 @@ function WakeUpActorButton({ actorId }: { actorId: ActorId }) {
 }
 
 function AutoWakeUpActor({ actorId }: { actorId: ActorId }) {
-	const { runner, actorContext } = useActorEngineContext({ actorId });
+	const { runner, actor, actorContext } = useActorEngineContext({ actorId });
 
 	const { isPending } = useQuery(
 		actorContext.actorAutoWakeUpQueryOptions(actorId, {
@@ -206,5 +208,14 @@ function AutoWakeUpActor({ actorId }: { actorId: ActorId }) {
 		}),
 	);
 
-	return isPending ? <Info>Waking up Actor...</Info> : null;
+	if (!runner) return <NoRunnerInfo runner={actor.runner || "unknown"} />;
+
+	return isPending ? (
+		<Info>
+			<div className="flex items-center">
+				<Icon icon={faSpinnerThird} className="animate-spin mr-2" />
+				Waiting for Actor to wake...
+			</div>
+		</Info>
+	) : null;
 }

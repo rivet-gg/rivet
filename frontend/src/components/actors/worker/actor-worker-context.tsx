@@ -10,7 +10,7 @@ import {
 } from "react";
 import { assertNonNullable } from "../../lib/utils";
 import { useActor } from "../actor-queries-context";
-import { useManager } from "../manager-context";
+import { useDataProvider } from "../data-provider";
 import { ActorFeature, type ActorId } from "../queries";
 import { ActorWorkerContainer } from "./actor-worker-container";
 
@@ -33,7 +33,7 @@ export const ActorWorkerContextProvider = ({
 	actorId,
 }: ActorWorkerContextProviderProps) => {
 	const { data: { features, name, endpoint, destroyedAt, startedAt } = {} } =
-		useQuery(useManager().actorWorkerQueryOptions(actorId));
+		useQuery(useDataProvider().actorWorkerQueryOptions(actorId));
 	const enabled =
 		(features?.includes(ActorFeature.Console) &&
 			!destroyedAt &&
