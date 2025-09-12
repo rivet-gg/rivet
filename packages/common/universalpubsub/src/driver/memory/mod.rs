@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use anyhow::*;
 use async_trait::async_trait;
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{RwLock, mpsc};
 use uuid::Uuid;
 
 use crate::driver::{PubSubDriver, SubscriberDriver, SubscriberDriverHandle};

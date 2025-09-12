@@ -71,6 +71,10 @@ import {
 
 export const sitemap = [
 	{
+		title: "Pricing",
+		href: "/pricing",
+	},
+	{
 		title: "Documentation",
 		href: "/docs",
 		sidebar: [
