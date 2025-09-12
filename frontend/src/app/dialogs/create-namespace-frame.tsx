@@ -1,8 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import {
+	useNavigate,
+	useParams,
+	useRouteContext,
+} from "@tanstack/react-router";
+import { match } from "ts-pattern";
 import * as CreateNamespaceForm from "@/app/forms/create-namespace-form";
 import { Flex, Frame } from "@/components";
-import { useEngineCompatDataProvider } from "@/components/actors";
 import { convertStringToId } from "@/lib/utils";
 
 const useCreateNamespace = () => {
@@ -11,7 +15,18 @@ const useCreateNamespace = () => {
 
 	const params = useParams({ strict: false });
 
-	const manager = useEngineCompatDataProvider();
+	const manager = useRouteContext({
+		from: match(__APP_TYPE__)
+			.with(
+				"cloud",
+				() =>
+					"/_context/_cloud/orgs/$organization/projects/$project" as const,
+			)
+			.with("engine", () => "/_context/_engine/ns/$namespace" as const)
+			.otherwise(() => {
+				throw new Error("Not in engine or cloud context");
+			}),
+	}).dataProvider;
 
 	return useMutation(
 		manager.createNamespaceMutationOptions({
@@ -26,7 +41,7 @@ const useCreateNamespace = () => {
 						throw new Error("Missing required parameters");
 					}
 					// Navigate to the newly created namespace
-					navigate({
+					await navigate({
 						to: "/orgs/$organization/projects/$project/ns/$namespace",
 						params: {
 							organization: params.organization,
@@ -37,7 +52,7 @@ const useCreateNamespace = () => {
 					return;
 				}
 
-				navigate({
+				await navigate({
 					to: "/ns/$namespace",
 					params: { namespace: data.name },
 				});

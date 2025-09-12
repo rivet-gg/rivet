@@ -4,7 +4,7 @@ import CreateProjectFrameContent from "@/app/dialogs/create-project-frame";
 import { Card } from "@/components";
 
 export const Route = createFileRoute("/_context/_cloud/orgs/$organization/")({
-	beforeLoad: ({ context, params }) => {
+	beforeLoad: async ({ context, params }) => {
 		return match(__APP_TYPE__)
 			.with("cloud", async () => {
 				if (!context.clerk?.organization) {
@@ -14,13 +14,15 @@ export const Route = createFileRoute("/_context/_cloud/orgs/$organization/")({
 					context.dataProvider.currentOrgProjectsQueryOptions(),
 				);
 
+				console.log(result);
+
 				const firstProject = result.pages[0].projects[0];
 
 				if (firstProject) {
 					throw redirect({
 						to: "/orgs/$organization/projects/$project",
 						replace: true,
-						reloadDocument: true,
+
 						params: {
 							organization: params.organization,
 							project: firstProject.name,

@@ -402,7 +402,7 @@ function HeaderButton({ children, className, ...props }: ButtonProps) {
 
 function ConnectionStatus(): ReactNode {
 	const endpoint = useSearch({
-		from: "/_context/_inspector",
+		from: "/_inspector/",
 		select: (s) => s.u,
 	});
 	const data = useInspectorDataProvider();
