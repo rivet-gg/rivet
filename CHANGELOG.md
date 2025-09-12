@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [25.7.0](https://github.com/rivet-gg/engine/compare/v25.6.0...v25.7.0) (2025-09-12)
+
+
+### Features
+
+* add telemetry via sentry ([#2865](https://github.com/rivet-gg/engine/issues/2865)) ([8a60a1f](https://github.com/rivet-gg/engine/commit/8a60a1ff35a9c21a86f4ae0a9784d9c39447eab3))
+
+
+### Bug Fixes
+
+* **ci:** get binaries uploading ([#2866](https://github.com/rivet-gg/engine/issues/2866)) ([1c5dbe6](https://github.com/rivet-gg/engine/commit/1c5dbe6b5de8a996ac51ae233e795fd571ea269f))
+* **guard:** remove incorrect connectability check ([#2856](https://github.com/rivet-gg/engine/issues/2856)) ([12b2e1a](https://github.com/rivet-gg/engine/commit/12b2e1a524f65051c9985e87ebbbd54375d68723))
+* **inspector:** use proper status indicator ([#2849](https://github.com/rivet-gg/engine/issues/2849)) ([e0d3cc0](https://github.com/rivet-gg/engine/commit/e0d3cc0cb19b9fc5b986e0b0d672bd74a21ebfdb))
+* **pegboard:** fix actor names not reserving on first reservation ([#2861](https://github.com/rivet-gg/engine/issues/2861)) ([fe6d7a9](https://github.com/rivet-gg/engine/commit/fe6d7a919763d30153f975793a3df87a5a49aa36))
+* proper turbo ([#2852](https://github.com/rivet-gg/engine/issues/2852)) ([e3ba990](https://github.com/rivet-gg/engine/commit/e3ba990dff34c48082b39bc34d48fcc8ba4bf5f6))
+* **runner:** remove top level await ([#2848](https://github.com/rivet-gg/engine/issues/2848)) ([c7919fa](https://github.com/rivet-gg/engine/commit/c7919faa8da6aca61c03bb2f7707af0b78f118a8))
+* **tunnel:** fix ups race condition ([#2858](https://github.com/rivet-gg/engine/issues/2858)) ([c0b1dd2](https://github.com/rivet-gg/engine/commit/c0b1dd293f7c965ba0ccc2c0b72057aaccc8ad72))
+* **universalpubsub:** fix pg driver ([#2857](https://github.com/rivet-gg/engine/issues/2857)) ([9ce6721](https://github.com/rivet-gg/engine/commit/9ce6721467975e922bd3601953ca0eb73bf70eef))
+
+
+### Chores
+
+* changelog Rivet v2.0 ([#2870](https://github.com/rivet-gg/engine/issues/2870)) ([e03d55f](https://github.com/rivet-gg/engine/commit/e03d55f0b5e2dafa0288a806e07b4bc9712e5b53))
+* fix linguist-generated for sdks ([eb510d1](https://github.com/rivet-gg/engine/commit/eb510d1b1e61890a227fd5889d7784de09375c8f))
+* only exclude ts & js from site ([4f489eb](https://github.com/rivet-gg/engine/commit/4f489eb41f50a03a46f8fc3c4bb219cbd7de00f1))
+* remove frontend from linguist count ([bb521b1](https://github.com/rivet-gg/engine/commit/bb521b11b7dff5f3f8a83e57fe61c19d982c9f7b))
+* remove site jsx from linguist ([febe657](https://github.com/rivet-gg/engine/commit/febe657f1a8693980c271d444e54cd4d7a9e53da))
+* **runner:** add ability to disable auto-shutdown ([#2859](https://github.com/rivet-gg/engine/issues/2859)) ([76488fd](https://github.com/rivet-gg/engine/commit/76488fd099975e2807f3a61f62f82f69be7797d4))
+* **runner:** connect tunnel before connecting pb ws ([#2872](https://github.com/rivet-gg/engine/issues/2872)) ([c86e501](https://github.com/rivet-gg/engine/commit/c86e501a995edcfd52c7b366dd0d221f31bd297d))
+* **runner:** disable default logs ([#2862](https://github.com/rivet-gg/engine/issues/2862)) ([32eb1e0](https://github.com/rivet-gg/engine/commit/32eb1e0b8bd0e1d290e4338cce0a4f46b524cc74))
+* **site:** document self-hosting ([#2854](https://github.com/rivet-gg/engine/issues/2854)) ([f1c054d](https://github.com/rivet-gg/engine/commit/f1c054db74707f06454ea6072da81cfbdc31873d))
+* throw the site in there too why not ([750e2c2](https://github.com/rivet-gg/engine/commit/750e2c27284bb2451eb9f5e17dc96a39c287b8ab))
+* update imge ([#2907](https://github.com/rivet-gg/engine/issues/2907)) ([911fd90](https://github.com/rivet-gg/engine/commit/911fd90c7877470fc70ea3b50ae10289e1af2a93))
+* update postgres and railway logo ([#2876](https://github.com/rivet-gg/engine/issues/2876)) ([b9309a2](https://github.com/rivet-gg/engine/commit/b9309a2205515272a3d7a3f8654816b25358c385))
+* updated region list ([#2867](https://github.com/rivet-gg/engine/issues/2867)) ([91e1c25](https://github.com/rivet-gg/engine/commit/91e1c25359293eb396af54a62bbc0f5f8e84ec87))
+* **ups:** add benches ([#2878](https://github.com/rivet-gg/engine/issues/2878)) ([ca5490e](https://github.com/rivet-gg/engine/commit/ca5490ee79a8c315cf12b8658c664cbc0b16d420))
+* **ups:** add message chunking & ups protocol ([#2874](https://github.com/rivet-gg/engine/issues/2874)) ([0977209](https://github.com/rivet-gg/engine/commit/0977209400cdad8642c7f5334a05b50d8fab1e55))
+* **ups:** remove no responders ([#2863](https://github.com/rivet-gg/engine/issues/2863)) ([6b4c00b](https://github.com/rivet-gg/engine/commit/6b4c00b17641cecdb2a11b17976e0e1182b3c472))
+* website language update ([#2860](https://github.com/rivet-gg/engine/issues/2860)) ([bdccba7](https://github.com/rivet-gg/engine/commit/bdccba7065d61e792e6f5dcefe90bd1551e0dc1c))
+* weekly release september 7th ([#2903](https://github.com/rivet-gg/engine/issues/2903)) ([6c99016](https://github.com/rivet-gg/engine/commit/6c99016e1b4c1426ff99556d76c522a1770c2428))
+
 ## [25.6.0](https://github.com/rivet-gg/rivet/compare/v25.5.2...v25.6.0) (2025-09-02)
 
 
