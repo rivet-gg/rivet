@@ -172,7 +172,7 @@ export const createOrganizationContext = ({
 					const response = await client.projects.create({
 						displayName: data.displayName,
 						name: data.nameId,
-						organizationId: organization,
+						org: organization,
 					});
 
 					return response;
@@ -207,7 +207,7 @@ export const createProjectContext = ({
 						displayName: data.displayName,
 						org: organization,
 					});
-					return response;
+					return response.namespace;
 				},
 			};
 		},

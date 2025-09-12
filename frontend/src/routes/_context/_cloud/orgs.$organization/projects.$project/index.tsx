@@ -22,7 +22,7 @@ export const Route = createFileRoute(
 					throw redirect({
 						to: "/orgs/$organization/projects/$project/ns/$namespace",
 						replace: true,
-						reloadDocument: true,
+
 						params: {
 							organization: params.organization,
 							project: params.project,

@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@sentry/vite-plugin':
+        specifier: ^2.23.1
+        version: 2.23.1
     devDependencies:
       '@bare-ts/tools':
         specifier: 0.15.0
@@ -850,7 +854,7 @@ importers:
         version: 15.5.2(@mdx-js/loader@3.1.1(webpack@5.101.3(esbuild@0.25.9)))(@mdx-js/react@3.1.1(@types/react@18.3.24)(react@19.1.1))
       '@next/third-parties':
         specifier: latest
-        version: 15.5.2(next@15.5.2(babel-plugin-macros@3.1.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(sass@1.92.1))(react@19.1.1)
+        version: 15.5.3(next@15.5.2(babel-plugin-macros@3.1.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(sass@1.92.1))(react@19.1.1)
       '@rivet-gg/api':
         specifier: 0.0.1-rc8
         version: 0.0.1-rc8
@@ -2427,8 +2431,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@next/third-parties@15.5.2':
-    resolution: {integrity: sha512-WkAP39cP5FMqrIq6CjnsTGO7A49Acliqmu1TytWMCOoCv57MN25a0+htKE5VRwm9vzAwSXKHSNnRso6nKLrKKg==}
+  '@next/third-parties@15.5.3':
+    resolution: {integrity: sha512-DSKz1N6/WmacV8JAPizHt8dqTP6RljcOgtrnLDEIEI7TGpX1lSfoHwY0TxXVhVoN1WwUHGDo6XUJsSjaLpcMoQ==}
     peerDependencies:
       next: ^13.0.0 || ^14.0.0 || ^15.0.0
       react: ^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0
@@ -3142,7 +3146,7 @@ packages:
     resolution: {integrity: sha512-aGJVImxsmz8fLLzeZHUlFRJ/7Y/xBrke9bOvMpooVaJpHor/XmiP19QeEtB2hmQUOPlgS3dz5o8UtCZ5+LcQGg==}
 
   '@rivet-gg/cloud@file:frontend/vendor/rivet-cloud.tgz':
-    resolution: {integrity: sha512-vtNVoG4dnpWWRj501dE7pa8q4yl8hXUjfG+55DS/Rgoc92H3qke4U09NuoU++fuw04LxbgoZ6v4XDPDRXjy7Iw==, tarball: file:frontend/vendor/rivet-cloud.tgz}
+    resolution: {integrity: sha512-IL7saOZQwKd4PyC97+IbalLAuJK+VvkpQxZG2WWz9/7BaOXl3uhmewpjCM/NaP025IPVtbGyrdLS7zWn8MsRwA==, tarball: file:frontend/vendor/rivet-cloud.tgz}
     version: 0.0.0
 
   '@rivet-gg/icons@file:frontend/vendor/rivet-icons.tgz':
@@ -9512,7 +9516,7 @@ snapshots:
   '@next/swc-win32-x64-msvc@15.5.2':
     optional: true
 
-  '@next/third-parties@15.5.2(next@15.5.2(babel-plugin-macros@3.1.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(sass@1.92.1))(react@19.1.1)':
+  '@next/third-parties@15.5.3(next@15.5.2(babel-plugin-macros@3.1.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(sass@1.92.1))(react@19.1.1)':
     dependencies:
       next: 15.5.2(babel-plugin-macros@3.1.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(sass@1.92.1)
       react: 19.1.1

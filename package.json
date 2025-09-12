@@ -17,5 +17,8 @@
 		"tsup": "^8.5.0",
 		"turbo": "^2.5.6",
 		"typescript": "^5.9.2"
+	},
+	"dependencies": {
+		"@sentry/vite-plugin": "^2.23.1"
 	}
 }
