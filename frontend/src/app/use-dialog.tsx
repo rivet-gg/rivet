@@ -10,4 +10,12 @@ d.CreateProject = createDialogHook(
 	() => import("@/app/dialogs/create-project-frame"),
 );
 
+d.ConnectVercel = createDialogHook(
+	() => import("@/app/dialogs/connect-vercel-frame"),
+);
+
+d.ConnectRailway = createDialogHook(
+	() => import("@/app/dialogs/connect-railway-frame"),
+);
+
 export { d as useDialog };
