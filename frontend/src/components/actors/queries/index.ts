@@ -1,5 +1,4 @@
 import type { Actor as InspectorActor } from "@rivetkit/core/inspector";
-import type { NamespaceNameId } from "@/queries/manager-engine";
 
 export type { ActorLogEntry } from "@rivetkit/core/inspector";
 export { ActorFeature } from "@rivetkit/core/inspector";
@@ -85,13 +84,6 @@ export type Build = {
 export type Region = {
 	id: string;
 	name: string;
-};
-
-export type Namespace = {
-	id: string;
-	name: string;
-	displayName: string;
-	createdAt: string;
 };
 
 export * from "./actor";
