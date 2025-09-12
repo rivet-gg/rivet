@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use anyhow::*;
 use async_trait::async_trait;
@@ -8,6 +8,8 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD_NO_PAD as BASE64;
 use deadpool_postgres::{Config, ManagerConfig, Pool, PoolConfig, RecyclingMethod, Runtime};
 use futures_util::future::poll_fn;
+use rivet_util::backoff::Backoff;
+use tokio::sync::{Mutex, broadcast};
 use tokio_postgres::{AsyncMessage, NoTls};
 use tracing::Instrument;
 
@@ -17,13 +19,13 @@ use crate::pubsub::DriverOutput;
 #[derive(Clone)]
 struct Subscription {
 	// Channel to send messages to this subscription
-	tx: tokio::sync::broadcast::Sender<Vec<u8>>,
+	tx: broadcast::Sender<Vec<u8>>,
 	// Cancellation token shared by all subscribers of this subject
 	token: tokio_util::sync::CancellationToken,
 }
 
 impl Subscription {
-	fn new(tx: tokio::sync::broadcast::Sender<Vec<u8>>) -> Self {
+	fn new(tx: broadcast::Sender<Vec<u8>>) -> Self {
 		let token = tokio_util::sync::CancellationToken::new();
 		Self { tx, token }
 	}
@@ -48,8 +50,9 @@ pub const POSTGRES_MAX_MESSAGE_SIZE: usize =
 #[derive(Clone)]
 pub struct PostgresDriver {
 	pool: Arc<Pool>,
-	client: Arc<tokio_postgres::Client>,
+	client: Arc<Mutex<Option<Arc<tokio_postgres::Client>>>>,
 	subscriptions: Arc<Mutex<HashMap<String, Subscription>>>,
+	client_ready: tokio::sync::watch::Receiver<bool>,
 }
 
 impl PostgresDriver {
@@ -76,48 +79,168 @@ impl PostgresDriver {
 
 		let subscriptions: Arc<Mutex<HashMap<String, Subscription>>> =
 			Arc::new(Mutex::new(HashMap::new()));
-		let subscriptions2 = subscriptions.clone();
+		let client: Arc<Mutex<Option<Arc<tokio_postgres::Client>>>> = Arc::new(Mutex::new(None));
 
-		let (client, mut conn) = tokio_postgres::connect(&conn_str, tokio_postgres::NoTls).await?;
-		tokio::spawn(async move {
-			// NOTE: This loop will stop automatically when client is dropped
-			loop {
-				match poll_fn(|cx| conn.poll_message(cx)).await {
-					Some(std::result::Result::Ok(AsyncMessage::Notification(note))) => {
-						if let Some(sub) =
-							subscriptions2.lock().unwrap().get(note.channel()).cloned()
-						{
-							let bytes = match BASE64.decode(note.payload()) {
-								std::result::Result::Ok(b) => b,
-								std::result::Result::Err(err) => {
-									tracing::error!(?err, "failed decoding base64");
-									break;
+		// Create channel for client ready notifications
+		let (ready_tx, client_ready) = tokio::sync::watch::channel(false);
+
+		// Spawn connection lifecycle task
+		tokio::spawn(Self::spawn_connection_lifecycle(
+			conn_str.clone(),
+			subscriptions.clone(),
+			client.clone(),
+			ready_tx,
+		));
+
+		let driver = Self {
+			pool: Arc::new(pool),
+			client,
+			subscriptions,
+			client_ready,
+		};
+
+		// Wait for initial connection to be established
+		driver.wait_for_client().await?;
+
+		Ok(driver)
+	}
+
+	/// Manages the connection lifecycle with automatic reconnection
+	async fn spawn_connection_lifecycle(
+		conn_str: String,
+		subscriptions: Arc<Mutex<HashMap<String, Subscription>>>,
+		client: Arc<Mutex<Option<Arc<tokio_postgres::Client>>>>,
+		ready_tx: tokio::sync::watch::Sender<bool>,
+	) {
+		let mut backoff = Backoff::new(8, None, 1_000, 1_000);
+
+		loop {
+			match tokio_postgres::connect(&conn_str, tokio_postgres::NoTls).await {
+				Result::Ok((new_client, conn)) => {
+					tracing::info!("postgres listen connection established");
+					// Reset backoff on successful connection
+					backoff = Backoff::new(8, None, 1_000, 1_000);
+
+					let new_client = Arc::new(new_client);
+
+					// Update the client reference immediately
+					*client.lock().await = Some(new_client.clone());
+					// Notify that client is ready
+					let _ = ready_tx.send(true);
+
+					// Get channels to re-subscribe to
+					let channels: Vec<String> =
+						subscriptions.lock().await.keys().cloned().collect();
+					let needs_resubscribe = !channels.is_empty();
+
+					if needs_resubscribe {
+						tracing::debug!(
+							?channels,
+							"will re-subscribe to channels after connection starts"
+						);
+					}
+
+					// Spawn a task to re-subscribe after a short delay
+					if needs_resubscribe {
+						let client_for_resub = new_client.clone();
+						let channels_clone = channels.clone();
+						tokio::spawn(async move {
+							tracing::debug!(
+								?channels_clone,
+								"re-subscribing to channels after reconnection"
+							);
+							for channel in &channels_clone {
+								if let Result::Err(e) = client_for_resub
+									.execute(&format!("LISTEN \"{}\"", channel), &[])
+									.await
+								{
+									tracing::error!(?e, %channel, "failed to re-subscribe to channel");
+								} else {
+									tracing::debug!(%channel, "successfully re-subscribed to channel");
 								}
-							};
-							let _ = sub.tx.send(bytes);
-						}
+							}
+						});
 					}
-					Some(std::result::Result::Ok(_)) => {
-						// Ignore other async messages
-					}
-					Some(std::result::Result::Err(err)) => {
-						tracing::error!(?err, "async postgres error");
-						break;
-					}
-					None => {
-						tracing::debug!("async postgres connection closed");
-						break;
-					}
+
+					// Poll the connection until it closes
+					Self::poll_connection(conn, subscriptions.clone()).await;
+
+					// Clear the client reference on disconnect
+					*client.lock().await = None;
+					// Notify that client is disconnected
+					let _ = ready_tx.send(false);
+				}
+				Result::Err(e) => {
+					tracing::error!(?e, "failed to connect to postgres, retrying");
+					backoff.tick().await;
 				}
 			}
-			tracing::debug!("listen connection closed");
-		});
+		}
+	}
 
-		Ok(Self {
-			pool: Arc::new(pool),
-			client: Arc::new(client),
-			subscriptions,
+	/// Polls the connection for notifications until it closes or errors
+	async fn poll_connection(
+		mut conn: tokio_postgres::Connection<
+			tokio_postgres::Socket,
+			tokio_postgres::tls::NoTlsStream,
+		>,
+		subscriptions: Arc<Mutex<HashMap<String, Subscription>>>,
+	) {
+		loop {
+			match poll_fn(|cx| conn.poll_message(cx)).await {
+				Some(std::result::Result::Ok(AsyncMessage::Notification(note))) => {
+					tracing::trace!(channel = %note.channel(), "received notification");
+					if let Some(sub) = subscriptions.lock().await.get(note.channel()).cloned() {
+						let bytes = match BASE64.decode(note.payload()) {
+							std::result::Result::Ok(b) => b,
+							std::result::Result::Err(err) => {
+								tracing::error!(?err, "failed decoding base64");
+								continue;
+							}
+						};
+						tracing::trace!(channel = %note.channel(), bytes_len = bytes.len(), "sending to broadcast channel");
+						let _ = sub.tx.send(bytes);
+					} else {
+						tracing::warn!(channel = %note.channel(), "received notification for unknown channel");
+					}
+				}
+				Some(std::result::Result::Ok(_)) => {
+					// Ignore other async messages
+				}
+				Some(std::result::Result::Err(err)) => {
+					tracing::error!(?err, "postgres connection error, reconnecting");
+					break; // Exit loop to reconnect
+				}
+				None => {
+					tracing::warn!("postgres connection closed, reconnecting");
+					break; // Exit loop to reconnect
+				}
+			}
+		}
+	}
+
+	/// Wait for the client to be connected
+	async fn wait_for_client(&self) -> Result<Arc<tokio_postgres::Client>> {
+		let mut ready_rx = self.client_ready.clone();
+		tokio::time::timeout(tokio::time::Duration::from_secs(5), async {
+			loop {
+				// Subscribe to changed before attempting to access client
+				let changed_fut = ready_rx.changed();
+
+				// Check if client is already available
+				if let Some(client) = self.client.lock().await.clone() {
+					return Ok(client);
+				}
+
+				// Wait for change, will return client if exists on next iteration
+				changed_fut
+					.await
+					.map_err(|_| anyhow!("connection lifecycle task ended"))?;
+				tracing::debug!("client does not exist immediately after receive ready");
+			}
 		})
+		.await
+		.map_err(|_| anyhow!("timeout waiting for postgres client connection"))?
 	}
 
 	fn hash_subject(&self, subject: &str) -> String {
@@ -147,7 +270,7 @@ impl PubSubDriver for PostgresDriver {
 
 		// Check if we already have a subscription for this channel
 		let (rx, drop_guard) =
-			if let Some(existing_sub) = self.subscriptions.lock().unwrap().get(&hashed).cloned() {
+			if let Some(existing_sub) = self.subscriptions.lock().await.get(&hashed).cloned() {
 				// Reuse the existing broadcast channel
 				let rx = existing_sub.tx.subscribe();
 				let drop_guard = existing_sub.token.clone().drop_guard();
@@ -160,13 +283,15 @@ impl PubSubDriver for PostgresDriver {
 				// Register subscription
 				self.subscriptions
 					.lock()
-					.unwrap()
+					.await
 					.insert(hashed.clone(), subscription.clone());
 
 				// Execute LISTEN command on the async client (for receiving notifications)
 				// This only needs to be done once per channel
+				// Wait for client to be connected with retry logic
+				let client = self.wait_for_client().await?;
 				let span = tracing::trace_span!("pg_listen");
-				self.client
+				client
 					.execute(&format!("LISTEN \"{hashed}\""), &[])
 					.instrument(span)
 					.await?;
@@ -179,13 +304,16 @@ impl PubSubDriver for PostgresDriver {
 				tokio::spawn(async move {
 					token_clone.cancelled().await;
 					if tx_clone.receiver_count() == 0 {
-						let sql = format!("UNLISTEN \"{}\"", hashed_clone);
-						if let Err(err) = driver.client.execute(sql.as_str(), &[]).await {
-							tracing::warn!(?err, %hashed_clone, "failed to UNLISTEN channel");
-						} else {
-							tracing::trace!(%hashed_clone, "unlistened channel");
+						let client = driver.client.lock().await.clone();
+						if let Some(client) = client {
+							let sql = format!("UNLISTEN \"{}\"", hashed_clone);
+							if let Err(err) = client.execute(sql.as_str(), &[]).await {
+								tracing::warn!(?err, %hashed_clone, "failed to UNLISTEN channel");
+							} else {
+								tracing::trace!(%hashed_clone, "unlistened channel");
+							}
 						}
-						driver.subscriptions.lock().unwrap().remove(&hashed_clone);
+						driver.subscriptions.lock().await.remove(&hashed_clone);
 					}
 				});
 
