@@ -193,6 +193,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             BUILD_FRONTEND=true
+            CARGO_BUILD_MODE=release
           # secrets: |
           #   fontawesome_package_token=${{ secrets.FONTAWESOME_PACKAGE_TOKEN }}
           # secret-files: |
@@ -209,6 +210,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             BUILD_FRONTEND=true
+            CARGO_BUILD_MODE=release
           # secrets: |
           #   fontawesome_package_token=${{ secrets.FONTAWESOME_PACKAGE_TOKEN }}
           # secret-files: |
