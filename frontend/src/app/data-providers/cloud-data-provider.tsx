@@ -201,7 +201,7 @@ export const createOrganizationContext = ({
 					const response = await client.projects.create({
 						displayName: data.displayName,
 						name: data.nameId,
-						org: organization,
+						organizationId: organization,
 					});
 
 					return response;
@@ -236,9 +236,21 @@ export const createProjectContext = ({
 						displayName: data.displayName,
 						org: organization,
 					});
-					return response.namespace;
+					return {
+						id: response.namespace.id,
+						name: response.namespace.name,
+						displayName: response.namespace.displayName,
+						createdAt: new Date(
+							response.namespace.createdAt,
+						).toISOString(),
+					};
 				},
 			};
+		},
+		currentProjectQueryOptions: () => {
+			return parent.currentOrgProjectQueryOptions({
+				project,
+			});
 		},
 		currentProjectNamespacesQueryOptions: () => {
 			return parent.orgProjectNamespacesQueryOptions({
@@ -257,6 +269,31 @@ export const createProjectContext = ({
 				project,
 				namespace: opts.namespace,
 			});
+		},
+		currentProjectBillingDetailsQueryOptions() {
+			return queryOptions({
+				queryKey: [{ organization, project }, "billing-details"],
+				queryFn: async ({ signal: abortSignal }) => {
+					const response = await client.billing.details(
+						project,
+						{org: organization },
+						{ abortSignal },
+					);
+					return response;
+				},
+			});
+		},
+		changeCurrentProjectBillingPlanMutationOptions() {
+			return {
+				mutationKey: [{ organization, project }, "billing"],
+				mutationFn: async (data: Rivet.BillingSetPlanRequest) => {
+					const response = await client.billing.setPlan(project, {
+						plan: data.plan,
+						org: organization,
+					});
+					return response;
+				},
+			};
 		},
 	};
 };
@@ -278,7 +315,7 @@ export const createNamespaceContext = ({
 			...parent,
 			namespace: engineNamespaceName,
 			namespaceId: engineNamespaceId,
-			client: createEngineClient(),
+			client: createEngineClient(cloudEnv().VITE_APP_CLOUD_ENGINE_URL),
 		}),
 		namespaceQueryOptions() {
 			return parent.currentProjectNamespaceQueryOptions({ namespace });
