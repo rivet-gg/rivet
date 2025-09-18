@@ -42,6 +42,7 @@ pub mod pagination;
 pub use self::pagination::Pagination;
 pub mod runner;
 pub use self::runner::Runner;
+<<<<<<< HEAD
 pub mod runner_config;
 pub use self::runner_config::RunnerConfig;
 pub mod runner_config_serverless;
@@ -52,6 +53,10 @@ pub mod runner_configs_list_response;
 pub use self::runner_configs_list_response::RunnerConfigsListResponse;
 pub mod runner_configs_upsert_request;
 pub use self::runner_configs_upsert_request::RunnerConfigsUpsertRequest;
+=======
+pub mod runner_config_variant;
+pub use self::runner_config_variant::RunnerConfigVariant;
+>>>>>>> 83cd02c7e (feat(cloud): connect page)
 pub mod runners_get_response;
 pub use self::runners_get_response::RunnersGetResponse;
 pub mod runners_list_names_response;
