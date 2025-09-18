@@ -1,5 +1,11 @@
-import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
+import {
+	MutationCache,
+	QueryCache,
+	QueryClient,
+	queryOptions,
+} from "@tanstack/react-query";
 import { toast } from "@/components";
+import { Changelog } from "./types";
 
 const queryCache = new QueryCache();
 
@@ -13,6 +19,23 @@ const mutationCache = new MutationCache({
 		});
 	},
 });
+
+export const changelogQueryOptions = () => {
+	return queryOptions({
+		queryKey: ["changelog", __APP_BUILD_ID__],
+		staleTime: 1 * 60 * 60 * 1000, // 1 hour
+		queryFn: async () => {
+			const response = await fetch(
+				"https://rivet-site.vercel.app/changelog.json",
+			);
+			if (!response.ok) {
+				throw new Error("Failed to fetch changelog");
+			}
+			const result = Changelog.parse(await response.json());
+			return result;
+		},
+	});
+};
 
 export const queryClient = new QueryClient({
 	defaultOptions: {
