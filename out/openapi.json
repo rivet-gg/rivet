@@ -1575,12 +1575,6 @@
           }
         },
         "additionalProperties": false
-      },
-      "RunnerConfigVariant": {
-        "type": "string",
-        "enum": [
-          "serverless"
-        ]
       }
     }
   }
