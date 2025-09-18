@@ -19,11 +19,13 @@ import { ActorMetricsTab } from "./actor-metrics-tab";
 import { ActorStateTab } from "./actor-state-tab";
 import { QueriedActorStatus } from "./actor-status";
 import { ActorStopButton } from "./actor-stop-button";
-import { ActorsSidebarToggleButton } from "./actors-sidebar-toggle-button";
 import { useActorsView } from "./actors-view-context-provider";
 import { ActorConsole } from "./console/actor-console";
-import { GuardConnectableInspector, useInspectorGuard } from "./guard-connectable-inspector";
-import { useManager } from "./manager-context";
+import { useDataProvider } from "./data-provider";
+import {
+	GuardConnectableInspector,
+	useInspectorGuard,
+} from "./guard-connectable-inspector";
 import { ActorFeature, type ActorId } from "./queries";
 import { ActorWorkerContextProvider } from "./worker/actor-worker-context";
 
@@ -42,32 +44,29 @@ interface ActorsActorDetailsProps {
 export const ActorsActorDetails = memo(
 	({ tab, onTabChange, actorId }: ActorsActorDetailsProps) => {
 		const { data: features = [] } = useQuery(
-			useManager().actorFeaturesQueryOptions(actorId),
+			useDataProvider().actorFeaturesQueryOptions(actorId),
 		);
 
 		const supportsConsole = features.includes(ActorFeature.Console);
 
 		return (
-
-		<GuardConnectableInspector actorId={actorId}>
-			<ActorDetailsSettingsProvider>
-				<div className="flex flex-col h-full flex-1">
-					<ActorTabs
-						features={features}
-						actorId={actorId}
-						tab={tab}
-						onTabChange={onTabChange}
-					/>
-
-					{supportsConsole ? (
-						<ActorWorkerContextProvider
+			<GuardConnectableInspector actorId={actorId}>
+				<ActorDetailsSettingsProvider>
+					<div className="flex flex-col h-full flex-1">
+						<ActorTabs
+							features={features}
 							actorId={actorId}
-						>
-							<ActorConsole actorId={actorId} />
-						</ActorWorkerContextProvider>
-					) : null}
-				</div>
-			</ActorDetailsSettingsProvider>
+							tab={tab}
+							onTabChange={onTabChange}
+						/>
+
+						{supportsConsole ? (
+							<ActorWorkerContextProvider actorId={actorId}>
+								<ActorConsole actorId={actorId} />
+							</ActorWorkerContextProvider>
+						) : null}
+					</div>
+				</ActorDetailsSettingsProvider>
 			</GuardConnectableInspector>
 		);
 	},
@@ -129,7 +128,6 @@ export function ActorTabs({
 			className={cn(className, "flex-1 min-h-0 min-w-0 flex flex-col ")}
 		>
 			<div className="flex justify-between items-center border-b h-[45px]">
-				<ActorsSidebarToggleButton />
 				<div className="flex flex-1 items-center h-full w-full ">
 					<TabsList className="overflow-auto border-none h-full items-end">
 						{supportsState ? (
@@ -220,7 +218,9 @@ export function ActorTabs({
 							className="min-h-0 flex-1 mt-0 h-full"
 						>
 							<Suspense fallback={<ActorLogsTab.Skeleton />}>
-								{guardContent || <ActorLogsTab actorId={actorId} />}
+								{guardContent || (
+									<ActorLogsTab actorId={actorId} />
+								)}
 							</Suspense>
 						</TabsContent>
 					) : null}
@@ -237,7 +237,9 @@ export function ActorTabs({
 							value="connections"
 							className="min-h-0 flex-1 mt-0"
 						>
-								{guardContent ||<ActorConnectionsTab actorId={actorId} />}
+							{guardContent || (
+								<ActorConnectionsTab actorId={actorId} />
+							)}
 						</TabsContent>
 					) : null}
 					{supportsEvents ? (
@@ -245,7 +247,9 @@ export function ActorTabs({
 							value="events"
 							className="min-h-0 flex-1 mt-0"
 						>
-								{guardContent || <ActorEventsTab actorId={actorId} />}
+							{guardContent || (
+								<ActorEventsTab actorId={actorId} />
+							)}
 						</TabsContent>
 					) : null}
 					{supportsDatabase ? (
@@ -253,7 +257,9 @@ export function ActorTabs({
 							value="database"
 							className="min-h-0 min-w-0 flex-1 mt-0 h-full"
 						>
-								{guardContent || <ActorDatabaseTab actorId={actorId} />}
+							{guardContent || (
+								<ActorDatabaseTab actorId={actorId} />
+							)}
 						</TabsContent>
 					) : null}
 					{supportsState ? (
@@ -261,7 +267,9 @@ export function ActorTabs({
 							value="state"
 							className="min-h-0 flex-1 mt-0"
 						>
-								{guardContent || <ActorStateTab actorId={actorId} />}
+							{guardContent || (
+								<ActorStateTab actorId={actorId} />
+							)}
 						</TabsContent>
 					) : null}
 					{supportsMetrics ? (
@@ -269,7 +277,9 @@ export function ActorTabs({
 							value="metrics"
 							className="min-h-0 flex-1 mt-0 h-full"
 						>
-								{guardContent || <ActorMetricsTab actorId={actorId} />}
+							{guardContent || (
+								<ActorMetricsTab actorId={actorId} />
+							)}
 						</TabsContent>
 					) : null}
 				</>
