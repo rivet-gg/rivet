@@ -391,9 +391,7 @@ export const createNamespaceContext = ({
 		},
 		createRunnerConfigMutationOptions(
 			opts: {
-				onSuccess?: (
-					data: Rivet.NamespacesRunnerConfigsUpsertResponse,
-				) => void;
+				onSuccess?: (data: Rivet.RunnerConfigsUpsertResponse) => void;
 			} = {},
 		) {
 			return {
@@ -404,14 +402,12 @@ export const createNamespaceContext = ({
 					config,
 				}: {
 					name: string;
-					config: Rivet.NamespacesRunnerConfig;
+					config: Rivet.RunnerConfig;
 				}) => {
-					const response =
-						await client.namespacesRunnerConfigs.upsert(
-							namespaceId,
-							name,
-							config,
-						);
+					const response = await client.runnerConfigs.upsert(name, {
+						namespace,
+						...config,
+					});
 					return response;
 				},
 			};
@@ -421,9 +417,9 @@ export const createNamespaceContext = ({
 				queryKey: [{ namespace }, "runners", "configs"],
 				initialPageParam: undefined as string | undefined,
 				queryFn: async ({ signal: abortSignal, pageParam }) => {
-					const response = await client.namespacesRunnerConfigs.list(
-						namespace,
+					const response = await client.runnerConfigs.list(
 						{
+							namespace,
 							cursor: pageParam ?? undefined,
 							limit: RECORDS_PER_PAGE,
 						},
