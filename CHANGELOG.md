@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [25.7.2](https://github.com/rivet-dev/engine/compare/v25.7.1...v25.7.2) (2025-09-19)
+
+
+### Chores
+
+* Weekly Changelog 2025.37 ([f2d0a51](https://github.com/rivet-dev/engine/commit/f2d0a514d05010d8b9a4494f43a5ac13db1ffef1))
+* Weekly Changelog 2025.37 ([#2947](https://github.com/rivet-dev/engine/issues/2947)) ([f2d0a51](https://github.com/rivet-dev/engine/commit/f2d0a514d05010d8b9a4494f43a5ac13db1ffef1))
+
 ## [25.7.1](https://github.com/rivet-dev/engine/compare/v25.7.0...v25.7.1) (2025-09-19)
 
 
