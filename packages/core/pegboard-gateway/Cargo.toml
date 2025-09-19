@@ -18,7 +18,6 @@ pegboard.workspace = true
 rand.workspace = true
 rivet-error.workspace = true
 rivet-guard-core.workspace = true
-rivet-tunnel-protocol.workspace = true
 rivet-util.workspace = true
 thiserror.workspace = true
 tokio-tungstenite.workspace = true

@@ -22,7 +22,6 @@ rivet-error.workspace = true
 rivet-guard-core = { path = "../guard/core" }
 rivet-metrics.workspace = true
 rivet-pools.workspace = true
-rivet-tunnel-protocol.workspace = true
 rivet-runtime.workspace = true
 rivet-util.workspace = true
 serde.workspace = true
