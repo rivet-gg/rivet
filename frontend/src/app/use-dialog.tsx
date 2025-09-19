@@ -6,4 +6,8 @@ d.CreateNamespace = createDialogHook(
 	import("@/app/dialogs/create-namespace-dialog"),
 );
 
+d.CreateProject = createDialogHook(
+	import("@/app/dialogs/create-project-dialog"),
+);
+
 export { d as useDialog };
