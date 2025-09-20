@@ -37,27 +37,16 @@ const UPS_REQ_TIMEOUT: Duration = Duration::from_secs(2);
 pub struct PegboardGateway {
 	ctx: StandaloneCtx,
 	shared_state: SharedState,
-	namespace_id: Id,
-	runner_name: String,
-	runner_key: String,
+	runner_id: Id,
 	actor_id: Id,
 }
 
 impl PegboardGateway {
-	pub fn new(
-		ctx: StandaloneCtx,
-		shared_state: SharedState,
-		namespace_id: Id,
-		runner_name: String,
-		runner_key: String,
-		actor_id: Id,
-	) -> Self {
+	pub fn new(ctx: StandaloneCtx, shared_state: SharedState, runner_id: Id, actor_id: Id) -> Self {
 		Self {
 			ctx,
 			shared_state,
-			namespace_id,
-			runner_name,
-			runner_key,
+			runner_id: Id,
 			actor_id,
 		}
 	}
@@ -151,12 +140,8 @@ impl PegboardGateway {
 			.to_bytes();
 
 		// Build subject to publish to
-		let tunnel_subject = pegboard::pubsub_subjects::TunnelRunnerReceiverSubject::new(
-			self.namespace_id,
-			&self.runner_name,
-			&self.runner_key,
-		)
-		.to_string();
+		let tunnel_subject =
+			pegboard::pubsub_subjects::TunnelRunnerReceiverSubject::new(self.runner_id).to_string();
 
 		// Start listening for request responses
 		let (request_id, mut msg_rx) = self
@@ -246,12 +231,8 @@ impl PegboardGateway {
 		}
 
 		// Build subject to publish to
-		let tunnel_subject = pegboard::pubsub_subjects::TunnelRunnerReceiverSubject::new(
-			self.namespace_id,
-			&self.runner_name,
-			&self.runner_key,
-		)
-		.to_string();
+		let tunnel_subject =
+			pegboard::pubsub_subjects::TunnelRunnerReceiverSubject::new(self.runner_id).to_string();
 
 		// Start listening for WebSocket messages
 		let (request_id, mut msg_rx) = self

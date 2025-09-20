@@ -12,7 +12,7 @@ use gas::prelude::*;
 use namespace::types::RunnerConfig;
 use pegboard::keys;
 use reqwest_eventsource as sse;
-use rivet_runner_protocol::protocol;
+use rivet_runner_protocol as protocol;
 use tokio::{sync::oneshot, task::JoinHandle, time::Duration};
 use universaldb::options::StreamingMode;
 use universaldb::utils::IsolationLevel::*;
