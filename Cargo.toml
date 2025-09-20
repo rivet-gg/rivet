@@ -227,7 +227,7 @@ version = "1.11.0"
 features = ["v4","serde"]
 
 [workspace.dependencies.tokio]
-version = "1.44.0"
+version = "1.47.1"
 features = ["full","tracing"]
 
 [workspace.dependencies.tokio-postgres]
