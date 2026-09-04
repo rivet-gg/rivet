@@ -73,7 +73,7 @@ export function createSynchronousTransactions(database: SqliteDatabase) {
 	};
 }
 
-function runSqliteTransactionSync<T>(
+export function runSqliteTransactionSync<T>(
 	database: SqliteDatabase,
 	callback: (transaction: SynchronousSqliteTransactionDatabase) => T,
 	options?: Omit<SqliteTransactionOptions, "experimental">,
@@ -174,6 +174,15 @@ export function toSqliteBindings(
 	}
 
 	throw new Error("unsupported sqlite binding collection");
+}
+
+export function normalizeSqliteBindings(
+	args: unknown[],
+): SqliteBindings | undefined {
+	if (args.length === 0) return undefined;
+	return args.length === 1 && isSqliteBindingObject(args[0])
+		? toSqliteBindings(args[0])
+		: toSqliteBindings(args);
 }
 
 /**

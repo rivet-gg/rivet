@@ -187,15 +187,32 @@ describeDriverMatrix(
 				const { client } = await setupDriverTest(c, driverTestConfig);
 
 				const actor = client.sleepWithDb.getOrCreate(["db-after-wake"]);
+				const observer = client.lifecycleObserver.getOrCreate([
+					"db-after-wake-observer",
+				]);
+				await actor.configureLifecycleObserver(
+					"db-after-wake-observer",
+				);
 
 				// Insert before sleep
 				await actor.insertLogEntry("before");
 
-				// Let it auto-sleep
-				await waitFor(driverTestConfig, SLEEP_DB_TIMEOUT + 250);
+				// Observe auto-sleep without calling the target actor and resetting its idle timer.
+				await vi.waitFor(
+					async () => {
+						expect(await observer.getEvents()).toContainEqual(
+							expect.objectContaining({
+								actorKey: "db-after-wake",
+								event: "sleep",
+							}),
+						);
+					},
+					{ timeout: 10_000, interval: 100 },
+				);
 
 				// Wake it by calling an action that uses the DB
 				await actor.insertLogEntry("after-wake");
+				expect((await actor.getCounts()).startCount).toBe(2);
 
 				const entries = await actor.getLogEntries();
 				const events = entries.map((e: { event: string }) => e.event);
