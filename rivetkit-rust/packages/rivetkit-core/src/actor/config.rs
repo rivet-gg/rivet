@@ -180,8 +180,34 @@ impl ActorTracingConfig {
 	}
 }
 
+/// Opt-in handoff after the handler exhausts its retry budget.
+#[derive(Clone, Debug, Default)]
+pub struct DeadLetterConfig {
+	pub stream: Option<String>,
+}
+
+/// Trusted DS connection. Endpoint is the full stream root, without credentials.
+#[derive(Clone)]
+pub struct InputStreamConfig {
+	pub dead_letters: std::collections::BTreeMap<String, DeadLetterConfig>,
+	pub primary: bool,
+	pub subscriptions:
+		std::collections::BTreeMap<String, super::stream_subscription::NamedStreamSubscription>,
+	pub endpoint: String,
+	pub token: Option<String>,
+}
+
+impl std::fmt::Debug for InputStreamConfig {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("InputStreamConfig")
+			.field("configured", &true)
+			.finish_non_exhaustive()
+	}
+}
+
 #[derive(Clone, Debug)]
 pub struct ActorConfig {
+	pub input_stream: Option<InputStreamConfig>,
 	pub name: Option<String>,
 	pub icon: Option<String>,
 	/// Whether the user declared a SQLite database for this actor (`db({...})`
@@ -224,6 +250,7 @@ pub struct ActorConfig {
 /// Sparse, serialization-friendly actor configuration. All fields are optional with millisecond integers instead of Duration. Used at runtime boundaries (NAPI, config files). Convert to ActorConfig via ActorConfig::from_input().
 #[derive(Clone, Debug, Default)]
 pub struct ActorConfigInput {
+	pub input_stream: Option<InputStreamConfig>,
 	pub name: Option<String>,
 	pub icon: Option<String>,
 	pub has_database: Option<bool>,
@@ -257,6 +284,7 @@ pub struct ActorConfigInput {
 impl ActorConfig {
 	pub fn from_input(config: ActorConfigInput) -> Self {
 		let mut actor_config = Self {
+			input_stream: config.input_stream,
 			name: config.name,
 			icon: config.icon,
 			has_database: config.has_database.unwrap_or(false),
@@ -350,6 +378,9 @@ impl ActorConfig {
 	/// etc.). Call this before constructing an `ActorFactory` from this
 	/// config so the actor never starts with garbage state.
 	pub fn validate(&self) -> anyhow::Result<()> {
+		if let Some(stream) = &self.input_stream {
+			stream.validate()?;
+		}
 		crate::inspector::validate_inspector_tabs(&self.inspector_tabs)?;
 		self.tracing.validate(&self.actions)?;
 		anyhow::ensure!(
@@ -377,6 +408,7 @@ impl ActorConfig {
 impl Default for ActorConfig {
 	fn default() -> Self {
 		Self {
+			input_stream: None,
 			name: None,
 			icon: None,
 			has_database: false,

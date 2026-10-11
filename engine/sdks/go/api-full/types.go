@@ -382,6 +382,8 @@ const (
 	AuthOperationKindList   AuthOperationKind = "list"
 	AuthOperationKindCreate AuthOperationKind = "create"
 	AuthOperationKindDelete AuthOperationKind = "delete"
+	AuthOperationKindAppend AuthOperationKind = "append"
+	AuthOperationKindClose  AuthOperationKind = "close"
 )
 
 func NewAuthOperationKindFromString(s string) (AuthOperationKind, error) {
@@ -396,6 +398,10 @@ func NewAuthOperationKindFromString(s string) (AuthOperationKind, error) {
 		return AuthOperationKindCreate, nil
 	case "delete":
 		return AuthOperationKindDelete, nil
+	case "append":
+		return AuthOperationKindAppend, nil
+	case "close":
+		return AuthOperationKindClose, nil
 	}
 	var t AuthOperationKind
 	return "", fmt.Errorf("%s is not a valid %T", s, t)
@@ -503,13 +509,15 @@ func (a *AuthTokenInspectResponse) String() string {
 type AuthTokenResource string
 
 const (
-	AuthTokenResourceNamespace    AuthTokenResource = "namespace"
-	AuthTokenResourceActor        AuthTokenResource = "actor"
-	AuthTokenResourceRunner       AuthTokenResource = "runner"
-	AuthTokenResourceRunnerConfig AuthTokenResource = "runner_config"
-	AuthTokenResourceDatacenter   AuthTokenResource = "datacenter"
-	AuthTokenResourceActorGateway AuthTokenResource = "actor_gateway"
-	AuthTokenResourceActorKv      AuthTokenResource = "actor_kv"
+	AuthTokenResourceNamespace     AuthTokenResource = "namespace"
+	AuthTokenResourceActor         AuthTokenResource = "actor"
+	AuthTokenResourceRunner        AuthTokenResource = "runner"
+	AuthTokenResourceRunnerConfig  AuthTokenResource = "runner_config"
+	AuthTokenResourceDatacenter    AuthTokenResource = "datacenter"
+	AuthTokenResourceActorGateway  AuthTokenResource = "actor_gateway"
+	AuthTokenResourceActorKv       AuthTokenResource = "actor_kv"
+	AuthTokenResourceActorStream   AuthTokenResource = "actor_stream"
+	AuthTokenResourceDurableStream AuthTokenResource = "durable_stream"
 )
 
 func NewAuthTokenResourceFromString(s string) (AuthTokenResource, error) {
@@ -528,6 +536,10 @@ func NewAuthTokenResourceFromString(s string) (AuthTokenResource, error) {
 		return AuthTokenResourceActorGateway, nil
 	case "actor_kv":
 		return AuthTokenResourceActorKv, nil
+	case "actor_stream":
+		return AuthTokenResourceActorStream, nil
+	case "durable_stream":
+		return AuthTokenResourceDurableStream, nil
 	}
 	var t AuthTokenResource
 	return "", fmt.Errorf("%s is not a valid %T", s, t)

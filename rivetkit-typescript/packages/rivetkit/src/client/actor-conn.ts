@@ -284,16 +284,19 @@ export class ActorConnRaw {
 		);
 	}
 
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	send(
 		name: string,
 		body: unknown,
 		options: QueueSendWaitOptions,
 	): Promise<QueueSendResult>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	send(
 		name: string,
 		body: unknown,
 		options?: QueueSendNoWaitOptions,
 	): Promise<void>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	send(
 		name: string,
 		body: unknown,

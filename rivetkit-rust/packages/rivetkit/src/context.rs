@@ -168,6 +168,37 @@ impl<A: Actor> Clone for Ctx<A> {
 }
 
 impl<A: Actor> Ctx<A> {
+	pub async fn stream_status(
+		&self,
+		source: rivetkit_core::actor::stream::StreamSource,
+	) -> Result<serde_json::Value> {
+		self.inner.stream_status(source).await
+	}
+	pub async fn stream_redrive(
+		&self,
+		message: serde_json::Value,
+		idempotency_key: &str,
+	) -> Result<serde_json::Value> {
+		let mut bytes = Vec::new();
+		ciborium::into_writer(
+			&serde_json::json!({"message":message,"idempotencyKey":idempotency_key}),
+			&mut bytes,
+		)?;
+		Ok(ciborium::from_reader(
+			self.inner.stream_redrive_cbor(&bytes).await?.as_slice(),
+		)?)
+	}
+	pub async fn stream_resume(
+		&self,
+		source: rivetkit_core::actor::stream::StreamSource,
+	) -> Result<()> {
+		self.inner.stream_resume(source).await
+	}
+	/// Append one JSON record to this actor's durable input stream.
+	pub async fn stream_append(&self, body: serde_json::Value) -> Result<()> {
+		self.inner.stream_append(body).await
+	}
+
 	pub fn new(inner: ActorContext) -> Self {
 		Self {
 			inner,
@@ -296,6 +327,9 @@ impl<A: Actor> Ctx<A> {
 		self.inner.sql()
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn queue(&self) -> Queue<'_, A> {
 		Queue::new(&self.inner)
 	}

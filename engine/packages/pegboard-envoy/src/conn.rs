@@ -35,6 +35,7 @@ pub struct Conn {
 	pub envoy_key: String,
 	pub envoy_conn_id: Id,
 	pub protocol_version: u16,
+	pub deployment_version: u32,
 	pub ws_handle: WebSocketHandle,
 	pub authorized_tunnel_routes: HashMap<(protocol::GatewayId, protocol::RequestId), ()>,
 	/// Tracks in-flight ToEnvoyWebSocketOpen sends so we can observe envoy-side
@@ -228,6 +229,7 @@ pub async fn init_conn(
 		envoy_key,
 		envoy_conn_id,
 		protocol_version,
+		deployment_version: version,
 		ws_handle,
 		authorized_tunnel_routes: HashMap::new(),
 		pending_websocket_opens: HashMap::new(),

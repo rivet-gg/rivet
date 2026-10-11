@@ -1,0 +1,8 @@
+type Receipt struct {
+    failureId: str
+    idempotencyKey: str
+    stream: str
+    nextOffset: str
+    bodyDigest: str
+    createdAt: i64
+}

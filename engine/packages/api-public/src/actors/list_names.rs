@@ -67,16 +67,24 @@ pub(crate) async fn list_names_inner(
 			|ctx, query| async move {
 				rivet_api_peer::actors::list_names::list_names(ctx, (), query).await
 			},
-			|_, res, agg| agg.extend(res.names),
+			|_, res, agg| {
+				for (name, actor) in res.names {
+					if let Some(existing) = agg.get_mut(&name) {
+						pegboard::actor_manifest::merge_sources(
+							&mut existing.metadata,
+							&actor.metadata,
+						);
+					} else {
+						agg.insert(name, actor);
+					}
+				}
+			},
 		)
-		.await?
-		.into_iter()
-		// Apply limit
-		.take(query.limit.unwrap_or(100))
-		.collect::<IndexMap<_, _>>();
+		.await?;
 
 	// Sort for consistency
 	all_names.sort_keys();
+	all_names.truncate(query.limit.unwrap_or(100));
 
 	let cursor = all_names.last().map(|(name, _)| name.to_string());
 

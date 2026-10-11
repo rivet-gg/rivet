@@ -264,6 +264,31 @@ function toNapiQueueMessage(message: NapiQueueMessage): RuntimeQueueMessage {
 }
 
 export class NapiCoreRuntime implements CoreRuntime {
+	async actorStreamStatus(
+		ctx: ActorContextHandle,
+		source: RuntimeBytes,
+	): Promise<RuntimeBytes> {
+		return asNativeActorContext(ctx).streamStatus(Buffer.from(source));
+	}
+	async actorStreamRedrive(
+		ctx: ActorContextHandle,
+		request: RuntimeBytes,
+	): Promise<RuntimeBytes> {
+		return asNativeActorContext(ctx).streamRedrive(Buffer.from(request));
+	}
+	async actorStreamResume(
+		ctx: ActorContextHandle,
+		source: RuntimeBytes,
+	): Promise<void> {
+		await asNativeActorContext(ctx).streamResume(Buffer.from(source));
+	}
+
+	async actorStreamAppend(
+		ctx: ActorContextHandle,
+		body: RuntimeBytes,
+	): Promise<void> {
+		await asNativeActorContext(ctx).streamAppend(Buffer.from(body));
+	}
 	readonly kind = "napi";
 
 	#bindings: NativeBindings;

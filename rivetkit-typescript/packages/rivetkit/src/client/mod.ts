@@ -83,3 +83,11 @@ export function createClient<A extends Registry<any>>(
 
 	return createClientWithDriver<A>(driver, config);
 }
+
+export type {
+	StreamSource,
+	StreamStatus,
+	StreamFailure,
+	DeadLetterMessage,
+	StreamRedriveReceipt,
+} from "@/actor/stream";

@@ -391,6 +391,44 @@ pub(crate) async fn dispatch_event(
 	let _ = dirty;
 
 	match event {
+		ActorEvent::StreamError {
+			subscription,
+			body,
+			cancel,
+			reply,
+		} => {
+			let Some(callback) = bindings.on_stream_error.clone() else {
+				reply.send(Ok(()));
+				return;
+			};
+			let ctx = ctx.clone();
+			spawn_reply(tasks, abort.clone(), reply, async move {
+				tokio::select! {
+					result=call_action(&callback,&ctx,None,None,subscription,body,None,Some(cancel.clone()))=>result.map(|_|()),
+					_=cancel.cancelled()=>Err(anyhow::anyhow!("Stream error callback canceled")),
+				}
+			});
+		}
+
+		ActorEvent::StreamMessage {
+			subscription,
+			body,
+			cancel,
+			reply,
+		} => {
+			let Some(callback) = bindings.on_stream_message.clone() else {
+				reply.send(Err(missing_callback("stream.onMessage")));
+				return;
+			};
+			let ctx = ctx.clone();
+			spawn_reply(tasks, abort.clone(), reply, async move {
+				tokio::select! {
+					result = call_action(&callback, &ctx, None, None, subscription, body, None,
+						Some(cancel.clone())) => result.map(|_| ()),
+					_ = cancel.cancelled() => Err(anyhow::anyhow!("Stream delivery canceled")),
+				}
+			});
+		}
 		ActorEvent::Action {
 			name,
 			args,

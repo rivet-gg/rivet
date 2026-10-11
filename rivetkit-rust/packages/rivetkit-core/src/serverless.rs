@@ -468,6 +468,7 @@ impl CoreServerlessRuntime {
 			.collect::<HashMap<_, _>>();
 
 		let payload = ServerlessMetadataPayload {
+			stream_subscriptions: true,
 			runtime: "rivetkit".to_owned(),
 			version: self.settings.package_version.clone(),
 			envoy_protocol_version: Some(protocol::PROTOCOL_VERSION),
@@ -580,7 +581,7 @@ impl CoreServerlessRuntime {
 			pool_name: headers.pool_name.clone(),
 			prepopulate_actor_names,
 			metadata: Some(json!({
-				"rivetkit": { "version": self.settings.package_version },
+				"rivetkit": { "version": self.settings.package_version, "streamSubscriptions": true },
 			})),
 			not_global: true,
 			debug_latency_ms: None,

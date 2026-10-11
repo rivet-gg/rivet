@@ -37,12 +37,44 @@ pub trait Actor: Send + Sync + Sized + 'static {
 	type Input: DeserializeOwned + Default + Send + 'static;
 	type Actions: ActionSet<Self>;
 	type Events: EventSet;
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	type Queue: QueueSet<Self>;
 	type ConnParams: DeserializeOwned + Default + Send + Sync + 'static;
 	type ConnState: Serialize + DeserializeOwned + Default + Send + Sync + Clone + 'static;
 	type Action: DeserializeOwned + Send + 'static;
 
 	const HAS_DATABASE: bool = false;
+
+	/// Handles one JSON input record when ActorConfig::input_stream is configured.
+	/// Dispatch a configured named subscription; primary keeps the original handler.
+	async fn on_subscription_message(
+		&self,
+		ctx: &Ctx<Self>,
+		subscription: &str,
+		body: serde_json::Value,
+	) -> Result<()> {
+		anyhow::ensure!(
+			subscription == "primary",
+			"No handler for stream subscription: {subscription}"
+		);
+		self.on_stream_message(ctx, body).await
+	}
+
+	async fn on_stream_message(&self, _ctx: &Ctx<Self>, _body: serde_json::Value) -> Result<()> {
+		bail!("stream.onMessage is not configured")
+	}
+
+	/// Called when a source exhausts its handler retries and pauses.
+	async fn on_stream_error(
+		&self,
+		_ctx: &Ctx<Self>,
+		_subscription: &str,
+		_failure: serde_json::Value,
+	) -> Result<()> {
+		Ok(())
+	}
 
 	/// Opts this actor into concurrent typed HTTP callbacks.
 	const CONCURRENT_HTTP_CALLBACKS: bool = false;

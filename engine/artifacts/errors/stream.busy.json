@@ -1,0 +1,5 @@
+{
+  "code": "busy",
+  "group": "stream",
+  "message": "Actor is already processing a stream wake."
+}

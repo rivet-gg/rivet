@@ -102,6 +102,14 @@ fn fixture(row_count: usize) -> Connection {
 	)
 	.expect("seed metadata");
 
+	for i in 0..1024 {
+		tx.execute(
+			"INSERT INTO _rivet_meta (key,value) VALUES (?,x'03')",
+			[format!("stream_checkpoint_v1_{i:064x}")],
+		)
+		.expect("seed stream progress cardinality");
+	}
+
 	let mut conn_insert = tx
 		.prepare("INSERT INTO _rivet_conns (conn_id, parameters, gateway_id, request_id, request_path, request_headers) VALUES (?, x'01', x'00000000', x'00000000', '/', x'01')")
 		.expect("prepare connection seed");
@@ -495,6 +503,12 @@ fn query_catalog() -> Vec<QueryCase> {
 			id: "meta.get",
 			sql: internal_storage::LOAD_META_TEXT_SQL.into(),
 			params: vec![text("fixture")],
+			expectation: indexed(None, &["_rivet_meta"]),
+		},
+		QueryCase {
+			id: "stream.checkpoint",
+			sql: internal_storage::LOAD_META_TEXT_SQL.into(),
+			params: vec![text("stream_checkpoint_v1_source_digest")],
 			expectation: indexed(None, &["_rivet_meta"]),
 		},
 		QueryCase {

@@ -27,6 +27,8 @@ pub(super) async fn task(
 					&ctx,
 					conn.namespace_id,
 					&conn.envoy_key,
+					&conn.pool_name,
+					conn.deployment_version,
 					metadata,
 				)
 				.await?;

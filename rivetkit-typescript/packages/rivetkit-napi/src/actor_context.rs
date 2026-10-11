@@ -439,6 +439,38 @@ impl ActorContext {
 	}
 
 	#[napi]
+	pub async fn stream_status(&self, source: Buffer) -> napi::Result<Buffer> {
+		self.inner()
+			.stream_status_cbor(source.as_ref())
+			.await
+			.map(Buffer::from)
+			.map_err(napi_anyhow_error)
+	}
+	#[napi]
+	pub async fn stream_redrive(&self, request: Buffer) -> napi::Result<Buffer> {
+		self.inner()
+			.stream_redrive_cbor(request.as_ref())
+			.await
+			.map(Buffer::from)
+			.map_err(napi_anyhow_error)
+	}
+	#[napi]
+	pub async fn stream_resume(&self, source: Buffer) -> napi::Result<()> {
+		self.inner()
+			.stream_resume_cbor(source.as_ref())
+			.await
+			.map_err(napi_anyhow_error)
+	}
+
+	#[napi]
+	pub async fn stream_append(&self, body: Buffer) -> napi::Result<()> {
+		self.inner()
+			.stream_append_cbor(body.as_ref())
+			.await
+			.map_err(napi_anyhow_error)
+	}
+
+	#[napi]
 	pub fn decode_inspector_request(
 		&self,
 		bytes: Buffer,

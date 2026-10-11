@@ -7,8 +7,8 @@ import * as Rivet from "../../api/index";
 import * as core from "../../core";
 
 export const AuthOperationKind: core.serialization.Schema<serializers.AuthOperationKind.Raw, Rivet.AuthOperationKind> =
-    core.serialization.enum_(["read", "update", "list", "create", "delete"]);
+    core.serialization.enum_(["read", "update", "list", "create", "delete", "append", "close"]);
 
 export declare namespace AuthOperationKind {
-    export type Raw = "read" | "update" | "list" | "create" | "delete";
+    export type Raw = "read" | "update" | "list" | "create" | "delete" | "append" | "close";
 }

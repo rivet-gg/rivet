@@ -14,12 +14,18 @@ use serde::{Serialize, de::DeserializeOwned};
 use crate::{actor::Actor, context::Ctx};
 pub(crate) type BoxQueueFuture = Pin<Box<dyn Future<Output = Result<Option<Vec<u8>>>> + Send>>;
 
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub trait QueueMessage: Serialize + DeserializeOwned + Send + Sync + 'static {
 	type Reply: Serialize + DeserializeOwned + Send + 'static;
 
 	const NAME: &'static str;
 }
 
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub trait HandlesQueue<M: QueueMessage>: Actor + Sized {
 	type Future: Future<Output = Result<M::Reply>> + Send + 'static;
 
@@ -27,12 +33,16 @@ pub trait HandlesQueue<M: QueueMessage>: Actor + Sized {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub struct QueueEntry<A: Actor> {
 	pub name: &'static str,
 	_p: PhantomData<fn() -> A>,
 }
 
 impl<A: Actor> QueueEntry<A> {
+	#[deprecated(note = "Queues are deprecated. Use actor streams.")]
 	pub const fn new(name: &'static str) -> Self {
 		Self {
 			name,
@@ -41,6 +51,9 @@ impl<A: Actor> QueueEntry<A> {
 	}
 }
 
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub trait QueueSet<A: Actor>: Send + Sync + 'static {
 	fn entries() -> Vec<QueueEntry<A>>;
 	fn dispatch(actor: Arc<A>, ctx: Ctx<A>, name: &str, body: &[u8]) -> Option<BoxQueueFuture>;
@@ -118,55 +131,91 @@ impl_queue_set!(
 /// [`QueueMessage`] bodies are raw bytes that the caller decodes against their own
 /// schema, matching how queued messages arrive through the event loop as
 /// `RuntimeEvent::QueueSend`.
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub struct Queue<'a, A: Actor> {
 	inner: &'a ActorContext,
 	_p: PhantomData<fn() -> A>,
 }
 
 #[derive(Debug, Clone)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub struct TypedQueueMessage<M: QueueMessage> {
 	inner: CoreQueueMessage,
 	body: M,
 }
 
 impl<M: QueueMessage> TypedQueueMessage<M> {
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn id(&self) -> u64 {
 		self.inner.id
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn name(&self) -> &str {
 		&self.inner.name
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn body(&self) -> &M {
 		&self.body
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn created_at(&self) -> i64 {
 		self.inner.created_at
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn is_completable(&self) -> bool {
 		self.inner.is_completable()
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn into_body(self) -> M {
 		self.body
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn as_core(&self) -> &CoreQueueMessage {
 		&self.inner
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn into_core(self) -> CoreQueueMessage {
 		self.inner
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn complete(self, reply: M::Reply) -> Result<()> {
 		self.complete_raw(Some(encode_cbor(&reply, "queue message reply")?))
 			.await
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn complete_raw(self, response: Option<Vec<u8>>) -> Result<()> {
 		self.inner.complete(response).await
 	}
@@ -181,18 +230,27 @@ impl<'a, A: Actor> Queue<'a, A> {
 	}
 
 	/// Enqueues a message with a CBOR-encoded body.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn send<T: Serialize>(&self, name: &str, body: &T) -> Result<CoreQueueMessage> {
 		self.send_raw(name, &encode_cbor(body, "queue message body")?)
 			.await
 	}
 
 	/// Enqueues a message with a raw byte body.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn send_raw(&self, name: &str, body: &[u8]) -> Result<CoreQueueMessage> {
 		self.inner.send(name, body).await
 	}
 
 	/// Enqueues a message with a CBOR-encoded body and waits for the consumer to
 	/// complete it, returning the raw completion response if any.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn enqueue_and_wait<T: Serialize>(
 		&self,
 		name: &str,
@@ -204,6 +262,9 @@ impl<'a, A: Actor> Queue<'a, A> {
 	}
 
 	/// Enqueues a raw-body message and waits for its completion response.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn enqueue_and_wait_raw(
 		&self,
 		name: &str,
@@ -214,11 +275,17 @@ impl<'a, A: Actor> Queue<'a, A> {
 	}
 
 	/// Awaits the next queued message, optionally bounded by the opts timeout.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn next(&self, opts: QueueNextOpts) -> Result<Option<CoreQueueMessage>> {
 		self.inner.next(opts).await
 	}
 
 	/// Awaits the next queued message matching `M::NAME` and decodes its CBOR body.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn next_typed<M: QueueMessage>(
 		&self,
 		opts: QueueNextOpts,
@@ -231,11 +298,17 @@ impl<'a, A: Actor> Queue<'a, A> {
 	}
 
 	/// Awaits up to `opts.count` queued messages.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn next_batch(&self, opts: QueueNextBatchOpts) -> Result<Vec<CoreQueueMessage>> {
 		self.inner.next_batch(opts).await
 	}
 
 	/// Awaits up to `opts.count` queued messages matching `M::NAME`.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn next_batch_typed<M: QueueMessage>(
 		&self,
 		opts: QueueNextBatchOpts,
@@ -249,11 +322,17 @@ impl<'a, A: Actor> Queue<'a, A> {
 	}
 
 	/// Returns the next queued message if one is immediately available.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn try_next(&self, opts: QueueTryNextOpts) -> Result<Option<CoreQueueMessage>> {
 		self.inner.try_next(opts)
 	}
 
 	/// Returns the next queued message matching `M::NAME` if one is immediately available.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn try_next_typed<M: QueueMessage>(
 		&self,
 		opts: QueueTryNextOpts,
@@ -265,11 +344,17 @@ impl<'a, A: Actor> Queue<'a, A> {
 	}
 
 	/// Returns immediately-available queued messages up to `opts.count`.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn try_next_batch(&self, opts: QueueTryNextBatchOpts) -> Result<Vec<CoreQueueMessage>> {
 		self.inner.try_next_batch(opts)
 	}
 
 	/// Returns immediately-available queued messages matching `M::NAME`.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn try_next_batch_typed<M: QueueMessage>(
 		&self,
 		opts: QueueTryNextBatchOpts,
@@ -282,11 +367,17 @@ impl<'a, A: Actor> Queue<'a, A> {
 	}
 
 	/// Lists the currently persisted queue messages without consuming them.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub async fn inspect_messages(&self) -> Result<Vec<CoreQueueMessage>> {
 		self.inner.inspect_messages().await
 	}
 
 	/// Returns the configured maximum queue size.
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 	pub fn max_size(&self) -> u32 {
 		self.inner.max_size()
 	}

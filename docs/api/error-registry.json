@@ -1561,6 +1561,48 @@
 			]
 		},
 		{
+			"name": "stream",
+			"description": null,
+			"errors": [
+				{
+					"code": "busy",
+					"message": "Actor is already processing a stream wake.",
+					"statuses": [
+						{
+							"status": 409,
+							"surfaces": [
+								"gateway"
+							]
+						}
+					]
+				},
+				{
+					"code": "invalid_wake",
+					"message": "Invalid stream wake notification.",
+					"statuses": [
+						{
+							"status": 401,
+							"surfaces": [
+								"gateway"
+							]
+						}
+					]
+				},
+				{
+					"code": "not_configured",
+					"message": "Actor input stream is not configured.",
+					"statuses": [
+						{
+							"status": 404,
+							"surfaces": [
+								"gateway"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "ups",
 			"description": null,
 			"errors": [

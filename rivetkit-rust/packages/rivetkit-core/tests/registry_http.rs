@@ -423,3 +423,20 @@ mod moved_tests {
 		assert_eq!(decoded.metadata, None);
 	}
 }
+
+#[test]
+fn internal_stream_paths_are_framework_owned_even_under_raw_requests() {
+	for prefix in ["", "/request"] {
+		for (name, wake) in [("append", false), ("wake", true)] {
+			let path = format!("{prefix}/internal/streams/{name}");
+			assert!(
+				matches!(RegistryHttpRoute::from_paths(&path,&path,false).unwrap(), RegistryHttpRoute::Framework(FrameworkHttpRoute::Stream(value)) if value == wake)
+			);
+		}
+		let path = format!("{prefix}/internal/user-handler");
+		assert!(matches!(
+			RegistryHttpRoute::from_paths(&path, &path, false).unwrap(),
+			RegistryHttpRoute::Framework(FrameworkHttpRoute::NotFound)
+		));
+	}
+}

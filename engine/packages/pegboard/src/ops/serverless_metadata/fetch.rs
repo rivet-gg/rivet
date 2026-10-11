@@ -124,6 +124,7 @@ impl From<ServerlessMetadataError> for ServerlessMetadataErrorEnvelope {
 
 #[derive(Debug, Clone)]
 pub struct Output {
+	pub stream_subscriptions: bool,
 	pub runtime: String,
 	pub version: String,
 	pub envoy_protocol_version: Option<u16>,
@@ -257,6 +258,7 @@ pub async fn pegboard_serverless_metadata_fetch(
 	};
 
 	let ServerlessMetadataPayload {
+		stream_subscriptions,
 		runtime,
 		version,
 		envoy_protocol_version,
@@ -308,6 +310,7 @@ pub async fn pegboard_serverless_metadata_fetch(
 		.collect();
 
 	Ok(Ok(Output {
+		stream_subscriptions,
 		runtime,
 		version: trimmed_version.to_owned(),
 		envoy_protocol_version,

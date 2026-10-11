@@ -3,7 +3,7 @@
  */
 
 export type AuthTokenResource =
-    "namespace" | "actor" | "runner" | "runner_config" | "datacenter" | "actor_gateway" | "actor_kv";
+    "namespace" | "actor" | "runner" | "runner_config" | "datacenter" | "actor_gateway" | "actor_kv" | "actor_stream" | "durable_stream";
 export const AuthTokenResource = {
     Namespace: "namespace",
     Actor: "actor",
@@ -12,4 +12,6 @@ export const AuthTokenResource = {
     Datacenter: "datacenter",
     ActorGateway: "actor_gateway",
     ActorKv: "actor_kv",
+    ActorStream: "actor_stream",
+    DurableStream: "durable_stream",
 } as const;

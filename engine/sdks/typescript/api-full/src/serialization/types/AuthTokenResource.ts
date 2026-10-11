@@ -15,8 +15,10 @@ export const AuthTokenResource: core.serialization.Schema<serializers.AuthTokenR
         "datacenter",
         "actor_gateway",
         "actor_kv",
+        "actor_stream",
+        "durable_stream",
     ]);
 
 export declare namespace AuthTokenResource {
-    export type Raw = "namespace" | "actor" | "runner" | "runner_config" | "datacenter" | "actor_gateway" | "actor_kv";
+    export type Raw = "namespace" | "actor" | "runner" | "runner_config" | "datacenter" | "actor_gateway" | "actor_kv" | "actor_stream" | "durable_stream";
 }

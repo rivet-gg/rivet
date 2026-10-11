@@ -2,6 +2,7 @@
 
 mod check;
 mod scope;
+pub mod streams;
 
 pub use check::{
 	AuthenticatedCredential, CheckInput, CredentialKind, JwtCredential, RequestAuthState,

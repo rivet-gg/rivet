@@ -20,6 +20,56 @@ fn actor_metadata_does_not_request_legacy_kv_preload_probes() {
 	);
 }
 
+#[test]
+fn actor_metadata_exports_primary_subscription_without_activating_actor() {
+	let mut factories = HashMap::new();
+	let config = ActorConfig {
+		name: Some("Customer display name".into()),
+		input_stream: Some(crate::actor::config::InputStreamConfig {
+			dead_letters: Default::default(),
+			primary: true,
+			subscriptions: Default::default(),
+			endpoint: "https://streams.gameinc.io/v1/stream".into(),
+			token: Some("test-management-secret".into()),
+		}),
+		..Default::default()
+	};
+	factories.insert(
+		"customer".to_owned(),
+		Arc::new(ActorFactory::new(config, |_| {
+			panic!("metadata publication must not start actors")
+		})),
+	);
+	let metadata = build_actor_metadata_map_from_factories(&factories);
+	assert_eq!(
+		metadata["customer"]["streamSubscriptions"],
+		json!({
+			"primary": {
+				"stream": "/actors/customer/:actorId",
+				"destination": {"actorId": {"actorName": "customer", "id": ":actorId"}}
+			}
+		})
+	);
+	assert_eq!(metadata["customer"]["name"], "Customer display name");
+	assert!(
+		!serde_json::to_string(&metadata)
+			.unwrap()
+			.contains("test-management-secret")
+	);
+}
+
+#[test]
+fn actor_metadata_exports_empty_subscription_set_for_removal() {
+	let factories = HashMap::from([(
+		"customer".into(),
+		Arc::new(ActorFactory::new(ActorConfig::default(), |_| {
+			panic!("metadata publication must not start actors")
+		})),
+	)]);
+	let metadata = build_actor_metadata_map_from_factories(&factories);
+	assert_eq!(metadata["customer"]["streamSubscriptions"], json!({}));
+}
+
 fn is_actor_active(state: Option<&ActorInstanceState>) -> bool {
 	matches!(state, Some(ActorInstanceState::Active(_)))
 }

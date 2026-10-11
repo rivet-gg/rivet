@@ -57,6 +57,10 @@ fn counter_factory() -> ActorFactory {
 			let mut events = start.events;
 			while let Some(event) = events.recv().await {
 				match event {
+					ActorEvent::StreamMessage { reply, .. }
+					| ActorEvent::StreamError { reply, .. } => {
+						reply.send(Err(anyhow::anyhow!("streams are not handled")));
+					}
 					ActorEvent::Action {
 						name,
 						args: _,

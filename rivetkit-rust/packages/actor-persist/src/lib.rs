@@ -75,3 +75,9 @@ impl Default for generated::v4::QueueMessage {
 		}
 	}
 }
+
+pub mod stream_checkpoint;
+
+pub const STREAM_CHECKPOINT_VERSION: u16 = 2;
+
+pub mod stream_redrive;

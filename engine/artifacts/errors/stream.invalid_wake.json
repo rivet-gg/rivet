@@ -1,0 +1,5 @@
+{
+  "code": "invalid_wake",
+  "group": "stream",
+  "message": "Invalid stream wake notification."
+}
