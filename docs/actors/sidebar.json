@@ -73,10 +73,18 @@
 					"icon": "faTowerBroadcast"
 				},
 				{
-					"title": "Queues",
+					"title": "Streams",
+					"href": "/actors/docs/streams"
+				},
+				{
+					"title": "Queues (Deprecated)",
 					"href": "/actors/docs/queues",
 					"icon": "faMailbox"
 				},
+                {
+                    "title": "Migrate Queues to Streams",
+                    "href": "/actors/docs/migrate-queues-to-streams"
+                },
 				{
 					"title": "Schedule & Cron",
 					"href": "/actors/docs/schedule",

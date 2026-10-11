@@ -234,6 +234,7 @@ pub struct WasmActorConfig {
 impl From<WasmActorConfig> for ActorConfigInput {
 	fn from(config: WasmActorConfig) -> Self {
 		Self {
+			input_stream: None,
 			name: config.name,
 			icon: config.icon,
 			has_database: config.has_database,
@@ -721,6 +722,11 @@ async fn run_preamble(
 
 async fn dispatch_event(callbacks: &WasmCallbacks, ctx: &WasmActorContext, event: ActorEvent) {
 	match event {
+		ActorEvent::StreamMessage { reply, .. } | ActorEvent::StreamError { reply, .. } => {
+			reply.send(Err(anyhow::anyhow!(
+				"Actor streams require the native runtime"
+			)));
+		}
 		ActorEvent::Action {
 			name,
 			args,

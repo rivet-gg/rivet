@@ -11,6 +11,7 @@ export interface EventTypeToken<T, TContext = any> {
 	readonly schema?: PrimitiveSchema;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface QueueTypeToken<TMessage, TComplete = never, TContext = any> {
 	readonly _queueMessage?: TMessage;
 	readonly _queueComplete?: TComplete;
@@ -39,6 +40,7 @@ export function event<T, TContext = any>(
 	return (options ?? {}) as EventTypeToken<T, TContext>;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export function queue<TMessage, TComplete = never, TContext = any>(
 	options?: QueueOptions<TContext>,
 ): QueueTypeToken<TMessage, TComplete, TContext> {
@@ -52,6 +54,7 @@ export interface EventSchemaDefinition<TContext = any> {
 	canSubscribe?: SchemaHook<TContext>;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface QueueSchemaDefinition<TContext = any> {
 	message: PrimitiveSchema;
 	complete?: PrimitiveSchema;
@@ -61,6 +64,7 @@ export interface QueueSchemaDefinition<TContext = any> {
 export type EventSchema<TContext = any> =
 	| PrimitiveSchema
 	| EventSchemaDefinition<TContext>;
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export type QueueSchema =
 	| PrimitiveSchema
 	| QueueSchemaDefinition<any>
@@ -69,6 +73,7 @@ export type EventSchemaConfig<TContext = any> = Record<
 	string,
 	EventSchema<TContext>
 >;
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export type QueueSchemaConfig<_TContext = any> = Record<string, QueueSchema>;
 export type AnySchemaConfig = EventSchemaConfig | QueueSchemaConfig;
 
@@ -94,6 +99,7 @@ export type InferSchemaMap<T extends Record<string, unknown>> = {
 	[K in keyof T]: InferSchema<T[K]>;
 };
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export type InferQueueComplete<T> =
 	T extends QueueTypeToken<unknown, infer C, any>
 		? [C] extends [never]
@@ -105,6 +111,7 @@ export type InferQueueComplete<T> =
 				: never
 			: never;
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export type InferQueueCompleteMap<T extends QueueSchemaConfig> = {
 	[K in keyof T]: InferQueueComplete<T[K]>;
 };
@@ -123,6 +130,7 @@ export function isStandardSchema(value: unknown): value is StandardSchemaV1 {
 	return typeof value === "object" && value !== null && "~standard" in value;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export function isQueueSchemaDefinition(
 	value: unknown,
 ): value is QueueSchemaDefinition<any> {
@@ -174,6 +182,7 @@ export function getEventCanSubscribe<TContext = any>(
 		: undefined;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export function getQueueCanPublish<TContext = any>(
 	schemas: QueueSchemaConfig | undefined,
 	key: string,

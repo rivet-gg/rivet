@@ -1,6 +1,5 @@
 use anyhow::Result;
 use gas::prelude::*;
-use rivet_data::converted::ActorNameKeyData;
 use rivet_types::actor::RunnerPoolError;
 use std::collections::HashMap;
 use universaldb::prelude::*;
@@ -83,30 +82,34 @@ pub async fn pegboard_runner_config_refresh_metadata(
 		.await?;
 	}
 
-	// Update actor names in DB if present
-	if !metadata.actor_names.is_empty() {
-		ctx.udb()?
-			.txn("pegboard_runner_config_write_actor_names", |tx| {
-				let metadata = &metadata;
-				let namespace_id = input.namespace_id;
-				async move {
-					let tx = tx.with_subspace(keys::subspace());
-
-					for entry in &metadata.actor_names {
-						tx.write(
-							&keys::ns::ActorNameKey::new(namespace_id, entry.name.clone()),
-							ActorNameKeyData {
-								metadata: entry.metadata.clone(),
-							},
-						)?;
-					}
-
-					Ok(())
-				}
-			})
-			.custom_instrument(tracing::info_span!("actor_name_upsert_batch_tx"))
-			.await?;
-	}
+	// Full manifest, including an empty set, removes declarations from old deployments.
+	ctx.udb()?
+		.txn("pegboard_runner_config_write_actor_names", |tx| {
+			let metadata = &metadata;
+			async move {
+				let tx = tx.with_subspace(keys::subspace());
+				crate::actor_manifest::publish(
+					&tx,
+					input.namespace_id,
+					&input.runner_name,
+					&crate::actor_manifest::Manifest {
+						supports_stream_subscriptions: metadata.stream_subscriptions,
+						version: metadata
+							.envoy_version
+							.or(metadata.runner_version)
+							.unwrap_or_default(),
+						rivetkit_version: Some(metadata.version.clone()),
+						actor_names: metadata
+							.actor_names
+							.iter()
+							.map(|entry| (entry.name.clone(), entry.metadata.clone()))
+							.collect(),
+					},
+				)
+				.await
+			}
+		})
+		.await?;
 
 	Ok(Ok(metadata))
 }

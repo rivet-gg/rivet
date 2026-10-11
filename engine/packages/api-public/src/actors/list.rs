@@ -42,25 +42,55 @@ use crate::{actors::utils::fetch_actors_by_ids, ctx::ApiCtx, errors};
 	),
 	security(("bearer_auth" = [])),
 )]
-pub async fn list(Extension(ctx): Extension<ApiCtx>, Query(query): Query<ListQuery>) -> Response {
-	match list_inner(ctx, query).await {
+pub async fn list(
+	Extension(ctx): Extension<ApiCtx>,
+	Query(query): Query<ListQuery>,
+	headers: axum::http::HeaderMap,
+) -> Response {
+	match list_inner(ctx, query, headers).await {
 		Ok(response) => Json(response).into_response(),
 		Err(err) => ApiError::from(err).into_response(),
 	}
 }
 
-async fn list_inner(ctx: ApiCtx, query: ListQuery) -> Result<ListResponse> {
-	ctx.auth(
-		AccessNamespaceScope::Name(query.namespace.clone()),
-		ResourceKind::Actor,
-		TargetScope::Any,
-		if query.actor_ids.is_none() && query.actor_id.is_empty() && query.key.is_none() {
-			OperationKind::List
-		} else {
-			OperationKind::Read
-		},
-	)
-	.await?;
+async fn list_inner(
+	ctx: ApiCtx,
+	query: ListQuery,
+	headers: axum::http::HeaderMap,
+) -> Result<ListResponse> {
+	let stream_lookup = if headers.contains_key(rivet_auth::streams::PATH_HEADER) {
+		anyhow::ensure!(
+			query.actor_ids.is_none()
+				&& query.actor_id.is_empty()
+				&& !query.include_destroyed.unwrap_or(false)
+				&& query.cursor.is_none(),
+			"Stream lookup requires one active storage key"
+		);
+		super::stream_access::authorize(
+			&ctx,
+			&query.namespace,
+			query.name.as_deref().unwrap_or(""),
+			query.key.as_deref().unwrap_or(""),
+			&headers,
+			None,
+		)
+		.await?
+	} else {
+		false
+	};
+	if !stream_lookup {
+		ctx.auth(
+			AccessNamespaceScope::Name(query.namespace.clone()),
+			ResourceKind::Actor,
+			TargetScope::Any,
+			if query.actor_ids.is_none() && query.actor_id.is_empty() && query.key.is_none() {
+				OperationKind::List
+			} else {
+				OperationKind::Read
+			},
+		)
+		.await?;
+	}
 
 	// Parse query
 	let actor_ids = [

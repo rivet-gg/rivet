@@ -2728,6 +2728,73 @@ class NativeConnectionMap implements ReadonlyMap<string, NativeConnAdapter> {
 const NO_INVOCATION_SCOPE = {};
 
 export class ActorContextHandleAdapter {
+	get stream() {
+		return {
+			status: async (
+				source: import("@/actor/stream").StreamSource = {},
+			): Promise<import("@/actor/stream").StreamStatus> => {
+				if (!this.#runtime.actorStreamStatus)
+					throw new RivetError(
+						"stream",
+						"not_configured",
+						"Actor streams require the native runtime.",
+					);
+				return decodeCborCompat(
+					await this.#runtime.actorStreamStatus(
+						this.#ctx,
+						encodeCborCompat(source as JsonCompatValue),
+					),
+				) as unknown as import("@/actor/stream").StreamStatus;
+			},
+			redrive: async (
+				message: import("@/actor/stream").DeadLetterMessage,
+				options: { idempotencyKey: string },
+			): Promise<import("@/actor/stream").StreamRedriveReceipt> => {
+				if (!this.#runtime.actorStreamRedrive)
+					throw new RivetError(
+						"stream",
+						"not_configured",
+						"Actor streams require the native runtime.",
+					);
+				return decodeCborCompat(
+					await this.#runtime.actorStreamRedrive(
+						this.#ctx,
+						encodeCborCompat({
+							message,
+							...options,
+						} as unknown as JsonCompatValue),
+					),
+				) as unknown as import("@/actor/stream").StreamRedriveReceipt;
+			},
+			resume: async (
+				source: import("@/actor/stream").StreamSource = {},
+			): Promise<void> => {
+				if (!this.#runtime.actorStreamResume)
+					throw new RivetError(
+						"stream",
+						"not_configured",
+						"Actor streams require the native runtime.",
+					);
+				await this.#runtime.actorStreamResume(
+					this.#ctx,
+					encodeCborCompat(source as JsonCompatValue),
+				);
+			},
+			append: async (body: unknown): Promise<void> => {
+				if (!this.#runtime.actorStreamAppend)
+					throw new RivetError(
+						"stream",
+						"not_configured",
+						"Actor streams require the native runtime.",
+					);
+				assertJsonCompatValue(body);
+				await this.#runtime.actorStreamAppend(
+					this.#ctx,
+					encodeCborCompat(body as JsonCompatValue),
+				);
+			},
+		};
+	}
 	#runtime: CoreRuntime;
 	#ctx: ActorContextHandle;
 	#schemas: NativeValidationConfig;
@@ -3902,6 +3969,16 @@ function buildActorConfig(
 	runtimeKind: "napi" | "wasm",
 ): RuntimeActorConfig {
 	const config = definition.config as unknown as Record<string, unknown>;
+	if (
+		(config.stream || config.subscriptions) &&
+		(!registryConfig.durableStreams || runtimeKind !== "napi")
+	) {
+		throw new RivetError(
+			"stream",
+			"not_configured",
+			"Actor streams require the native runtime and setup({ durableStreams: { endpoint } }).",
+		);
+	}
 	const options = (config.options ?? {}) as Record<string, unknown>;
 	const canHibernate = options.canHibernateWebSocket;
 	const usesRemoteSqlite =
@@ -3912,6 +3989,43 @@ function buildActorConfig(
 
 	return {
 		name: options.name as string | undefined,
+		inputStream:
+			config.stream || config.subscriptions
+				? {
+						...registryConfig.durableStreams!,
+						primary: !!config.stream,
+						deadLetters: Object.fromEntries(
+							Object.entries({
+								...(config.subscriptions ?? {}),
+								...(config.stream
+									? { primary: config.stream }
+									: {}),
+							}).flatMap(([name, sub]) => {
+								const option = (
+									sub as {
+										deadLetter?:
+											| boolean
+											| { stream: string };
+									}
+								).deadLetter;
+								return option
+									? [[name, option === true ? {} : option]]
+									: [];
+							}),
+						),
+						subscriptions: Object.fromEntries(
+							Object.entries(
+								(config.subscriptions ?? {}) as Record<
+									string,
+									{ stream: string; actorKey: string[] }
+								>,
+							).map(([name, sub]) => [
+								name,
+								{ stream: sub.stream, actorKey: sub.actorKey },
+							]),
+						),
+					}
+				: undefined,
 		icon: options.icon as string | undefined,
 		hasDatabase: true,
 		remoteSqlite: usesRemoteSqlite,
@@ -4627,6 +4741,87 @@ export function buildNativeFactory(
 		}
 	};
 	const callbacks = {
+		onStreamError:
+			config.stream || config.subscriptions
+				? wrapNativeCallback(
+						async (
+							error: unknown,
+							payload: {
+								ctx: ActorContextHandle;
+								name: string;
+								args: RuntimeBytes;
+								cancelToken?: CancellationTokenHandle;
+							},
+						) => {
+							const { ctx, name, args, cancelToken } =
+								unwrapTsfnPayload(error, payload);
+							const actorCtx = makeActorCtx(
+								ctx,
+								undefined,
+								cancelToken,
+							);
+							try {
+								const handler =
+									name === "primary"
+										? config.stream
+										: config.subscriptions?.[name];
+								await handler?.onError?.(
+									actorCtx,
+									decodeCborCompat(args),
+								);
+								return encodeValue(null);
+							} finally {
+								await actorCtx.dispose();
+							}
+						},
+					)
+				: undefined,
+		onStreamMessage:
+			config.stream || config.subscriptions
+				? wrapNativeCallback(
+						async (
+							error: unknown,
+							payload: {
+								ctx: ActorContextHandle;
+								name: string;
+								args: RuntimeBytes;
+								cancelToken?: CancellationTokenHandle;
+							},
+						) => {
+							const { ctx, args, name, cancelToken } =
+								unwrapTsfnPayload(error, payload);
+							const actorCtx = makeActorCtx(
+								ctx,
+								undefined,
+								cancelToken,
+							);
+							try {
+								const handler =
+									name === "primary"
+										? config.stream
+										: config.subscriptions?.[name];
+								if (!handler)
+									throw new RivetError(
+										"stream",
+										"not_configured",
+										"Stream subscription handler is not configured.",
+									);
+								const value = decodeCborCompat(args);
+								const body = handler.schema
+									? await handler.schema.parseAsync(value)
+									: value;
+								await handler.onMessage(
+									actorCtx,
+									{ body },
+									{ signal: actorCtx.abortSignal },
+								);
+								return encodeValue(null);
+							} finally {
+								await actorCtx.dispose();
+							}
+						},
+					)
+				: undefined,
 		createState:
 			hasStaticState || typeof config.createState === "function"
 				? wrapNativeCallback(

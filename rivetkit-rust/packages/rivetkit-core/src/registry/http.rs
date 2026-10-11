@@ -158,6 +158,174 @@ impl RegistryDispatcher {
 	) -> Result<HttpResponse> {
 		let actor = actor_specifier_for_instance(instance);
 		match route {
+			FrameworkHttpRoute::StreamRedrive => {
+				if request.method() != http::Method::POST {
+					return text_response(StatusCode::METHOD_NOT_ALLOWED, "Expected POST");
+				}
+				#[cfg(feature = "native-runtime")]
+				{
+					if request.body().len()
+						> instance.factory.config().max_incoming_message_size as usize
+					{
+						return text_response(StatusCode::PAYLOAD_TOO_LARGE, "Input too large");
+					}
+					let body = match serde_json::from_slice(request.body()) {
+						Ok(body) => body,
+						Err(_) => {
+							return text_response(
+								StatusCode::BAD_REQUEST,
+								"Expected a redrive request",
+							);
+						}
+					};
+					let token = request
+						.headers()
+						.get("x-rivet-token")
+						.and_then(|v| v.to_str().ok())
+						.or_else(|| {
+							request
+								.headers()
+								.get("authorization")
+								.and_then(|v| v.to_str().ok())
+								.and_then(|v| v.strip_prefix("Bearer "))
+						});
+					match instance.ctx.stream_redrive_authenticated(body, token).await {
+						Ok(value) => bytes_response(
+							StatusCode::OK,
+							"application/json",
+							serde_json::to_vec(&value)?,
+						),
+						Err(error) => framework_anyhow_error_response_with_actor(
+							request_encoding(request.headers()),
+							error,
+							Some(&actor),
+						),
+					}
+				}
+				#[cfg(not(feature = "native-runtime"))]
+				text_response(
+					StatusCode::NOT_IMPLEMENTED,
+					"Actor streams require the native runtime",
+				)
+			}
+			FrameworkHttpRoute::StreamControl(resume) => {
+				if request.method() != http::Method::POST {
+					return text_response(StatusCode::METHOD_NOT_ALLOWED, "Expected POST");
+				}
+				#[cfg(feature = "native-runtime")]
+				{
+					let source = match serde_json::from_slice::<crate::actor::stream::StreamSource>(
+						request.body(),
+					) {
+						Ok(source) => source,
+						Err(_) => {
+							return text_response(
+								StatusCode::BAD_REQUEST,
+								"Expected a stream source",
+							);
+						}
+					};
+					let result = if resume {
+						instance
+							.ctx
+							.stream_resume(source)
+							.await
+							.map(|_| serde_json::json!({"resumed":true}))
+					} else {
+						instance.ctx.stream_status(source).await
+					};
+					match result {
+						Ok(value) => bytes_response(
+							StatusCode::OK,
+							"application/json",
+							serde_json::to_vec(&value).expect("JSON status"),
+						),
+						Err(error) => framework_anyhow_error_response_with_actor(
+							request_encoding(request.headers()),
+							error,
+							Some(&actor),
+						),
+					}
+				}
+				#[cfg(not(feature = "native-runtime"))]
+				{
+					let _ = resume;
+					text_response(
+						StatusCode::NOT_IMPLEMENTED,
+						"Actor streams require the native runtime",
+					)
+				}
+			}
+
+			FrameworkHttpRoute::Stream(wake) => {
+				#[cfg(feature = "native-runtime")]
+				{
+					if request.method() != http::Method::POST {
+						return text_response(StatusCode::METHOD_NOT_ALLOWED, "Expected POST");
+					}
+					if request.body().len()
+						> instance.factory.config().max_incoming_message_size as usize
+					{
+						return text_response(StatusCode::PAYLOAD_TOO_LARGE, "Input too large");
+					}
+					let result = if wake {
+						instance
+							.ctx
+							.stream_wake(
+								request
+									.headers()
+									.get("webhook-signature")
+									.and_then(|v| v.to_str().ok())
+									.unwrap_or(""),
+								request.body(),
+							)
+							.await
+					} else {
+						match serde_json::from_slice(request.body()) {
+							Ok(body) => {
+								let token = request
+									.headers()
+									.get("x-rivet-token")
+									.and_then(|v| v.to_str().ok())
+									.or_else(|| {
+										request
+											.headers()
+											.get("authorization")
+											.and_then(|v| v.to_str().ok())
+											.and_then(|v| v.strip_prefix("Bearer "))
+									});
+								instance.ctx.stream_append_authenticated(body, token).await
+							}
+							Err(_) => {
+								return text_response(
+									StatusCode::BAD_REQUEST,
+									"Expected a JSON input",
+								);
+							}
+						}
+					};
+					match result {
+						Ok(()) => bytes_response(
+							StatusCode::ACCEPTED,
+							"application/json",
+							b"{\"done\":false}".to_vec(),
+						),
+						Err(error) => framework_anyhow_error_response_with_actor(
+							request_encoding(request.headers()),
+							error,
+							Some(&actor),
+						),
+					}
+				}
+				#[cfg(not(feature = "native-runtime"))]
+				{
+					let _ = wake;
+					text_response(
+						StatusCode::NOT_IMPLEMENTED,
+						"Actor streams require the native runtime",
+					)
+				}
+			}
 			FrameworkHttpRoute::Action(name) => {
 				self.handle_action_fetch(instance, request, name).await
 			}
@@ -449,6 +617,32 @@ impl RegistryHttpRoute {
 		normalized_path: &str,
 		handle_inspector_http_in_runtime: bool,
 	) -> Result<Self> {
+		let stream_path = normalized_path
+			.strip_prefix("/request/")
+			.map(|path| format!("/{path}"))
+			.unwrap_or_else(|| normalized_path.to_owned());
+		if matches!(
+			stream_path.as_str(),
+			"/internal/streams/append" | "/internal/streams/wake"
+		) {
+			return Ok(Self::Framework(FrameworkHttpRoute::Stream(
+				stream_path.ends_with("/wake"),
+			)));
+		}
+		if matches!(
+			stream_path.as_str(),
+			"/internal/streams/status" | "/internal/streams/resume"
+		) {
+			return Ok(Self::Framework(FrameworkHttpRoute::StreamControl(
+				stream_path.ends_with("/resume"),
+			)));
+		}
+		if stream_path == "/internal/streams/redrive" {
+			return Ok(Self::Framework(FrameworkHttpRoute::StreamRedrive));
+		}
+		if stream_path == "/internal" || stream_path.starts_with("/internal/") {
+			return Ok(Self::Framework(FrameworkHttpRoute::NotFound));
+		}
 		if let Some(stripped) = original_path.strip_prefix("/request") {
 			if stripped.is_empty() || matches!(stripped.as_bytes().first(), Some(b'/') | Some(b'?'))
 			{
@@ -480,6 +674,9 @@ impl RegistryHttpRoute {
 }
 
 pub(super) enum FrameworkHttpRoute {
+	Stream(bool),
+	StreamControl(bool),
+	StreamRedrive,
 	Action(String),
 	Queue(String),
 	Metadata,
@@ -1124,6 +1321,9 @@ pub(super) fn framework_anyhow_status(error: &anyhow::Error) -> StatusCode {
 
 pub(super) fn framework_error_status(group: &str, code: &str) -> StatusCode {
 	match (group, code) {
+		("stream", "invalid_wake") => StatusCode::UNAUTHORIZED,
+		("stream", "busy" | "not_paused") => StatusCode::CONFLICT,
+		("stream", "not_configured") => StatusCode::NOT_FOUND,
 		("auth", "forbidden") => StatusCode::FORBIDDEN,
 		("actor", "action_not_found") => StatusCode::NOT_FOUND,
 		("actor", "not_found") => StatusCode::NOT_FOUND,

@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use rivetkit_client_protocol as wire;
 use serde::Serialize;
-use serde_json::{json, Value as JsonValue};
+use serde_json::{Value as JsonValue, json};
 use vbare::OwnedVersionedData;
 
 use crate::EncodingKind;
@@ -111,6 +111,9 @@ pub fn encode_http_queue_request<T: Serialize>(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub enum QueueSendStatus {
 	Completed,
 	TimedOut,
@@ -118,6 +121,9 @@ pub enum QueueSendStatus {
 }
 
 #[derive(Debug, Clone)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub struct QueueSendResult {
 	pub status: QueueSendStatus,
 	pub response: Option<JsonValue>,

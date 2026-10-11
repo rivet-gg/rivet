@@ -102,6 +102,7 @@ pub struct JsActorTracingConfig {
 #[napi(object)]
 #[derive(Clone, Default)]
 pub struct JsActorConfig {
+	pub input_stream: Option<JsInputStreamConfig>,
 	pub name: Option<String>,
 	pub icon: Option<String>,
 	pub has_database: Option<bool>,
@@ -135,6 +136,29 @@ pub struct JsActorConfig {
 	pub max_outgoing_message_size: Option<u32>,
 	pub actions: Option<Vec<JsActionDefinition>>,
 	pub inspector_tabs: Option<Vec<JsInspectorTabEntry>>,
+}
+
+#[napi(object)]
+#[derive(Clone)]
+pub struct JsInputStreamConfig {
+	pub dead_letters: Option<std::collections::HashMap<String, JsDeadLetterConfig>>,
+	pub primary: Option<bool>,
+	pub subscriptions: Option<std::collections::HashMap<String, JsNamedStreamSubscription>>,
+	pub endpoint: String,
+	pub token: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone)]
+pub struct JsDeadLetterConfig {
+	pub stream: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Clone)]
+pub struct JsNamedStreamSubscription {
+	pub stream: String,
+	pub actor_key: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -257,6 +281,8 @@ pub(crate) struct AdapterConfig {
 
 #[allow(dead_code)]
 pub(crate) struct CallbackBindings {
+	pub(crate) on_stream_message: Option<CallbackTsfn<ActionPayload>>,
+	pub(crate) on_stream_error: Option<CallbackTsfn<ActionPayload>>,
 	pub(crate) create_state: Option<CallbackTsfn<CreateStatePayload>>,
 	pub(crate) on_create: Option<CallbackTsfn<CreateStatePayload>>,
 	pub(crate) create_conn_state: Option<CallbackTsfn<CreateConnStatePayload>>,
@@ -463,6 +489,8 @@ impl CallbackBindings {
 				build_before_action_response_payload,
 			)?,
 			on_request: optional_tsfn(&callbacks, "onRequest", build_http_request_payload)?,
+			on_stream_message: optional_tsfn(&callbacks, "onStreamMessage", build_action_payload)?,
+			on_stream_error: optional_tsfn(&callbacks, "onStreamError", build_action_payload)?,
 			on_queue_send: optional_tsfn(&callbacks, "onQueueSend", build_queue_send_payload)?,
 			on_websocket: optional_tsfn(&callbacks, "onWebSocket", build_websocket_payload)?,
 			run: optional_tsfn(&callbacks, "run", build_lifecycle_payload)?,
@@ -894,6 +922,7 @@ fn build_action_payload(env: &Env, payload: ActionPayload) -> napi::Result<Vec<n
 		Some(conn) => object.set("conn", ConnHandle::new(conn))?,
 		None => object.set("conn", env.get_null()?)?,
 	}
+	object.set("name", payload.name)?;
 	object.set("args", Buffer::from(payload.args))?;
 	if let Some(fire) = payload.scheduled_fire {
 		let mut fire_object = env.create_object()?;
@@ -1017,6 +1046,12 @@ pub(crate) fn callback_error(callback_name: &str, error: napi::Error) -> anyhow:
 impl From<JsActorConfig> for ActorConfigInput {
 	fn from(value: JsActorConfig) -> Self {
 		Self {
+			input_stream: value.input_stream.map(|stream| rivetkit_core::actor::config::InputStreamConfig {
+                dead_letters:stream.dead_letters.unwrap_or_default().into_iter().map(|(name,value)|(name,rivetkit_core::actor::config::DeadLetterConfig {stream:value.stream})).collect(),
+				endpoint: stream.endpoint, token: stream.token,
+                primary: stream.primary.unwrap_or(true),
+                subscriptions: stream.subscriptions.unwrap_or_default().into_iter().map(|(name, sub)| (name, rivetkit_core::actor::stream_subscription::NamedStreamSubscription { stream: sub.stream, actor_key: sub.actor_key })).collect(),
+			}),
 			name: value.name,
 			icon: value.icon,
 			has_database: value.has_database,

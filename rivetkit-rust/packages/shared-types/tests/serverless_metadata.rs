@@ -6,6 +6,7 @@ use rivetkit_shared_types::serverless_metadata::{
 #[test]
 fn serverless_metadata_matches_typescript_json_shape() {
 	let payload = ServerlessMetadataPayload {
+		stream_subscriptions: true,
 		runtime: "rivetkit".to_owned(),
 		version: "test-version".to_owned(),
 		envoy_protocol_version: Some(3),
@@ -72,4 +73,16 @@ fn serverless_metadata_matches_typescript_json_shape() {
 		decoded.actor_names["counter"].metadata.as_ref().unwrap()["customField"]["kept"],
 		true
 	);
+}
+
+#[test]
+fn legacy_metadata_does_not_claim_a_complete_stream_manifest() {
+	let legacy: ServerlessMetadataPayload = serde_json::from_value(
+		serde_json::json!({"runtime":"rivetkit","version":"2.3.16","actorNames":{}}),
+	)
+	.unwrap();
+	assert!(!legacy.stream_subscriptions);
+	let complete: ServerlessMetadataPayload = serde_json::from_value(serde_json::json!({"runtime":"rivetkit","version":"2.3.20","actorNames":{},"streamSubscriptions":true})).unwrap();
+	assert!(complete.stream_subscriptions);
+	assert!(complete.actor_names.is_empty());
 }

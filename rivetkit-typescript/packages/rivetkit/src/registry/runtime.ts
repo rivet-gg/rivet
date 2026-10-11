@@ -326,6 +326,13 @@ export interface RuntimeActorTracingConfig {
 }
 
 export interface RuntimeActorConfig {
+	inputStream?: {
+		deadLetters?: Record<string, { stream?: string }>;
+		endpoint: string;
+		token?: string;
+		primary?: boolean;
+		subscriptions?: Record<string, { stream: string; actorKey: string[] }>;
+	};
 	name?: string;
 	icon?: string;
 	hasDatabase?: boolean;
@@ -480,6 +487,22 @@ export type RuntimeWebSocketEvent =
 	  };
 
 export interface CoreRuntime {
+	actorStreamStatus?(
+		ctx: ActorContextHandle,
+		source: RuntimeBytes,
+	): Promise<RuntimeBytes>;
+	actorStreamRedrive?(
+		ctx: ActorContextHandle,
+		request: RuntimeBytes,
+	): Promise<RuntimeBytes>;
+	actorStreamResume?(
+		ctx: ActorContextHandle,
+		source: RuntimeBytes,
+	): Promise<void>;
+	actorStreamAppend?(
+		ctx: ActorContextHandle,
+		body: RuntimeBytes,
+	): Promise<void>;
 	readonly kind: "napi" | "wasm";
 
 	createRegistry(): RegistryHandle;

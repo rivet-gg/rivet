@@ -399,6 +399,7 @@ export class WorkflowStepContext<
 		);
 	}
 
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. Workflow stream integration is deferred; existing workflow queues remain supported. */
 	get queue() {
 		const self = this;
 		function send<K extends keyof TQueues & string>(
@@ -510,6 +511,7 @@ export class WorkflowContext<
 		return this.#runCtx.log;
 	}
 
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. Workflow stream integration is deferred; existing workflow queues remain supported. */
 	get queue() {
 		const self = this;
 		function next<

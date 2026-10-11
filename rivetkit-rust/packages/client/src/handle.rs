@@ -1,14 +1,14 @@
 use crate::{
-	common::{EncodingKind, RawWebSocket, TransportKind, HEADER_CONN_PARAMS, HEADER_ENCODING},
-	connection::{start_connection, ActorConnection, ActorConnectionInner},
+	common::{EncodingKind, HEADER_CONN_PARAMS, HEADER_ENCODING, RawWebSocket, TransportKind},
+	connection::{ActorConnection, ActorConnectionInner, start_connection},
 	protocol::{codec, query::*},
 	remote_manager::{GatewayTarget, RemoteManager},
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bytes::Bytes;
 use reqwest::{
-	header::{HeaderMap, HeaderValue},
 	Method, Response,
+	header::{HeaderMap, HeaderValue},
 };
 use serde::Serialize;
 use serde_json::Value as JsonValue;
@@ -21,12 +21,22 @@ use std::{
 pub use crate::protocol::codec::{QueueSendResult, QueueSendStatus};
 
 #[derive(Debug, Clone, Copy, Default)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub struct SendOpts {}
 
 #[derive(Debug, Clone, Copy, Default)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 pub struct SendAndWaitOpts {
 	pub timeout: Option<Duration>,
 }
+
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
 
 pub type QueueSendOptions = SendAndWaitOpts;
 
@@ -125,9 +135,17 @@ impl ActorHandleStateless {
 		codec::decode_http_action_response(self.encoding_kind, &output)
 	}
 
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
+
 	pub async fn send(&self, name: &str, body: impl Serialize, _opts: SendOpts) -> Result<()> {
 		self.send_queue(name, &body, false, None).await.map(|_| ())
 	}
+
+	#[deprecated(
+		note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+	)]
 
 	pub async fn send_and_wait(
 		&self,

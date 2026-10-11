@@ -20,6 +20,7 @@
 		"src/**/*",
 		"runtime/index.ts",
 		"tests/token-issuance.types.ts"
+		,"tests/actor-streams.types.ts"
 	],
 	"exclude": [
 		"src/actor/instance/mod.ts",

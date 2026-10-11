@@ -1,5 +1,9 @@
 import type { AnyActorDefinition } from "@/actor/definition";
-import { type ActorSpecifier, encodeErrorForBridge } from "@/actor/errors";
+import {
+	type ActorSpecifier,
+	encodeErrorForBridge,
+	RivetError,
+} from "@/actor/errors";
 import type { ActorInvocationSpanContext } from "@/common/actor-telemetry-context";
 import {
 	HEADER_CONN_PARAMS,
@@ -81,6 +85,73 @@ import { sendHttpRequest } from "./utils";
  * @see {@link ActorHandle}
  */
 export class ActorHandleRaw {
+	readonly stream = {
+		status: async (
+			source: import("@/actor/stream").StreamSource = {},
+		): Promise<import("@/actor/stream").StreamStatus> => {
+			const response = await this.fetch("/internal/streams/status", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(source),
+			});
+			if (!response.ok)
+				throw new RivetError(
+					"stream",
+					"status_failed",
+					`Stream status failed (HTTP ${response.status})`,
+				);
+			return response.json() as Promise<
+				import("@/actor/stream").StreamStatus
+			>;
+		},
+		redrive: async (
+			message: import("@/actor/stream").DeadLetterMessage,
+			options: { idempotencyKey: string },
+		): Promise<import("@/actor/stream").StreamRedriveReceipt> => {
+			const response = await this.fetch("/internal/streams/redrive", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ message, ...options }),
+			});
+			if (!response.ok)
+				throw new RivetError(
+					"stream",
+					"redrive_failed",
+					`Stream redrive failed (HTTP ${response.status})`,
+				);
+			return response.json() as Promise<
+				import("@/actor/stream").StreamRedriveReceipt
+			>;
+		},
+		resume: async (
+			source: import("@/actor/stream").StreamSource = {},
+		): Promise<void> => {
+			const response = await this.fetch("/internal/streams/resume", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(source),
+			});
+			if (!response.ok)
+				throw new RivetError(
+					"stream",
+					"resume_failed",
+					`Stream resume failed (HTTP ${response.status})`,
+				);
+		},
+		append: async (body: unknown): Promise<void> => {
+			const response = await this.fetch("/internal/streams/append", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(body),
+			});
+			if (!response.ok)
+				throw new RivetError(
+					"stream",
+					"append_failed",
+					`Stream append failed (HTTP ${response.status})`,
+				);
+		},
+	};
 	#client: ClientRaw;
 	#driver: EngineControlClient;
 	#encoding: Encoding;
@@ -134,16 +205,19 @@ export class ActorHandleRaw {
 		return this.#params;
 	}
 
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	send(
 		name: string,
 		body: unknown,
 		options: QueueSendWaitOptions,
 	): Promise<QueueSendResult>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	send(
 		name: string,
 		body: unknown,
 		options?: QueueSendNoWaitOptions,
 	): Promise<void>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	send(
 		name: string,
 		body: unknown,
@@ -1000,11 +1074,13 @@ export class ActorHandleRaw {
 		);
 	}
 
-	/** Issue a token scoped to this actor. Defaults to actor gateway read access. */
-	async issueToken(options: ActorIssueTokenOptions = {}): Promise<IssuedToken> {
+	/** Issue a token scoped to this actor. Defaults to actor actions and primary stream append. */
+	async issueToken(
+		options: ActorIssueTokenOptions = {},
+	): Promise<IssuedToken> {
 		const actorId = await this.resolve();
 		const permissions: ActorTokenPermissions = options.permissions ?? {
-			actor_gateway: ["read"],
+			actor_gateway: ["read", "append"],
 		};
 		const grants: TokenGrant[] = (
 			Object.keys(permissions) as ActorTokenResource[]
@@ -1069,8 +1145,11 @@ export class ActorHandleRaw {
  */
 export type ActorHandle<AD extends AnyActorDefinition> = Omit<
 	ActorHandleRaw,
-	"connect" | "send"
+	"connect" | "send" | "stream"
 > & {
+	stream: import("@/actor/stream").StreamWriter<
+		import("@/actor/stream").ActorStreamInput<AD>
+	>;
 	// Add typed version of ActorConn (instead of using AnyActorDefinition)
 	connect(params?: unknown, options?: ActorConnectOptions): ActorConn<AD>;
 	// Resolve method returns the actor ID

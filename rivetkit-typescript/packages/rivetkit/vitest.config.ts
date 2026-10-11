@@ -9,6 +9,9 @@ export default defineConfig({
 		...defaultConfig.test,
 		exclude: [
 			...configDefaults.exclude,
+			...(process.env.RIVETKIT_INCLUDE_STREAM_TESTS === "1"
+				? []
+				: ["tests/actor-streams.integration.test.ts"]),
 			...(process.env.RIVETKIT_INCLUDE_PLATFORM_TESTS === "1"
 				? []
 				: ["tests/platforms/**/*.test.ts"]),

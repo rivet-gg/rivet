@@ -2,13 +2,13 @@ use std::cmp::Ordering;
 
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use rivet_auth_policy::{OperationKind, OwnedGrant, ResourceKind, Scope};
-use rivet_data::{AUTH_GRANTS_VERSION, generated::auth_grants_v1, versioned::AuthGrantsData};
+use rivet_data::{AUTH_GRANTS_VERSION, generated::auth_grants_v2, versioned::AuthGrantsData};
 use vbare::OwnedVersionedData;
 
 use crate::{Id, TokenError};
 
 pub const MAX_GRANTS: usize = 32;
-pub const MAX_OPERATIONS_PER_GRANT: usize = 5;
+pub const MAX_OPERATIONS_PER_GRANT: usize = 7;
 pub const MAX_GRANTS_BYTES: usize = 2_048;
 const MAX_ENCODED_GRANTS_BYTES: usize = 2_731;
 
@@ -58,16 +58,33 @@ impl ValidatedGrantSet {
 }
 
 pub fn encode_grants(grants: &ValidatedGrantSet) -> Result<String, TokenError> {
-	let data = auth_grants_v1::Data {
+	let version = if grants.grants.iter().any(|g| {
+		matches!(
+			g.resource,
+			ResourceKind::ActorStream | ResourceKind::DurableStream
+		) || g
+			.operations
+			.iter()
+			.any(|o| matches!(o, OperationKind::Append | OperationKind::Close))
+	}) {
+		AUTH_GRANTS_VERSION
+	} else {
+		1
+	};
+	encode_grants_version(grants, version)
+}
+
+fn encode_grants_version(grants: &ValidatedGrantSet, version: u16) -> Result<String, TokenError> {
+	let data = auth_grants_v2::Data {
 		grants: grants
 			.grants
 			.iter()
 			.cloned()
-			.map(|grant| auth_grants_v1::Grant {
+			.map(|grant| auth_grants_v2::Grant {
 				resource: encode_resource(grant.resource),
 				target: match grant.target {
-					Scope::Any => auth_grants_v1::TargetScope::Any,
-					Scope::Id(id) => auth_grants_v1::TargetScope::Id(id.as_bytes()),
+					Scope::Any => auth_grants_v2::TargetScope::Any,
+					Scope::Id(id) => auth_grants_v2::TargetScope::Id(id.as_bytes()),
 				},
 				operations: grant.operations.into_iter().map(encode_operation).collect(),
 			})
@@ -75,7 +92,7 @@ pub fn encode_grants(grants: &ValidatedGrantSet) -> Result<String, TokenError> {
 	};
 
 	let encoded = AuthGrantsData::wrap_latest(data)
-		.serialize_with_embedded_version(AUTH_GRANTS_VERSION)
+		.serialize_with_embedded_version(version)
 		.map_err(|_| TokenError::InvalidGrants)?;
 	if encoded.len() > MAX_GRANTS_BYTES {
 		return Err(TokenError::InvalidGrants);
@@ -154,8 +171,8 @@ pub fn decode_grants(
 			namespace: Scope::Id(namespace_id),
 			resource: decode_resource(grant.resource)?,
 			target: match grant.target {
-				auth_grants_v1::TargetScope::Any => Scope::Any,
-				auth_grants_v1::TargetScope::Id(id) => {
+				auth_grants_v2::TargetScope::Any => Scope::Any,
+				auth_grants_v2::TargetScope::Id(id) => {
 					Scope::Id(Id::from_slice(&id).map_err(|_| TokenError::InvalidGrants)?)
 				}
 			},
@@ -165,7 +182,7 @@ pub fn decode_grants(
 
 	let validated = ValidatedGrantSet::new(namespace_id, grants)?;
 	let version = u16::from_le_bytes([decoded[0], decoded[1]]);
-	if version == AUTH_GRANTS_VERSION && encode_grants(&validated).as_deref() != Ok(encoded) {
+	if encode_grants_version(&validated, version).as_deref() != Ok(encoded) {
 		return Err(TokenError::InvalidGrants);
 	}
 

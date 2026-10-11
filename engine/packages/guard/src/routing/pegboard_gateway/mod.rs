@@ -1,6 +1,7 @@
 mod cors;
 mod gateway3_selector;
 mod resolve_actor_query;
+mod stream_access;
 
 use std::{sync::Arc, time::Duration};
 
@@ -438,18 +439,24 @@ async fn route_request_inner(
 			.with_namespace_id(actor.namespace_id)
 			.with_actor_id(actor_id),
 			ctx.config().guard().route_pegboard_auth_check_timeout(),
-			rivet_auth::check(
-				ctx,
-				shared_state.jwt_key_ring_cache.as_ref(),
-				&auth_state,
-				rivet_auth::CheckInput {
-					token,
-					namespace: AccessNamespaceScope::Id(actor.namespace_id),
-					resource: ResourceKind::ActorGateway,
-					target: TargetScope::Id(actor_id),
-					operation: OperationKind::Read,
-				},
-			),
+			async {
+				for (resource, target, operation) in requests {
+					rivet_auth::check(
+						ctx,
+						shared_state.jwt_key_ring_cache.as_ref(),
+						&auth_state,
+						rivet_auth::CheckInput {
+							token,
+							namespace: AccessNamespaceScope::Id(actor.namespace_id),
+							resource,
+							target,
+							operation,
+						},
+					)
+					.await?;
+				}
+				Ok::<(), anyhow::Error>(())
+			},
 			|elapsed, timeout| {
 				pegboard::errors::RouteAuthCheckTimeout {
 					actor_id: actor_id.to_string(),

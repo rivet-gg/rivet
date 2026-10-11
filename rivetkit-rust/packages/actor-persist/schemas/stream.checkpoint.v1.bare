@@ -1,0 +1,15 @@
+type Failure struct {
+    attempts: u32
+    firstFailedAt: i64
+    lastFailedAt: i64
+    nextAttemptAt: i64
+    paused: bool
+    notified: bool
+    error: str
+}
+
+type Data struct {
+    offset: str
+    completed: u64
+    failure: optional<Failure>
+}

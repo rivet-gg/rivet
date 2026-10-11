@@ -255,6 +255,13 @@ export const RegistryConfigSchema = z
 		 * RIVET_RUN_SERVICES=0 or 1 to override it.
 		 */
 		startServices: z.boolean().optional(),
+		/** Full Durable Streams root and its management credential. */
+		durableStreams: z
+			.object({
+				endpoint: z.url(),
+				token: z.string().optional(),
+			})
+			.optional(),
 		/**
 		 * @experimental
 		 *

@@ -363,6 +363,37 @@ async fn handle_actor_event<A: Actor>(
 	event: ActorEvent,
 ) -> Result<bool> {
 	match event {
+		ActorEvent::StreamError {
+			subscription,
+			body,
+			cancel,
+			reply,
+		} => {
+			ctx.inner().clone().register_task(async move {
+                let result = async {actor.on_stream_error(&ctx, &subscription, ciborium::from_reader(body.as_slice())?).await};
+                tokio::select! {result=result=>reply.send(result), _=cancel.cancelled()=>reply.send(Err(anyhow::anyhow!("Stream error callback canceled")))}
+            });
+		}
+
+		ActorEvent::StreamMessage {
+			subscription,
+			body,
+			cancel,
+			reply,
+		} => {
+			ctx.inner().clone().register_task(async move {
+				let result = async {
+					let body = ciborium::from_reader(body.as_slice())?;
+					actor
+						.on_subscription_message(&ctx, &subscription, body)
+						.await
+				};
+				tokio::select! {
+					result = result => reply.send(result),
+					_ = cancel.cancelled() => reply.send(Err(anyhow::anyhow!("Stream delivery canceled"))),
+				}
+			});
+		}
 		ActorEvent::Action {
 			name,
 			args,

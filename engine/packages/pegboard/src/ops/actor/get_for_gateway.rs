@@ -11,6 +11,7 @@ pub struct Input {
 #[derive(Debug)]
 pub struct Output {
 	pub namespace_id: Id,
+	pub name: String,
 	pub workflow_id: Id,
 	pub key: Option<String>,
 	// NOTE: None if older actor has not received the new key
@@ -35,6 +36,7 @@ pub async fn pegboard_actor_get_for_gateway(
 		.txn("pegboard_actor_get_for_gateway", |tx| async move {
 			let tx = tx.with_subspace(keys::subspace());
 
+			let name_key = keys::actor::NameKey::new(input.actor_id);
 			let namespace_id_key = keys::actor::NamespaceIdKey::new(input.actor_id);
 			let workflow_id_key = keys::actor::WorkflowIdKey::new(input.actor_id);
 			let key_key = keys::actor::KeyKey::new(input.actor_id);
@@ -49,6 +51,7 @@ pub async fn pegboard_actor_get_for_gateway(
 
 			let (
 				namespace_id_entry,
+				name,
 				workflow_id_entry,
 				key,
 				runner_name_selector,
@@ -61,6 +64,7 @@ pub async fn pegboard_actor_get_for_gateway(
 				generation,
 			) = tokio::try_join!(
 				tx.read_opt(&namespace_id_key, Serializable),
+				tx.read_opt(&name_key, Serializable),
 				tx.read_opt(&workflow_id_key, Serializable),
 				tx.read_opt(&key_key, Serializable),
 				tx.read_opt(&runner_name_selector_key, Serializable),
@@ -92,6 +96,7 @@ pub async fn pegboard_actor_get_for_gateway(
 
 			Ok(Some(Output {
 				namespace_id,
+				name: name.unwrap_or_default(),
 				workflow_id,
 				key,
 				runner_name_selector,

@@ -40,6 +40,9 @@ export interface SharedTestEngine {
 
 export interface SharedTestEngineOptions {
 	gateway3?: boolean;
+	engineBinaryPath?: string;
+	/** Keep integration timing independent of host CPU load. */
+	deterministicScheduling?: boolean;
 }
 
 interface SharedEngineFiles {
@@ -57,7 +60,11 @@ let sharedEngineProfile: string | undefined;
 let sharedEngineFiles: SharedEngineFiles | undefined;
 
 function resolveSharedEngineProfile(options: SharedTestEngineOptions): string {
-	return JSON.stringify({ gateway3: options.gateway3 ?? false });
+	return JSON.stringify({
+		gateway3: options.gateway3 ?? false,
+		engineBinaryPath: options.engineBinaryPath,
+		deterministicScheduling: options.deterministicScheduling ?? false,
+	});
 }
 
 function resolveSharedEngineFiles(profile: string): SharedEngineFiles {
@@ -278,6 +285,17 @@ async function spawnSharedEngine(
 	writeFileSync(
 		configPath,
 		JSON.stringify({
+			runtime: options.deterministicScheduling
+				? {
+						worker_load_shedding_curve: [
+							// Engine requires a strictly descending curve. Both ends
+							// exceed every sampling bucket (0..999), disabling shedding.
+							[0, 1001],
+							[1000, 1000],
+						],
+						worker_poll_interval_ms: 100,
+					}
+				: undefined,
 			topology: {
 				datacenter_label: 1,
 				datacenters: {
@@ -311,7 +329,7 @@ async function spawnSharedEngine(
 	const spawnStartedAt = performance.now();
 	const logs: RuntimeLogs = { stdout: "", stderr: "" };
 	const engine = spawn(
-		resolveEngineBinaryPath(),
+		options.engineBinaryPath ?? resolveEngineBinaryPath(),
 		["start", "--config", configPath],
 		{
 			env: {

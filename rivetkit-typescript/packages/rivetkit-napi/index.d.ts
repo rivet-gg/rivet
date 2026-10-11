@@ -107,6 +107,7 @@ export interface JsActorTracingConfig {
   actions?: Record<string, number>
 }
 export interface JsActorConfig {
+  inputStream?: JsInputStreamConfig
   name?: string
   icon?: string
   hasDatabase?: boolean
@@ -140,6 +141,20 @@ export interface JsActorConfig {
   maxOutgoingMessageSize?: number
   actions?: Array<JsActionDefinition>
   inspectorTabs?: Array<JsInspectorTabEntry>
+}
+export interface JsInputStreamConfig {
+  deadLetters?: Record<string, JsDeadLetterConfig>
+  primary?: boolean
+  subscriptions?: Record<string, JsNamedStreamSubscription>
+  endpoint: string
+  token?: string
+}
+export interface JsDeadLetterConfig {
+  stream?: string
+}
+export interface JsNamedStreamSubscription {
+  stream: string
+  actorKey: Array<string>
 }
 export interface JsBindParam {
   kind: string
@@ -354,6 +369,10 @@ export declare class ActorContext {
   setAlarm(timestampMs?: number | undefined | null): void
   requestSave(opts?: JsRequestSaveOpts | undefined | null): void
   requestSaveAndWait(opts?: JsRequestSaveOpts | undefined | null): Promise<void>
+  streamStatus(source: Buffer): Promise<Buffer>
+  streamRedrive(request: Buffer): Promise<Buffer>
+  streamResume(source: Buffer): Promise<void>
+  streamAppend(body: Buffer): Promise<void>
   decodeInspectorRequest(bytes: Buffer, advertisedVersion: number): Buffer
   encodeInspectorResponse(bytes: Buffer, targetVersion: number): Buffer
   inspectorSnapshot(): JsInspectorSnapshot

@@ -1,4 +1,13 @@
 export type { ActorKey } from "@/client/query";
+export type {
+	StreamMessage,
+	StreamWriter,
+	StreamSource,
+	StreamStatus,
+	StreamFailure,
+	DeadLetterMessage,
+	StreamRedriveReceipt,
+} from "./stream";
 export { ALLOWED_PUBLIC_HEADERS } from "@/common/actor-router-consts";
 export type { Encoding } from "@/common/encoding";
 export type {

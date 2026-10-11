@@ -92,21 +92,25 @@ export type ActorDefinitionActions<AD extends AnyActorDefinition> =
 		: ActorActionMap<ActionsOf<AD>>;
 
 type ActorQueueSend<TQueues extends QueueSchemaConfig> = {
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	<K extends keyof TQueues & string>(
 		name: K,
 		body: InferSchemaMap<TQueues>[K],
 		options: QueueSendWaitOptions,
 	): Promise<QueueSendResult<InferQueueCompleteMap<TQueues>[K]>>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	<K extends keyof TQueues & string>(
 		name: K,
 		body: InferSchemaMap<TQueues>[K],
 		options?: QueueSendNoWaitOptions,
 	): Promise<void>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	(
 		name: keyof TQueues extends never ? string : never,
 		body: unknown,
 		options: QueueSendWaitOptions,
 	): Promise<QueueSendResult>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	(
 		name: keyof TQueues extends never ? string : never,
 		body: unknown,
@@ -125,13 +129,20 @@ type ActorEventSubscribe<TEvents extends EventSchemaConfig> = {
 	): () => void;
 };
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export type ActorDefinitionQueueSend<AD extends AnyActorDefinition> =
 	// biome-ignore lint/suspicious/noExplicitAny: safe to use any here
 	IsAny<AD> extends true
-		? { send: ActorQueueSend<Record<string, any>> }
+		? {
+				/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
+				send: ActorQueueSend<Record<string, any>>;
+			}
 		: AD extends { config: { queues?: infer Q } }
 			? Q extends QueueSchemaConfig
-				? { send: ActorQueueSend<Q> }
+				? {
+						/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
+						send: ActorQueueSend<Q>;
+					}
 				: {}
 			: AD extends BaseActorDefinition<
 						any,
@@ -145,7 +156,10 @@ export type ActorDefinitionQueueSend<AD extends AnyActorDefinition> =
 						any
 					>
 				? Q extends QueueSchemaConfig
-					? { send: ActorQueueSend<Q> }
+					? {
+							/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
+							send: ActorQueueSend<Q>;
+						}
 					: {}
 				: {};
 

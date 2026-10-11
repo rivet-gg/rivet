@@ -1,8 +1,14 @@
 ---
-title: "Queues & Run Loops"
+title: "Queues & Run Loops (Deprecated)"
 description: "Process durable messages in order with Rivet Actor queues and run loops, including typed payloads, replies, and workflow integration."
 skill: true
 ---
+
+**Queue APIs are deprecated.** Use [actor streams](/actors/docs/streams) for new
+message processing. Streams support direct writes while the consuming actor is
+down, flexible subscriptions, and observable delivery progress. Existing queue
+APIs continue to work. Follow the [migration guide](/actors/docs/migrate-queues-to-streams).
+Run loops remain supported; this deprecation applies to queue APIs.
 
 ## What are queues?
 
