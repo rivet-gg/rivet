@@ -52,8 +52,13 @@ pub struct RunnerConfigKindOneOf1Serverless {
 		skip_serializing_if = "Option::is_none"
 	)]
 	pub drain_on_version_upgrade: Option<Option<bool>>,
-	#[serde(rename = "headers", skip_serializing_if = "Option::is_none")]
-	pub headers: Option<std::collections::HashMap<String, String>>,
+	#[serde(
+		rename = "headers",
+		default,
+		with = "::serde_with::rust::double_option",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub headers: Option<Option<std::collections::HashMap<String, String>>>,
 	#[serde(
 		rename = "max_concurrent_actors",
 		default,

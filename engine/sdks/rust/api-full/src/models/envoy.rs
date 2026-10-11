@@ -19,22 +19,37 @@ pub struct Envoy {
 	pub datacenter: String,
 	#[serde(rename = "envoy_key")]
 	pub envoy_key: String,
-	#[serde(rename = "last_connected_ts", skip_serializing_if = "Option::is_none")]
-	pub last_connected_ts: Option<i64>,
+	#[serde(
+		rename = "last_connected_ts",
+		default,
+		with = "::serde_with::rust::double_option",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub last_connected_ts: Option<Option<i64>>,
 	#[serde(rename = "last_ping_ts")]
 	pub last_ping_ts: i64,
 	#[serde(rename = "last_rtt")]
 	pub last_rtt: i32,
-	#[serde(rename = "metadata", skip_serializing_if = "Option::is_none")]
-	pub metadata: Option<serde_json::Value>,
+	#[serde(
+		rename = "metadata",
+		default,
+		with = "::serde_with::rust::double_option",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub metadata: Option<Option<std::collections::HashMap<String, serde_json::Value>>>,
 	#[serde(rename = "namespace_id")]
 	pub namespace_id: String,
 	#[serde(rename = "pool_name")]
 	pub pool_name: String,
 	#[serde(rename = "slots")]
 	pub slots: i64,
-	#[serde(rename = "stop_ts", skip_serializing_if = "Option::is_none")]
-	pub stop_ts: Option<i64>,
+	#[serde(
+		rename = "stop_ts",
+		default,
+		with = "::serde_with::rust::double_option",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub stop_ts: Option<Option<i64>>,
 	#[serde(rename = "version")]
 	pub version: i32,
 }

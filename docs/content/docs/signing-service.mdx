@@ -1,0 +1,169 @@
+---
+title: "Signing Service"
+description: "Issue downstream application tokens and sign exact webhook bytes with namespace-scoped permissions."
+---
+
+Use Rivet to issue application JWTs or sign webhook payloads while keeping private keys in the control plane. Receivers verify signatures locally using [public-key discovery](/actors/docs/jwks).
+
+The two operations have separate formats and permissions:
+
+| Operation | Endpoint | Required ACL resource and operation |
+| --- | --- | --- |
+| Issue an application token | `POST /auth/application-tokens` | `application_token/create` |
+| Provision webhook keys | `POST /auth/webhooks/ensure` | `webhook_signing/create` |
+| Sign a webhook | `POST /auth/webhooks/sign` | `webhook_signing/create` |
+
+These operations require ACL credentials. The credential must grant the requested resource's `create` operation with target `any` in exactly one concrete namespace. Duplicate grants for that namespace are fine; wildcard-only or multiple eligible namespaces are rejected. The request body cannot select a namespace. Rivet access JWTs and application JWTs cannot call these operations.
+
+This remote-signing model resembles [Cloud KMS asymmetric signing](https://docs.cloud.google.com/kms/docs/reference/rest/v1/projects.locations.keyRings.cryptoKeys.cryptoKeyVersions/asymmetricSign): a service holds the private key and callers verify with public keys. Rivet's API owns the token and webhook formats; it does not offer arbitrary-message or digest signing, private-key export, or an HSM custody guarantee.
+
+## Provision a signing credential
+
+An administrator can apply this ACL manifest with `POST /acl/manifest`, replacing `<namespace-id>` with the immutable namespace ID:
+
+```json
+{
+  "rules": {
+    "application-signing": {
+      "namespace": {"id": "<namespace-id>"},
+      "resource": "application_token",
+      "target": "any",
+      "operations": ["create"]
+    },
+    "webhook-signing": {
+      "namespace": {"id": "<namespace-id>"},
+      "resource": "webhook_signing",
+      "target": "any",
+      "operations": ["create"]
+    }
+  },
+  "policies": {"signing": {"rules": ["application-signing", "webhook-signing"]}},
+  "roles": {"signing": {"policies": ["signing"]}}
+}
+```
+
+Create a credential with `POST /acl/tokens` and `{"roles":["signing"],"duration":86400}`. Keep the returned token secret and refresh it before expiry. Use separate roles if callers should have only one signing purpose. New signing resources become available after all control-plane readers support the updated ACL schema; an incomplete rollout returns 503.
+
+The examples below assume `RIVET_ENDPOINT` is your control-plane URL and `RIVET_SIGNING_TOKEN` is this namespace-scoped ACL credential.
+
+## Issue an application token
+
+Save a request as `application-token.json`:
+
+```json
+{
+  "audience": "durable-streams",
+  "purpose": "durable-streams.callback",
+  "duration": 86400,
+  "claims": {
+    "durable_streams": {
+      "root": "https://streams.gameinc.io/streams",
+      "subscription_id": "sub-1",
+      "wake_id": "wake-1",
+      "generation": 7,
+      "operations": ["callback"]
+    }
+  }
+}
+```
+
+```bash
+curl --fail-with-body "$RIVET_ENDPOINT/auth/application-tokens" \
+  -H "Authorization: Bearer $RIVET_SIGNING_TOKEN" \
+  -H 'Content-Type: application/json' \
+  --data-binary @application-token.json
+```
+
+The response contains `token`, `issued_ts`, and `expires_ts`; timestamps are Unix milliseconds. The default lifetime is one hour, with a maximum of 24 hours or the configured lower maximum. Expiration is also bounded by the caller's credential. Always use the returned `expires_ts`; requesting 24 hours does not guarantee 24 hours remain.
+
+Rivet controls `iss`, `rivet_ns`, `iat`, `exp`, `jti`, version, and token type. Your audience must be nonempty and different from the control-plane audience. Purpose is required and cannot begin with the reserved `rivet` or `engine` prefixes, case-insensitively. An optional `subject` maps to `sub`.
+
+Application data stays under `app`. Supply at most eight named objects, with ASCII names of 1–64 characters drawn from letters, digits, `_`, `-`, and `.`. Registered JWT names and the reserved prefixes cannot be application namespace names. Claims are limited to 3,072 serialized UTF-8 bytes and eight container levels; the final compact JWT must fit 6,144 bytes. Unknown top-level request fields, duplicate JSON members, and attempts to override reserved fields are rejected.
+
+Application tokens are downstream-only. The control plane rejects them as credentials even if their application data resembles permissions. Receivers must validate the complete [application-token profile](/actors/docs/jwks#verify-the-intended-artifact), then apply their own authorization checks against current state.
+
+## Sign a webhook
+
+Provision the namespace's keys before advertising subscription metadata:
+
+```bash
+curl --fail-with-body -X POST "$RIVET_ENDPOINT/auth/webhooks/ensure" \
+  -H "Authorization: Bearer $RIVET_SIGNING_TOKEN"
+```
+
+This idempotent operation returns `{namespace_id, alg, kid, jwks_url, generation}` after the public keys are available. Normal signing also provisions on first use.
+
+Serialize the payload once to `payload.bin`, sign that file, and send those same bytes to the receiver:
+
+```bash
+curl --fail-with-body "$RIVET_ENDPOINT/auth/webhooks/sign" \
+  -H "Authorization: Bearer $RIVET_SIGNING_TOKEN" \
+  -H 'Content-Type: application/octet-stream' \
+  --data-binary @payload.bin
+```
+
+The response is:
+
+```json
+{"timestamp":"1790300000","kid":"ds_<thumbprint>","signature":"<unpadded-base64url-signature>"}
+```
+
+Construct the delivery header without changing the payload:
+
+```text
+Webhook-Signature: t=<timestamp>,kid=<kid>,ed25519=<signature>
+```
+
+Rivet generates decimal Unix seconds and signs `ASCII(timestamp) + "." + raw_body` with plain Ed25519. The signature is 64 bytes before unpadded base64url encoding. JSON whitespace, line endings, NUL bytes, and non-UTF-8 bytes are significant. Do not parse and reserialize the body between signing and delivery. Compressed uploads are rejected; omit `Content-Encoding` or use `identity`.
+
+Receivers select the public key by `kid`, verify those exact bytes, reject timestamps outside a five-minute freshness window, and enforce replay protection using application state. Signing does not deliver the webhook or prove that the receiver accepted it. Obtain a new signature for each delivery retry.
+
+## Limits and failures
+
+| Limit | Default |
+| --- | --- |
+| Application request body | 16 KiB |
+| Application JWT lifetime | 1 hour; maximum 24 hours |
+| Serialized application claims / final JWT | 3,072 / 6,144 bytes |
+| Webhook body | 32 MiB |
+| Upload deadline | 30 seconds |
+| Application issuance attempts per namespace | 300 per 60-second window |
+| Webhook signing/provisioning attempts per namespace | 60 per 60-second window |
+| Webhook input per namespace | 128 MiB per 60-second window |
+
+Namespace quotas are shared across API replicas and datacenters. Failed and cancelled attempts remain charged. Webhook bytes are reserved in 1 MiB increments, rounded up per request. Fixed windows allow bursts up to the configured allowance; apply caller-side pacing where smooth throughput matters. Process admission and buffered-memory limits may reject earlier under load.
+
+Configure `auth.jwt.signing.payload_bytes` between 1 byte and 128 MiB. Configure `auth.jwt.signing.defaults` with `application_operations`, `webhook_operations`, and `webhook_bytes`; `auth.jwt.signing.namespaces` maps immutable namespace IDs to complete quota overrides. These are per-minute allowances, not guaranteed throughput. Lowering a quota does not reset already consumed budget.
+
+Errors use Rivet's `{group, code, message}` envelope:
+
+| Status | Meaning | Caller action |
+| --- | --- | --- |
+| 400 | Invalid claims, audience, purpose, lifetime, or encoding | Correct the request |
+| 401 | Missing, expired, or invalid credential | Refresh the credential |
+| 403 | Missing permission or ambiguous namespace | Correct the ACL grants |
+| 404 | Namespace or signing keys unavailable at that path | Check namespace and provision keys |
+| 409 | Stale key generation or conflicting emergency request ID | Fetch key status and reconcile |
+| 413 | Payload, claims, or final token exceeds its limit | Reduce input or adjust the permitted payload limit |
+| 429 | Namespace quota or process capacity exhausted | Honor `Retry-After` and back off |
+| 503 | Signing disabled, unavailable, or awaiting schema rollout | Retry with bounded backoff |
+
+No failure returns a partial signature. Signing responses use `Cache-Control: no-store`. Audit events record caller ID, namespace, purpose class, key version, outcome, and latency; metrics use bounded labels. Audit logging is operational observability, not a durable compliance ledger. Do not log credentials, tokens, claims, payloads, or signature headers in your application.
+
+## Operate webhook keys
+
+Normal rotation is automatic. Operators can inspect `GET /namespaces/{namespace}/auth/webhook-keys` with `webhook_signing/read`, rotate using `POST .../rotate` with `webhook_signing/update`, or revoke using `POST .../revoke` with `webhook_signing/delete`. These management paths use the namespace name and independently check authorization.
+
+Rotation accepts `{"expected_generation":7}` and stages a pending public key before activation. Revocation accepts `{"request_id":"<UUID>","expected_generation":7,"kids":["ds_<thumbprint>"]}`. Both return 200 only after the mutation commits, with public status including `generation`, `active_kid`, `pending_kid`, `last_emergency_request_id`, and `last_emergency_generation`.
+
+Every emergency revocation replaces the active signer and discards the pending signer, even when the requested key was already retiring. Repeating the last committed emergency request with the same arguments returns its receipt; conflicting reuse returns 409. This is bounded last-request idempotency. After later changes or an uncertain 503 response, inspect status before deciding to submit another mutation.
+
+Revocation remains available when new issuance is paused. Read the [caching and revocation limits](/actors/docs/jwks#rotation-and-caching) before treating revocation as an immediate receiver-side cutoff.
+
+## Durable Streams integration
+
+Preserve the stream-root JWKS endpoint, `ds_` key IDs, six-field public JWK shape, subscription metadata, and delivery header format. Use separate downstream purposes for callback and claim capabilities. Verify root, namespace, subscription, wake, generation, operation scope, and live subscription/lease state; a valid JWT does not bypass those checks.
+
+The default webhook limit accommodates the tested 4,096-stream snapshot. Repeated additions and glob subscriptions can produce larger snapshots. Detect oversize and report an actionable delivery failure; never truncate the snapshot or acknowledge undelivered streams.
+
+At migration, issue only Rivet artifacts. Keep legacy capability verification until the last previously issued capability expires, at most 24 hours, and retain old webhook public keys for 365 seconds after the final local signature. Then remove legacy key material. This preserves in-flight subscriptions while moving all new signing to Rivet.

@@ -1,7 +1,9 @@
 #!/usr/bin/env tsx
 
 import { spawn } from 'node:child_process';
-import { rm, readFile, writeFile } from 'node:fs/promises';
+import { rm, readFile, writeFile, mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 
 const FERN_GROUP = process.env.FERN_GROUP;
@@ -34,7 +36,10 @@ async function generateRustSdk() {
 	// Delete existing directories
 	await rm(GEN_PATH_RUST, { recursive: true, force: true });
 
-	const uid = process.getuid?.() ?? 1000;
+	// The pinned Rust generator requires OpenAPI 3.0 nullable schemas.
+    const inputDir = await mkdtemp(join(tmpdir(), "rivet-openapi-"));
+    await runCommand("node", ["scripts/openapi/normalize.mjs", OPENAPI_PATH, join(inputDir, "openapi.json")]);
+    const uid = process.getuid?.() ?? 1000;
 	const gid = process.getgid?.() ?? 1000;
 
 	await runCommand("docker", [
@@ -42,11 +47,14 @@ async function generateRustSdk() {
 		"--rm",
 		`-u=${uid}:${gid}`,
 		`-v=${process.cwd()}:/data`,
+        `-v=${inputDir}:/input:ro`,
 		"openapitools/openapi-generator-cli:v7.14.0",
 		"generate",
 		"-i",
-		`/data/${OPENAPI_PATH}`,
+		"/input/openapi.json",
 		"--additional-properties=removeEnumValuePrefix=false",
+        "--type-mappings", "file=Vec<u8>,binary=Vec<u8>",
+        "-t", "/data/scripts/openapi/templates/rust",
 		"-g",
 		"rust",
 		"-o",
@@ -117,7 +125,8 @@ async function modifyDependencies() {
 		/\[dependencies\.reqwest\]/,
 		"[dependencies.reqwest]\ndefault-features = false",
 	);
-	await writeFile(cargoTomlPath, cargoToml, 'utf-8');
+	cargoToml = cargoToml.replace(/^license = .*$/m, 'license = "LicenseRef-RivetEnterprise"');
+    await writeFile(cargoTomlPath, cargoToml, 'utf-8');
 }
 
 async function applyErrorPatch() {

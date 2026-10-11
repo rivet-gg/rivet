@@ -22,7 +22,11 @@ impl IntoResponse for ApiError {
 		let (status, error_response) =
 			if let Some(rivet_err) = self.0.chain().find_map(|x| x.downcast_ref::<RivetError>()) {
 				let status = match (rivet_err.group(), rivet_err.code()) {
-					("api", "not_found") => StatusCode::NOT_FOUND,
+					("api", "not_found") | ("signing", "not_found") => StatusCode::NOT_FOUND,
+					("signing", "unavailable") => StatusCode::SERVICE_UNAVAILABLE,
+					("signing", "payload_too_large") => StatusCode::PAYLOAD_TOO_LARGE,
+					("signing", "throttled") => StatusCode::TOO_MANY_REQUESTS,
+					("signing", "conflict") => StatusCode::CONFLICT,
 					("api", "unauthorized") => StatusCode::UNAUTHORIZED,
 					("api", "forbidden") => StatusCode::FORBIDDEN,
 					("auth", "invalid_token" | "token_expired") => StatusCode::UNAUTHORIZED,
@@ -71,6 +75,12 @@ impl IntoResponse for ApiError {
 		// Build response
 		let mut res = (status, Json(error_response.clone())).into_response();
 
+		if status == StatusCode::TOO_MANY_REQUESTS && error_response.group == "signing" {
+			res.headers_mut().insert(
+				axum::http::header::RETRY_AFTER,
+				axum::http::HeaderValue::from_static("60"),
+			);
+		}
 		// Add extension so we can reference it when logging response
 		res.extensions_mut().insert(error_ext);
 

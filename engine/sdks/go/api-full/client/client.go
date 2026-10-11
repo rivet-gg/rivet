@@ -73,10 +73,19 @@ func NewClient(opts ...core.ClientOption) *Client {
 // - GET /actors (fanout)
 //
 // ## Optimized Alternative Routes
-func (c *Client) ActorsList(ctx context.Context, request *sdk.ActorsListRequest) (*sdk.ActorsListResponse, error) {
+func (c *Client) ActorsList(
+	ctx context.Context,
+	request *sdk.ActorsListRequest,
+	opts ...option.RequestOption,
+) (*sdk.ActorsListResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := baseURL + "/" + "actors"
 
@@ -107,14 +116,18 @@ func (c *Client) ActorsList(ctx context.Context, request *sdk.ActorsListRequest)
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response *sdk.ActorsListResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodGet,
-			Headers:  c.header,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodGet,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -138,10 +151,19 @@ func (c *Client) ActorsList(ctx context.Context, request *sdk.ActorsListRequest)
 // - [pegboard::workflows::actor] Create actor workflow (includes Epoxy key allocation)
 //
 // actor::get will always be in the same datacenter.
-func (c *Client) ActorsCreate(ctx context.Context, request *sdk.ActorsCreateRequest) (*sdk.ActorsCreateResponse, error) {
+func (c *Client) ActorsCreate(
+	ctx context.Context,
+	request *sdk.ActorsCreateRequest,
+	opts ...option.RequestOption,
+) (*sdk.ActorsCreateResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := baseURL + "/" + "actors"
 
@@ -151,15 +173,19 @@ func (c *Client) ActorsCreate(ctx context.Context, request *sdk.ActorsCreateRequ
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response *sdk.ActorsCreateResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodPost,
-			Headers:  c.header,
-			Request:  request,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodPost,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Request:     request,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -192,10 +218,19 @@ func (c *Client) ActorsCreate(ctx context.Context, request *sdk.ActorsCreateRequ
 // actor::get will always be in the same datacenter.
 //
 // ## Optimized Alternative Routes
-func (c *Client) ActorsGetOrCreate(ctx context.Context, request *sdk.ActorsGetOrCreateRequest) (*sdk.ActorsGetOrCreateResponse, error) {
+func (c *Client) ActorsGetOrCreate(
+	ctx context.Context,
+	request *sdk.ActorsGetOrCreateRequest,
+	opts ...option.RequestOption,
+) (*sdk.ActorsGetOrCreateResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := baseURL + "/" + "actors"
 
@@ -205,15 +240,19 @@ func (c *Client) ActorsGetOrCreate(ctx context.Context, request *sdk.ActorsGetOr
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response *sdk.ActorsGetOrCreateResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodPut,
-			Headers:  c.header,
-			Request:  request,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodPut,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Request:     request,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -225,10 +264,19 @@ func (c *Client) ActorsGetOrCreate(ctx context.Context, request *sdk.ActorsGetOr
 //
 // - GET /actors/names (fanout)
 // - [api-peer] namespace::ops::resolve_for_name_global
-func (c *Client) ActorsListNames(ctx context.Context, request *sdk.ActorsListNamesRequest) (*sdk.ActorsListNamesResponse, error) {
+func (c *Client) ActorsListNames(
+	ctx context.Context,
+	request *sdk.ActorsListNamesRequest,
+	opts ...option.RequestOption,
+) (*sdk.ActorsListNamesResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := baseURL + "/" + "actors/names"
 
@@ -244,14 +292,18 @@ func (c *Client) ActorsListNames(ctx context.Context, request *sdk.ActorsListNam
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response *sdk.ActorsListNamesResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodGet,
-			Headers:  c.header,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodGet,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -263,10 +315,20 @@ func (c *Client) ActorsListNames(ctx context.Context, request *sdk.ActorsListNam
 //
 // - DELETE /actors/{}
 // - [api-peer] namespace::ops::resolve_for_name_global
-func (c *Client) ActorsDelete(ctx context.Context, actorId sdk.RivetId, request *sdk.ActorsDeleteRequest) (sdk.ActorsDeleteResponse, error) {
+func (c *Client) ActorsDelete(
+	ctx context.Context,
+	actorId sdk.RivetId,
+	request *sdk.ActorsDeleteRequest,
+	opts ...option.RequestOption,
+) (sdk.ActorsDeleteResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := fmt.Sprintf(baseURL+"/"+"actors/%v", actorId)
 
@@ -276,14 +338,18 @@ func (c *Client) ActorsDelete(ctx context.Context, actorId sdk.RivetId, request 
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response sdk.ActorsDeleteResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodDelete,
-			Headers:  c.header,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodDelete,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -291,10 +357,21 @@ func (c *Client) ActorsDelete(ctx context.Context, actorId sdk.RivetId, request 
 	return response, nil
 }
 
-func (c *Client) ActorsKvGet(ctx context.Context, actorId sdk.RivetId, key string, request *sdk.ActorsKvGetRequest) (*sdk.ActorsKvGetResponse, error) {
+func (c *Client) ActorsKvGet(
+	ctx context.Context,
+	actorId sdk.RivetId,
+	key string,
+	request *sdk.ActorsKvGetRequest,
+	opts ...option.RequestOption,
+) (*sdk.ActorsKvGetResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := fmt.Sprintf(baseURL+"/"+"actors/%v/kv/keys/%v", actorId, key)
 
@@ -304,14 +381,18 @@ func (c *Client) ActorsKvGet(ctx context.Context, actorId sdk.RivetId, key strin
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response *sdk.ActorsKvGetResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodGet,
-			Headers:  c.header,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodGet,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -319,10 +400,20 @@ func (c *Client) ActorsKvGet(ctx context.Context, actorId sdk.RivetId, key strin
 	return response, nil
 }
 
-func (c *Client) ActorsReschedule(ctx context.Context, actorId sdk.RivetId, request *sdk.ActorsRescheduleRequest) (sdk.ActorsRescheduleResponse, error) {
+func (c *Client) ActorsReschedule(
+	ctx context.Context,
+	actorId sdk.RivetId,
+	request *sdk.ActorsRescheduleRequest,
+	opts ...option.RequestOption,
+) (sdk.ActorsRescheduleResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := fmt.Sprintf(baseURL+"/"+"actors/%v/reschedule", actorId)
 
@@ -332,15 +423,19 @@ func (c *Client) ActorsReschedule(ctx context.Context, actorId sdk.RivetId, requ
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response sdk.ActorsRescheduleResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodPost,
-			Headers:  c.header,
-			Request:  request,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodPost,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Request:     request,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -348,10 +443,20 @@ func (c *Client) ActorsReschedule(ctx context.Context, actorId sdk.RivetId, requ
 	return response, nil
 }
 
-func (c *Client) ActorsSleep(ctx context.Context, actorId sdk.RivetId, request *sdk.ActorsSleepRequest) (sdk.ActorsSleepResponse, error) {
+func (c *Client) ActorsSleep(
+	ctx context.Context,
+	actorId sdk.RivetId,
+	request *sdk.ActorsSleepRequest,
+	opts ...option.RequestOption,
+) (sdk.ActorsSleepResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := fmt.Sprintf(baseURL+"/"+"actors/%v/sleep", actorId)
 
@@ -361,15 +466,19 @@ func (c *Client) ActorsSleep(ctx context.Context, actorId sdk.RivetId, request *
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response sdk.ActorsSleepResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodPost,
-			Headers:  c.header,
-			Request:  request,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodPost,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Request:     request,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -377,10 +486,19 @@ func (c *Client) ActorsSleep(ctx context.Context, actorId sdk.RivetId, request *
 	return response, nil
 }
 
-func (c *Client) RunnerConfigsList(ctx context.Context, request *sdk.RunnerConfigsListRequest) (*sdk.RunnerConfigsListResponse, error) {
+func (c *Client) RunnerConfigsList(
+	ctx context.Context,
+	request *sdk.RunnerConfigsListRequest,
+	opts ...option.RequestOption,
+) (*sdk.RunnerConfigsListResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := baseURL + "/" + "runner-configs"
 
@@ -405,14 +523,18 @@ func (c *Client) RunnerConfigsList(ctx context.Context, request *sdk.RunnerConfi
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response *sdk.RunnerConfigsListResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodGet,
-			Headers:  c.header,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodGet,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -420,10 +542,19 @@ func (c *Client) RunnerConfigsList(ctx context.Context, request *sdk.RunnerConfi
 	return response, nil
 }
 
-func (c *Client) RunnerConfigsServerlessHealthCheck(ctx context.Context, request *sdk.RunnerConfigsServerlessHealthCheckRequest) (*sdk.RunnerConfigsServerlessHealthCheckResponse, error) {
+func (c *Client) RunnerConfigsServerlessHealthCheck(
+	ctx context.Context,
+	request *sdk.RunnerConfigsServerlessHealthCheckRequest,
+	opts ...option.RequestOption,
+) (*sdk.RunnerConfigsServerlessHealthCheckResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := baseURL + "/" + "runner-configs/serverless-health-check"
 
@@ -433,15 +564,19 @@ func (c *Client) RunnerConfigsServerlessHealthCheck(ctx context.Context, request
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response *sdk.RunnerConfigsServerlessHealthCheckResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodPost,
-			Headers:  c.header,
-			Request:  request,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodPost,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Request:     request,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -449,10 +584,20 @@ func (c *Client) RunnerConfigsServerlessHealthCheck(ctx context.Context, request
 	return response, nil
 }
 
-func (c *Client) RunnerConfigsUpsert(ctx context.Context, runnerName string, request *sdk.RunnerConfigsUpsertRequestBody) (*sdk.RunnerConfigsUpsertResponse, error) {
+func (c *Client) RunnerConfigsUpsert(
+	ctx context.Context,
+	runnerName string,
+	request *sdk.RunnerConfigsUpsertRequestBody,
+	opts ...option.RequestOption,
+) (*sdk.RunnerConfigsUpsertResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := fmt.Sprintf(baseURL+"/"+"runner-configs/%v", runnerName)
 
@@ -461,16 +606,20 @@ func (c *Client) RunnerConfigsUpsert(ctx context.Context, runnerName string, req
 	if len(queryParams) > 0 {
 		endpointURL += "?" + queryParams.Encode()
 	}
+
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
 
 	var response *sdk.RunnerConfigsUpsertResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodPut,
-			Headers:  c.header,
-			Request:  request,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodPut,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Request:     request,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -478,10 +627,20 @@ func (c *Client) RunnerConfigsUpsert(ctx context.Context, runnerName string, req
 	return response, nil
 }
 
-func (c *Client) RunnerConfigsDelete(ctx context.Context, runnerName string, request *sdk.RunnerConfigsDeleteRequest) (sdk.RunnerConfigsDeleteResponse, error) {
+func (c *Client) RunnerConfigsDelete(
+	ctx context.Context,
+	runnerName string,
+	request *sdk.RunnerConfigsDeleteRequest,
+	opts ...option.RequestOption,
+) (sdk.RunnerConfigsDeleteResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := fmt.Sprintf(baseURL+"/"+"runner-configs/%v", runnerName)
 
@@ -491,14 +650,18 @@ func (c *Client) RunnerConfigsDelete(ctx context.Context, runnerName string, req
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response sdk.RunnerConfigsDeleteResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodDelete,
-			Headers:  c.header,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodDelete,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -506,10 +669,20 @@ func (c *Client) RunnerConfigsDelete(ctx context.Context, runnerName string, req
 	return response, nil
 }
 
-func (c *Client) RunnerConfigsRefreshMetadata(ctx context.Context, runnerName string, request *sdk.RunnerConfigsRefreshMetadataRequest) (sdk.RunnerConfigsRefreshMetadataResponse, error) {
+func (c *Client) RunnerConfigsRefreshMetadata(
+	ctx context.Context,
+	runnerName string,
+	request *sdk.RunnerConfigsRefreshMetadataRequest,
+	opts ...option.RequestOption,
+) (sdk.RunnerConfigsRefreshMetadataResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := fmt.Sprintf(baseURL+"/"+"runner-configs/%v/refresh-metadata", runnerName)
 
@@ -519,15 +692,19 @@ func (c *Client) RunnerConfigsRefreshMetadata(ctx context.Context, runnerName st
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response sdk.RunnerConfigsRefreshMetadataResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodPost,
-			Headers:  c.header,
-			Request:  request,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodPost,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Request:     request,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err

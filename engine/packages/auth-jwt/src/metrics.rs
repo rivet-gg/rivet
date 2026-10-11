@@ -212,3 +212,10 @@ pub fn record_verifier_refresh(mode: &'static str, result: &'static str, generat
 fn saturating_i64(value: u64) -> i64 {
 	i64::try_from(value).unwrap_or(i64::MAX)
 }
+
+lazy_static::lazy_static! {
+	pub static ref SIGNING_REQUESTS: IntCounterVec = register_int_counter_vec_with_registry!("rivet_signing_requests_total", "Purpose-specific signing outcomes.", &["operation", "outcome"], *REGISTRY).unwrap();
+	pub static ref SIGNING_LATENCY: HistogramVec = register_histogram_vec_with_registry!("rivet_signing_duration_seconds", "Purpose-specific signing request latency.", &["operation", "outcome"], *REGISTRY).unwrap();
+	pub static ref SIGNING_BYTES: IntCounterVec = register_int_counter_vec_with_registry!("rivet_signing_bytes_total", "Accepted signing input bytes.", &["operation"], *REGISTRY).unwrap();
+	pub static ref WEBHOOK_MUTATIONS: IntCounterVec = register_int_counter_vec_with_registry!("rivet_webhook_key_mutations_total", "Committed webhook key lifecycle mutations.", &["operation"], *REGISTRY).unwrap();
+}

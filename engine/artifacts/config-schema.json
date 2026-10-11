@@ -255,6 +255,15 @@
             "key_publish_lead": null,
             "key_rotation_interval": null,
             "max_duration": null,
+            "signing": {
+              "defaults": {
+                "application_operations": 300,
+                "webhook_bytes": 134217728,
+                "webhook_operations": 60
+              },
+              "namespaces": {},
+              "payload_bytes": 33554432
+            },
             "unknown_kid_refresh_cooldown": null,
             "verifier_cache_ttl": null,
             "verifier_max_stale": null
@@ -1010,6 +1019,23 @@
           ],
           "format": "uint64",
           "minimum": 0.0
+        },
+        "signing": {
+          "description": "Purpose-specific signing limits, shared by all replicas in a namespace.",
+          "default": {
+            "defaults": {
+              "application_operations": 300,
+              "webhook_bytes": 134217728,
+              "webhook_operations": 60
+            },
+            "namespaces": {},
+            "payload_bytes": 33554432
+          },
+          "allOf": [
+            {
+              "$ref": "#/definitions/Signing"
+            }
+          ]
         },
         "unknown_kid_refresh_cooldown": {
           "type": [
@@ -1964,6 +1990,63 @@
     },
     "Secret<String>": {
       "type": "string"
+    },
+    "Signing": {
+      "description": "Fixed 60-second namespace budgets. Failed and cancelled attempts remain charged.",
+      "type": "object",
+      "properties": {
+        "defaults": {
+          "default": {
+            "application_operations": 300,
+            "webhook_bytes": 134217728,
+            "webhook_operations": 60
+          },
+          "allOf": [
+            {
+              "$ref": "#/definitions/SigningQuota"
+            }
+          ]
+        },
+        "namespaces": {
+          "description": "Overrides indexed by immutable namespace ID, never namespace name.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/SigningQuota"
+          }
+        },
+        "payload_bytes": {
+          "default": 33554432,
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "SigningQuota": {
+      "type": "object",
+      "properties": {
+        "application_operations": {
+          "default": 300,
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "webhook_bytes": {
+          "default": 134217728,
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "webhook_operations": {
+          "default": 60,
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
     },
     "Sqlite": {
       "type": "object",

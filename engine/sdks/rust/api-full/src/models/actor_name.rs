@@ -14,11 +14,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ActorName {
 	#[serde(rename = "metadata")]
-	pub metadata: serde_json::Value,
+	pub metadata: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl ActorName {
-	pub fn new(metadata: serde_json::Value) -> ActorName {
+	pub fn new(metadata: std::collections::HashMap<String, serde_json::Value>) -> ActorName {
 		ActorName { metadata }
 	}
 }

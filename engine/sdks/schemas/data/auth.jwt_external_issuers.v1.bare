@@ -1,0 +1,14 @@
+type Issuer struct {
+	name: str
+	issuer: str
+	audience: str
+	jwksUrl: str
+	algorithm: str
+	grantCeiling: str
+}
+
+type Data struct {
+	namespaceId: data
+	generation: u64
+	issuers: list<Issuer>
+}

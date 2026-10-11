@@ -14,6 +14,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.ok_or("Failed to find workspace root")?;
 
 	let schema_dir = workspace_root.join("sdks").join("schemas").join("data");
+	// Individual schema watches do not detect a newly added versioned schema.
+	println!("cargo:rerun-if-changed={}", schema_dir.display());
 
 	let cfg = vbare_compiler::Config::default();
 	vbare_compiler::process_schemas_with_config(&schema_dir, &cfg)?;

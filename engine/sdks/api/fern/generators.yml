@@ -19,7 +19,9 @@ groups:
           skipResponseValidation: true
           allowCustomFetcher: true
       - name: fernapi/fern-go-sdk
-        version: 0.9.3
+        version: 0.13.0
         output:
           location: local-file-system
           path: ../../go/api-full
+        config:
+          includeLegacyClientOptions: true

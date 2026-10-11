@@ -39,6 +39,19 @@ use crate::{
 		health::fanout,
 		metadata::get,
 		auth::tokens::create,
+		auth::application_tokens::create,
+		auth::webhook_keys::ensure,
+		auth::webhook_signing::sign,
+		auth::webhook_discovery::jwks,
+		auth::webhook_discovery::metadata,
+		auth::webhook_keys::get,
+		auth::webhook_keys::rotate,
+		auth::webhook_keys::revoke,
+		auth::jwks::get,
+		auth::issuers::list,
+		auth::issuers::get,
+		auth::issuers::upsert,
+		auth::issuers::delete,
 		auth::tokens::inspect,
 	),
 	components(
@@ -70,6 +83,59 @@ pub async fn router(
 			)
 			// MARK: Metadata
 			.route("/metadata", axum::routing::get(metadata::get))
+			.route(
+				"/.well-known/jwks.json",
+				axum::routing::get(auth::jwks::get),
+			)
+			.route(
+				"/namespaces/{namespace}/auth/issuers",
+				axum::routing::get(auth::issuers::list),
+			)
+			.route(
+				"/namespaces/{namespace}/auth/issuers/{issuer_name}",
+				axum::routing::get(auth::issuers::get)
+					.put(auth::issuers::upsert)
+					.delete(auth::issuers::delete)
+					.layer(axum::extract::DefaultBodyLimit::max(32 * 1024)),
+			)
+			// MARK: Webhook discovery
+			.route(
+				"/namespaces/{namespace}/auth/webhooks/jwks.json",
+				axum::routing::get(auth::webhook_discovery::jwks),
+			)
+			.route(
+				"/namespaces/{namespace}/auth/webhooks",
+				axum::routing::get(auth::webhook_discovery::metadata),
+			)
+			// MARK: Webhook signing
+			.route(
+				"/auth/webhooks/sign",
+				axum::routing::post(auth::webhook_signing::sign),
+			)
+			// MARK: Webhook keys
+			.route(
+				"/auth/webhooks/ensure",
+				axum::routing::post(auth::webhook_keys::ensure),
+			)
+			.route(
+				"/namespaces/{namespace}/auth/webhook-keys",
+				axum::routing::get(auth::webhook_keys::get),
+			)
+			.route(
+				"/namespaces/{namespace}/auth/webhook-keys/rotate",
+				axum::routing::post(auth::webhook_keys::rotate)
+					.layer(axum::extract::DefaultBodyLimit::max(4096)),
+			)
+			.route(
+				"/namespaces/{namespace}/auth/webhook-keys/revoke",
+				axum::routing::post(auth::webhook_keys::revoke)
+					.layer(axum::extract::DefaultBodyLimit::max(4096)),
+			)
+			// MARK: Application signing
+			.route(
+				"/auth/application-tokens",
+				axum::routing::post(auth::application_tokens::create),
+			)
 			// MARK: Namespaces
 			.route("/namespaces", axum::routing::get(namespaces::list))
 			.route("/namespaces", axum::routing::post(namespaces::create))
@@ -185,8 +251,27 @@ async fn auth_middleware(
 	let method = req.method().clone();
 	let path = req.uri().path().to_string();
 
-	// Run endpoint
-	let res = next.run(req).await;
+	let mut audit = auth::signing_audit::Guard::start(ctx.signing_audit.clone(), &path);
+	let _admission = if audit.is_some() {
+		match auth::signing_audit::small_body_permit() {
+			Ok(permit) => Some(permit),
+			Err(error) => {
+				let response = auth::signing::no_store(
+					rivet_api_builder::ApiError::from(error).into_response(),
+				);
+				audit.as_mut().unwrap().response(&response);
+				return Ok(response);
+			}
+		}
+	} else {
+		None
+	};
+	// Includes extractor failures; the guard also records cancellation when this future drops.
+	let mut res = next.run(req).await;
+	if let Some(audit) = audit.as_mut() {
+		audit.response(&res);
+		res = auth::signing::no_store(res);
+	}
 
 	// Verify auth was handled
 	if res.extensions().get::<FailedExtraction>().is_none()

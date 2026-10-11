@@ -135,3 +135,9 @@ pub async fn create(
 
 	Ok(CreateResponse { namespace })
 }
+
+#[tracing::instrument(skip_all)]
+pub async fn exists_authoritative(ctx: ApiCtx, (namespace_id,): (Id,), _query: ()) -> Result<bool> {
+	ctx.op(namespace::ops::exists_authoritative::Input { namespace_id })
+		.await
+}

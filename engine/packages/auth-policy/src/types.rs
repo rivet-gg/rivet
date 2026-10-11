@@ -32,6 +32,8 @@ pub enum ResourceKind {
 	ActorGateway,
 	ActorKv,
 	Jwt,
+	ApplicationToken,
+	WebhookSigning,
 }
 
 impl fmt::Display for ResourceKind {
@@ -41,6 +43,8 @@ impl fmt::Display for ResourceKind {
 			ResourceKind::ActorGateway => "actor gateways",
 			ResourceKind::ActorKv => "actor KVs",
 			ResourceKind::Jwt => "JWTs",
+			ResourceKind::ApplicationToken => "application tokens",
+			ResourceKind::WebhookSigning => "webhook signing",
 			ResourceKind::Runner => "runners",
 			ResourceKind::RunnerConfig => "runner configs",
 			ResourceKind::Token => "tokens",
@@ -57,6 +61,8 @@ impl ResourceKind {
 			ResourceKind::ActorGateway => "actor-gateway",
 			ResourceKind::ActorKv => "actor-kv",
 			ResourceKind::Jwt => "jwt",
+			ResourceKind::ApplicationToken => "application-token",
+			ResourceKind::WebhookSigning => "webhook-signing",
 			ResourceKind::Runner => "runner",
 			ResourceKind::RunnerConfig => "runner-config",
 			ResourceKind::Token => "token",

@@ -5,35 +5,31 @@ package client
 import (
 	http "net/http"
 	core "sdk/core"
+	option "sdk/option"
 )
 
-// WithBaseURL sets the client's base URL, overriding the
-// default environment, if any.
-func WithBaseURL(baseURL string) core.ClientOption {
-	return func(opts *core.ClientOptions) {
-		opts.BaseURL = baseURL
-	}
+// WithBaseURL sets the base URL, overriding the default
+// environment, if any.
+func WithBaseURL(baseURL string) *core.BaseURLOption {
+	return option.WithBaseURL(baseURL)
 }
 
-// WithHTTPClient uses the given HTTPClient to issue all HTTP requests.
-func WithHTTPClient(httpClient core.HTTPClient) core.ClientOption {
-	return func(opts *core.ClientOptions) {
-		opts.HTTPClient = httpClient
-	}
+// WithHTTPClient uses the given HTTPClient to issue the request.
+func WithHTTPClient(httpClient core.HTTPClient) *core.HTTPClientOption {
+	return option.WithHTTPClient(httpClient)
 }
 
-// WithHTTPHeader adds the given http.Header to all requests
-// issued by the client.
-func WithHTTPHeader(httpHeader http.Header) core.ClientOption {
-	return func(opts *core.ClientOptions) {
-		// Clone the headers so they can't be modified after the option call.
-		opts.HTTPHeader = httpHeader.Clone()
-	}
+// WithHTTPHeader adds the given http.Header to the request.
+func WithHTTPHeader(httpHeader http.Header) *core.HTTPHeaderOption {
+	return option.WithHTTPHeader(httpHeader)
 }
 
-// WithToken sets the 'Authorization: Bearer <token>' header on every request.
-func WithToken(token string) core.ClientOption {
-	return func(opts *core.ClientOptions) {
-		opts.Token = token
-	}
+// WithMaxAttempts configures the maximum number of retry attempts.
+func WithMaxAttempts(attempts uint) *core.MaxAttemptsOption {
+	return option.WithMaxAttempts(attempts)
+}
+
+// WithToken sets the 'Authorization: Bearer <token>' request header.
+func WithToken(token string) *core.TokenOption {
+	return option.WithToken(token)
 }

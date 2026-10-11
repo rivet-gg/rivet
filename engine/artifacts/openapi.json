@@ -458,6 +458,41 @@
         ]
       }
     },
+    "/auth/application-tokens": {
+      "post": {
+        "tags": [
+          "auth::application_tokens"
+        ],
+        "operationId": "auth_application_tokens_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthApplicationTokenCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthApplicationTokenCreateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/auth/tokens": {
       "post": {
         "tags": [
@@ -506,6 +541,67 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthTokenInspectResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/auth/webhooks/ensure": {
+      "post": {
+        "tags": [
+          "auth::webhook_keys"
+        ],
+        "operationId": "auth_webhooks_ensure",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebhookMetadata"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/auth/webhooks/sign": {
+      "post": {
+        "tags": [
+          "auth::webhook_signing"
+        ],
+        "operationId": "auth_webhooks_sign",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebhookSignResponse"
                 }
               }
             }
@@ -763,6 +859,375 @@
             "bearer_auth": []
           }
         ]
+      }
+    },
+    "/namespaces/{namespace}/auth/issuers": {
+      "get": {
+        "tags": [
+          "auth::issuers"
+        ],
+        "operationId": "auth_issuers_list",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "description": "Namespace name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthIssuerListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/namespaces/{namespace}/auth/issuers/{issuer_name}": {
+      "get": {
+        "tags": [
+          "auth::issuers"
+        ],
+        "operationId": "auth_issuers_get",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "description": "Namespace name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "issuer_name",
+            "in": "path",
+            "description": "Issuer registration name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthIssuerGetResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "auth::issuers"
+        ],
+        "operationId": "auth_issuers_upsert",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "description": "Namespace name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "issuer_name",
+            "in": "path",
+            "description": "Issuer registration name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthIssuerUpsertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthIssuerUpsertResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "auth::issuers"
+        ],
+        "operationId": "auth_issuers_delete",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "description": "Namespace name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "issuer_name",
+            "in": "path",
+            "description": "Issuer registration name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthIssuerDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/namespaces/{namespace}/auth/webhook-keys": {
+      "get": {
+        "tags": [
+          "auth::webhook_keys"
+        ],
+        "operationId": "auth_webhook_keys_get",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "description": "Namespace name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebhookKeyStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/namespaces/{namespace}/auth/webhook-keys/revoke": {
+      "post": {
+        "tags": [
+          "auth::webhook_keys"
+        ],
+        "operationId": "auth_webhook_keys_revoke",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "description": "Namespace name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthWebhookRevokeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebhookKeyStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/namespaces/{namespace}/auth/webhook-keys/rotate": {
+      "post": {
+        "tags": [
+          "auth::webhook_keys"
+        ],
+        "operationId": "auth_webhook_keys_rotate",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "description": "Namespace name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthWebhookRotateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebhookKeyStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/namespaces/{namespace}/auth/webhooks": {
+      "get": {
+        "tags": [
+          "auth::webhook_discovery"
+        ],
+        "operationId": "auth_webhooks_metadata",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "description": "Immutable namespace ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebhookMetadata"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/namespaces/{namespace}/auth/webhooks/jwks.json": {
+      "get": {
+        "tags": [
+          "auth::webhook_discovery"
+        ],
+        "operationId": "auth_webhooks_jwks",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "description": "Immutable namespace ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/jwk-set+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthWebhookJwks"
+                }
+              }
+            }
+          }
+        },
+        "security": []
       }
     },
     "/runner-configs": {

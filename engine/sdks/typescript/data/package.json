@@ -1,0 +1,36 @@
+{
+	"name": "@rivetkit/engine-data",
+	"version": "2.3.17",
+	"license": "SEE LICENSE IN LICENSE",
+	"type": "module",
+	"files": ["dist"],
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		}
+	},
+	"scripts": {
+		"generate": "bare compile ../../schemas/data/auth.grants.v1.bare -o src/auth-grants-v1.generated.ts",
+		"build": "tsup src/index.ts",
+		"check-types": "tsc --noEmit",
+		"test": "tsx tests/auth-grants.ts"
+	},
+	"dependencies": {
+		"@bare-ts/lib": "^0.6.0",
+		"vbare": "^0.0.4"
+	},
+	"devDependencies": {
+		"@bare-ts/tools": "^0.15.0",
+		"@types/node": "^22.13.9",
+		"tsx": "^4.20.0",
+		"tsup": "^8.5.0",
+		"typescript": "^5.9.2"
+	}
+}

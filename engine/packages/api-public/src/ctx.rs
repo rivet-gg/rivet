@@ -10,6 +10,7 @@ use std::{
 
 #[derive(Clone)]
 pub struct ApiCtx {
+	pub(crate) signing_audit: crate::auth::signing_audit::Audit,
 	inner: rivet_api_builder::ApiCtx,
 	token: Option<String>,
 	jwt_key_ring_cache: Option<Arc<rivet_auth_jwt::key_ring_cache::KeyRingCache>>,
@@ -24,6 +25,7 @@ impl ApiCtx {
 		jwt_key_ring_cache: Option<Arc<rivet_auth_jwt::key_ring_cache::KeyRingCache>>,
 	) -> Self {
 		Self {
+			signing_audit: Default::default(),
 			inner,
 			token,
 			jwt_key_ring_cache,

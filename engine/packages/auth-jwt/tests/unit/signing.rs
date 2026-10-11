@@ -111,6 +111,11 @@ impl Source {
 			last_unknown_refresh_ts: AtomicI64::new(i64::MIN),
 			last_refresh_failure_ts: AtomicI64::new(i64::MIN),
 			fallback_state: AtomicU8::new(0),
+			external_fetch_registry: Arc::new(|namespace_id| {
+				Box::pin(async move { Ok(crate::ExternalIssuerRegistry::empty(namespace_id)) })
+			}),
+			external_fetch_jwks: Arc::new(|_| Box::pin(async { Ok(Default::default()) })),
+			external_cache: Mutex::new(Default::default()),
 		})
 	}
 

@@ -10,6 +10,7 @@ packages:
   - engine
   - self-host/compose/template
   - engine/sdks/typescript/api-full
+  - engine/sdks/typescript/data
   - engine/sdks/typescript/envoy-protocol
   - engine/sdks/typescript/test-envoy
   - engine/sdks/typescript/test-envoy-native

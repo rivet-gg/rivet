@@ -1,0 +1,25 @@
+{
+	"name": "jwks-counter-example",
+	"version": "1.0.0",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"scripts": {
+		"start": "tsx src/server.ts --host 0.0.0.0",
+		"client": "tsx src/client.ts",
+		"provision": "tsx src/provision.ts",
+		"test:grants": "tsx tests/grants.ts",
+		"smoke": "tsx tests/smoke.ts",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@rivetkit/engine-data": "workspace:*",
+		"jose": "^6.1.3",
+		"rivetkit": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.13.9",
+		"tsx": "^4.20.0",
+		"typescript": "^5.5.2"
+	}
+}

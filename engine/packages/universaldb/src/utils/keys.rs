@@ -169,4 +169,5 @@ define_keys! {
 	(141, JWT, "jwt"),
 	(142, KEY_RING, "key_ring"),
 	(143, PRIVATE_KEY, "private_key"),
+	(144, EXTERNAL_ISSUERS, "external_issuers"),
 }

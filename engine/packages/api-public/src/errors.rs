@@ -21,3 +21,5 @@ pub enum Validation {
 	)]
 	RaceCondition,
 }
+
+pub use rivet_auth::errors::Signing;

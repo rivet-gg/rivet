@@ -1,0 +1,69 @@
+---
+title: "JWKS and Public Keys"
+description: "Discover Rivet signing keys and verify tokens and webhooks locally."
+---
+
+Rivet publishes public signing keys as a JSON Web Key Set (JWKS). Your application can verify signatures locally without sending the token or webhook back to Rivet. Configure a trusted discovery URL in your application; never choose that URL from an unverified token.
+
+Signing and namespace issuer configuration require a deployment with ACL authentication enabled.
+
+## Choose the right key set
+
+| Signed artifact | Discovery URL | Verification purpose |
+| --- | --- | --- |
+| Rivet access token | `/.well-known/jwks.json` | Access to the control plane |
+| Downstream application token | `/.well-known/jwks.json` | Your application's own authorization |
+| Namespace webhook | `/namespaces/{namespace_id}/auth/webhooks/jwks.json` | Webhooks from one immutable namespace |
+
+Resolve these paths against your configured control-plane endpoint, for example `https://api.rivet.dev`. The webhook path requires the immutable namespace ID, not its display name. Webhook keys are separate from token keys and from other namespaces' keys.
+
+Public discovery requires no bearer token. Webhook keys must first be provisioned using the authenticated `POST /auth/webhooks/ensure` operation described in [Signing Service](/actors/docs/signing-service). Public discovery never creates keys and returns 404 before provisioning.
+
+A webhook key has exactly these public fields:
+
+```json
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "kid": "ds_<public-key-thumbprint>",
+  "use": "sig",
+  "alg": "EdDSA",
+  "x": "<unpadded-base64url-public-key>"
+}
+```
+
+The JWKS wraps these objects in a `keys` array. Private key material is never included. Webhook IDs use the `ds_` prefix followed by the unpadded-base64url SHA-256 thumbprint of the canonical public JWK fields `crv`, `kty`, and `x`.
+
+`GET /namespaces/{namespace_id}/auth/webhooks` returns the active signer's `kid`, algorithm `ed25519`, `jwks_url`, immutable `namespace_id`, and ring `generation`. Metadata describes the signer at the time of the read. Always select the verification key using the `kid` on the actual token or webhook.
+
+## Verify the intended artifact
+
+A valid cryptographic signature alone does not grant permission.
+
+For application JWTs, require `alg=EdDSA`, `typ=rivet-app+jwt`, supported `rivet_ver=1`, and your configured issuer, audience, purpose, and immutable namespace. Check `iat` and `exp`, a positive lifetime within your application's limit, and your application claims against current application state. Rivet access tokens use a separate `rivet-auth+jwt` profile. Application tokens cannot authenticate to the control plane.
+
+For webhooks, verify the exact timestamp and body bytes using Ed25519, require a timestamp within five minutes, and enforce your application's replay and authorization rules. See the [byte format and examples](/actors/docs/signing-service#sign-a-webhook).
+
+If a `kid` is unfamiliar, fetch a fresh key set once with bounded retries and rate limiting. Reject the artifact if the key is still absent. Use ordinary cryptographic libraries; Rivet does not provide a verification RPC or a verification helper in its SDKs.
+
+## Rotation and caching
+
+Webhook keys rotate automatically. By default, a pending public key is published ten minutes before use, normal rotation occurs at seven days, and a key stops signing after fourteen days even if rotation stalls. A normally retired public key remains available for 365 seconds, covering timestamp freshness, clock allowance, and outstanding signing operations.
+
+For example, while key A signs deliveries, discovery starts publishing A and pending key B. After the publication interval, B becomes active. Discovery retains A briefly so a delivery already signed by A can still be verified. After that retention window, only the current and any newly pending keys remain.
+
+Rivet webhook discovery and active-signer metadata use `Cache-Control: no-store` and authoritative reads. Authentication/application-token discovery has its own HTTP cache policy; honor its returned headers. Do not reuse a webhook key set as a token key set or extend stale data indefinitely after a fetch failure.
+
+Emergency revocation removes a compromised key from authoritative discovery and atomically replaces the active signer. An operation already admitted may finish within the five-second signing lease. A verifier with cached public keys can continue accepting signatures until its cache refreshes: revocation cannot recall an offline copy of a public key. A replacement key may appear without the normal prepublication interval, so unfamiliar-key refresh matters.
+
+## Durable Streams discovery
+
+A Durable Streams integration preserves its own `{stream-root}/__ds/jwks.json` URL and subscription signing metadata. Its adapter fetches the namespace's dedicated webhook keys from Rivet and serves the existing `Cache-Control: public, max-age=300` contract. It must use a fresh authoritative snapshot when creating that response, account for retrieval age, and avoid additional stale caches.
+
+This five-minute downstream cache bounds how quickly receivers learn about revocation, in addition to outstanding read/signing leases and clock allowance. The delivery header's `kid` takes precedence over advisory subscription metadata. See the [Durable Streams webhook protocol](https://github.com/durable-streams/durable-streams/blob/461b40267aabd644558f9b19dbb9507dd5f691cf/PROTOCOL.md#71-webhook-delivery-and-callback).
+
+## External namespace issuers
+
+You can also configure a namespace to trust tokens from an external issuer using `/namespaces/{namespace}/auth/issuers/{issuer_name}`. This is a separate trust direction: Rivet fetches that issuer's public keys and applies the configured audience and grant ceiling before authorizing control-plane operations.
+
+An external issuer cannot turn a Rivet application token into a control-plane credential. Keep external issuer URLs, audiences, and grants narrowly scoped, and remove trust when the integration is retired.

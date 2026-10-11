@@ -17,18 +17,33 @@ pub struct Runner {
 	pub create_ts: i64,
 	#[serde(rename = "datacenter")]
 	pub datacenter: String,
-	#[serde(rename = "drain_ts", skip_serializing_if = "Option::is_none")]
-	pub drain_ts: Option<i64>,
+	#[serde(
+		rename = "drain_ts",
+		default,
+		with = "::serde_with::rust::double_option",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub drain_ts: Option<Option<i64>>,
 	#[serde(rename = "key")]
 	pub key: String,
-	#[serde(rename = "last_connected_ts", skip_serializing_if = "Option::is_none")]
-	pub last_connected_ts: Option<i64>,
+	#[serde(
+		rename = "last_connected_ts",
+		default,
+		with = "::serde_with::rust::double_option",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub last_connected_ts: Option<Option<i64>>,
 	#[serde(rename = "last_ping_ts")]
 	pub last_ping_ts: i64,
 	#[serde(rename = "last_rtt")]
 	pub last_rtt: i32,
-	#[serde(rename = "metadata", skip_serializing_if = "Option::is_none")]
-	pub metadata: Option<serde_json::Value>,
+	#[serde(
+		rename = "metadata",
+		default,
+		with = "::serde_with::rust::double_option",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub metadata: Option<Option<std::collections::HashMap<String, serde_json::Value>>>,
 	#[serde(rename = "name")]
 	pub name: String,
 	#[serde(rename = "namespace_id")]
@@ -37,8 +52,13 @@ pub struct Runner {
 	pub remaining_slots: i32,
 	#[serde(rename = "runner_id")]
 	pub runner_id: String,
-	#[serde(rename = "stop_ts", skip_serializing_if = "Option::is_none")]
-	pub stop_ts: Option<i64>,
+	#[serde(
+		rename = "stop_ts",
+		default,
+		with = "::serde_with::rust::double_option",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub stop_ts: Option<Option<i64>>,
 	#[serde(rename = "total_slots")]
 	pub total_slots: i32,
 	#[serde(rename = "version")]

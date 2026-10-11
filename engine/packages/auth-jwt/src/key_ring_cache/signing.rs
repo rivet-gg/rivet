@@ -14,6 +14,7 @@ pub(crate) struct ActiveSigner<'a> {
 	pub(crate) audience: &'a str,
 	pub(crate) issued_ts: i64,
 	pub(crate) now: i64,
+	pub(crate) generation: u64,
 }
 
 impl KeyRingCache {
@@ -80,6 +81,7 @@ impl CachedSnapshot {
 
 		Ok(ActiveSigner {
 			key: &active.key.signing_key,
+			generation: self.generation,
 			issuer: &self.active_issuer,
 			audience: &self.audience,
 			issued_ts: now.div_euclid(1_000) * 1_000,

@@ -147,6 +147,60 @@ fn canonicalizes_selector_order_and_merges_operations() {
 }
 
 #[test]
+fn typescript_canonical_grant_fixture_matches_rust() {
+	let namespace_id = Id::nil();
+	let mut a = [0; 19];
+	a[0] = 1;
+	a[1] = 1;
+	let mut b = [0; 19];
+	b[0] = 1;
+	b[1] = 2;
+	let target_a = Id::from_slice(&a).unwrap();
+	let target_b = Id::from_slice(&b).unwrap();
+	let grants = [
+		OwnedGrant {
+			namespace: Scope::Id(namespace_id),
+			resource: ResourceKind::Runner,
+			target: Scope::Any,
+			operations: vec![OperationKind::Delete],
+		},
+		OwnedGrant {
+			namespace: Scope::Id(namespace_id),
+			resource: ResourceKind::Actor,
+			target: Scope::Id(target_b),
+			operations: vec![OperationKind::Create],
+		},
+		OwnedGrant {
+			namespace: Scope::Id(namespace_id),
+			resource: ResourceKind::Actor,
+			target: Scope::Id(target_a),
+			operations: vec![
+				OperationKind::List,
+				OperationKind::Read,
+				OperationKind::Read,
+			],
+		},
+		OwnedGrant {
+			namespace: Scope::Id(namespace_id),
+			resource: ResourceKind::Actor,
+			target: Scope::Any,
+			operations: vec![OperationKind::Update, OperationKind::Read],
+		},
+		OwnedGrant {
+			namespace: Scope::Id(namespace_id),
+			resource: ResourceKind::Actor,
+			target: Scope::Id(target_a),
+			operations: vec![OperationKind::Update],
+		},
+	];
+
+	assert_eq!(
+		encode(namespace_id, &grants).unwrap(),
+		"AQAEAQACAAEBARMBAQAAAAAAAAAAAAAAAAAAAAAAAwABAgEBEwECAAAAAAAAAAAAAAAAAAAAAAABAwIAAQQ"
+	);
+}
+
+#[test]
 fn rejects_operation_limit_before_normalization() {
 	let namespace_id = Id::nil();
 	let grants = [OwnedGrant {

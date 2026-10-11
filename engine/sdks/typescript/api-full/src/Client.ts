@@ -20,7 +20,7 @@ export declare namespace RivetClient {
         environment: core.Supplier<string>;
         /** Specify a custom URL to connect the client to. */
         baseUrl?: core.Supplier<string>;
-        token: core.Supplier<core.BearerToken>;
+        token?: core.Supplier<core.BearerToken | undefined>;
         fetcher?: core.FetchFunction;
     }
 
@@ -69,6 +69,14 @@ export class RivetClient {
 
     public get namespaces(): Namespaces {
         return (this._namespaces ??= new Namespaces(this._options));
+    }
+
+    public get authIssuers(): AuthIssuers {
+        return (this._authIssuers ??= new AuthIssuers(this._options));
+    }
+
+    public get authWebhookDiscovery(): AuthWebhookDiscovery {
+        return (this._authWebhookDiscovery ??= new AuthWebhookDiscovery(this._options));
     }
 
     public get runners(): Runners {
@@ -1171,7 +1179,12 @@ export class RivetClient {
         }
     }
 
-    protected async _getAuthorizationHeader(): Promise<string> {
-        return `Bearer ${await core.Supplier.get(this._options.token)}`;
+    protected async _getAuthorizationHeader(): Promise<string | undefined> {
+        const bearer = await core.Supplier.get(this._options.token);
+        if (bearer != null) {
+            return `Bearer ${bearer}`;
+        }
+
+        return undefined;
     }
 }

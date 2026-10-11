@@ -7,6 +7,24 @@ fn jwt_token_routes_are_root_scoped() {
 	let openapi = rivet_api_public::router::ApiDoc::openapi();
 	assert!(openapi.paths.paths.contains_key("/auth/tokens"));
 	assert!(openapi.paths.paths.contains_key("/auth/tokens/inspect"));
+	assert!(openapi.paths.paths.contains_key("/.well-known/jwks.json"));
+	assert_eq!(
+		serde_json::to_value(&openapi).unwrap()["paths"]["/.well-known/jwks.json"]["get"]["security"],
+		serde_json::json!([{}]),
+		"published verification keys must not require bearer authentication",
+	);
+	assert!(
+		openapi
+			.paths
+			.paths
+			.contains_key("/namespaces/{namespace}/auth/issuers")
+	);
+	assert!(
+		openapi
+			.paths
+			.paths
+			.contains_key("/namespaces/{namespace}/auth/issuers/{issuer_name}")
+	);
 	assert!(
 		!openapi
 			.paths
@@ -40,4 +58,26 @@ async fn router_preserves_method_handling_and_public_health() {
 		.await
 		.assert_status(StatusCode::METHOD_NOT_ALLOWED);
 	server.get("/health").await.assert_status_ok();
+	server
+		.get("/.well-known/jwks.json")
+		.await
+		.assert_status(StatusCode::SERVICE_UNAVAILABLE);
+}
+
+#[test]
+fn signing_contract_is_binary_and_public_discovery_is_unauthenticated() {
+	let doc = serde_json::to_value(rivet_api_public::router::ApiDoc::openapi()).unwrap();
+	let body = &doc["paths"]["/auth/webhooks/sign"]["post"]["requestBody"]["content"]["application/octet-stream"]
+		["schema"];
+	assert_eq!(body["type"], "string");
+	assert_eq!(body["format"], "binary");
+	for path in [
+		"/namespaces/{namespace}/auth/webhooks/jwks.json",
+		"/namespaces/{namespace}/auth/webhooks",
+	] {
+		assert_eq!(
+			doc["paths"][path]["get"]["security"],
+			serde_json::json!([])
+		);
+	}
 }

@@ -47,6 +47,9 @@ impl Auth {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Jwt {
+	/// Purpose-specific signing limits, shared by all replicas in a namespace.
+	#[serde(default)]
+	pub signing: Signing,
 	/// Controls verification, issuance, and key maintenance. Defaults to true.
 	pub enabled: Option<bool>,
 	/// Pauses only new token minting. Defaults to true while JWT is enabled.
@@ -143,6 +146,7 @@ impl Jwt {
 			self.issuer_generation() > 0,
 			"auth.jwt.issuer_generation must be positive"
 		);
+		self.signing.validate()?;
 		let accepted = self.accepted_issuers()?;
 		let mut unique = HashSet::new();
 		for issuer in &accepted {
@@ -368,5 +372,61 @@ mod tests {
 			let error = serde_json::from_str::<Auth>(&json).unwrap_err().to_string();
 			assert!(error.contains(field));
 		}
+	}
+}
+
+/// Fixed 60-second namespace budgets. Failed and cancelled attempts remain charged.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct Signing {
+	pub payload_bytes: u64,
+	pub defaults: SigningQuota,
+	/// Overrides indexed by immutable namespace ID, never namespace name.
+	pub namespaces: std::collections::BTreeMap<String, SigningQuota>,
+}
+impl Default for Signing {
+	fn default() -> Self {
+		Self {
+			payload_bytes: 32 * 1024 * 1024,
+			defaults: SigningQuota::default(),
+			namespaces: Default::default(),
+		}
+	}
+}
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct SigningQuota {
+	pub application_operations: u64,
+	pub webhook_operations: u64,
+	pub webhook_bytes: u64,
+}
+impl Default for SigningQuota {
+	fn default() -> Self {
+		Self {
+			application_operations: 300,
+			webhook_operations: 60,
+			webhook_bytes: 128 * 1024 * 1024,
+		}
+	}
+}
+impl Signing {
+	pub fn quota(&self, namespace_id: &str) -> SigningQuota {
+		self.namespaces
+			.get(namespace_id)
+			.copied()
+			.unwrap_or(self.defaults)
+	}
+	fn validate(&self) -> Result<()> {
+		ensure!(
+			(1..=128 * 1024 * 1024).contains(&self.payload_bytes),
+			"signing payload_bytes must be between 1 and 128 MiB"
+		);
+		for id in self.namespaces.keys() {
+			ensure!(
+				!id.is_empty() && id.len() <= 64,
+				"signing namespace override requires an immutable namespace ID"
+			);
+		}
+		Ok(())
 	}
 }

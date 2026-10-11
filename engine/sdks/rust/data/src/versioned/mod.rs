@@ -1,4 +1,6 @@
+mod auth_signing_quota;
 use anyhow::{Ok, Result, bail};
+pub use auth_signing_quota::*;
 use gas::prelude::Id;
 use vbare::OwnedVersionedData;
 
@@ -6,11 +8,15 @@ use crate::converted;
 use crate::generated::*;
 
 mod auth_grants;
+mod auth_jwt_external_issuers;
 mod auth_jwt_key_ring;
+mod auth_webhook_key_ring;
 mod namespace_runner_config;
 
 pub use auth_grants::*;
+pub use auth_jwt_external_issuers::*;
 pub use auth_jwt_key_ring::*;
+pub use auth_webhook_key_ring::*;
 pub use namespace_runner_config::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

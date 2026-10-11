@@ -20,9 +20,11 @@ pub struct RunnerConfigResponse {
 	/// Deprecated.
 	#[serde(
 		rename = "drain_on_version_upgrade",
+		default,
+		with = "::serde_with::rust::double_option",
 		skip_serializing_if = "Option::is_none"
 	)]
-	pub drain_on_version_upgrade: Option<bool>,
+	pub drain_on_version_upgrade: Option<Option<bool>>,
 	#[serde(
 		rename = "metadata",
 		default,

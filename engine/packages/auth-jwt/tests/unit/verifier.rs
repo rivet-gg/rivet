@@ -1,11 +1,16 @@
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU8, AtomicUsize, Ordering};
+use std::time::Instant;
 
 use anyhow::Context;
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use rivet_auth_policy::{OperationKind, OwnedGrant, ResourceKind, Scope};
 use tokio::sync::Notify;
 
 use super::*;
-use crate::{Claims, Id, KeyId, SigningKey, TokenId, ValidatedGrantSet, encode, encode_grants};
+use crate::{
+	Claims, ExternalIssuer, ExternalIssuerRegistry, Id, KeyId, SigningKey, TokenId,
+	ValidatedGrantSet, encode, encode_grants,
+};
 
 #[derive(Clone)]
 struct MockSource {
@@ -122,6 +127,11 @@ fn test_verifier(
 		last_unknown_refresh_ts: AtomicI64::new(i64::MIN),
 		last_refresh_failure_ts: AtomicI64::new(i64::MIN),
 		fallback_state: AtomicU8::new(0),
+		external_fetch_registry: Arc::new(|namespace_id| {
+			Box::pin(async move { Ok(crate::ExternalIssuerRegistry::empty(namespace_id)) })
+		}),
+		external_fetch_jwks: Arc::new(|_| Box::pin(async move { Ok(BTreeMap::new()) })),
+		external_cache: Mutex::new(BTreeMap::new()),
 	})
 }
 
@@ -202,6 +212,405 @@ fn signed_token(signing_key: &SigningKey, issuer: &str, now: u64) -> String {
 		},
 	)
 	.unwrap()
+}
+
+#[tokio::test]
+async fn registered_jwks_issuer_cannot_exceed_its_namespace_grant_ceiling() {
+	let namespace_id = Id::new_v1(1);
+	let signing_key = SigningKey::from_seed(KeyId::from_bytes([7; 16]), [42; 32]);
+	let grant = OwnedGrant {
+		namespace: Scope::Id(namespace_id),
+		resource: ResourceKind::Actor,
+		target: Scope::Any,
+		operations: vec![OperationKind::Read],
+	};
+	let issuer = ExternalIssuer {
+		name: "example".into(),
+		issuer: "https://issuer.example.com".into(),
+		audience: "rivet-api".into(),
+		jwks_url: "https://issuer.example.com/.well-known/jwks.json".into(),
+		algorithm: "EdDSA".into(),
+		grant_ceiling: vec![grant.clone()],
+	};
+	let registry = Arc::new(Mutex::new(ExternalIssuerRegistry {
+		namespace_id,
+		generation: 1,
+		issuers: vec![issuer.clone()],
+	}));
+	let fetches = Arc::new(AtomicUsize::new(0));
+	let fail_registry = Arc::new(AtomicBool::new(false));
+	let empty_jwks = Arc::new(AtomicBool::new(false));
+	let source = MockSource::new(Some(snapshot(1, &[3])));
+	let mut verifier = test_verifier(
+		&source,
+		Duration::from_secs(60),
+		Duration::from_secs(300),
+		Duration::from_secs(5),
+	);
+	Arc::get_mut(&mut verifier).unwrap().external_fetch_registry = {
+		let registry = Arc::clone(&registry);
+		let fetches = Arc::clone(&fetches);
+		let fail_registry = Arc::clone(&fail_registry);
+		Arc::new(move |requested_namespace| {
+			let registry = Arc::clone(&registry);
+			let fetches = Arc::clone(&fetches);
+			let fail_registry = Arc::clone(&fail_registry);
+			Box::pin(async move {
+				fetches.fetch_add(1, Ordering::Relaxed);
+				if fail_registry.load(Ordering::Acquire) {
+					anyhow::bail!("all registry replicas are unavailable");
+				}
+				if requested_namespace == namespace_id {
+					Ok(registry.lock().await.clone())
+				} else {
+					Ok(ExternalIssuerRegistry::empty(requested_namespace))
+				}
+			})
+		})
+	};
+	Arc::get_mut(&mut verifier).unwrap().external_fetch_jwks = {
+		let public_key = signing_key.public_key();
+		let kid = signing_key.kid().to_string();
+		let empty_jwks = Arc::clone(&empty_jwks);
+		Arc::new(move |_| {
+			let kid = kid.clone();
+			let empty_jwks = Arc::clone(&empty_jwks);
+			Box::pin(async move {
+				if empty_jwks.load(Ordering::Acquire) {
+					return Ok(BTreeMap::new());
+				}
+				Ok(BTreeMap::from([(
+					kid,
+					jsonwebtoken::DecodingKey::from_ed_der(&public_key),
+				)]))
+			})
+		})
+	};
+	verifier.refresh(false).await.unwrap();
+	let now = u64::try_from(rivet_util::timestamp::now() / 1_000).unwrap();
+	let token_for =
+		|token_namespace: Id, token_issuer: &str, grant: OwnedGrant<Id, Id>, audience: &str| {
+			let grants = ValidatedGrantSet::new(token_namespace, [grant]).unwrap();
+			encode(
+				&signing_key,
+				&Claims {
+					rivet_ver: crate::CLAIMS_VERSION,
+					iss: token_issuer.into(),
+					aud: audience.into(),
+					sub: Some("user-123".into()),
+					iat: now,
+					exp: now + 60,
+					jti: TokenId::from_bytes([9; 16]).to_string(),
+					rivet_ns: token_namespace.to_string(),
+					rivet_grants: encode_grants(&grants).unwrap(),
+				},
+			)
+			.unwrap()
+		};
+	let token = |grant: OwnedGrant<Id, Id>, audience: &str| {
+		token_for(namespace_id, &issuer.issuer, grant, audience)
+	};
+	assert!(
+		verifier
+			.verify(&token(grant.clone(), "rivet-api"))
+			.await
+			.is_ok()
+	);
+	assert!(
+		verifier
+			.verify(&token(grant.clone(), "rivet-api"))
+			.await
+			.is_ok()
+	);
+	assert_eq!(
+		fetches.load(Ordering::Relaxed),
+		1,
+		"warm JWT requests must not read Epoxy"
+	);
+	let unknown_signer = SigningKey::from_seed(KeyId::from_bytes([10; 16]), [44; 32]);
+	let unknown_grants = ValidatedGrantSet::new(namespace_id, [grant.clone()]).unwrap();
+	let unknown_token = encode(
+		&unknown_signer,
+		&Claims {
+			rivet_ver: crate::CLAIMS_VERSION,
+			iss: issuer.issuer.clone(),
+			aud: "rivet-api".into(),
+			sub: Some("user-123".into()),
+			iat: now,
+			exp: now + 60,
+			jti: TokenId::from_bytes([10; 16]).to_string(),
+			rivet_ns: namespace_id.to_string(),
+			rivet_grants: encode_grants(&unknown_grants).unwrap(),
+		},
+	)
+	.unwrap();
+	assert!(matches!(
+		verifier.verify(&unknown_token).await,
+		Err(VerificationFailure::InvalidToken)
+	));
+	assert!(matches!(
+		verifier.verify(&unknown_token).await,
+		Err(VerificationFailure::InvalidToken)
+	));
+	assert_eq!(
+		fetches.load(Ordering::Relaxed),
+		2,
+		"unknown kid refresh must be rate limited"
+	);
+	assert!(matches!(
+		verifier
+			.verify(&token(grant.clone(), "another-service"))
+			.await,
+		Err(VerificationFailure::InvalidToken)
+	));
+	assert!(matches!(
+		verifier
+			.verify(&token_for(
+				namespace_id,
+				"https://unregistered.example.com",
+				grant.clone(),
+				"rivet-api",
+			))
+			.await,
+		Err(VerificationFailure::InvalidToken)
+	));
+	let other_namespace = Id::new_v1(2);
+	let mut other_namespace_grant = grant.clone();
+	other_namespace_grant.namespace = Scope::Id(other_namespace);
+	assert!(matches!(
+		verifier
+			.verify(&token_for(
+				other_namespace,
+				&issuer.issuer,
+				other_namespace_grant,
+				"rivet-api",
+			))
+			.await,
+		Err(VerificationFailure::InvalidToken)
+	));
+	let valid = token(grant.clone(), "rivet-api");
+	let different = token(grant.clone(), "another-service");
+	let tampered = format!(
+		"{}.{}",
+		valid.rsplit_once('.').unwrap().0,
+		different.rsplit_once('.').unwrap().1,
+	);
+	assert!(matches!(
+		verifier.verify(&tampered).await,
+		Err(VerificationFailure::InvalidToken)
+	));
+	let (_, signed_payload) = valid.split_once('.').unwrap();
+	let (payload, _) = signed_payload.split_once('.').unwrap();
+	let claims: Claims = serde_json::from_slice(&URL_SAFE_NO_PAD.decode(payload).unwrap()).unwrap();
+	let mut wrong_algorithm_header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+	wrong_algorithm_header.kid = Some(signing_key.kid().to_string());
+	wrong_algorithm_header.typ = Some(crate::TOKEN_TYPE.into());
+	let public_key = signing_key.public_key();
+	let wrong_algorithm = jsonwebtoken::encode(
+		&wrong_algorithm_header,
+		&claims,
+		&jsonwebtoken::EncodingKey::from_secret(&public_key),
+	)
+	.unwrap();
+	let mut hs_validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
+	hs_validation.required_spec_claims.clear();
+	hs_validation.validate_aud = false;
+	assert!(
+		jsonwebtoken::decode::<Claims>(
+			&wrong_algorithm,
+			&jsonwebtoken::DecodingKey::from_secret(&public_key),
+			&hs_validation,
+		)
+		.is_ok(),
+		"forged token must have a valid HS256 signature"
+	);
+	assert!(matches!(
+		verifier.verify(&wrong_algorithm).await,
+		Err(VerificationFailure::InvalidToken)
+	));
+	let mut excessive = grant.clone();
+	excessive.operations.push(OperationKind::Delete);
+	assert!(matches!(
+		verifier.verify(&token(excessive, "rivet-api")).await,
+		Err(VerificationFailure::InvalidToken)
+	));
+	let issuer_cache = verifier
+		.external_cache
+		.lock()
+		.await
+		.get(&(namespace_id, issuer.issuer.clone()))
+		.unwrap()
+		.clone();
+	fail_registry.store(true, Ordering::Release);
+	issuer_cache
+		.state
+		.lock()
+		.await
+		.cached
+		.as_mut()
+		.unwrap()
+		.fetched_at = Instant::now() - Duration::from_secs(31);
+	assert!(
+		verifier
+			.verify(&token(grant.clone(), "rivet-api"))
+			.await
+			.is_ok()
+	);
+	issuer_cache
+		.state
+		.lock()
+		.await
+		.cached
+		.as_mut()
+		.unwrap()
+		.fetched_at = Instant::now() - Duration::from_secs(301);
+	assert!(matches!(
+		verifier.verify(&token(grant.clone(), "rivet-api")).await,
+		Err(VerificationFailure::VerificationUnavailable)
+	));
+	fail_registry.store(false, Ordering::Release);
+	empty_jwks.store(true, Ordering::Release);
+	{
+		let mut state = issuer_cache.state.lock().await;
+		// The service retries after the failed-refresh cooldown, not on every waiter.
+		state.last_failed_refresh = Some(Instant::now() - Duration::from_secs(6));
+		state.cached.as_mut().unwrap().fetched_at = Instant::now() - Duration::from_secs(31);
+	}
+	assert!(matches!(
+		verifier.verify(&token(grant.clone(), "rivet-api")).await,
+		Err(VerificationFailure::InvalidToken)
+	));
+	empty_jwks.store(false, Ordering::Release);
+	issuer_cache
+		.state
+		.lock()
+		.await
+		.cached
+		.as_mut()
+		.unwrap()
+		.fetched_at = Instant::now() - Duration::from_secs(31);
+	assert!(
+		verifier
+			.verify(&token(grant.clone(), "rivet-api"))
+			.await
+			.is_ok()
+	);
+	registry.lock().await.issuers.clear();
+	issuer_cache
+		.state
+		.lock()
+		.await
+		.cached
+		.as_mut()
+		.unwrap()
+		.fetched_at = Instant::now() - Duration::from_secs(31);
+	assert!(matches!(
+		verifier
+			.verify(&token(issuer.grant_ceiling[0].clone(), "rivet-api"))
+			.await,
+		Err(VerificationFailure::InvalidToken)
+	));
+}
+
+#[tokio::test]
+async fn stalled_jwks_issuer_does_not_block_another_cached_issuer() {
+	let namespace_id = Id::new_v1(2);
+	let signing_key = SigningKey::from_seed(KeyId::from_bytes([8; 16]), [43; 32]);
+	let grant = OwnedGrant {
+		namespace: Scope::Id(namespace_id),
+		resource: ResourceKind::Actor,
+		target: Scope::Any,
+		operations: vec![OperationKind::Read],
+	};
+	let issuer = |name: &str| ExternalIssuer {
+		name: name.into(),
+		issuer: format!("https://{name}.example.com"),
+		audience: "rivet-api".into(),
+		jwks_url: format!("https://{name}.example.com/.well-known/jwks.json"),
+		algorithm: "EdDSA".into(),
+		grant_ceiling: vec![grant.clone()],
+	};
+	let registry = ExternalIssuerRegistry {
+		namespace_id,
+		generation: 1,
+		issuers: vec![issuer("fast"), issuer("slow")],
+	};
+	let source = MockSource::new(Some(snapshot(1, &[3])));
+	let mut verifier = test_verifier(
+		&source,
+		Duration::from_secs(60),
+		Duration::from_secs(300),
+		Duration::from_secs(5),
+	);
+	Arc::get_mut(&mut verifier).unwrap().external_fetch_registry = Arc::new(move |_| {
+		let registry = registry.clone();
+		Box::pin(async move { Ok(registry) })
+	});
+	let slow_started = Arc::new(AtomicBool::new(false));
+	let release_slow = Arc::new(Notify::new());
+	Arc::get_mut(&mut verifier).unwrap().external_fetch_jwks = {
+		let slow_started = Arc::clone(&slow_started);
+		let release_slow = Arc::clone(&release_slow);
+		let public_key = signing_key.public_key();
+		let kid = signing_key.kid().to_string();
+		Arc::new(move |issuer| {
+			let slow_started = Arc::clone(&slow_started);
+			let release_slow = Arc::clone(&release_slow);
+			let kid = kid.clone();
+			Box::pin(async move {
+				if issuer.name == "slow" {
+					slow_started.store(true, Ordering::Release);
+					release_slow.notified().await;
+				}
+				Ok(BTreeMap::from([(
+					kid,
+					jsonwebtoken::DecodingKey::from_ed_der(&public_key),
+				)]))
+			})
+		})
+	};
+	verifier.refresh(false).await.unwrap();
+	let now = u64::try_from(rivet_util::timestamp::now() / 1_000).unwrap();
+	let token = |issuer: &str| {
+		let grants = ValidatedGrantSet::new(namespace_id, [grant.clone()]).unwrap();
+		encode(
+			&signing_key,
+			&Claims {
+				rivet_ver: crate::CLAIMS_VERSION,
+				iss: format!("https://{issuer}.example.com"),
+				aud: "rivet-api".into(),
+				sub: Some("user-123".into()),
+				iat: now,
+				exp: now + 60,
+				jti: TokenId::from_bytes([9; 16]).to_string(),
+				rivet_ns: namespace_id.to_string(),
+				rivet_grants: encode_grants(&grants).unwrap(),
+			},
+		)
+		.unwrap()
+	};
+	assert!(verifier.verify(&token("fast")).await.is_ok());
+	let slow = tokio::spawn({
+		let verifier = Arc::clone(&verifier);
+		let token = token("slow");
+		async move { verifier.verify(&token).await }
+	});
+	let started_deadline = Instant::now() + Duration::from_secs(1);
+	while !slow_started.load(Ordering::Acquire) {
+		assert!(
+			Instant::now() < started_deadline,
+			"slow fetch did not start"
+		);
+		tokio::task::yield_now().await;
+	}
+	assert!(
+		tokio::time::timeout(Duration::from_secs(1), verifier.verify(&token("fast")))
+			.await
+			.expect("stalled issuer blocked the fast issuer")
+			.is_ok()
+	);
+	release_slow.notify_one();
+	assert!(slow.await.unwrap().is_ok());
 }
 
 #[test]

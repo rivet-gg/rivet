@@ -34,8 +34,21 @@ Class | Method | HTTP request | Description
 *ActorsListNamesApi* | [**actors_list_names**](docs/ActorsListNamesApi.md#actors_list_names) | **GET** /actors/names | ## Datacenter Round Trips
 *ActorsRescheduleApi* | [**actors_reschedule**](docs/ActorsRescheduleApi.md#actors_reschedule) | **POST** /actors/{actor_id}/reschedule | 
 *ActorsSleepApi* | [**actors_sleep**](docs/ActorsSleepApi.md#actors_sleep) | **POST** /actors/{actor_id}/sleep | 
+*AuthApplicationTokensApi* | [**auth_application_tokens_create**](docs/AuthApplicationTokensApi.md#auth_application_tokens_create) | **POST** /auth/application-tokens | 
+*AuthIssuersApi* | [**auth_issuers_delete**](docs/AuthIssuersApi.md#auth_issuers_delete) | **DELETE** /namespaces/{namespace}/auth/issuers/{issuer_name} | 
+*AuthIssuersApi* | [**auth_issuers_get**](docs/AuthIssuersApi.md#auth_issuers_get) | **GET** /namespaces/{namespace}/auth/issuers/{issuer_name} | 
+*AuthIssuersApi* | [**auth_issuers_list**](docs/AuthIssuersApi.md#auth_issuers_list) | **GET** /namespaces/{namespace}/auth/issuers | 
+*AuthIssuersApi* | [**auth_issuers_upsert**](docs/AuthIssuersApi.md#auth_issuers_upsert) | **PUT** /namespaces/{namespace}/auth/issuers/{issuer_name} | 
+*AuthJwksApi* | [**auth_jwks_get**](docs/AuthJwksApi.md#auth_jwks_get) | **GET** /.well-known/jwks.json | Publishes only the public halves of Rivet's currently valid signing keys.
 *AuthTokensApi* | [**auth_tokens_create**](docs/AuthTokensApi.md#auth_tokens_create) | **POST** /auth/tokens | 
 *AuthTokensApi* | [**auth_tokens_inspect**](docs/AuthTokensApi.md#auth_tokens_inspect) | **GET** /auth/tokens/inspect | 
+*AuthWebhookDiscoveryApi* | [**auth_webhooks_jwks**](docs/AuthWebhookDiscoveryApi.md#auth_webhooks_jwks) | **GET** /namespaces/{namespace}/auth/webhooks/jwks.json | 
+*AuthWebhookDiscoveryApi* | [**auth_webhooks_metadata**](docs/AuthWebhookDiscoveryApi.md#auth_webhooks_metadata) | **GET** /namespaces/{namespace}/auth/webhooks | 
+*AuthWebhookKeysApi* | [**auth_webhook_keys_get**](docs/AuthWebhookKeysApi.md#auth_webhook_keys_get) | **GET** /namespaces/{namespace}/auth/webhook-keys | 
+*AuthWebhookKeysApi* | [**auth_webhook_keys_revoke**](docs/AuthWebhookKeysApi.md#auth_webhook_keys_revoke) | **POST** /namespaces/{namespace}/auth/webhook-keys/revoke | 
+*AuthWebhookKeysApi* | [**auth_webhook_keys_rotate**](docs/AuthWebhookKeysApi.md#auth_webhook_keys_rotate) | **POST** /namespaces/{namespace}/auth/webhook-keys/rotate | 
+*AuthWebhookKeysApi* | [**auth_webhooks_ensure**](docs/AuthWebhookKeysApi.md#auth_webhooks_ensure) | **POST** /auth/webhooks/ensure | 
+*AuthWebhookSigningApi* | [**auth_webhooks_sign**](docs/AuthWebhookSigningApi.md#auth_webhooks_sign) | **POST** /auth/webhooks/sign | 
 *DatacentersApi* | [**datacenters_list**](docs/DatacentersApi.md#datacenters_list) | **GET** /datacenters | 
 *EnvoysApi* | [**envoys_list**](docs/EnvoysApi.md#envoys_list) | **GET** /envoys | 
 *HealthApi* | [**health_fanout**](docs/HealthApi.md#health_fanout) | **GET** /health/fanout | 

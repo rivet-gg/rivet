@@ -9,6 +9,7 @@ import (
 	url "net/url"
 	sdk "sdk"
 	core "sdk/core"
+	option "sdk/option"
 )
 
 type Client struct {
@@ -17,22 +18,33 @@ type Client struct {
 	header  http.Header
 }
 
-func NewClient(opts ...core.ClientOption) *Client {
-	options := core.NewClientOptions()
-	for _, opt := range opts {
-		opt(options)
-	}
+func NewClient(opts ...option.RequestOption) *Client {
+	options := core.NewRequestOptions(opts...)
 	return &Client{
 		baseURL: options.BaseURL,
-		caller:  core.NewCaller(options.HTTPClient),
-		header:  options.ToHeader(),
+		caller: core.NewCaller(
+			&core.CallerParams{
+				Client:      options.HTTPClient,
+				MaxAttempts: options.MaxAttempts,
+			},
+		),
+		header: options.ToHeader(),
 	}
 }
 
-func (c *Client) List(ctx context.Context, request *sdk.NamespacesListRequest) (*sdk.NamespaceListResponse, error) {
+func (c *Client) List(
+	ctx context.Context,
+	request *sdk.NamespacesListRequest,
+	opts ...option.RequestOption,
+) (*sdk.NamespaceListResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
+	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
 	}
 	endpointURL := baseURL + "/" + "namespaces"
 
@@ -56,14 +68,18 @@ func (c *Client) List(ctx context.Context, request *sdk.NamespacesListRequest) (
 		endpointURL += "?" + queryParams.Encode()
 	}
 
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
+
 	var response *sdk.NamespaceListResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodGet,
-			Headers:  c.header,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodGet,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -71,22 +87,35 @@ func (c *Client) List(ctx context.Context, request *sdk.NamespacesListRequest) (
 	return response, nil
 }
 
-func (c *Client) Create(ctx context.Context, request *sdk.NamespacesCreateRequest) (*sdk.NamespacesCreateResponse, error) {
+func (c *Client) Create(
+	ctx context.Context,
+	request *sdk.NamespacesCreateRequest,
+	opts ...option.RequestOption,
+) (*sdk.NamespacesCreateResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
+	}
 	endpointURL := baseURL + "/" + "namespaces"
+
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
 
 	var response *sdk.NamespacesCreateResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodPost,
-			Headers:  c.header,
-			Request:  request,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodPost,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Request:     request,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err

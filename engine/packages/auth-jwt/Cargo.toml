@@ -9,11 +9,13 @@ license.workspace = true
 default = []
 service = [
 	"dep:epoxy",
+    "dep:namespace",
 	"dep:epoxy-protocol",
 	"dep:gas",
 	"dep:futures-util",
 	"dep:lazy_static",
 	"dep:rivet-config",
+	"dep:reqwest",
 	"dep:rivet-metrics",
 	"dep:rivet-util",
 	"dep:tokio",
@@ -30,8 +32,10 @@ epoxy-protocol = { workspace = true, optional = true }
 gas = { workspace = true, optional = true }
 futures-util = { workspace = true, optional = true }
 jsonwebtoken.workspace = true
+namespace = { workspace = true, optional = true }
 lazy_static = { workspace = true, optional = true }
 rand.workspace = true
+reqwest = { workspace = true, optional = true }
 rivet-auth-policy.workspace = true
 rivet-config = { workspace = true, optional = true }
 rivet-data.workspace = true
@@ -46,6 +50,7 @@ thiserror.workspace = true
 tokio = { workspace = true, optional = true }
 tracing = { workspace = true, optional = true }
 universaldb = { workspace = true, optional = true }
+url.workspace = true
 vbare.workspace = true
 zeroize.workspace = true
 

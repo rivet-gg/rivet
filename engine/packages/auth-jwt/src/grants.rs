@@ -28,7 +28,7 @@ impl ValidatedGrantSet {
 		}
 		if grants.iter().any(|grant| {
 			!matches!(grant.namespace, Scope::Id(id) if id == namespace_id)
-				|| matches!(grant.resource, ResourceKind::Jwt | ResourceKind::Token)
+				|| matches!(grant.resource, ResourceKind::Jwt | ResourceKind::Token | ResourceKind::ApplicationToken | ResourceKind::WebhookSigning)
 				|| grant.operations.is_empty()
 				|| grant.operations.len() > MAX_OPERATIONS_PER_GRANT
 		}) {
@@ -182,7 +182,7 @@ fn encode_resource(resource: ResourceKind) -> auth_grants_v1::ResourceKind {
 		ResourceKind::Datacenter => auth_grants_v1::ResourceKind::Datacenter,
 		ResourceKind::ActorGateway => auth_grants_v1::ResourceKind::ActorGateway,
 		ResourceKind::ActorKv => auth_grants_v1::ResourceKind::ActorKv,
-		ResourceKind::Jwt => unreachable!("control-plane grants are rejected during validation"),
+		ResourceKind::Jwt | ResourceKind::ApplicationToken | ResourceKind::WebhookSigning => unreachable!("control-plane grants are rejected during validation"),
 	}
 }
 

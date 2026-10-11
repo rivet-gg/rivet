@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 **last_connected_ts** | Option<**i64**> |  | [optional]
 **last_ping_ts** | **i64** |  | 
 **last_rtt** | **i32** |  | 
-**metadata** | Option<[**serde_json::Value**](serde_json::Value.md)> |  | [optional]
+**metadata** | Option<[**std::collections::HashMap<String, serde_json::Value>**](serde_json::Value.md)> |  | [optional]
 **namespace_id** | **String** |  | 
 **pool_name** | **String** |  | 
 **slots** | **i64** |  | 

@@ -7,6 +7,7 @@ import (
 	http "net/http"
 	sdk "sdk"
 	core "sdk/core"
+	option "sdk/option"
 )
 
 type Client struct {
@@ -15,34 +16,49 @@ type Client struct {
 	header  http.Header
 }
 
-func NewClient(opts ...core.ClientOption) *Client {
-	options := core.NewClientOptions()
-	for _, opt := range opts {
-		opt(options)
-	}
+func NewClient(opts ...option.RequestOption) *Client {
+	options := core.NewRequestOptions(opts...)
 	return &Client{
 		baseURL: options.BaseURL,
-		caller:  core.NewCaller(options.HTTPClient),
-		header:  options.ToHeader(),
+		caller: core.NewCaller(
+			&core.CallerParams{
+				Client:      options.HTTPClient,
+				MaxAttempts: options.MaxAttempts,
+			},
+		),
+		header: options.ToHeader(),
 	}
 }
 
-func (c *Client) Create(ctx context.Context, request *sdk.AuthTokenCreateRequest) (*sdk.AuthTokenCreateResponse, error) {
+func (c *Client) Create(
+	ctx context.Context,
+	request *sdk.AuthTokenCreateRequest,
+	opts ...option.RequestOption,
+) (*sdk.AuthTokenCreateResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
+	}
 	endpointURL := baseURL + "/" + "auth/tokens"
+
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
 
 	var response *sdk.AuthTokenCreateResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodPost,
-			Headers:  c.header,
-			Request:  request,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodPost,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Request:     request,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err
@@ -50,21 +66,33 @@ func (c *Client) Create(ctx context.Context, request *sdk.AuthTokenCreateRequest
 	return response, nil
 }
 
-func (c *Client) Inspect(ctx context.Context) (*sdk.AuthTokenInspectResponse, error) {
+func (c *Client) Inspect(
+	ctx context.Context,
+	opts ...option.RequestOption,
+) (*sdk.AuthTokenInspectResponse, error) {
+	options := core.NewRequestOptions(opts...)
+
 	baseURL := ""
 	if c.baseURL != "" {
 		baseURL = c.baseURL
 	}
+	if options.BaseURL != "" {
+		baseURL = options.BaseURL
+	}
 	endpointURL := baseURL + "/" + "auth/tokens/inspect"
+
+	headers := core.MergeHeaders(c.header.Clone(), options.ToHeader())
 
 	var response *sdk.AuthTokenInspectResponse
 	if err := c.caller.Call(
 		ctx,
 		&core.CallParams{
-			URL:      endpointURL,
-			Method:   http.MethodGet,
-			Headers:  c.header,
-			Response: &response,
+			URL:         endpointURL,
+			Method:      http.MethodGet,
+			MaxAttempts: options.MaxAttempts,
+			Headers:     headers,
+			Client:      options.HTTPClient,
+			Response:    &response,
 		},
 	); err != nil {
 		return nil, err

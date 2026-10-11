@@ -1,12 +1,14 @@
 //! One published key-ring generation for runtime JWT verification and optional issuance.
 //! Verification allows bounded stale reads; signing uses its own short freshness lease.
 
+mod external;
 mod refresh;
 mod signing;
 mod snapshot;
 mod validation;
 
 use std::{
+	collections::BTreeMap,
 	sync::{
 		Arc,
 		atomic::{AtomicBool, AtomicI64, AtomicU8},
@@ -23,6 +25,7 @@ pub use snapshot::{
 };
 
 use crate::{PROTOCOL_CLOCK_SKEW, VerifiedJwt};
+use external::{JwksFetcher, RegistryFetcher};
 use refresh::{SnapshotFetcher, fetch_snapshot_from_epoxy, periodic_refresh};
 use snapshot::CachedSnapshot;
 use validation::{decode_with_snapshot, map_token_error, validate_lifecycle};
@@ -82,6 +85,9 @@ pub struct KeyRingCache {
 	last_unknown_refresh_ts: AtomicI64,
 	last_refresh_failure_ts: AtomicI64,
 	fallback_state: AtomicU8,
+	external_fetch_registry: RegistryFetcher,
+	external_fetch_jwks: JwksFetcher,
+	external_cache: Mutex<BTreeMap<(crate::Id, String), Arc<external::ExternalIssuerEntry>>>,
 }
 
 impl KeyRingCache {
@@ -93,6 +99,7 @@ impl KeyRingCache {
 		);
 		let (snapshot_tx, _) = watch::channel(None);
 		let fetch_ctx = ctx.clone();
+		let external_ctx = ctx.clone();
 		Ok(Arc::new(Self {
 			mode,
 			fetch_snapshot: Arc::new(move || {
@@ -108,6 +115,19 @@ impl KeyRingCache {
 			last_unknown_refresh_ts: AtomicI64::new(i64::MIN),
 			last_refresh_failure_ts: AtomicI64::new(i64::MIN),
 			fallback_state: AtomicU8::new(0),
+			external_fetch_registry: Arc::new(move |namespace_id| {
+				let ctx = external_ctx.clone();
+				Box::pin(async move {
+					Ok(ctx
+						.op(crate::ops::external_issuers::get::Input { namespace_id })
+						.await?
+						.registry)
+				})
+			}),
+			external_fetch_jwks: Arc::new(|issuer| {
+				Box::pin(async move { external::fetch_jwks(&issuer).await })
+			}),
+			external_cache: Mutex::new(BTreeMap::new()),
 		}))
 	}
 
@@ -147,12 +167,32 @@ impl KeyRingCache {
 		result
 	}
 
+	/// Returns only public keys using the verification cache's bounded-staleness policy.
+	pub async fn public_snapshot(
+		self: &Arc<Self>,
+	) -> Result<VerificationSnapshot, VerificationFailure> {
+		Ok(self.usable_snapshot().await?.verification.clone())
+	}
+
 	async fn verify_inner(
 		self: &Arc<Self>,
 		token: &str,
 	) -> Result<VerifiedJwt, VerificationFailure> {
-		let header = crate::peek_header(token).map_err(map_token_error)?;
+		if crate::is_application_token(token) {
+			return Err(VerificationFailure::InvalidToken);
+		}
 		let mut snapshot = self.usable_snapshot().await?;
+		// Untrusted `iss` only selects a verifier. Rivet issuers never fall back to JWKS.
+		if let Some(claims) = external::unverified_claims(token)
+			&& claims.iss != snapshot.active_issuer
+			&& !snapshot
+				.retiring_issuers
+				.iter()
+				.any(|entry| entry.issuer == claims.iss)
+		{
+			return self.verify_external(token, claims).await;
+		}
+		let header = crate::peek_header(token).map_err(map_token_error)?;
 		if !snapshot.keys.contains_key(&header.kid) {
 			snapshot = self
 				.refresh_unknown_kid(header.kid)

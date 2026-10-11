@@ -1,0 +1,8 @@
+type Data struct {
+    windowStart: i64
+    applicationOperations: u64
+    webhookOperations: u64
+    webhookBytes: u64
+    leaderDatacenter: u16
+    leaderGeneration: u64
+}
