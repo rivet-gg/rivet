@@ -1,0 +1,38 @@
+{
+	"name": "opencode-rivet-example",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "tsup",
+		"check-types": "tsc --noEmit",
+		"test": "pnpm build && vitest run",
+		"start": "node dist/server.js",
+		"client": "tsx src/client.ts"
+	},
+	"dependencies": {
+		"@effect/platform-node-shared": "4.0.0-rc.112",
+		"@opencode/core": "0.0.0-dev-19487",
+		"@opencode/sdk": "0.0.0-dev-19487",
+		"@opencode/util": "0.0.0-dev-19487",
+		"effect": "4.0.0-rc.112",
+		"rivetkit": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.19.15",
+		"tsup": "^8.5.0",
+		"tsx": "^4.20.0",
+		"typescript": "^5.9.2",
+		"vitest": "^4.0.15"
+	},
+	"engines": {
+		"node": ">=22.19.0"
+	},
+	"template": {
+		"technologies": ["typescript"],
+		"tags": ["ai", "opencode", "actors"],
+		"noFrontend": true,
+		"skipVercel": true
+	},
+	"license": "MIT"
+}
