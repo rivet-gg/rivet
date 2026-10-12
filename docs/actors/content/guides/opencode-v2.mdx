@@ -3,14 +3,25 @@ title: "OpenCode v2 on Rivet Actors"
 description: "Start from the standalone OpenCode v2 example and adapt it to your app."
 ---
 
-Start with the [OpenCode v2 example](https://github.com/rivet-dev/rivet/tree/main/examples/opencode). It runs OpenCode inside a Rivet Actor and stores sessions and events in the actor's SQLite database. The example has a server, a command-line client, and no separate agent or sandbox integration.
+Start with the [OpenCode v2 example](https://github.com/rivet-dev/rivet/tree/main/examples/opencode). It runs OpenCode inside a Rivet Actor and stores sessions and events in the actor's SQLite database. The example has a server and a command-line client. By default, OpenCode's coding tools use the actor host's filesystem and processes.
 
 ## Adapt the example
 
 1. Copy the example into your backend. Keep `src/actor.ts`, `src/host.ts`, and `src/sqlite.ts` together: they handle actor lifecycle, the embedded OpenCode host, and SQLite persistence.
 2. Choose an actor key for each coding session. Update the registry and client so `getOrCreate([sessionId])` consistently reaches that session.
-3. Set `OPENCODE_WORKDIR` to the project directory and provide your model API key on the server. OpenCode tools use the actor host's filesystem and permissions. Store project files on persistent storage if actors may move between machines.
+3. Set `OPENCODE_WORKDIR` to the project directory and provide your model API key on the server. Store project files on persistent storage if actors may move between machines, or connect a sandbox as described below.
 4. Adapt the actor's `prompt`, `getMessages`, `waitForIdle`, and `abort` actions to your app. Add authentication and authorization before exposing them to users. Keep the wake, sleep, and `keepAwake` handling so active work can resume after a restart.
 5. Build and run the example, send a prompt, restart the actor, and confirm that the same actor key returns the saved session and messages. The example includes a test for SQLite session persistence across host restarts.
 
 OpenCode v2 uses preview packages in this example, so keep the pinned OpenCode and Effect versions together when adapting it. Model credentials belong in server-side environment variables, never in browser code.
+
+## Connect a sandbox
+
+The example does not connect a sandbox yet. Adapt it to run coding tools in a separate sandbox:
+
+1. Choose a sandbox provider that can reconnect to a running sandbox and stream process output, stdin, exit status, and cancellation. Give each actor a stable sandbox ID, persist the provider's binding in actor SQLite, and use the sandbox's working directory for the OpenCode session.
+2. In `src/actor.ts`, connect or restore the sandbox before `createHost()` and before resuming a saved session. Pass the connected sandbox to `createHost()`.
+3. In `src/host.ts`, implement a sandbox-backed OpenCode `Environment` service for file operations and process spawning. Replace both `Environment.node` and `CrossSpawnSpawner.node` in the `OpenCode.create()` overrides. Redirect or disable any other OpenCode services that still touch host files or processes; setting only a sandbox working directory or adding a custom tool does not redirect built-in tools.
+4. On sleep, close the OpenCode host before suspending the sandbox. On wake, reconnect before recovery; on actor destruction, destroy the sandbox. Keep model credentials on the actor host and pass only the environment variables needed by sandbox commands.
+
+OpenCode's SDK and plugins still run in the actor process. The sandbox isolates the coding tools you route through it; it does **not** remove OpenCode's own access to the host. Trusted plugins that read files or spawn processes directly also need explicit sandbox wiring. If OpenCode itself must have no host access, run the entire OpenCode process inside the sandbox instead of embedding it in the actor.
