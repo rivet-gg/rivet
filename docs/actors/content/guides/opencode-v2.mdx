@@ -3,7 +3,62 @@ title: "OpenCode v2 on Rivet Actors"
 description: "Start from the standalone OpenCode v2 example and adapt it to your app."
 ---
 
+<Note>
+Pass this guide to your coding agent and ask it to add OpenCode v2 to your Rivet Actors app. Start from the linked example, keep the OpenCode harness in the Actor, and connect a separate sandbox for file and shell tools.
+</Note>
+
 Start with the [OpenCode v2 example](https://github.com/rivet-dev/rivet/tree/main/examples/opencode). It runs OpenCode inside a Rivet Actor and stores sessions and events in the actor's SQLite database. The example has a server and a command-line client. By default, OpenCode's coding tools use the actor host's filesystem and processes.
+
+## Architecture
+
+With a sandbox connected, each keyed Rivet Actor keeps its OpenCode harness, model credentials, and durable SQLite session in your backend. Only routed file and shell tool calls reach that actor's separate sandbox. The example provides the Actor and SQLite pieces; the sandbox connection is the adaptation below.
+
+<svg viewBox="0 0 472 330" role="img" aria-label="Your backend runs three OpenCode harnesses, each in its own Rivet Actor. Each harness sends file and shell tool calls to a separate sandbox." style="width:100%;max-width:472px;height:auto;display:block;margin:2.5rem auto;font-family:system-ui,sans-serif">
+  <defs>
+    <marker id="opencode-harness-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="rgb(var(--site-ink, 27 25 22))"/></marker>
+  </defs>
+  <g font-size="11" font-family="ui-monospace,monospace" font-weight="600" letter-spacing="0.14em" fill="rgb(var(--site-pine, 46 64 52))">
+    <text x="20" y="26">YOUR BACKEND</text>
+    <text x="280" y="26">SANDBOXES</text>
+  </g>
+  <rect x="20" y="40" width="180" height="276" rx="10" fill="rgb(var(--site-paper-mid, 227 227 229))" stroke="rgb(var(--site-pine, 46 64 52))" stroke-width="1.4" stroke-dasharray="7 6"/>
+  <g fill="rgb(var(--site-paper-mid, 227 227 229))" stroke="rgb(var(--site-pine, 46 64 52))" stroke-width="1.4" stroke-dasharray="7 6">
+    <rect x="280" y="54" width="172" height="72" rx="10"/>
+    <rect x="280" y="142" width="172" height="72" rx="10"/>
+    <rect x="280" y="230" width="172" height="72" rx="10"/>
+  </g>
+  <g fill="#c7e4fb" stroke="#3d9df3" stroke-width="2">
+    <rect x="45" y="62" width="130" height="56" rx="7"/>
+    <rect x="45" y="150" width="130" height="56" rx="7"/>
+    <rect x="45" y="238" width="130" height="56" rx="7"/>
+  </g>
+  <g fill="#fecaca" stroke="#ef4444" stroke-width="2">
+    <rect x="292" y="66" width="148" height="48" rx="7"/>
+    <rect x="292" y="154" width="148" height="48" rx="7"/>
+    <rect x="292" y="242" width="148" height="48" rx="7"/>
+  </g>
+  <g stroke="rgb(var(--site-ink, 27 25 22))" stroke-width="1.4" marker-end="url(#opencode-harness-arrow)">
+    <line x1="176" y1="90" x2="290" y2="90"/>
+    <line x1="176" y1="178" x2="290" y2="178"/>
+    <line x1="176" y1="266" x2="290" y2="266"/>
+  </g>
+  <text x="240" y="81" text-anchor="middle" font-size="11" fill="rgb(var(--site-ink-soft, 86 82 74))">tool calls</text>
+  <g text-anchor="middle" font-size="14" font-weight="600" fill="rgb(var(--site-ink, 27 25 22))">
+    <text x="110" y="86">OpenCode</text>
+    <text x="366" y="95">Shell + files</text>
+    <text x="110" y="174">OpenCode</text>
+    <text x="366" y="183">Shell + files</text>
+    <text x="110" y="262">OpenCode</text>
+    <text x="366" y="271">Shell + files</text>
+  </g>
+  <g text-anchor="middle" font-size="11" fill="rgb(var(--site-ink-soft, 86 82 74))">
+    <text x="110" y="104">harness · Actor</text>
+    <text x="110" y="192">harness · Actor</text>
+    <text x="110" y="280">harness · Actor</text>
+  </g>
+</svg>
+
+Diagram adapted from the [Agents SDK overview](/agents/docs).
 
 ## Adapt the example
 
