@@ -17,8 +17,8 @@ import {
 	getProductDocsUrl,
 	ProductMark,
 } from "@/components/products/product-picker";
-import { features } from "@/lib/features";
 import { getRivetRunUrl } from "@/lib/env";
+import { features } from "@/lib/features";
 import {
 	MANAGED_SERVICES_POOL,
 	MANAGED_SERVICES_POOL_CONFIG,
@@ -27,16 +27,26 @@ import {
 } from "../managed-services";
 import { SettingsCard } from "./settings-card";
 
-// Services are Rivet-run workers the user connects to a namespace rather than
-// code they deploy. Each one registers well-known actor names, so a namespace
-// "has" the service once an actor under any of those names exists. Setup
-// instructions live in the docs so they are not duplicated here.
+// Each service registers well-known actor names, so a namespace "has" the
+// service once an actor under any of those names exists. Setup instructions
+// live in the docs so they are not duplicated here.
+//
+// `servicePath` is set for Rivet-run workers that are served under the
+// namespace's Rivet Run origin on Rivet Cloud. agentOS is deployed by the user
+// as a regular actor, so it has no managed URL to hand out; its probe relies on
+// the `vm` actor name used by the onboarding template and every example.
 const SERVICES = [
 	{
 		product: getProduct("durable-streams"),
 		actorNames: ["durableStream"],
+		servicePath: "durable-streams",
 	},
-];
+	{
+		product: getProduct("agent-os"),
+		actorNames: ["vm"],
+		servicePath: null,
+	},
+].filter((service) => service.product.isAvailable());
 
 function openDocs(target: (typeof SERVICES)[number]["product"]["target"]) {
 	window.open(getProductDocsUrl(target), "_blank", "noopener,noreferrer");
@@ -185,9 +195,10 @@ function ServicesList() {
 			>
 				{SERVICES.map((service, idx) => {
 					const connected = connections[idx]?.data ?? false;
-					const serviceUrl = rivetRunUrl
-						? `${rivetRunUrl.replace(/\/?$/, "/")}${service.product.target}/`
-						: null;
+					const serviceUrl =
+						rivetRunUrl && service.servicePath
+							? `${rivetRunUrl.replace(/\/?$/, "/")}${service.servicePath}/`
+							: null;
 					return (
 						<div
 							key={service.product.target}
