@@ -1,0 +1,16 @@
+---
+title: "OpenCode v2 on Rivet Actors"
+description: "Start from the standalone OpenCode v2 example and adapt it to your app."
+---
+
+Start with the [OpenCode v2 example](https://github.com/rivet-dev/rivet/tree/main/examples/opencode). It runs OpenCode inside a Rivet Actor and stores sessions and events in the actor's SQLite database. The example has a server, a command-line client, and no separate agent or sandbox integration.
+
+## Adapt the example
+
+1. Copy the example into your backend. Keep `src/actor.ts`, `src/host.ts`, and `src/sqlite.ts` together: they handle actor lifecycle, the embedded OpenCode host, and SQLite persistence.
+2. Choose an actor key for each coding session. Update the registry and client so `getOrCreate([sessionId])` consistently reaches that session.
+3. Set `OPENCODE_WORKDIR` to the project directory and provide your model API key on the server. OpenCode tools use the actor host's filesystem and permissions. Store project files on persistent storage if actors may move between machines.
+4. Adapt the actor's `prompt`, `getMessages`, `waitForIdle`, and `abort` actions to your app. Add authentication and authorization before exposing them to users. Keep the wake, sleep, and `keepAwake` handling so active work can resume after a restart.
+5. Build and run the example, send a prompt, restart the actor, and confirm that the same actor key returns the saved session and messages. The example includes a test for SQLite session persistence across host restarts.
+
+OpenCode v2 uses preview packages in this example, so keep the pinned OpenCode and Effect versions together when adapting it. Model credentials belong in server-side environment variables, never in browser code.
