@@ -3656,8 +3656,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1(pyodide@0.28.3)
       '@rivet-dev/services':
-        specifier: ^0.1.5
-        version: 0.1.6
+        specifier: ^0.2.0
+        version: 0.2.0
       '@rivetkit/bare-ts':
         specifier: ^0.6.2
         version: 0.6.2
@@ -9079,38 +9079,38 @@ packages:
     resolution: {integrity: sha512-MCwRS12jbgzIEjVYwHXpHjDrkBU6tjSVCIsepZY8SyBM+1VeZpKAfzLi9zOdMqowHftkOP1bx2Bn8RBr/tSeLQ==}
     engines: {node: '>=22.19.0'}
 
-  '@rivet-dev/services-darwin-arm64@0.1.6':
-    resolution: {integrity: sha512-lAf4j9gh2gcT32Jc+gCzPvgYdcAvS5SN1mD2NisMCrBVLTeq3YV18bQY1vgm5+ETnAyWGQZSoP4I/oYA6gaXtA==}
+  '@rivet-dev/services-darwin-arm64@0.2.0':
+    resolution: {integrity: sha512-pvYcu7R3uS0W/WqMxlVd0dU1INinrH8G99WEAdhUPdkhY1KCNg6YPli1Vrczq/xA0wyNZyN7vW9E/g/PsKuWOA==}
     engines: {node: '>=20'}
     cpu: [arm64]
     os: [darwin]
 
-  '@rivet-dev/services-darwin-x64@0.1.6':
-    resolution: {integrity: sha512-W8q2z8jnQNqUjT2h1S4MZ5H4SU0hYKB5cxjruYWVcXbTMm/w/bUIVMmUcuGzlzFtgbnMGb0GcSXVIJRGRVS3Fg==}
+  '@rivet-dev/services-darwin-x64@0.2.0':
+    resolution: {integrity: sha512-8oc5EaZMwOZho2baMgaMUkSLNWWUFINccB6AOQhHaS1oW6nsMe+4SD78dwp2RcK7jCnpX9JpdvSdZs26wYgPHA==}
     engines: {node: '>=20'}
     cpu: [x64]
     os: [darwin]
 
-  '@rivet-dev/services-linux-arm64-musl@0.1.6':
-    resolution: {integrity: sha512-Ju+yYplMndfc/Bl4Ne7KJRFPjU4s5W00+jB0p+JtHqmN55sSjEBiaCB18fBNOSOzqD6J/VDPUGuz28oIuGzfRg==}
+  '@rivet-dev/services-linux-arm64-gnu@0.2.0':
+    resolution: {integrity: sha512-J/OfxFsXQaiXcwCky7/WS/vuJnXciSSJDXV+mdfqRNATvNr9rl8U1Q1wXRbtZzPfaoLjODe6N0aen2WJUSdyvg==}
     engines: {node: '>=20'}
     cpu: [arm64]
     os: [linux]
 
-  '@rivet-dev/services-linux-x64-musl@0.1.6':
-    resolution: {integrity: sha512-pPjHXEuHIkKPxbWJd9+tOQT+dqN7XaX69Cgrnq4vSQi+F1oG4YUBPSUV4yrQpb6ypxlJqxCb3ckSt3aI1OFohA==}
+  '@rivet-dev/services-linux-x64-gnu@0.2.0':
+    resolution: {integrity: sha512-tTPAaiNIZ6uVvCL04s2678Z+ENnzILgtmG4AuwEfhq3BVH0Jn9gblCqRicwFRwIa7UW2bL7yZ5Lzyn3Ofwz2wQ==}
     engines: {node: '>=20'}
     cpu: [x64]
     os: [linux]
 
-  '@rivet-dev/services-win32-x64@0.1.6':
-    resolution: {integrity: sha512-EJ1rwF+bhMjsHQL1q6h2AUB2D4qAqypRxs9juvk+pXHQKX2qaN74EL9+sZoOSLhcqHLN8TgagTFRFW+/UaeyRg==}
+  '@rivet-dev/services-win32-x64@0.2.0':
+    resolution: {integrity: sha512-nXYW2pqh1H23OZWq5ebJB4z4uqUeInfA1e50mXinLiVaoFQrPcYfcsYgv57G4A0gqCXy4XdSBG64qkVKTu/hAA==}
     engines: {node: '>=20'}
     cpu: [x64]
     os: [win32]
 
-  '@rivet-dev/services@0.1.6':
-    resolution: {integrity: sha512-mu8TPRTrpiDFgteHmkMNKBOkzywiTOnQHkdnNblh3wfSsJeEZp8qEUgu8ELp1y1MnFqC4OuLAlN0ii+tWRieWg==}
+  '@rivet-dev/services@0.2.0':
+    resolution: {integrity: sha512-o8Ywmonp+EE9kb6b/YPaHkenCeqxke/jucBtnB5lYGJAHoAPW1BmgW1lypMq1bjVkelFZ5eVJEJVliC0ZO2P1Q==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -25888,28 +25888,28 @@ snapshots:
       - zod-openapi
       - zod-to-json-schema
 
-  '@rivet-dev/services-darwin-arm64@0.1.6':
+  '@rivet-dev/services-darwin-arm64@0.2.0':
     optional: true
 
-  '@rivet-dev/services-darwin-x64@0.1.6':
+  '@rivet-dev/services-darwin-x64@0.2.0':
     optional: true
 
-  '@rivet-dev/services-linux-arm64-musl@0.1.6':
+  '@rivet-dev/services-linux-arm64-gnu@0.2.0':
     optional: true
 
-  '@rivet-dev/services-linux-x64-musl@0.1.6':
+  '@rivet-dev/services-linux-x64-gnu@0.2.0':
     optional: true
 
-  '@rivet-dev/services-win32-x64@0.1.6':
+  '@rivet-dev/services-win32-x64@0.2.0':
     optional: true
 
-  '@rivet-dev/services@0.1.6':
+  '@rivet-dev/services@0.2.0':
     optionalDependencies:
-      '@rivet-dev/services-darwin-arm64': 0.1.6
-      '@rivet-dev/services-darwin-x64': 0.1.6
-      '@rivet-dev/services-linux-arm64-musl': 0.1.6
-      '@rivet-dev/services-linux-x64-musl': 0.1.6
-      '@rivet-dev/services-win32-x64': 0.1.6
+      '@rivet-dev/services-darwin-arm64': 0.2.0
+      '@rivet-dev/services-darwin-x64': 0.2.0
+      '@rivet-dev/services-linux-arm64-gnu': 0.2.0
+      '@rivet-dev/services-linux-x64-gnu': 0.2.0
+      '@rivet-dev/services-win32-x64': 0.2.0
 
   '@rivet-gg/cloud@https://pkg.pr.new/rivet-dev/engine-ee/@rivet-gg/cloud@1330':
     dependencies:

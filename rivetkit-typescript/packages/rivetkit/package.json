@@ -211,7 +211,7 @@
 		"@hono/zod-openapi": "^1.1.5",
 		"@opentelemetry/api": "^1.1.0",
 		"@rivet-dev/agent-os-core": "^0.1.1",
-		"@rivet-dev/services": "^0.1.5",
+		"@rivet-dev/services": "^0.2.0",
 		"@rivetkit/bare-ts": "^0.6.2",
 		"@rivetkit/engine-api-full": "workspace:*",
 		"@rivetkit/engine-cli": "workspace:*",
