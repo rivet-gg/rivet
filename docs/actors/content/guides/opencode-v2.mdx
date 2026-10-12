@@ -7,7 +7,7 @@ Start with the [OpenCode v2 example](https://github.com/rivet-dev/rivet/tree/mai
 
 ## Adapt the example
 
-1. Copy the example into your backend. Keep `src/actor.ts`, `src/host.ts`, and `src/sqlite.ts` together: they handle actor lifecycle, the embedded OpenCode host, and SQLite persistence.
+1. Copy the example into your backend. Keep `src/actor.ts`, `src/runtime.ts`, `src/host.ts`, and `src/sqlite.ts` together: they handle the actor entrypoint, session lifecycle, the embedded OpenCode host, and SQLite persistence.
 2. Choose an actor key for each coding session. Update the registry and client so `getOrCreate([sessionId])` consistently reaches that session.
 3. Set `OPENCODE_WORKDIR` to the project directory and provide your model API key on the server. Store project files on persistent storage if actors may move between machines, or connect a sandbox as described below.
 4. Adapt the actor's `prompt`, `getMessages`, `waitForIdle`, and `abort` actions to your app. Add authentication and authorization before exposing them to users. Keep the wake, sleep, and `keepAwake` handling so active work can resume after a restart.
@@ -20,7 +20,7 @@ OpenCode v2 uses preview packages in this example, so keep the pinned OpenCode a
 The example does not connect a sandbox yet. Adapt it to run coding tools in a separate sandbox:
 
 1. Choose a sandbox provider that can reconnect to a running sandbox and stream process output, stdin, exit status, and cancellation. Give each actor a stable sandbox ID, persist the provider's binding in actor SQLite, and use the sandbox's working directory for the OpenCode session.
-2. In `src/actor.ts`, connect or restore the sandbox before `createHost()` and before resuming a saved session. Pass the connected sandbox to `createHost()`.
+2. In `src/runtime.ts`, connect or restore the sandbox before `createHost()` and before resuming a saved session. Pass the connected sandbox to `createHost()`.
 3. In `src/host.ts`, implement a sandbox-backed OpenCode `Environment` service for file operations and process spawning. Replace both `Environment.node` and `CrossSpawnSpawner.node` in the `OpenCode.create()` overrides. Redirect or disable any other OpenCode services that still touch host files or processes; setting only a sandbox working directory or adding a custom tool does not redirect built-in tools.
 4. On sleep, close the OpenCode host before suspending the sandbox. On wake, reconnect before recovery; on actor destruction, destroy the sandbox. Keep model credentials on the actor host and pass only the environment variables needed by sandbox commands.
 

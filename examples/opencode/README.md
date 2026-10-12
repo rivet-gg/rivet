@@ -48,9 +48,12 @@ Use a different key in `src/client.ts` to create an independent OpenCode session
 ## Implementation
 
 [`src/actor.ts`](https://github.com/rivet-dev/rivet/tree/main/examples/opencode/src/actor.ts)
-owns the actor lifecycle and actions.
+is the entrypoint: it retains one OpenCode host promise in actor-local vars from
+wake until sleep, following [OpenCode's Cloudflare Durable Object example](https://opencode.ai/v2/docs/build/sdk/cloudflare/).
+[`src/runtime.ts`](https://github.com/rivet-dev/rivet/tree/main/examples/opencode/src/runtime.ts)
+handles sessions, event delivery, recovery, and actions.
 [`src/host.ts`](https://github.com/rivet-dev/rivet/tree/main/examples/opencode/src/host.ts)
-embeds OpenCode, and
+embeds OpenCode, while
 [`src/sqlite.ts`](https://github.com/rivet-dev/rivet/tree/main/examples/opencode/src/sqlite.ts)
 adapts OpenCode's SQL driver to Rivet's actor SQLite transactions.
 [`src/client.ts`](https://github.com/rivet-dev/rivet/tree/main/examples/opencode/src/client.ts)
