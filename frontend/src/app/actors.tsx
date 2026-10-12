@@ -8,6 +8,7 @@ import {
 	ActorsListPreview,
 	useDataProvider,
 } from "@/components/actors";
+import { ActorConfigTab } from "@/components/actors/actor-config-tab";
 
 export function Actors({ actorId }: { actorId: string | undefined }) {
 	return (
@@ -27,6 +28,12 @@ function Actor() {
 
 	if (!data || isError) {
 		return <ActorNotFound actorId={actorId as ActorId} />;
+	}
+
+	// TODO(agentOS-0.4): The inspector tabs do not work yet with agentOS 0.4, so show
+	// only its metadata. Remove this branch once the tabs are fixed.
+	if (data.name === "agentOS") {
+		return <ActorConfigTab actorId={data.actorId} />;
 	}
 
 	return (
