@@ -302,6 +302,10 @@
 					"href": "/guides/ai-agent"
 				},
 				{
+					"title": "OpenCode v2 on Rivet Actors",
+					"href": "/guides/opencode-v2"
+				},
+				{
 					"title": "Authenticate Users End to End",
 					"href": "/guides/authentication"
 				},
