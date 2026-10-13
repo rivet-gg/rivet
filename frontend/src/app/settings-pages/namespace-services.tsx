@@ -27,14 +27,15 @@ import {
 } from "../managed-services";
 import { SettingsCard } from "./settings-card";
 
-// Each service registers well-known actor names, so a namespace "has" the
-// service once an actor under any of those names exists. Setup instructions
-// live in the docs so they are not duplicated here.
+// Each service registers a well-known actor name on the managed Services pool,
+// so a namespace "has" the service once an actor with that name has run there.
+// Requiring the pool keeps a user's own actor with the same name from reading
+// as a connected service. Setup instructions live in the docs so they are not
+// duplicated here.
 //
 // `servicePath` is set for Rivet-run workers that are served under the
-// namespace's Rivet Run origin on Rivet Cloud. agentOS is deployed by the user
-// as a regular actor, so it has no managed URL to hand out; its probe relies on
-// the `vm` actor name used by the onboarding template and every example.
+// namespace's Rivet Run origin on Rivet Cloud. Hosted agentOS VMs are reached
+// through the gateway by VM ID, so agentOS has no managed URL to hand out.
 const SERVICES = [
 	{
 		product: getProduct("durable-streams"),
@@ -43,7 +44,7 @@ const SERVICES = [
 	},
 	{
 		product: getProduct("agent-os"),
-		actorNames: ["vm"],
+		actorNames: ["agentOS"],
 		servicePath: null,
 	},
 ].filter((service) => service.product.isAvailable());
@@ -146,7 +147,11 @@ function ServicesList() {
 				n: service.actorNames,
 				filters: { showDestroyed: { value: ["true"] } },
 			}),
-			select: (data: { actors: unknown[] }) => data.actors.length > 0,
+			select: (data: { actors: { runnerNameSelector: string }[] }) =>
+				data.actors.some(
+					(actor) =>
+						actor.runnerNameSelector === MANAGED_SERVICES_POOL,
+				),
 		})),
 	});
 
