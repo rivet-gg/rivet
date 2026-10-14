@@ -1,3 +1,4 @@
+#[allow(deprecated)]
 pub mod codec;
 pub mod query;
 pub mod to_client;

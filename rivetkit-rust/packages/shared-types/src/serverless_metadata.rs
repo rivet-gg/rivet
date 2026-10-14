@@ -28,6 +28,9 @@ pub struct ServerlessMetadataRunner {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerlessMetadataPayload {
+	/// The actor_names map is a complete subscription manifest for this deployment.
+	#[serde(default)]
+	pub stream_subscriptions: bool,
 	pub runtime: String,
 	pub version: String,
 	#[serde(skip_serializing_if = "Option::is_none")]

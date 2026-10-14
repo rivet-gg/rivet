@@ -49,9 +49,10 @@ use crate::ctx::ApiCtx;
 pub async fn get_or_create(
 	Extension(ctx): Extension<ApiCtx>,
 	Query(query): Query<GetOrCreateQuery>,
+	headers: axum::http::HeaderMap,
 	Json(body): Json<GetOrCreateRequest>,
 ) -> Response {
-	match get_or_create_inner(ctx, query, body).await {
+	match get_or_create_inner(ctx, query, body, headers).await {
 		Ok(response) => Json(response).into_response(),
 		Err(err) => ApiError::from(err).into_response(),
 	}
@@ -62,14 +63,31 @@ async fn get_or_create_inner(
 	ctx: ApiCtx,
 	query: GetOrCreateQuery,
 	body: GetOrCreateRequest,
+	headers: axum::http::HeaderMap,
 ) -> Result<GetOrCreateResponse> {
-	ctx.auth(
-		AccessNamespaceScope::Name(query.namespace.clone()),
-		ResourceKind::Actor,
-		TargetScope::Any,
-		OperationKind::Create,
+	if !super::stream_access::authorize(
+		&ctx,
+		&query.namespace,
+		&body.name,
+		&body.key,
+		&headers,
+		body.input.as_deref(),
 	)
-	.await?;
+	.await?
+	{
+		ctx.auth(
+			AccessNamespaceScope::Name(query.namespace.clone()),
+			ResourceKind::Actor,
+			TargetScope::Any,
+			OperationKind::Create,
+		)
+		.await?;
+	} else {
+		anyhow::ensure!(
+			body.input.is_some(),
+			"Stream provisioning requires its authorized identity"
+		);
+	}
 
 	let namespace = ctx
 		.op(namespace::ops::resolve_for_name_global::Input {

@@ -1,3 +1,6 @@
+import type { z } from "zod/v4";
+import type { ActorStreamDefinition, StreamInput } from "./stream";
+import type { ActorContext } from "./config";
 import type { AnyDatabaseProvider } from "@/common/database/config";
 import type { RegistryConfig } from "@/registry/config";
 import {
@@ -98,8 +101,10 @@ export class ActorDefinition<
 		E,
 		Q
 	>,
+	SI = unknown,
 > implements BaseActorDefinition<S, CP, CS, V, I, DB, E, Q, R>
 {
+	declare readonly "~streamInput": SI;
 	#config: ActorConfig<S, CP, CS, V, I, DB, E, Q, R>;
 
 	constructor(config: ActorConfig<S, CP, CS, V, I, DB, E, Q, R>) {
@@ -174,6 +179,9 @@ export function actor<
 		TEvents,
 		TQueues
 	>,
+	TStreamSchema extends z.ZodType | undefined = undefined,
+	TStreamBody = unknown,
+	TSubscriptions extends Record<string, unknown> = {},
 >(
 	input: ActorConfigInput<
 		TState,
@@ -185,7 +193,66 @@ export function actor<
 		TEvents,
 		TQueues,
 		TActions
-	>,
+	> & {
+		subscriptions?: {
+			[K in keyof TSubscriptions]: {
+				schema?: TSubscriptions[K] & z.ZodType;
+				stream: string;
+				actorKey: string[];
+				deadLetter?: boolean | { stream: string };
+				onError?: NoInfer<
+					(
+						c: ActorContext<
+							TState,
+							TConnParams,
+							TConnState,
+							TVars,
+							TInput,
+							TDatabase,
+							TEvents,
+							TQueues,
+							StreamInput<TStreamSchema, TStreamBody>
+						>,
+						failure: import("./stream").StreamFailure,
+					) => void | Promise<void>
+				>;
+				onMessage(
+					c: ActorContext<
+						TState,
+						TConnParams,
+						TConnState,
+						TVars,
+						TInput,
+						TDatabase,
+						TEvents,
+						TQueues,
+						StreamInput<TStreamSchema, TStreamBody>
+					>,
+					message: {
+						body: TSubscriptions[K] extends z.ZodType
+							? z.output<TSubscriptions[K]>
+							: unknown;
+					},
+					options: { signal: AbortSignal },
+				): void | Promise<void>;
+			};
+		};
+		stream?: ActorStreamDefinition<
+			ActorContext<
+				TState,
+				TConnParams,
+				TConnState,
+				TVars,
+				TInput,
+				TDatabase,
+				TEvents,
+				TQueues,
+				StreamInput<TStreamSchema, TStreamBody>
+			>,
+			TStreamSchema,
+			TStreamBody
+		>;
+	},
 ): ActorDefinition<
 	TState,
 	TConnParams,
@@ -195,7 +262,8 @@ export function actor<
 	TDatabase,
 	TEvents,
 	TQueues,
-	TActions
+	TActions,
+	StreamInput<TStreamSchema, TStreamBody>
 > {
 	warnDeprecatedOptionKeys(
 		(input as { options?: unknown } | undefined)?.options,

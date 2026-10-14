@@ -25,6 +25,9 @@ pub mod sleep;
 mod sql_efficiency;
 pub mod sqlite;
 pub mod state;
+#[cfg(feature = "native-runtime")]
+pub mod stream;
+pub mod stream_subscription;
 pub mod task;
 pub mod task_types;
 pub(crate) mod work_registry;

@@ -16,7 +16,7 @@ fn encode(namespace_id: Id, grants: &[OwnedGrant<Id, Id>]) -> Result<String, Tok
 	encode_validated_grants(&validate(namespace_id, grants)?)
 }
 
-const RESOURCES: [ResourceKind; 7] = [
+const RESOURCES: [ResourceKind; 9] = [
 	ResourceKind::Namespace,
 	ResourceKind::Actor,
 	ResourceKind::Runner,
@@ -24,14 +24,18 @@ const RESOURCES: [ResourceKind; 7] = [
 	ResourceKind::Datacenter,
 	ResourceKind::ActorGateway,
 	ResourceKind::ActorKv,
+	ResourceKind::ActorStream,
+	ResourceKind::DurableStream,
 ];
 
-const OPERATIONS: [OperationKind; 5] = [
+const OPERATIONS: [OperationKind; 7] = [
 	OperationKind::Read,
 	OperationKind::Update,
 	OperationKind::List,
 	OperationKind::Create,
 	OperationKind::Delete,
+	OperationKind::Append,
+	OperationKind::Close,
 ];
 
 #[test]
@@ -71,19 +75,19 @@ fn rejects_control_plane_credential_grants() {
 
 #[test]
 fn rejects_encoded_control_plane_credential_grants() {
-	use rivet_data::{AUTH_GRANTS_VERSION, generated::auth_grants_v1, versioned::AuthGrantsData};
+	use rivet_data::{AUTH_GRANTS_VERSION, generated::auth_grants_v2, versioned::AuthGrantsData};
 	use vbare::OwnedVersionedData;
 
 	let namespace_id = Id::nil();
 	for resource in [
-		auth_grants_v1::ResourceKind::Token,
-		auth_grants_v1::ResourceKind::Reserved,
+		auth_grants_v2::ResourceKind::Token,
+		auth_grants_v2::ResourceKind::Reserved,
 	] {
-		let data = auth_grants_v1::Data {
-			grants: vec![auth_grants_v1::Grant {
+		let data = auth_grants_v2::Data {
+			grants: vec![auth_grants_v2::Grant {
 				resource,
-				target: auth_grants_v1::TargetScope::Any,
-				operations: vec![auth_grants_v1::OperationKind::Create],
+				target: auth_grants_v2::TargetScope::Any,
+				operations: vec![auth_grants_v2::OperationKind::Create],
 			}],
 		};
 		let bytes = AuthGrantsData::wrap_latest(data)
@@ -192,7 +196,7 @@ fn rejects_unknown_versions_and_padded_base64() {
 	let encoded = encode(namespace_id, &grants).unwrap();
 
 	let mut bytes = URL_SAFE_NO_PAD.decode(&encoded).unwrap();
-	bytes[..2].copy_from_slice(&2_u16.to_le_bytes());
+	bytes[..2].copy_from_slice(&(rivet_data::AUTH_GRANTS_VERSION + 1).to_le_bytes());
 	assert_eq!(
 		decode_grants(namespace_id, &URL_SAFE_NO_PAD.encode(bytes)),
 		Err(TokenError::InvalidGrants)

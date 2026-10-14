@@ -147,6 +147,10 @@ pub(crate) struct ActorContextInner {
 	pub(super) queue_config: Mutex<ActorConfig>,
 	pub(super) queue_abort_signal: Mutex<CancellationToken>,
 	pub(super) queue_initialize: OnceCell<()>,
+	#[cfg(feature = "native-runtime")]
+	pub(super) stream_initialize: OnceCell<()>,
+	#[cfg(feature = "native-runtime")]
+	pub(super) stream_lock: Arc<AsyncMutex<()>>,
 	pub(super) queue_metadata: AsyncMutex<QueueMetadata>,
 	pub(super) queue_receive_lock: AsyncMutex<()>,
 	pub(super) queue_completion_waiters: SccHashMap<u64, oneshot::Sender<Option<Vec<u8>>>>,
@@ -490,6 +494,10 @@ impl ActorContext {
 			queue_config: Mutex::new(config.clone()),
 			queue_abort_signal: Mutex::new(abort_signal.clone()),
 			queue_initialize: OnceCell::new(),
+			#[cfg(feature = "native-runtime")]
+			stream_initialize: OnceCell::new(),
+			#[cfg(feature = "native-runtime")]
+			stream_lock: Arc::new(AsyncMutex::new(())),
 			queue_metadata: AsyncMutex::new(QueueMetadata::default()),
 			queue_receive_lock: AsyncMutex::new(()),
 			queue_completion_waiters: SccHashMap::new(),

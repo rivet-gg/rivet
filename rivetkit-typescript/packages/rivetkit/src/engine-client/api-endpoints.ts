@@ -1,3 +1,4 @@
+import { pairPrimaryStreamGrants } from "@/client/auth";
 import { serializeActorKey } from "@/actor/keys";
 import type { ClientConfig } from "@/client/client";
 import type { IssuedToken, IssueTokenOptions } from "@/client/auth";
@@ -36,7 +37,7 @@ export async function issueToken(
 		namespace: config.namespace,
 		subject: options.subject,
 		duration: options.expiresIn,
-		grants: options.grants,
+		grants: pairPrimaryStreamGrants(options.grants),
 	});
 }
 

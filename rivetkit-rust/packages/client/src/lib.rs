@@ -10,6 +10,7 @@ pub mod client;
 mod common;
 pub mod connection;
 pub mod drivers;
+#[allow(deprecated)] // Legacy queue client API remains available during the stream migration.
 pub mod handle;
 pub mod protocol;
 mod remote_manager;
@@ -19,6 +20,7 @@ pub use client::{
 };
 pub use common::{EncodingKind, RawWebSocket, TransportKind};
 pub use connection::{ConnectionStatus, Event, SubscriptionHandle};
+#[allow(deprecated)]
 pub use handle::{
 	QueueSendOptions, QueueSendResult, QueueSendStatus, ResolvedActorHandle, SendAndWaitOpts,
 	SendOpts,

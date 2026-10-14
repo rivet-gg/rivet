@@ -9,7 +9,7 @@ pub enum AccessNamespaceScope {
 	Name(String),
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, ToSchema)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 #[schema(as = AuthTargetScope)]
 pub enum TargetScope {

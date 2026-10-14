@@ -1,0 +1,79 @@
+---
+title: "Migrate Queues to Streams"
+description: "Move actor queue processing to durable input streams without losing existing queued work."
+---
+
+**Queue APIs are deprecated.** Existing queues keep working, but use [actor
+streams](/actors/docs/streams) for new message processing.
+
+Streams provide:
+
+- **Writes while the consumer is down:** producers can append directly to DS while the consuming actor is asleep or unavailable. The DS service and its storage actors must still be available.
+- **More flexibility:** use one primary input per actor, plus subscriptions to other streams using path patterns and actor keys.
+- **Better observability:** inspect retained input through DS, actor progress and failures through `stream.status()`, and failed payloads in an optional dead-letter stream.
+
+The current `actor.stream.append()` helper goes through the actor gateway and
+can activate the actor. Use the direct DS HTTP endpoint when writes must be
+independent of the consuming actor's availability. Both paths accept the same
+[paired input token](/actors/docs/authentication#issue-engine-access-tokens).
+
+## Replace queue handlers
+
+Move queue processing from `run` / `c.queue.next()` into `stream.onMessage`.
+For multiple queue names, use a discriminated union in one primary input stream:
+
+<CodeSnippet file="examples/docs/actors-streams/migration/index.ts" title="index.ts" />
+
+Replace `account.send("credit", { amount: 25 })` with:
+
+<CodeSnippet file="examples/docs/actors-streams/migration/client.ts" title="client.ts" />
+
+| Queue API | Stream equivalent |
+| --- | --- |
+| `queues` and `queue<T>()` | `stream.onMessage`, with optional `stream.schema` |
+| `handle.send(name, body)` / `connection.send(name, body)` | `handle.stream.append(body)` or direct DS append; include a type/name in the body when needed |
+| `c.queue.send(name, body)` | `c.stream.append(body)` |
+| `next`, `nextBatch`, `tryNext`, `tryNextBatch`, `iter` | `onMessage` receives one record at a time |
+| `waitForNames`, `waitForAvailable` | DS wakes the actor when input is available |
+| `complete()` | Returning successfully saves actor state and processing progress |
+| `send(..., { wait: true })`, `enqueueAndWait`, completion replies | No direct equivalent; append confirms acceptance, not processing or a result |
+| `canPublish` | Engine stream append grants plus application-specific authorization and validation |
+| Queue filters and selective receive | Dispatch by body type or use separate subscriptions; primary input is processed in stream order |
+
+Use an action for synchronous results, or model completion explicitly in actor
+state/events when processing asynchronously. Handler returns do not send a
+queue-style completion reply to the producer. `maxQueueSize` and
+`maxQueueMessageSize` do not configure streams.
+
+## Failures and retries
+
+Stream handlers get five retries with backoff after the initial attempt. Without
+DLQ, exhaustion pauses that source and calls `onError`; inspect it with
+`stream.status()` and explicitly `stream.resume()` after fixing the cause.
+With `deadLetter: true`, RivetKit durably writes a separate dead letter before
+continuing. See [failure handling and redrive](/actors/docs/streams#dead-letter-streams).
+
+Delivery is at least once. Make external side effects idempotent. Failed handler
+mutations are not rolled back, and replayed messages arrive at the stream tail.
+Stream progress does not delete acknowledged input; retention remains a separate,
+deferred concern.
+
+## Cut over without losing queued work
+
+1. Deploy the stream handler alongside the existing queue consumer.
+2. Switch producers to stream append. Stop new queue writes.
+3. Keep the old consumer running until its queue backlog and any completion replies are drained.
+4. Verify stream progress and failures, then remove the queue definitions and consumer.
+
+Queue storage is **not automatically copied** into streams. If ordering across
+the cutover matters, pause producers, drain the old queue, and then switch.
+Keep the old path available until rollback no longer requires it.
+
+Actor streams currently require the native runtime and a DS service configured
+for subscriptions. Workflow stream integration is still deferred: existing
+workflow queue APIs remain available, and a workflow migration needs its own
+completion and replay design. Do not replace a workflow's durable queue waits
+with untracked stream callbacks.
+
+Keep each primary stream for its actor's lifetime. Do not delete and recreate a
+stream to reset progress; see the [stream recommendations](/actors/docs/streams#recommendations).

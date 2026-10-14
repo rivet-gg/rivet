@@ -193,6 +193,7 @@ export interface CronFire {
 	};
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export type QueueMessageOf<Name extends string, Body> = {
 	id: number | bigint;
 	name: Name;
@@ -201,8 +202,10 @@ export type QueueMessageOf<Name extends string, Body> = {
 	[key: string]: unknown;
 };
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export type QueueName<TQueues extends QueueSchemaConfig> = keyof TQueues &
 	string;
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export type QueueFilterName<TQueues extends QueueSchemaConfig> =
 	keyof TQueues extends never ? string : QueueName<TQueues>;
 
@@ -234,6 +237,7 @@ type QueueCompletableMessageForName<
 	TQueues extends QueueSchemaConfig,
 	TName extends QueueFilterName<TQueues>,
 > = QueueMessageForName<TQueues, TName> & {
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	complete(...args: QueueCompleteArgsForName<TQueues, TName>): Promise<void>;
 };
 
@@ -246,6 +250,7 @@ type QueueCompletionResultForName<
 		? InferQueueCompleteMap<TQueues>[TName] | undefined
 		: unknown | undefined;
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export type QueueResultMessageForName<
 	TQueues extends QueueSchemaConfig,
 	TName extends QueueFilterName<TQueues>,
@@ -254,6 +259,7 @@ export type QueueResultMessageForName<
 	? QueueCompletableMessageForName<TQueues, TName>
 	: QueueMessageForName<TQueues, TName>;
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface QueueNextOptions<
 	TName extends string = string,
 	TCompletable extends boolean = boolean,
@@ -264,6 +270,7 @@ export interface QueueNextOptions<
 	completable?: TCompletable;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface QueueNextBatchOptions<
 	TName extends string = string,
 	TCompletable extends boolean = boolean,
@@ -275,17 +282,20 @@ export interface QueueNextBatchOptions<
 	completable?: TCompletable;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface QueueWaitOptions<TCompletable extends boolean = boolean> {
 	timeout?: number;
 	signal?: AbortSignal;
 	completable?: TCompletable;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface QueueEnqueueAndWaitOptions {
 	timeout?: number;
 	signal?: AbortSignal;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface QueueTryNextOptions<
 	TName extends string = string,
 	TCompletable extends boolean = boolean,
@@ -294,6 +304,7 @@ export interface QueueTryNextOptions<
 	completable?: TCompletable;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface QueueTryNextBatchOptions<
 	TName extends string = string,
 	TCompletable extends boolean = boolean,
@@ -303,6 +314,7 @@ export interface QueueTryNextBatchOptions<
 	completable?: TCompletable;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface QueueIterOptions<
 	TName extends string = string,
 	TCompletable extends boolean = boolean,
@@ -312,21 +324,26 @@ export interface QueueIterOptions<
 	completable?: TCompletable;
 }
 
+/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 export interface ActorQueue<
 	TQueues extends QueueSchemaConfig = Record<never, never>,
 > {
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	send<TName extends QueueFilterName<TQueues>>(
 		name: TName,
 		body: QueueMessageForName<TQueues, TName>["body"],
 	): Promise<any>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	next<
 		const TName extends QueueFilterName<TQueues>,
 		const TCompletable extends boolean = false,
 	>(opts?: QueueNextOptions<TName, TCompletable>): Promise<any>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	nextBatch<
 		const TName extends QueueFilterName<TQueues>,
 		const TCompletable extends boolean = false,
 	>(opts?: QueueNextBatchOptions<TName, TCompletable>): Promise<any[]>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	waitForNames<
 		const TName extends QueueFilterName<TQueues>,
 		const TCompletable extends boolean = false,
@@ -335,28 +352,34 @@ export interface ActorQueue<
 		opts?: QueueWaitOptions<TCompletable>,
 	): Promise<any>;
 	/** @experimental */
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	waitForAvailable<const TName extends QueueFilterName<TQueues>>(
 		names?: readonly TName[],
 		opts?: Omit<QueueWaitOptions<false>, "completable">,
 	): Promise<void>;
 	/** @experimental */
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	complete<const TName extends QueueFilterName<TQueues>>(
 		message: { id: number | bigint; name: TName },
 		...args: QueueCompleteArgsForName<TQueues, TName>
 	): Promise<void>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	enqueueAndWait<const TName extends QueueFilterName<TQueues>>(
 		name: TName,
 		body: QueueMessageForName<TQueues, TName>["body"],
 		opts?: QueueEnqueueAndWaitOptions,
 	): Promise<QueueCompletionResultForName<TQueues, TName>>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	tryNext<
 		const TName extends QueueFilterName<TQueues>,
 		const TCompletable extends boolean = false,
 	>(opts?: QueueTryNextOptions<TName, TCompletable>): Promise<any>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	tryNextBatch<
 		const TName extends QueueFilterName<TQueues>,
 		const TCompletable extends boolean = false,
 	>(opts?: QueueTryNextBatchOptions<TName, TCompletable>): Promise<any[]>;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	iter<
 		const TName extends QueueFilterName<TQueues>,
 		const TCompletable extends boolean = false,
@@ -394,6 +417,7 @@ export interface ActorContext<
 	TDatabase extends AnyDatabaseProvider,
 	TEvents extends EventSchemaConfig = Record<never, never>,
 	TQueues extends QueueSchemaConfig = Record<never, never>,
+	TStreamInput = unknown,
 > {
 	[ACTOR_CONTEXT_INTERNAL_SYMBOL]?: unknown;
 	/** Returns the raw unwrapped state without the write-through proxy. */
@@ -408,7 +432,9 @@ export interface ActorContext<
 	readonly db: InferDatabaseClient<TDatabase>;
 	readonly schedule: ActorSchedule;
 	readonly cron: ActorCron;
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	readonly queue: ActorQueue<TQueues>;
+	readonly stream: import("./stream").StreamWriter<TStreamInput>;
 	/** @experimental */
 	readonly run: ActorRun;
 	readonly actorId: string;
@@ -1351,6 +1377,41 @@ const zActionSampleRates: z.ZodType<ActionSampleRates> = z.lazy(() =>
 
 export const ActorConfigSchema = z
 	.object({
+		subscriptions: z
+			.record(
+				z.string().regex(/^(?!primary$)[A-Za-z0-9_-]{1,128}$/),
+				z
+					.object({
+						stream: z.string().startsWith("/"),
+						actorKey: z.array(z.string()),
+						schema: z.custom<PrimitiveSchema>().optional(),
+						onMessage: zFunction(),
+						onError: zFunction().optional(),
+						deadLetter: z
+							.union([
+								z.boolean(),
+								z
+									.object({ stream: z.string().min(1) })
+									.strict(),
+							])
+							.optional(),
+					})
+					.strict(),
+			)
+			.optional(),
+		stream: z
+			.object({
+				schema: z.custom<PrimitiveSchema>().optional(),
+				onMessage: zFunction(),
+				onError: zFunction().optional(),
+				deadLetter: z
+					.union([
+						z.boolean(),
+						z.object({ stream: z.string().min(1) }).strict(),
+					])
+					.optional(),
+			})
+			.optional(),
 		onCreate: zFunction().optional(),
 		onDestroy: zFunction().optional(),
 		onMigrate: zFunction().optional(),
@@ -1937,6 +1998,7 @@ interface BaseActorConfig<
 	/**
 	 * Schema map for queue payloads sent by this actor.
 	 */
+	/** @deprecated Queues are deprecated. Use actor streams. See https://rivet.dev/actors/docs/migrate-queues-to-streams. */
 	queues?: TQueues;
 }
 
@@ -1982,6 +2044,7 @@ export type ActorConfig<
 	>,
 > = Omit<
 	z.infer<typeof ActorConfigSchema>,
+	| "stream"
 	| "actions"
 	| "events"
 	| "queues"
@@ -2080,6 +2143,8 @@ export type ActorConfigInput<
 	>;
 } & Omit<
 	z.input<typeof ActorConfigSchema>,
+	| "stream"
+	| "subscriptions"
 	| "actions"
 	| "tracing"
 	| "events"
@@ -2305,7 +2370,7 @@ export const DocActorOptionsSchema = z
 			.number()
 			.optional()
 			.describe(
-				"Maximum number of queue messages before rejecting new messages. Default: 1000",
+				"Deprecated queue option. Maximum number of queue messages before rejecting new messages. Default: 1000",
 			),
 		maxSchedules: z
 			.number()
@@ -2319,7 +2384,7 @@ export const DocActorOptionsSchema = z
 			.number()
 			.optional()
 			.describe(
-				"Maximum size of each queue message in bytes. Default: 65536",
+				"Deprecated queue option. Maximum size of each queue message in bytes. Default: 65536",
 			),
 		canHibernateWebSocket: z
 			.boolean()
@@ -2477,7 +2542,9 @@ export const DocActorConfigSchema = z
 		queues: z
 			.record(z.string(), z.unknown())
 			.optional()
-			.describe("Map of queue names to schemas."),
+			.describe(
+				"Deprecated: use stream.onMessage and optional stream.schema. Map of legacy queue names to schemas.",
+			),
 		options: DocActorOptionsSchema.optional(),
 	})
 	.describe("Actor configuration passed to the actor() function.");

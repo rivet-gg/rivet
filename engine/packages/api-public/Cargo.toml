@@ -8,6 +8,8 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+base64.workspace = true
+ciborium.workspace = true
 axum.workspace = true
 epoxy-protocol.workspace = true
 epoxy.workspace = true

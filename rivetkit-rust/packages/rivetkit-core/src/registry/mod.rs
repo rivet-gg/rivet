@@ -658,7 +658,7 @@ impl CoreRegistry {
 			pool_name: config.pool_name,
 			prepopulate_actor_names,
 			metadata: Some(json!({
-				"rivetkit": { "version": config.serverless_package_version },
+				"rivetkit": { "version": config.serverless_package_version, "streamSubscriptions": true },
 			})),
 			not_global: false,
 			debug_latency_ms: None,
@@ -724,6 +724,11 @@ impl CoreRegistry {
 		self,
 		config: ServeConfig,
 	) -> Result<crate::serverless::CoreServerlessRuntime> {
+		for factory in self.factories.values() {
+			if let Some(stream) = &factory.config().input_stream {
+				stream.validate()?;
+			}
+		}
 		crate::serverless::CoreServerlessRuntime::new(self.factories, config).await
 	}
 }
@@ -766,6 +771,7 @@ pub(crate) fn serverless_metadata_payload(
 		.collect::<HashMap<_, _>>();
 
 	ServerlessMetadataPayload {
+		stream_subscriptions: true,
 		runtime: "rivetkit".to_owned(),
 		version: config.serverless_package_version.clone(),
 		envoy_protocol_version: Some(protocol::PROTOCOL_VERSION),
@@ -795,6 +801,14 @@ fn build_actor_metadata_map_from_factories(
 			if let Some(name) = &config.name {
 				metadata.insert("name".to_owned(), json!(name));
 			}
+			let subscriptions = config
+				.input_stream
+				.as_ref()
+				.map(|stream| stream.declarations(actor_name))
+				.unwrap_or_default();
+			// Always export an explicit set, including empty, so a metadata
+			// consumer can distinguish removal from an older unaware publisher.
+			metadata.insert("streamSubscriptions".to_owned(), json!(subscriptions));
 			(actor_name.clone(), JsonValue::Object(metadata))
 		})
 		.collect()

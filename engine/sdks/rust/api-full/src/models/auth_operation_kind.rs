@@ -24,6 +24,10 @@ pub enum AuthOperationKind {
 	Create,
 	#[serde(rename = "delete")]
 	Delete,
+	#[serde(rename = "append")]
+	Append,
+	#[serde(rename = "close")]
+	Close,
 }
 
 impl std::fmt::Display for AuthOperationKind {
@@ -34,6 +38,8 @@ impl std::fmt::Display for AuthOperationKind {
 			Self::List => write!(f, "list"),
 			Self::Create => write!(f, "create"),
 			Self::Delete => write!(f, "delete"),
+			Self::Append => write!(f, "append"),
+			Self::Close => write!(f, "close"),
 		}
 	}
 }

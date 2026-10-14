@@ -28,6 +28,10 @@ pub enum AuthTokenResource {
 	ActorGateway,
 	#[serde(rename = "actor_kv")]
 	ActorKv,
+	#[serde(rename = "actor_stream")]
+	ActorStream,
+	#[serde(rename = "durable_stream")]
+	DurableStream,
 }
 
 impl std::fmt::Display for AuthTokenResource {
@@ -40,6 +44,8 @@ impl std::fmt::Display for AuthTokenResource {
 			Self::Datacenter => write!(f, "datacenter"),
 			Self::ActorGateway => write!(f, "actor_gateway"),
 			Self::ActorKv => write!(f, "actor_kv"),
+			Self::ActorStream => write!(f, "actor_stream"),
+			Self::DurableStream => write!(f, "durable_stream"),
 		}
 	}
 }

@@ -1,0 +1,159 @@
+---
+title: "Streams"
+description: "Process durable input with an actor's primary stream and subscriptions to other streams."
+---
+
+Rivet Actors can process messages from [Durable Streams](/integrations/durable-streams). Each actor can have a primary input stream and subscribe to additional streams. New messages wake sleeping actors and run the matching `onMessage` handler.
+
+Actor stream handlers currently require the native runtime and a Durable Streams service configured for actor subscriptions.
+
+## Define stream handlers
+
+Use `stream.onMessage` for the actor's primary input. Use `subscriptions` for other streams that should deliver messages to this actor type. Set `DURABLE_STREAMS_ENDPOINT` to your service's stream root, such as `http://127.0.0.1:8642/durable-streams/v1/stream`.
+
+<CodeSnippet file="examples/docs/actors-streams/index.ts" title="index.ts" />
+
+Schemas are optional. With a schema, the handler's body type is inferred from the parsed output. Without a schema, annotate the message body, as shown in the primary handler above.
+
+### Primary input stream
+
+Each actor instance has one primary input stream at `actors/{name}/{actorId}`, relative to the Durable Streams endpoint. The ID is the actor's unique ID, not its key.
+
+Append through an actor handle, using `RIVET_ENDPOINT` for your Rivet connection:
+
+<CodeSnippet file="examples/docs/actors-streams/client.ts" title="client.ts" />
+
+`stream.append()` resolves when the message has been durably accepted, without waiting for the handler to finish. Actor code can also append to its own primary stream with `c.stream.append()`.
+
+### Subscribe to other streams
+
+In the example, `/tenants/acme/orders/alice` delivers to the `customer` actor with key `["acme", "alice"]`. The actor is created if it does not exist.
+
+- `stream` matches the complete path relative to the Durable Streams endpoint, using URLPattern pathname syntax.
+- `actorKey` maps named captures to actor key components. Literal components are also supported.
+- Subscription names select handlers. `primary` is reserved.
+- Multiple source streams can deliver to the same actor, with progress tracked separately for each source.
+
+Durable Streams registers subscriptions from deployed actor definitions, so actors do not need to wake up to register them. New named subscriptions receive writes after the configuration is adopted; they do not automatically replay earlier history. Removing a subscription stops delivery without deleting the source stream.
+
+## Processing and progress
+
+RivetKit maintains a durable read offset for each source stream. After a handler succeeds, it saves actor state and processing progress before acknowledging delivery. Sleep and restarts preserve these offsets.
+
+Stream handlers run one at a time for each actor. Messages can be redelivered after a failure, so make external side effects idempotent. There is no ordering guarantee across different streams.
+
+## Failures and resuming
+
+A failed record gets **five retries** after the initial attempt, with delays of
+1, 2, 4, 8, and 16 seconds. Failed attempts and their next retry time are durable;
+sleeping, restarting, or redeploying does not reset the retry budget. Failures to
+read DS or deliver a callback retry separately and do not consume handler attempts.
+
+Without a dead-letter stream, after the sixth failed attempt the source **pauses** and RivetKit calls that
+handler's optional `onError`. Its checkpoint stays before the failed record.
+Other actor actions and other subscribed sources remain usable.
+
+<CodeSnippet file="examples/docs/actors-streams/failure.ts" />
+
+Inspect a source with `stream.status()`. After fixing the cause, call
+`stream.resume()` to retry the same record with a fresh budget. Resuming does not
+skip, delete, or reappend the record. Actor code can use the same operations on
+`c.stream`.
+
+<CodeSnippet file="examples/docs/actors-streams/resume.ts" />
+
+Status and resume use `POST /gateway/{actorId}/internal/streams/status` and
+`POST /gateway/{actorId}/internal/streams/resume`. Status requires actor gateway
+read permission; resume requires actor gateway **update** permission. Default
+input tokens do not grant resume access. Raw gateway requests use `x-rivet-token`;
+the RivetKit client sets this header for you.
+
+Handler mutations are not rolled back on failure. Make side effects and
+`onError` idempotent: a crash can cause redelivery, including a repeated error
+notification. An interrupted handler can run again without counting as a
+completed failed attempt. There is no transaction spanning an external service
+and the actor's checkpoint.
+
+## Dead-letter streams
+
+Set `deadLetter: true` on a primary or named handler to send a failed record to a
+separate stream after its five retries. RivetKit calls `onError`, durably publishes
+the failed input, and then continues with the next source record.
+
+<CodeSnippet file="examples/docs/actors-streams/dead-letter.ts" />
+
+The default destination is `actors/{name}/{actorId}/dead-letters/{subscription}`;
+`subscription` is `primary` for the actor's own input. Use
+`deadLetter: { stream: "failed-orders" }` for a custom relative stream path.
+The actor host needs permission to append there. Choose a destination outside
+its input subscription patterns to avoid processing dead letters as new input.
+
+Each dead letter includes the original `body`, failure ID, actor identity,
+source path and position, attempts, and error. RivetKit persists the pending
+payload before publication and advances the source only after DS accepts it.
+If publication fails, the source stays blocked; `stream.status().deadLetter`
+reports the pending destination and error. Delivery retries without running the
+failed handler again. `stream.resume()` also retries a pending handoff, keeping
+its original destination even if configuration changes. Repair that destination
+or its permissions first. Oversized envelopes can also block publication.
+
+### Reprocess failed primary input
+
+Read a dead letter using a DS read credential, fix the cause, then pass the
+whole envelope to the owning actor's `stream.redrive()`:
+
+<CodeSnippet file="examples/docs/actors-streams/redrive.ts" />
+
+Redrive appends the original body to the **end of the primary input stream**.
+It leaves the dead letter intact, preserves its failure ID in a durable receipt,
+and starts a fresh handler retry budget. Supply an `idempotencyKey` and reuse it
+when retrying the same redrive request. A completed receipt prevents another
+append; reusing a key for different input fails. A new key intentionally schedules
+another replay. `nextOffset` is the DS acknowledgement boundary, not a message ID.
+
+Redrive requires actor gateway append and primary-stream append permission, so a
+paired input token works. The endpoint is
+`POST /gateway/{actorId}/internal/streams/redrive`; caller credentials are
+preserved at the DS boundary. The caller supplies the payload, so redrive is
+subject to the same trust requirements as ordinary input append.
+
+Automatic redrive is limited to primary input. For named or shared streams,
+explicitly republish to the intended destination; republishing to the original
+shared source can deliver to every subscriber. There is no dashboard redrive
+control yet.
+
+DLQ handoff and unfinished redrive requests use DS producer deduplication.
+Delivery remains at least once: the current Rivet DS producer deduplication
+window is seven days, so an uncertain append retried after that window can
+appear twice. Keep effects idempotent. Completed redrive receipts are retained
+in the actor; receipt cleanup and stream retention policies are deferred.
+
+## Authorization
+
+Issue a token on the actor handle to grant action and primary input access. Both
+RivetKit token APIs pair actor input permission with append permission for that
+actor's primary stream. Explicit action-only permissions stay action-only. See
+[Authentication](/actors/docs/authentication#issue-engine-access-tokens).
+
+The same token works with `stream.append()` and direct HTTP appends to the primary
+DS URL. Send it as `Authorization: Bearer <token>`. DS preserves caller credentials
+for storage lookup, creation, and writes; missing or rejected credentials never
+use the service token. Append permission does not permit reading, closing, or
+deleting streams, or writing to additional subscription sources.
+
+Actor hosts need their own read permission for subscribed streams. Durable
+Streams authenticates asynchronous wakes using its service credential only after
+validating the deployed subscription and resolved actor destination.
+
+The framework endpoints are `POST /gateway/{actorId}/internal/streams/append` and
+`POST /gateway/{actorId}/internal/streams/wake`. `/internal/*` is reserved for
+RivetKit. Wakes also require a valid DS webhook signature; applications should
+use the append API instead of invoking wakes.
+
+## Recommendations
+
+**Do not delete a stream to reset an actor's input. Instead, create a new stream at a new URL and update the subscription.** For a primary input stream, keep it throughout the actor's lifetime; a replacement actor with a new actor ID has a new stream URL.
+
+Actors maintain their own read offsets. The Durable Streams specification does not define a notification that tells actors to reset those offsets when a stream is deleted and recreated. Reusing the URL can therefore cause an actor to skip new messages using its old offset. The [specification recommends against reusing deleted stream URLs](https://github.com/durable-streams/durable-streams/blob/main/PROTOCOL.md#4-stream-model).
+
+If you only want to stop accepting new messages, **close the stream instead of deleting it**. Closing preserves its data and offsets so readers can finish processing. A closed stream cannot be reopened.

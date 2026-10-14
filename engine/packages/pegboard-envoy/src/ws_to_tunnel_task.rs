@@ -18,7 +18,7 @@ use gas::prelude::*;
 use hyper_tungstenite::tungstenite::Message;
 use pegboard::actor_kv;
 use pegboard::pubsub_subjects::GatewayReceiverSubject;
-use rivet_data::converted::{ActorNameKeyData, MetadataKeyData};
+use rivet_data::converted::MetadataKeyData;
 use rivet_envoy_protocol::{self as protocol, PROTOCOL_VERSION, versioned};
 use rivet_guard_core::websocket_handle::WebSocketReceiver;
 use rivet_metrics::GaugeGuardExt;
@@ -1359,6 +1359,8 @@ pub(super) async fn handle_metadata(
 	ctx: &StandaloneCtx,
 	namespace_id: Id,
 	envoy_key: &str,
+	pool_name: &str,
+	deployment_version: u32,
 	metadata: protocol::ToRivetMetadata,
 ) -> Result<()> {
 	let metadata = &metadata;
@@ -1367,20 +1369,28 @@ pub(super) async fn handle_metadata(
 			async move {
 				let tx = tx.with_subspace(pegboard::keys::subspace());
 
-				// Populate actor names if provided
 				if let Some(actor_names) = &metadata.prepopulate_actor_names {
-					// Write each actor name into the namespace actor names list
-					for (name, data) in actor_names {
-						let metadata = serde_json::from_str::<
-							serde_json::Map<String, serde_json::Value>,
-						>(&data.metadata)
-						.unwrap_or_default();
-
-						tx.write(
-							&pegboard::keys::ns::ActorNameKey::new(namespace_id, name.clone()),
-							ActorNameKeyData { metadata },
-						)?;
-					}
+					let manifest = pegboard::actor_manifest::Manifest {
+						supports_stream_subscriptions: metadata
+							.metadata
+							.as_ref()
+							.and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
+							.is_some_and(|m| m["rivetkit"]["streamSubscriptions"] == true),
+						version: deployment_version,
+						rivetkit_version: metadata
+							.metadata
+							.as_ref()
+							.and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
+							.and_then(|m| m["rivetkit"]["version"].as_str().map(str::to_owned)),
+						actor_names: actor_names
+							.iter()
+							.map(|(name, data)| {
+								Ok((name.clone(), serde_json::from_str(&data.metadata)?))
+							})
+							.collect::<Result<_>>()?,
+					};
+					pegboard::actor_manifest::publish(&tx, namespace_id, pool_name, &manifest)
+						.await?;
 				}
 
 				// Write envoy metadata

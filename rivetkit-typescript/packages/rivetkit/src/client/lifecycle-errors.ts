@@ -64,6 +64,20 @@ function classifyActorError(
 		return undefined;
 	}
 
+	// Envoy rejects a stale generation before admitting the request, so no user
+	// code has run. Retry through the gateway as routing catches up.
+	if (error.group === "envoy" && error.code === "actor_generation_mismatch") {
+		return buildLifecycleBoundaryInfo(
+			"request_retry",
+			"actor_error",
+			error.message,
+			{
+				group: error.group,
+				code: error.code,
+			},
+		);
+	}
+
 	if (error.group === "actor" && error.code === "restarting") {
 		return buildLifecycleBoundaryInfo(
 			"request_retry",

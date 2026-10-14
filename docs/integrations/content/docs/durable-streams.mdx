@@ -5,6 +5,8 @@ description: "Run the Durable Streams protocol locally and deploy it with Rivet.
 
 [Durable Streams](https://github.com/durable-streams/durable-streams) is an open standard for real-time streams with durable, replayable history. Rivet provides an implementation backed by Rivet Actors.
 
+To process streams in your own actors, see [Streams](/actors/docs/streams), which covers each actor's primary input stream and subscriptions to other streams.
+
 ## Quickstart
 
 <Steps>
@@ -119,3 +121,9 @@ Your streams are at `http://<host>:8642/durable-streams/v1/stream/<path>`.
 </Step>
 
 </Steps>
+
+## Recommendations
+
+**Do not delete and recreate a stream at the same URL.** To stop accepting writes while preserving history, close the stream instead. To start fresh, create a stream at a new URL and update its consumers.
+
+Actors maintain a durable read offset for each stream. The Durable Streams specification does not define a deletion notification that resets an actor's saved offset, so reusing a deleted URL can cause it to skip new messages. See [actor stream recommendations](/actors/docs/streams#recommendations).

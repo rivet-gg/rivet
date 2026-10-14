@@ -397,6 +397,18 @@ pub struct QueueSendResult {
 
 #[derive(Debug)]
 pub enum ActorEvent {
+	StreamError {
+		subscription: String,
+		body: Vec<u8>,
+		cancel: CancellationToken,
+		reply: Reply<()>,
+	},
+	StreamMessage {
+		subscription: String,
+		body: Vec<u8>,
+		cancel: CancellationToken,
+		reply: Reply<()>,
+	},
 	Action {
 		name: String,
 		args: Vec<u8>,
@@ -492,6 +504,8 @@ impl ActorEvent {
 	pub(crate) fn kind(&self) -> &'static str {
 		match self {
 			Self::Action { .. } => "action",
+			Self::StreamMessage { .. } => "stream_message",
+			Self::StreamError { .. } => "stream_error",
 			Self::HttpRequest { .. } => "http_request",
 			Self::QueueSend { .. } => "queue_send",
 			Self::WebSocketOpen { .. } => "websocket_open",

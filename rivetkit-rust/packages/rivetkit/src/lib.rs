@@ -1,15 +1,19 @@
 #![recursion_limit = "256"]
 
 pub mod action;
+#[allow(deprecated)] // Legacy queue API remains available during the stream migration.
 pub mod actor;
+#[allow(deprecated)]
 pub mod context;
 pub mod event;
 pub mod persist;
 pub mod prelude;
+#[allow(deprecated)]
 pub mod queue;
 pub mod registry;
 mod serverless_listener;
 pub mod sqlite;
+#[allow(deprecated)]
 pub mod start;
 pub mod telemetry;
 pub mod test;
@@ -17,6 +21,7 @@ pub mod test;
 mod test_fixtures;
 pub mod typed_client;
 
+#[allow(deprecated)]
 pub use crate::{
 	action::{Action, ActionEntry, ActionSet, Handles, Raw},
 	actor::{Actor, HttpCallbackAdmission, HttpCallbackClass},
@@ -47,11 +52,53 @@ pub use rivetkit_core::serverless::{
 pub use rivetkit_core::serverless_http;
 pub use rivetkit_core::{
 	ActorConfig, ActorHttpResponse, ActorKey, ActorKeySegment, ActorKv, ActorTracingConfig,
-	CanHibernateWebSocket, CompletableQueueMessage, ConnHandle, ConnId, EngineSpawnMode,
-	EnqueueAndWaitOpts, HTTP_BODY_STREAM_CHANNEL_CAPACITY, KeepAwakeRegion, ListOpts,
-	QueueMessage as CoreQueueMessage, QueueNextBatchOpts, QueueNextOpts, QueueTryNextBatchOpts,
-	QueueTryNextOpts, QueueWaitOpts, Request, RequestSaveOpts, Response, ResponseChunk,
-	RuntimeMode, SaveStateOpts, SerializeStateReason, ServeConfig, SqliteBatchStatement, SqliteDb,
+	CanHibernateWebSocket, ConnHandle, ConnId, EngineSpawnMode, HTTP_BODY_STREAM_CHANNEL_CAPACITY,
+	KeepAwakeRegion, ListOpts, Request, RequestSaveOpts, Response, ResponseChunk, RuntimeMode,
+	SaveStateOpts, SerializeStateReason, ServeConfig, SqliteBatchStatement, SqliteDb,
 	SqliteTransaction, StateDelta, StreamingResponse, WebSocket, WsMessage,
 	sqlite::{BindParam, ColumnValue, ExecResult, QueryResult},
 };
+
+pub use rivetkit_core::actor::stream::StreamSource;
+
+// Compatibility aliases keep legacy queue types available without changing behavior.
+#[allow(deprecated)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
+pub type CompletableQueueMessage = rivetkit_core::CompletableQueueMessage;
+#[allow(deprecated)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
+pub type EnqueueAndWaitOpts = rivetkit_core::EnqueueAndWaitOpts;
+#[allow(deprecated)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
+pub type CoreQueueMessage = rivetkit_core::QueueMessage;
+#[allow(deprecated)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
+pub type QueueNextBatchOpts = rivetkit_core::QueueNextBatchOpts;
+#[allow(deprecated)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
+pub type QueueNextOpts = rivetkit_core::QueueNextOpts;
+#[allow(deprecated)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
+pub type QueueTryNextBatchOpts = rivetkit_core::QueueTryNextBatchOpts;
+#[allow(deprecated)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
+pub type QueueTryNextOpts = rivetkit_core::QueueTryNextOpts;
+#[allow(deprecated)]
+#[deprecated(
+	note = "Queues are deprecated. Migrate to actor streams: https://rivet.dev/actors/docs/migrate-queues-to-streams"
+)]
+pub type QueueWaitOpts = rivetkit_core::QueueWaitOpts;

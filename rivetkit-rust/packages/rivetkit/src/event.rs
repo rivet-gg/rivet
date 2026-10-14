@@ -77,6 +77,18 @@ impl_event_set!(
 #[derive(Debug)]
 #[must_use = "dropping a RuntimeEvent<A> without replying sends actor/dropped_reply"]
 pub enum RuntimeEvent<A: Actor> {
+	StreamError {
+		subscription: String,
+		body: Vec<u8>,
+		cancel: tokio_util::sync::CancellationToken,
+		reply: Reply<()>,
+	},
+	StreamMessage {
+		subscription: String,
+		body: Vec<u8>,
+		cancel: tokio_util::sync::CancellationToken,
+		reply: Reply<()>,
+	},
 	Action(ActionCall<A>),
 	Http(HttpCall),
 	QueueSend(QueueSend<A>),
@@ -92,6 +104,29 @@ pub enum RuntimeEvent<A: Actor> {
 impl<A: Actor> RuntimeEvent<A> {
 	pub(crate) fn from_core(event: ActorEvent) -> Self {
 		match event {
+			ActorEvent::StreamError {
+				subscription,
+				body,
+				cancel,
+				reply,
+			} => Self::StreamError {
+				subscription,
+				body,
+				cancel,
+				reply,
+			},
+
+			ActorEvent::StreamMessage {
+				subscription,
+				body,
+				cancel,
+				reply,
+			} => Self::StreamMessage {
+				subscription,
+				body,
+				cancel,
+				reply,
+			},
 			ActorEvent::Action {
 				name,
 				args,

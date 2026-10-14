@@ -13,6 +13,7 @@ description = "Core runtime primitives for RivetKit actor hosts"
 [features]
 default = ["native-runtime"]
 native-runtime = [
+	"dep:ed25519-dalek",
 	"dep:nix",
 	"dep:reqwest",
 	"dep:opentelemetry-otlp",
@@ -36,6 +37,7 @@ anyhow.workspace = true
 fs_extra = { workspace = true }
 
 [dependencies]
+ed25519-dalek = { workspace = true, optional = true }
 anyhow.workspace = true
 async-trait.workspace = true
 axum = { workspace = true, optional = true }
@@ -85,6 +87,7 @@ tracing.workspace = true
 tracing-opentelemetry = { version = "0.29", default-features = false }
 tracing-subscriber = { workspace = true, optional = true }
 url.workspace = true
+urlpattern = "0.6"
 vbare.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
