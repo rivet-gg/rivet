@@ -1,6 +1,7 @@
 import type { UniversalWebSocket } from "rivetkit";
 import { actor, event, queue } from "rivetkit";
 import { db } from "@/common/database/mod";
+import type { registry } from "./registry-static";
 import { RAW_WS_HANDLER_DELAY, RAW_WS_HANDLER_SLEEP_TIMEOUT } from "./sleep";
 
 export const SLEEP_DB_TIMEOUT = 1000;
@@ -16,6 +17,7 @@ export const sleepWithDb = actor({
 		sleepCount: 0,
 		onSleepDbWriteSuccess: false,
 		onSleepDbWriteError: null as string | null,
+		lifecycleObserverKey: null as string | null,
 	},
 	db: db({
 		onMigrate: async (db) => {
@@ -45,8 +47,17 @@ export const sleepWithDb = actor({
 			c.state.onSleepDbWriteError =
 				error instanceof Error ? error.message : String(error);
 		}
+		if (c.state.lifecycleObserverKey) {
+			const client = c.client<typeof registry>();
+			await client.lifecycleObserver
+				.getOrCreate([c.state.lifecycleObserverKey])
+				.recordEvent({ actorKey: c.key.join("/"), event: "sleep" });
+		}
 	},
 	actions: {
+		configureLifecycleObserver: (c, observerKey: string) => {
+			c.state.lifecycleObserverKey = observerKey;
+		},
 		triggerSleep: (c) => {
 			c.sleep();
 		},

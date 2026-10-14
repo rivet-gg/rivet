@@ -6,18 +6,22 @@ import {
 import type {
 	DatabaseProvider,
 	DatabaseProviderContext,
+	SqliteCommitMode,
 	SqliteDatabase,
+	SqliteExecuteResult,
 	SqliteProfilingOptions,
 	SqliteTransactionDatabase,
 	SqliteTransactionOptions,
 	SynchronousRawAccess,
 	SynchronousTransactionAccess,
+	SynchronousTransactionHandle,
 } from "@/common/database/config";
 import {
-	createSynchronousTransactions,
 	isManualTransactionControl,
 	isSqliteBindingObject,
 	MIGRATION_TRANSACTION_TIMEOUT_MS,
+	normalizeSqliteBindings,
+	runSqliteTransactionSync,
 	toSqliteBindings,
 	validateTransactionName,
 	validateTransactionTimeout,
@@ -64,12 +68,24 @@ interface DrizzleMigrations {
 	migrations: Record<string, string>;
 }
 
+function isTerminalTransactionError(error: unknown): boolean {
+	if (!error || typeof error !== "object") return false;
+	const code =
+		"code" in error ? (error as { code?: unknown }).code : undefined;
+	return (
+		code === "transaction_closed" ||
+		code === "transaction_terminal" ||
+		code === "transaction_expired"
+	);
+}
+
 export interface DrizzleDatabaseFactoryConfig<TSchema extends DrizzleSchema> {
 	schema?: TSchema;
 	migrations?: DrizzleMigrations;
 	onMigrate?: (db: DrizzleDatabase<TSchema>) => Promise<void> | void;
 	warnOnManualTransactions?: boolean;
 	profiling?: SqliteProfilingOptions;
+	commitMode?: SqliteCommitMode;
 }
 
 interface DrizzleKitConfig {
@@ -94,11 +110,13 @@ export function db<TSchema extends DrizzleSchema = Record<string, never>>({
 	onMigrate,
 	warnOnManualTransactions = true,
 	profiling,
+	commitMode = "awaited",
 }: DrizzleDatabaseFactoryConfig<TSchema> = {}): DatabaseProvider<
 	DrizzleDatabase<TSchema>
 > {
 	return {
 		sqliteProfiling: profiling,
+		sqliteCommitMode: commitMode,
 		createClient: async (ctx) => {
 			const override = ctx.overrideDrizzleDatabaseClient
 				? await ctx.overrideDrizzleDatabaseClient()
@@ -117,8 +135,8 @@ export function db<TSchema extends DrizzleSchema = Record<string, never>>({
 			const nativeDb = await nativeDatabaseProvider.open(ctx.actorId);
 			let closed = false;
 			let manualTransactionWarned = false;
-			const synchronousTransactions =
-				createSynchronousTransactions(nativeDb);
+			let synchronousTransactionKind: "callback" | "handle" | undefined;
+			let closeSynchronousHandle: (() => void) | undefined;
 			const ensureOpen = () => {
 				if (closed) {
 					throw new Error(
@@ -126,10 +144,48 @@ export function db<TSchema extends DrizzleSchema = Record<string, never>>({
 					);
 				}
 			};
+			const ensureSynchronousTransactionClient = (
+				transactionScoped: boolean,
+				asyncMember = false,
+			) => {
+				if (
+					!transactionScoped &&
+					synchronousTransactionKind === "callback"
+				) {
+					throw new Error(
+						"Use the transaction callback's tx value for queries inside db.transactionSync().",
+					);
+				}
+				if (
+					!transactionScoped &&
+					!asyncMember &&
+					synchronousTransactionKind === "handle"
+				) {
+					throw new Error(
+						"Use the open synchronous transaction handle until it is committed or rolled back.",
+					);
+				}
+			};
+			const recoverSynchronousHandle = (error: unknown) => {
+				if (!error || typeof error !== "object") return;
+				const code =
+					"code" in error
+						? (error as { code?: unknown }).code
+						: undefined;
+				if (
+					code === "transaction_active" ||
+					code === "transaction_closed"
+				) {
+					closeSynchronousHandle?.();
+				}
+			};
 
 			const createDrizzleClient = (
 				target: SqliteDatabase | SqliteTransactionDatabase,
 				transactionScoped = false,
+				sequencing:
+					| SqliteDatabase
+					| SqliteTransactionDatabase = nativeDb,
 			): DrizzleDatabase<TSchema> => {
 				const runSql = async (
 					query: string,
@@ -137,7 +193,7 @@ export function db<TSchema extends DrizzleSchema = Record<string, never>>({
 					method: "run" | "all" | "values" | "get",
 				) => {
 					ensureOpen();
-					synchronousTransactions.ensureClient(transactionScoped);
+					ensureSynchronousTransactionClient(transactionScoped, true);
 					warnForManualTransaction(query, transactionScoped);
 
 					const start = performance.now();
@@ -192,7 +248,7 @@ export function db<TSchema extends DrizzleSchema = Record<string, never>>({
 					query: string,
 					...args: unknown[]
 				): Promise<TRow[]> => {
-					synchronousTransactions.ensureClient(transactionScoped);
+					ensureSynchronousTransactionClient(transactionScoped, true);
 					return await executeRaw<TRow>(
 						target,
 						ctx,
@@ -212,16 +268,24 @@ export function db<TSchema extends DrizzleSchema = Record<string, never>>({
 					query: string,
 					...args: unknown[]
 				): TRow[] => {
-					synchronousTransactions.ensureClient(transactionScoped);
-					return executeRawSync<TRow>(
-						target,
-						ctx,
-						ensureOpen,
-						query,
-						args,
-						() =>
-							warnForManualTransaction(query, transactionScoped),
-					);
+					ensureSynchronousTransactionClient(transactionScoped);
+					try {
+						return executeRawSync<TRow>(
+							target,
+							ctx,
+							ensureOpen,
+							query,
+							args,
+							() =>
+								warnForManualTransaction(
+									query,
+									transactionScoped,
+								),
+						);
+					} catch (error) {
+						if (!transactionScoped) recoverSynchronousHandle(error);
+						throw error;
+					}
 				};
 				drizzleDb.transaction = async <T>(
 					transactionCallback: (
@@ -230,14 +294,18 @@ export function db<TSchema extends DrizzleSchema = Record<string, never>>({
 					options?: SqliteTransactionOptions,
 				): Promise<T> => {
 					ensureOpen();
-					synchronousTransactions.ensureClient(transactionScoped);
+					ensureSynchronousTransactionClient(transactionScoped, true);
 					validateTransactionTimeout(options?.timeout);
 					validateTransactionName(options?.name);
 					const transaction = await nativeDb.beginTransaction(
 						options?.timeout,
 						options?.name,
 					);
-					const tx = createDrizzleClient(transaction, true);
+					const tx = createDrizzleClient(
+						transaction,
+						true,
+						sequencing,
+					);
 					try {
 						const result = await transactionCallback(tx);
 						await transaction.commit();
@@ -258,22 +326,191 @@ export function db<TSchema extends DrizzleSchema = Record<string, never>>({
 					options?: Omit<SqliteTransactionOptions, "experimental">,
 				): T => {
 					ensureOpen();
-					return synchronousTransactions.run(
-						transactionScoped,
-						(transaction) => {
-							const transactionClient = createDrizzleClient(
-								transaction,
-								true,
-							);
-							return transactionCallback({
-								executeSync: transactionClient.executeSync,
-							});
-						},
-						options,
+					if (transactionScoped || synchronousTransactionKind) {
+						throw new Error(
+							"Nested synchronous SQLite transactions are not supported.",
+						);
+					}
+					synchronousTransactionKind = "callback";
+					try {
+						return runSqliteTransactionSync(
+							nativeDb,
+							(transaction) => {
+								const transactionClient = createDrizzleClient(
+									transaction,
+									true,
+									sequencing,
+								);
+								const tx: SynchronousTransactionAccess = {
+									executeSync: transactionClient.executeSync,
+									commitSeq: transactionClient.commitSeq,
+									flushedSeq: transactionClient.flushedSeq,
+									waitForFlush:
+										transactionClient.waitForFlush,
+									flushError: transactionClient.flushError,
+								};
+								return transactionCallback(tx);
+							},
+							options,
+						);
+					} finally {
+						synchronousTransactionKind = undefined;
+					}
+				};
+				drizzleDb.executeSyncRaw = (
+					query: string,
+					...args: unknown[]
+				): SqliteExecuteResult & { readonly: boolean } => {
+					ensureOpen();
+					ensureSynchronousTransactionClient(transactionScoped);
+					if (!target.executeSync) {
+						throw new Error(
+							"Synchronous SQLite queries are only available in the Node.js native runtime.",
+						);
+					}
+					if (sequencing.supportsSyncMetadata?.() !== true) {
+						throw new Error(
+							"Synchronous SQLite metadata is only available for local native SQLite.",
+						);
+					}
+					let result: SqliteExecuteResult;
+					try {
+						result = target.executeSync(
+							query,
+							normalizeSqliteBindings(args),
+						);
+					} catch (error) {
+						if (!transactionScoped) recoverSynchronousHandle(error);
+						throw error;
+					}
+					if (result.readonly === undefined) {
+						throw new Error(
+							"Synchronous SQLite metadata is only available in the Node.js native runtime.",
+						);
+					}
+					return result as SqliteExecuteResult & {
+						readonly: boolean;
+					};
+				};
+				drizzleDb.commitSeq = () => sequencing.commitSeq!();
+				drizzleDb.flushedSeq = () => sequencing.flushedSeq!();
+				drizzleDb.waitForFlush = async (seq?: number) => {
+					const targetSeq = seq ?? sequencing.commitSeq!();
+					if (!Number.isSafeInteger(targetSeq) || targetSeq < 0) {
+						throw new Error(
+							"flush sequence must be a non-negative safe integer",
+						);
+					}
+					await sequencing.waitForFlush!(targetSeq);
+				};
+				drizzleDb.flushError = () => sequencing.flushError!();
+				drizzleDb.beginTransactionSync = (
+					options?: Omit<SqliteTransactionOptions, "experimental">,
+				): SynchronousTransactionHandle => {
+					ensureOpen();
+					if (transactionScoped || synchronousTransactionKind) {
+						throw new Error(
+							"Nested synchronous SQLite transactions are not supported.",
+						);
+					}
+					validateTransactionTimeout(options?.timeout);
+					validateTransactionName(options?.name);
+					if (!nativeDb.beginTransactionSync) {
+						throw new Error(
+							"Synchronous SQLite transactions are only available in the Node.js native runtime.",
+						);
+					}
+					const transaction = nativeDb.beginTransactionSync(
+						options?.timeout,
+						options?.name,
 					);
+					const transactionClient = createDrizzleClient(
+						transaction,
+						true,
+						sequencing,
+					);
+					let isOpen = true;
+					synchronousTransactionKind = "handle";
+					const finish = () => {
+						isOpen = false;
+						if (closeSynchronousHandle === finish) {
+							closeSynchronousHandle = undefined;
+							synchronousTransactionKind = undefined;
+						}
+					};
+					closeSynchronousHandle = finish;
+					const closeOnTerminal = (error: unknown): never => {
+						if (isTerminalTransactionError(error)) finish();
+						throw error;
+					};
+					const requireOpen = () => {
+						if (!isOpen)
+							throw new Error(
+								"SQLite transaction handle is closed.",
+							);
+					};
+					return {
+						executeSync: (query, ...args) => {
+							requireOpen();
+							try {
+								return transactionClient.executeSync(
+									query,
+									...args,
+								);
+							} catch (error) {
+								return closeOnTerminal(error);
+							}
+						},
+						executeSyncRaw: (query, ...args) => {
+							requireOpen();
+							try {
+								return transactionClient.executeSyncRaw(
+									query,
+									...args,
+								);
+							} catch (error) {
+								return closeOnTerminal(error);
+							}
+						},
+						execSync: (sql, callback) => {
+							requireOpen();
+							try {
+								return transaction.execSync(sql, callback);
+							} catch (error) {
+								return closeOnTerminal(error);
+							}
+						},
+						commitSync: () => {
+							requireOpen();
+							try {
+								return transaction.commitSync();
+							} finally {
+								finish();
+							}
+						},
+						rollbackSync: () => {
+							requireOpen();
+							try {
+								transaction.rollbackSync();
+							} finally {
+								finish();
+							}
+						},
+						get isOpen() {
+							return isOpen;
+						},
+						commitSeq: transactionClient.commitSeq,
+						flushedSeq: transactionClient.flushedSeq,
+						waitForFlush: transactionClient.waitForFlush,
+						flushError: transactionClient.flushError,
+					};
 				};
 				drizzleDb.close = async () => {
-					synchronousTransactions.ensureCanClose();
+					if (synchronousTransactionKind) {
+						throw new Error(
+							"Cannot close the database inside an active synchronous transaction.",
+						);
+					}
 					if (!closed) {
 						closed = true;
 						await nativeDb.close();
