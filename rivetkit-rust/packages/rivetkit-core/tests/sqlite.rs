@@ -1758,6 +1758,65 @@ fn head_fence_mismatch(expected: Option<u64>, head_txid: u64) -> protocol::Sqlit
 
 #[cfg(feature = "sqlite-local")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn abort_generation_reports_one_crash_and_revokes_writes() {
+	let transport = Arc::new(MemorySqliteTransport::default());
+	let native = depot_client::database::open_database_from_transport(
+		transport,
+		"abort-generation".to_owned(),
+		1,
+		tokio::runtime::Handle::current(),
+		None,
+		CommitMode::Deferred,
+	)
+	.await
+	.expect("memory-backed native sqlite database should open");
+	let (handle, mut envoy_rx) = test_envoy_handle();
+	let db = SqliteDb {
+		handle: Some(handle),
+		actor_id: Some("abort-generation".to_owned()),
+		generation: Some(1),
+		backend: SqliteBackend::LocalNative,
+		enabled: true,
+		db: Arc::new(parking_lot::Mutex::new(Some(native))),
+		..SqliteDb::default()
+	};
+	db.execute("CREATE TABLE abort_rows (id INTEGER PRIMARY KEY)", None)
+		.await
+		.expect("writes succeed before the abort");
+
+	db.abort_generation("output gate broke");
+	db.abort_generation("a second abort");
+
+	let message = tokio::time::timeout(Duration::from_secs(5), envoy_rx.recv())
+		.await
+		.expect("an abort must report a crash to the engine")
+		.expect("envoy channel should stay open");
+	let ToEnvoyMessage::ActorIntent {
+		intent,
+		error: Some(error),
+		..
+	} = message
+	else {
+		panic!("expected an actor intent carrying the abort reason");
+	};
+	assert_eq!(intent, protocol::ActorIntent::ActorIntentSleep);
+	assert_eq!(error, "actor aborted: output gate broke");
+	assert!(
+		tokio::time::timeout(Duration::from_millis(500), envoy_rx.recv())
+			.await
+			.is_err(),
+		"a repeated abort must not report a second crash"
+	);
+	assert!(
+		db.execute("INSERT INTO abort_rows VALUES (1)", None)
+			.await
+			.is_err(),
+		"an aborted generation rejects later writes"
+	);
+}
+
+#[cfg(feature = "sqlite-local")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn deferred_flush_failure_stops_the_generation_and_reports_a_crash() {
 	let transport = Arc::new(MemorySqliteTransport::default());
 	let native = depot_client::database::open_database_from_transport(

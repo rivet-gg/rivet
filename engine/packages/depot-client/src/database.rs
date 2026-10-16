@@ -371,6 +371,12 @@ impl NativeDatabaseHandle {
 		self.vfs.take_backlog_full()
 	}
 
+	/// Breaks the database: every later statement fails and flush waits reject. Pending local
+	/// commits never become durable.
+	pub fn break_database(&self, reason: String) {
+		self.vfs.break_database(reason);
+	}
+
 	pub async fn wait_for_flush(&self, seq: u64) -> std::result::Result<(), FlushError> {
 		self.vfs.wait_for_flush(seq).await
 	}

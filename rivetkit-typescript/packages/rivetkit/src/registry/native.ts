@@ -695,6 +695,7 @@ function getOrCreateNativeSqlDatabase(
 		open: () => runtime.actorSqlOpen(ctx),
 		commitTicket: () => runtime.actorSqlCommitTicket(ctx),
 		whenDurable: (ticket) => runtime.actorSqlWhenDurable(ctx, ticket),
+		abortGeneration: (reason) => runtime.actorSqlAbortGeneration(ctx, reason),
 		close: () => runtime.actorSqlClose(ctx),
 	};
 	const database = wrapJsNativeDatabase(bindings, {

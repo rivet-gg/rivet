@@ -1149,6 +1149,23 @@ impl SqliteDb {
 		}
 	}
 
+	/// Restarts the owning actor from durable state, the same way a flush failure does: the
+	/// engine records a crash, and the database is broken so every later write fails, including
+	/// the final state save. Native database providers use it when in-memory state can no longer
+	/// be trusted. Idempotent.
+	pub fn abort_generation(&self, reason: impl Into<String>) {
+		let message = format!("actor aborted: {}", reason.into());
+		// Report before breaking the database, so the crash carries this reason rather than the
+		// flush failure the break raises.
+		if let Ok(config) = self.runtime_config() {
+			report_sqlite_worker_fatal(&self.worker_fatal_reported, config, message.clone());
+		}
+		#[cfg(feature = "sqlite-local")]
+		if let Ok(db) = self.native_db_handle() {
+			db.break_database(message);
+		}
+	}
+
 	pub fn runtime_config(&self) -> Result<SqliteRuntimeConfig> {
 		Ok(SqliteRuntimeConfig {
 			handle: self.handle()?,

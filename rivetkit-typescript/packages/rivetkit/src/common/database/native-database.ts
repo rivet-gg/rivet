@@ -112,6 +112,7 @@ export interface JsNativeDatabaseLike {
 	open(): Promise<void>;
 	commitTicket(): number;
 	whenDurable(ticket: number): Promise<void>;
+	abortGeneration(reason: string): void;
 	close(): Promise<void>;
 }
 export type StateAwareSqliteDatabase = SqliteDatabase & {
@@ -617,6 +618,9 @@ export function wrapJsNativeDatabase(
 		},
 		async whenDurable(ticket: number): Promise<void> {
 			await database.whenDurable(ticket);
+		},
+		abortGeneration(reason: string): void {
+			database.abortGeneration(reason);
 		},
 		async close(): Promise<void> {
 			closePromise ??= gate.close(async () => {

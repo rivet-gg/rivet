@@ -250,6 +250,11 @@ impl JsNativeDatabase {
 	}
 
 	#[napi]
+	pub fn abort_generation(&self, reason: String) {
+		self.db.abort_generation(reason);
+	}
+
+	#[napi]
 	pub async fn when_durable(&self, ticket: f64) -> napi::Result<()> {
 		let ticket = commit_ticket_from_js(ticket)?;
 		self.db

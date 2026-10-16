@@ -117,6 +117,11 @@ export interface SqliteDatabase {
 	 * `sqlite.durability_failed` once the database broke and the actor is restarting.
 	 */
 	whenDurable?(ticket: number): Promise<void>;
+	/**
+	 * Restarts the owning actor from durable state. Every later write fails, including the final
+	 * state save. For native database providers whose in-memory state can no longer be trusted.
+	 */
+	abortGeneration?(reason: string): void;
 	close(): Promise<void>;
 }
 

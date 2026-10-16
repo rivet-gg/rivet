@@ -4473,6 +4473,10 @@ impl SqliteVfs {
 		self.ctx.backlog_full.swap(false, Ordering::AcqRel)
 	}
 
+	pub fn break_database(&self, reason: String) {
+		self.ctx.break_database(FlushError::Aborted(reason));
+	}
+
 	pub async fn wait_for_flush(&self, seq: u64) -> std::result::Result<(), FlushError> {
 		self.ctx.wait_for_flush(seq).await
 	}

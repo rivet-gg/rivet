@@ -1033,6 +1033,10 @@ export class WasmCoreRuntime implements CoreRuntime {
 		return synchronousSqliteUnavailable();
 	}
 
+	actorSqlAbortGeneration(_ctx: ActorContextHandle, _reason: string): void {
+		synchronousSqliteUnavailable();
+	}
+
 	async actorSqlWhenDurable(
 		_ctx: ActorContextHandle,
 		_ticket: number,

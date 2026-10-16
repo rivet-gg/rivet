@@ -797,6 +797,7 @@ export interface CoreRuntime {
 	actorSqlCommitTicket(ctx: ActorContextHandle): number;
 	/** Resolves once the commit `ticket` names and every earlier commit are durable. */
 	actorSqlWhenDurable(ctx: ActorContextHandle, ticket: number): Promise<void>;
+	actorSqlAbortGeneration(ctx: ActorContextHandle, reason: string): void;
 	actorSqlClose(ctx: ActorContextHandle): Promise<void>;
 	actorRuntimeSocketProvision(
 		ctx: ActorContextHandle,

@@ -472,6 +472,7 @@ export declare class JsNativeDatabase {
    * realistic generation, so they cross to JavaScript as numbers.
    */
   commitTicket(): number
+  abortGeneration(reason: string): void
   whenDurable(ticket: number): Promise<void>
   beginTransaction(timeoutMs?: number | undefined | null, name?: string | undefined | null): Promise<JsSqliteTransaction>
 }

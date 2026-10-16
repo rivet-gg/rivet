@@ -1052,6 +1052,10 @@ export class NapiCoreRuntime implements CoreRuntime {
 		return this.#actorSql(ctx).commitTicket();
 	}
 
+	actorSqlAbortGeneration(ctx: ActorContextHandle, reason: string): void {
+		this.#actorSql(ctx).abortGeneration(reason);
+	}
+
 	async actorSqlWhenDurable(
 		ctx: ActorContextHandle,
 		ticket: number,

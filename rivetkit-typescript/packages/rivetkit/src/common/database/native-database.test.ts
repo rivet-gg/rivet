@@ -75,6 +75,7 @@ class FakeNativeDatabase implements JsNativeDatabaseLike {
 	}
 
 	async whenDurable() {}
+	abortGeneration() {}
 
 	async close() {
 		this.closed = true;
