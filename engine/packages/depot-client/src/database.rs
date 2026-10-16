@@ -340,6 +340,10 @@ impl NativeDatabaseHandle {
 		}
 	}
 
+	pub fn commit_mode(&self) -> CommitMode {
+		self.vfs.commit_mode()
+	}
+
 	pub fn commit_seq(&self) -> u64 {
 		self.vfs.commit_seq()
 	}
