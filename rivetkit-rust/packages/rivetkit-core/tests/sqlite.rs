@@ -2225,3 +2225,60 @@ async fn sync_call_waits_for_an_internal_transaction_without_joining_it() {
 		"the sync write is not part of the rolled-back transaction"
 	);
 }
+
+#[cfg(feature = "sqlite-local")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sqlite_statement_errors_reach_the_caller_with_their_message() {
+	let transport = Arc::new(MemorySqliteTransport::default());
+	let db = open_memory_sqlite(transport, CommitMode::Awaited).await;
+	db.execute("CREATE TABLE unique_rows (id INTEGER PRIMARY KEY)", None)
+		.await
+		.unwrap();
+	db.execute("INSERT INTO unique_rows VALUES (1)", None)
+		.await
+		.unwrap();
+
+	// The primary result code is the low byte of SQLite's extended code: 19 is
+	// SQLITE_CONSTRAINT and 1 is SQLITE_ERROR.
+	for (sql, expected, primary_code) in [
+		(
+			"INSERT INTO unique_rows VALUES (1)",
+			"UNIQUE constraint failed",
+			Some(19),
+		),
+		(
+			"SELECT * FROM missing_table",
+			"no such table: missing_table",
+			Some(1),
+		),
+		("SELEC 1", "syntax error", Some(1)),
+		(
+			"SELECT 1; SELECT 2",
+			"only supports a single statement",
+			None,
+		),
+	] {
+		let error = db
+			.execute(sql, None)
+			.await
+			.expect_err("the statement should fail");
+		let error = rivet_error::RivetError::extract(&error);
+		assert_eq!(
+			format!("{}.{}", error.group(), error.code()),
+			"sqlite.statement_failed",
+			"{sql}"
+		);
+		assert!(
+			error.message().contains(expected),
+			"{sql}: unexpected message {}",
+			error.message()
+		);
+		if let Some(primary_code) = primary_code {
+			let code = error
+				.metadata()
+				.and_then(|metadata| metadata.get("code").and_then(|code| code.as_i64()))
+				.unwrap_or_else(|| panic!("{sql}: the error must carry the SQLite result code"));
+			assert_eq!(code & 0xff, primary_code, "{sql}");
+		}
+	}
+}

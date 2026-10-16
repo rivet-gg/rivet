@@ -345,6 +345,13 @@ pub(crate) enum SqliteRuntimeError {
 	DeferredCommitsUnsupported,
 
 	#[error(
+		"statement_failed",
+		"SQLite statement failed.",
+		"SQLite statement failed: {message} (SQLite result code {code})"
+	)]
+	StatementFailed { message: String, code: i32 },
+
+	#[error(
 		"sync_unsupported",
 		"Synchronous SQLite is unavailable.",
 		"Synchronous SQLite is unavailable because {reason}."

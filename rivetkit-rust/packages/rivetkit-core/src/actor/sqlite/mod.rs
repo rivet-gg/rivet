@@ -492,6 +492,7 @@ impl SqliteDb {
 		self.open().await?;
 		self.wait_for_backlog_room().await?;
 		self.map_local_worker_result(self.native_db_handle()?.exec_profiled(sql).await)
+			.map(map_local_worker_reply)
 			.map(|reply| self.backlog_reply(reply))
 	}
 
@@ -521,6 +522,7 @@ impl SqliteDb {
 		self.open().await?;
 		self.wait_for_backlog_room().await?;
 		self.map_local_worker_result(self.native_db_handle()?.execute_profiled(sql, params).await)
+			.map(map_local_worker_reply)
 			.map(|reply| self.backlog_reply(reply))
 	}
 
@@ -1496,6 +1498,13 @@ fn sqlite_worker_fatal_message(error: &anyhow::Error) -> String {
 	format!("sqlite worker failed: {error}")
 }
 
+/// Profiled worker calls carry the statement's own result inside a successful reply.
+#[cfg(feature = "sqlite-local")]
+fn map_local_worker_reply<T>(mut reply: SqliteWorkerResult<T>) -> SqliteWorkerResult<T> {
+	reply.result = reply.result.map_err(map_local_worker_error);
+	reply
+}
+
 #[cfg(feature = "sqlite-local")]
 fn map_local_worker_error(error: anyhow::Error) -> anyhow::Error {
 	if error
@@ -1515,6 +1524,21 @@ fn map_local_worker_error(error: anyhow::Error) -> anyhow::Error {
 		|| error.downcast_ref::<SqliteWorkerFatalError>().is_some()
 	{
 		return SqliteRuntimeError::Closed.build();
+	}
+
+	// The statement is the actor's own SQL, so its SQLite message is safe to return. The
+	// statement error stays in the chain for the Actor Runtime Socket's wire mapping.
+	if let Some(statement) = error.downcast_ref::<SqliteStatementError>() {
+		return SqliteRuntimeError::StatementFailed {
+			message: statement.message.clone(),
+			code: statement.code,
+		}
+		.build()
+		.context(SqliteStatementError {
+			code: statement.code,
+			statement_index: statement.statement_index,
+			message: statement.message.clone(),
+		});
 	}
 
 	error
