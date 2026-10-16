@@ -55,7 +55,7 @@ use crate::runtime::RuntimeSpawner;
 #[cfg(feature = "sqlite-local")]
 use depot_client::{
 	database::{NativeDatabaseHandle, open_database_from_transport},
-	vfs::{SqliteVfsMetrics, SqliteVfsMetricsSnapshot},
+	vfs::{CommitMode, DatabaseFailure, SqliteVfsMetrics, SqliteVfsMetricsSnapshot},
 	worker::{
 		SQLITE_WORKER_QUEUE_CAPACITY, SqliteWorkerCloseTimeoutError, SqliteWorkerClosingError,
 		SqliteWorkerDeadError, SqliteWorkerFatalError, SqliteWorkerOverloadedError,
@@ -425,6 +425,7 @@ impl SqliteDb {
 								.ok_or_else(|| sqlite_not_configured("generation"))?,
 							rt_handle,
 							vfs_metrics,
+							CommitMode::Awaited,
 						)
 						.await,
 					)?;
@@ -1020,7 +1021,10 @@ impl SqliteDb {
 		self.abort_worker_failure_monitor();
 		let reported = Arc::clone(&self.worker_fatal_reported);
 		let task = RuntimeSpawner::spawn(async move {
-			if native_db.wait_for_worker_failure().await {
+			if matches!(
+				native_db.wait_for_failure().await,
+				DatabaseFailure::WorkerStopped
+			) {
 				report_sqlite_worker_fatal(
 					&reported,
 					config,
