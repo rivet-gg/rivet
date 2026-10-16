@@ -8,7 +8,7 @@ import { describeDriverMatrix } from "./shared-matrix";
 describeDriverMatrix(
 	"Connection Drain",
 	(driverTestConfig) => {
-		test("closes connections with ws.going_away and runs onDisconnect once", async (c) => {
+		test("rejects in-flight actions with ws.going_away and runs onDisconnect once", async (c) => {
 			const runtime = await driverTestConfig.start({
 				env: { RIVETKIT_TEST_DRAIN_ON_SIGTERM: "1" },
 			});
@@ -31,14 +31,21 @@ describeDriverMatrix(
 			const closed = new Promise<void>((resolve) =>
 				conn.onClose(resolve),
 			);
-			expect(await conn.ping()).toBe("pong");
+			const started = new Promise<void>((resolve) =>
+				conn.once("hangStarted", () => resolve()),
+			);
+			const rejection = conn.hang().then(
+				() => undefined,
+				(error: ActorError) => error,
+			);
+			await started;
 
 			await runtime.cleanup();
 			await closed;
 
-			expect(
-				errors.map((error) => `${error.group}.${error.code}`),
-			).toEqual(["ws.going_away"]);
+			const error = await rejection;
+			expect(`${error?.group}.${error?.code}`).toBe("ws.going_away");
+			expect(errors).toEqual([]);
 			const output = runtime.getRuntimeOutput?.() ?? "";
 			const hookRuns =
 				output.split(`${CONN_DRAIN_DISCONNECT_MARKER} ${key}`).length - 1;

@@ -11,5 +11,13 @@ export const connDrainActor = actor({
 	},
 	actions: {
 		ping: () => "pong",
+		hang: async (c) => {
+			c.broadcast("hangStarted");
+			await new Promise((resolve) => setTimeout(resolve, 3_000));
+		},
+	},
+	options: {
+		// Shorter than `hang`, so the drain closes the socket while it runs.
+		sleepGracePeriod: 1_000,
 	},
 });
