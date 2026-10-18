@@ -28,6 +28,7 @@ jobs:
       base: ${{ steps.changes.outputs.base }}
       footprint: ${{ steps.changes.outputs.footprint }}
       tool: ${{ steps.changes.outputs.tool }}
+      rust: ${{ steps.changes.outputs.rust }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -41,6 +42,7 @@ jobs:
           if [ "$EVENT" != "pull_request" ]; then
             echo "footprint=true" >> "$GITHUB_OUTPUT"
             echo "tool=true" >> "$GITHUB_OUTPUT"
+            echo "rust=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           base="$(git merge-base "$PR_BASE_SHA" HEAD)"
@@ -56,6 +58,11 @@ jobs:
             tool=true
           fi
           echo "tool=$tool" >> "$GITHUB_OUTPUT"
+          rust=false
+          if grep -qE '(\.rs$|(^|/)Cargo\.(toml|lock)$|^deny\.toml$|^rust-toolchain\.toml$|^\.cargo/|^scripts/pipboy/|^\.github/workflows/pipboy\.yml$)' <<< "$files"; then
+            rust=true
+          fi
+          echo "rust=$rust" >> "$GITHUB_OUTPUT"
 
   self-test:
     name: self-test
@@ -153,9 +160,64 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  hygiene:
+    name: hygiene
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter 'pipboy...'
+      # Install the toolchain from rust-toolchain.toml up front. Otherwise the first
+      # cargo calls, which run in parallel for base and PR, race to auto-install it.
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        with:
+          tool: cargo-deny@0.20.2,cargo-shear@1.14.0
+      # cargo deny reads every crate's manifest; caching the registry skips the downloads.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+          key: cargo-registry-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-registry-
+      - name: Check out the base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ needs.changes.outputs.base }}
+        run: git worktree add "$RUNNER_TEMP/base-src" "$BASE_SHA"
+      - name: Diff findings
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports"
+          base=()
+          if [ "$EVENT" = "pull_request" ]; then base=(--base-root "$RUNNER_TEMP/base-src"); fi
+          pnpm --silent --filter pipboy pipboy hygiene "${base[@]}" --out "$RUNNER_TEMP/reports/hygiene.json"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: report-hygiene
+          path: ${{ runner.temp }}/reports/hygiene.json
+          if-no-files-found: ignore
+          retention-days: 30
+
   report:
     name: report
-    needs: [changes, footprint]
+    needs: [changes, footprint, hygiene]
     # Not `always()`: a run cancelled by a newer push must not post its partial results.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
