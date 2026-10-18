@@ -26,9 +26,12 @@ jobs:
       contents: read
     outputs:
       base: ${{ steps.changes.outputs.base }}
+      base_history: ${{ steps.changes.outputs.base_history }}
       footprint: ${{ steps.changes.outputs.footprint }}
       tool: ${{ steps.changes.outputs.tool }}
       rust: ${{ steps.changes.outputs.rust }}
+      native: ${{ steps.changes.outputs.native }}
+      native_matrix: ${{ steps.changes.outputs.native_matrix }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -38,16 +41,51 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          # The napi and engine binaries the publish workflow ships. The CLI and the
+          # Windows napi build aren't measured. `linux` entries build on any Rust change;
+          # the rest build on platform-specific changes or the `ci: native-all` label,
+          # which is read on the next push.
+          NATIVE_ALL: >-
+            [
+            {"target":"rivetkit-napi","platform":"linux-x64-gnu","artifact":"rivetkit-napi.linux-x64-gnu.node","frontend":"false","tier":"linux"},
+            {"target":"engine","platform":"linux-x64-musl","artifact":"rivet-engine-x86_64-unknown-linux-musl","frontend":"true","tier":"linux"},
+            {"target":"rivetkit-napi","platform":"linux-x64-musl","artifact":"rivetkit-napi.linux-x64-musl.node","frontend":"false","tier":"all"},
+            {"target":"rivetkit-napi","platform":"linux-arm64-gnu","artifact":"rivetkit-napi.linux-arm64-gnu.node","frontend":"false","tier":"all"},
+            {"target":"rivetkit-napi","platform":"linux-arm64-musl","artifact":"rivetkit-napi.linux-arm64-musl.node","frontend":"false","tier":"all"},
+            {"target":"rivetkit-napi","platform":"darwin-x64","artifact":"rivetkit-napi.darwin-x64.node","frontend":"false","tier":"all"},
+            {"target":"rivetkit-napi","platform":"darwin-arm64","artifact":"rivetkit-napi.darwin-arm64.node","frontend":"false","tier":"all"},
+            {"target":"engine","platform":"linux-arm64-musl","artifact":"rivet-engine-aarch64-unknown-linux-musl","frontend":"true","tier":"all"},
+            {"target":"engine","platform":"darwin-x64","artifact":"rivet-engine-x86_64-apple-darwin","frontend":"true","tier":"all"},
+            {"target":"engine","platform":"darwin-arm64","artifact":"rivet-engine-aarch64-apple-darwin","frontend":"true","tier":"all"},
+            {"target":"engine","platform":"windows-x64","artifact":"rivet-engine-x86_64-pc-windows-gnu.exe","frontend":"true","tier":"all"}
+            ]
         run: |
+          RUST='(\.rs$|(^|/)Cargo\.(toml|lock)$|^deny\.toml$|^rust-toolchain\.toml$|^\.cargo/|^docker/build/|^scripts/pipboy/|^\.github/workflows/pipboy\.yml$)'
+          PLATFORM_SENSITIVE='((^|/)Cargo\.(toml|lock)$|(^|/)build\.rs$|^\.cargo/|^docker/build/|^rust-toolchain\.toml$)'
+          matrix() { jq -c --arg tier "$1" 'map(select($tier == "all" or .tier == $tier))' <<< "$NATIVE_ALL"; }
+
           if [ "$EVENT" != "pull_request" ]; then
+            # Pushes to main record baselines. Natives build only when Rust changed,
+            # and then for every platform. Hygiene stores no baseline, so it skips main.
             echo "footprint=true" >> "$GITHUB_OUTPUT"
             echo "tool=true" >> "$GITHUB_OUTPUT"
-            echo "rust=true" >> "$GITHUB_OUTPUT"
+            echo "rust=false" >> "$GITHUB_OUTPUT"
+            native=none
+            if ! files="$(git diff --name-only "$PUSH_BEFORE" HEAD 2>/dev/null)" || grep -qE "$RUST" <<< "$files"; then
+              native=all
+            fi
+            echo "native=$native" >> "$GITHUB_OUTPUT"
+            echo "native_matrix=$(matrix "$native")" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
           base="$(git merge-base "$PR_BASE_SHA" HEAD)"
           echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "base_history=$(git rev-list --first-parent -n 200 "$base" | paste -sd, -)" >> "$GITHUB_OUTPUT"
           files="$(git diff --name-only "$base" HEAD)"
+
           footprint=false
           if grep -qE '^(rivetkit-typescript/|engine/sdks/typescript/|shared/typescript/|integrations/workflow-world/|pnpm-lock\.yaml|pnpm-workspace\.yaml|scripts/pipboy/|scripts/publish/|\.github/workflows/pipboy\.yml)' <<< "$files"; then
             footprint=true
@@ -58,11 +96,21 @@ jobs:
             tool=true
           fi
           echo "tool=$tool" >> "$GITHUB_OUTPUT"
+
           rust=false
-          if grep -qE '(\.rs$|(^|/)Cargo\.(toml|lock)$|^deny\.toml$|^rust-toolchain\.toml$|^\.cargo/|^scripts/pipboy/|^\.github/workflows/pipboy\.yml$)' <<< "$files"; then
+          native=none
+          if grep -qE "$RUST" <<< "$files"; then
             rust=true
+            native=linux
+            if grep -qE "$PLATFORM_SENSITIVE" <<< "$files" \
+              || git diff -U0 "$base" HEAD -- '*.rs' | grep -qE '^\+.*(cfg\(target_|target_os|target_arch)' \
+              || jq -e 'index("ci: native-all")' <<< "$LABELS" > /dev/null; then
+              native=all
+            fi
           fi
           echo "rust=$rust" >> "$GITHUB_OUTPUT"
+          echo "native=$native" >> "$GITHUB_OUTPUT"
+          echo "native_matrix=$(matrix "$native")" >> "$GITHUB_OUTPUT"
 
   self-test:
     name: self-test
@@ -215,15 +263,73 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  native:
+    name: native · ${{ matrix.target }} · ${{ matrix.platform }}
+    needs: changes
+    if: needs.changes.outputs.native != 'none'
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.native_matrix) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # The same Dockerfile and build arguments as publish.yaml, so the size is
+      # what ships. No DEPOT_TOKEN: sccache stays off, and nothing this PR builds
+      # can reach a cache that release builds read.
+      - name: Build with the publish Dockerfile
+        env:
+          TARGET: ${{ matrix.target }}
+          PLATFORM: ${{ matrix.platform }}
+          ARTIFACT: ${{ matrix.artifact }}
+          FRONTEND: ${{ matrix.frontend }}
+        run: |
+          docker build \
+            -f "docker/build/${PLATFORM}.Dockerfile" \
+            --build-arg "BUILD_TARGET=${TARGET}" \
+            --build-arg BUILD_MODE=release \
+            --build-arg "BUILD_FRONTEND=${FRONTEND}" \
+            -t pipboy-native \
+            --load \
+            .
+          cid="$(docker create pipboy-native)"
+          docker cp "$cid:/artifacts/$ARTIFACT" "$RUNNER_TEMP/$ARTIFACT"
+          docker rm "$cid"
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      # No pnpm cache: this job runs fork code on a Depot runner and doesn't need one.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile --filter 'pipboy...'
+      - name: Measure
+        env:
+          TARGET: ${{ matrix.target }}
+          PLATFORM: ${{ matrix.platform }}
+          ARTIFACT: ${{ matrix.artifact }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports"
+          pnpm --silent --filter pipboy pipboy native --target "$TARGET" --platform "$PLATFORM" \
+            --artifact "$RUNNER_TEMP/$ARTIFACT" --out "$RUNNER_TEMP/reports/native-$TARGET-$PLATFORM.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: report-native-${{ matrix.target }}-${{ matrix.platform }}
+          path: ${{ runner.temp }}/reports/native-${{ matrix.target }}-${{ matrix.platform }}.json
+          retention-days: 90
+
   report:
     name: report
-    needs: [changes, footprint, hygiene]
+    needs: [changes, footprint, hygiene, native]
     # Not `always()`: a run cancelled by a newer push must not post its partial results.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      actions: read # job timings and report artifacts
+      actions: read # job timings, report artifacts, and native baselines from main
       pull-requests: write # the one Pip-Boy comment
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -243,12 +349,16 @@ jobs:
       - name: Write the comment and run summary
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
           # Empty for pushes and fork PRs: they get the run summary only.
           PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number || '' }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_HISTORY: ${{ needs.changes.outputs.base_history }}
           # Each check job's result, so a failed job is reported as failed, not skipped.
           JOB_RESULTS: ${{ toJSON(needs) }}
-        run: pnpm --silent --filter pipboy pipboy report --reports "$RUNNER_TEMP/reports"
+        run: |
+          pnpm --silent --filter pipboy pipboy report --reports "$RUNNER_TEMP/reports" \
+            --base-history "$BASE_HISTORY"
 
   zizmor:
     name: zizmor
