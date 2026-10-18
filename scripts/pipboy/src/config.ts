@@ -53,6 +53,7 @@ export const THRESHOLDS = {
 	install: { warn: { pct: 5, abs: 1024 ** 2 }, alert: { pct: 20, abs: 10 * 1024 ** 2 } },
 	packages: { warn: { pct: 10, abs: 5 }, alert: { pct: 25, abs: 25 } },
 	bundle: { warn: { pct: 5, abs: 5 * 1024 }, alert: { pct: 20, abs: 25 * 1024 } },
+	binary: { warn: { pct: 3, abs: 1024 ** 2 }, alert: { pct: 10, abs: 5 * 1024 ** 2 } },
 } satisfies Record<string, { warn: Threshold; alert: Threshold }>;
 
 /** Synthetic version for packed workspace packages, so npm can never pick a registry copy instead. */

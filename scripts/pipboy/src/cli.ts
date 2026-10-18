@@ -4,21 +4,25 @@ import { Config, Console, Effect, FileSystem, Layer, Option, Schema } from "effe
 import { Command, Flag } from "effect/cli";
 import { compareFootprint } from "./compare/footprint.ts";
 import { compareHygiene } from "./compare/hygiene.ts";
+import { compareNative } from "./compare/native.ts";
 import { REPO_ROOT } from "./config.ts";
 import { inspectEntrypoints } from "./footprint/inspect.ts";
 import { pack, readPackManifest } from "./footprint/pack.ts";
 import * as Registry from "./footprint/registry.ts";
 import { resolveSide } from "./footprint/resolve.ts";
 import * as GitHubApi from "./github/api.ts";
-import { fetchBaseline } from "./github/baseline.ts";
+import { fetchBaseline, fetchNearestBaselines } from "./github/baseline.ts";
 import { upsertComment } from "./github/comment.ts";
 import { readTiming, renderTiming } from "./github/timing.ts";
 import { collectHygiene } from "./hygiene/collect.ts";
+import { measureNative } from "./native/measure.ts";
 import { renderFootprint } from "./render/footprint.ts";
 import { renderHygiene } from "./render/hygiene.ts";
+import { renderNative } from "./render/native.ts";
 import { JobResults, renderCheckSection } from "./render/status.ts";
 import { FootprintReport, type FootprintSide } from "./schema/footprint.ts";
 import { HygieneReport } from "./schema/hygiene.ts";
+import { NativeReport } from "./schema/native.ts";
 
 export class ChecksFailed extends Schema.TaggedError<ChecksFailed>()("ChecksFailed", {
 	failures: Schema.Array(Schema.String),
@@ -101,6 +105,22 @@ const hygieneCommand = Command.make(
 	}),
 ).pipe(Command.withDescription("Diff cargo deny and cargo shear findings between the merge base and this change"));
 
+const nativeCommand = Command.make(
+	"native",
+	{
+		target: Flag.String("target").pipe(Flag.withDescription("rivetkit-napi or engine")),
+		platform: Flag.String("platform"),
+		artifact: Flag.String("artifact").pipe(Flag.withDescription("Path to the built binary")),
+		out: Flag.String("out"),
+	},
+	Effect.fn("Cli.native")(function* ({ target, platform, artifact, out }) {
+		const fs = yield* FileSystem.FileSystem;
+		const report = yield* measureNative(target, platform, artifact);
+		yield* fs.writeFileString(out, JSON.stringify(report));
+		yield* Console.log(`${target} ${platform}: ${report.artifact.bytes} bytes, ${Object.keys(report.artifact.crates).length} crates`);
+	}, Effect.provide(Registry.layer)),
+).pipe(Command.withDescription("Measure one published binary built by the publish Dockerfiles"));
+
 const baselineCommand = Command.make(
 	"baseline",
 	{
@@ -119,8 +139,12 @@ const reportCommand = Command.make(
 	"report",
 	{
 		reports: Flag.String("reports").pipe(Flag.withDescription("Directory holding the checks' JSON reports")),
+		baseHistory: Flag.String("base-history").pipe(
+			Flag.withDefault(""),
+			Flag.withDescription("Comma-separated merge base ancestry, newest first, for native baselines"),
+		),
 	},
-	Effect.fn("Cli.report")(function* ({ reports }) {
+	Effect.fn("Cli.report")(function* ({ reports, baseHistory }) {
 		const fs = yield* FileSystem.FileSystem;
 		const github = yield* GitHubApi.GitHub;
 		const env = yield* Config.all({
@@ -158,6 +182,31 @@ const reportCommand = Command.make(
 			),
 		);
 
+		// No report artifacts at all (every check skipped) means no reports directory.
+		const reportFiles = (yield* fs.exists(reports)) ? yield* fs.readDirectory(reports) : [];
+		const nativeFiles = reportFiles.filter((f) => /^native-.+\.json$/.test(f)).sort();
+		let nativeRendered: string | undefined;
+		if (nativeFiles.length > 0) {
+			const history = baseHistory.split(",").filter((sha) => /^[0-9a-f]{40}$/.test(sha));
+			const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "pipboy-native-base-" });
+			const pr = yield* Effect.forEach(nativeFiles, (file) => readReport(join(reports, file), NativeReport));
+			const baseline = yield* fetchNearestBaselines(
+				history,
+				nativeFiles.map((file) => `report-${file.replace(/\.json$/, "")}`),
+				baseDir,
+			);
+			const base = Option.isSome(baseline)
+				? yield* Effect.forEach(baseline.value.found, (artifact) =>
+						readReport(join(baseDir, `${artifact.replace(/^report-/, "")}.json`), NativeReport),
+					)
+				: [];
+			nativeRendered = renderNative(
+				compareNative(pr, base),
+				Option.map(baseline, ({ sha }) => ({ sha, isMergeBase: sha === history[0] })),
+			);
+		}
+		sections.push(section("### 🦀 Binaries", "native", "this PR doesn't change any Rust code.", nativeRendered));
+
 		const timing = yield* readTiming();
 		sections.push(renderTiming(timing));
 		const body = sections.join("\n\n");
@@ -166,10 +215,10 @@ const reportCommand = Command.make(
 			yield* fs.writeFileString(env.summary.value, `${body}\n`, { flag: "a" });
 		}
 		if (env.prNumber !== "") {
-			const result = yield* upsertComment(Number(env.prNumber), env.headSha, body);
+			const result = yield* upsertComment(Number(env.prNumber), env.headSha, fitComment(body, github.runUrl));
 			yield* Console.log(`comment ${result}`);
 		}
-	}, Effect.provide(GitHubApi.layer)),
+	}, Effect.scoped, Effect.provide(GitHubApi.layer)),
 ).pipe(Command.withDescription("Write the PR comment and run summary from the checks' reports"));
 
 export class ReportTooLarge extends Schema.TaggedError<ReportTooLarge>()("ReportTooLarge", {
@@ -189,6 +238,13 @@ const readReport = Effect.fn("Cli.readReport")(function* <S extends Schema.Const
 	return yield* Schema.decodeUnknownEffect(Schema.fromJsonString(schema))(yield* fs.readFileString(path));
 });
 
+/** GitHub rejects comments over 65,536 characters; the run summary always has the full report. */
+const MAX_COMMENT = 60_000;
+function fitComment(body: string, runUrl: string): string {
+	if (body.length <= MAX_COMMENT) return body;
+	return `${body.slice(0, MAX_COMMENT)}\n\n…truncated. The [run summary](${runUrl}) has the full report.`;
+}
+
 /** Appends `name=value` to the step's outputs. A no-op outside GitHub Actions. */
 const setOutput = Effect.fn("Cli.setOutput")(function* (name: string, value: string) {
 	const path = yield* Config.option(Config.String("GITHUB_OUTPUT"));
@@ -198,7 +254,7 @@ const setOutput = Effect.fn("Cli.setOutput")(function* (name: string, value: str
 });
 
 const cli = Command.make("pipboy").pipe(
-	Command.withSubcommands([packCommand, footprintCommand, hygieneCommand, baselineCommand, reportCommand]),
+	Command.withSubcommands([packCommand, footprintCommand, hygieneCommand, nativeCommand, baselineCommand, reportCommand]),
 );
 
 Command.run(cli, { version: "0.0.0" }).pipe(
