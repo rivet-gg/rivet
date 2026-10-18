@@ -1,4 +1,4 @@
-import { actor } from "rivetkit";
+import { actor, type Client } from "rivetkit";
 import { promiseWithResolvers } from "rivetkit/utils";
 import { db } from "@/common/database/mod";
 import type { registry } from "./registry-static";
@@ -43,7 +43,7 @@ async function recordLifecycleEvent(
 	c: {
 		key: string[];
 		state: { lifecycleObserverKey: string | null };
-		client: <T>() => T;
+		client: () => Client<typeof registry>;
 	},
 	event: string,
 ) {
@@ -52,7 +52,7 @@ async function recordLifecycleEvent(
 		return;
 	}
 
-	const client = c.client<typeof registry>();
+	const client = c.client();
 	const observer = client.lifecycleObserver.getOrCreate([observerKey]);
 	await observer.recordEvent({
 		actorKey: c.key.join("/"),
@@ -356,8 +356,20 @@ export const dbActorRaw = actor({
 			};
 		},
 		stateTransactionHoldAndRollback: async (c, value: string) => {
-			c.vars.stateTransactionStarted = promiseWithResolvers<void>();
-			c.vars.stateTransactionRelease = promiseWithResolvers<void>();
+			c.vars.stateTransactionStarted = promiseWithResolvers<void>(
+				(reason) =>
+					c.log.warn({
+						msg: "state transaction start rejected",
+						reason,
+					}),
+			);
+			c.vars.stateTransactionRelease = promiseWithResolvers<void>(
+				(reason) =>
+					c.log.warn({
+						msg: "state transaction release rejected",
+						reason,
+					}),
+			);
 			try {
 				await c.db.transaction(
 					async (tx) => {

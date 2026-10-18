@@ -3,6 +3,7 @@ import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 import { actor, queue, UserError } from "rivetkit";
 import { db } from "@/common/database/mod";
 import { workflow } from "@/workflow/mod";
+import type { registry } from "./registry-static";
 
 // Only a traced runtime gets a JavaScript tracer, so the other driver
 // fixtures keep running without an OpenTelemetry context manager.
@@ -171,7 +172,7 @@ export const workflowTracedActor = actor({
 			},
 		});
 		await ctx.step("notify", async (c) => {
-			const client = c.client<any>();
+			const client = c.client<typeof registry>();
 			await client.telemetryRunConsumerActor
 				.getOrCreate(c.key)
 				.send("runJobs", { id: "workflow-notify" });
