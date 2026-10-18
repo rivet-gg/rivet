@@ -12,6 +12,7 @@
 			"rivetkit/dynamic": ["./src/dynamic/mod.ts"],
 			"rivetkit/errors": ["./src/actor/errors.ts"],
 			"rivetkit/experimental/inspector/workflow": ["./src/inspector/workflow.ts"],
+			"rivetkit/unstable/migrations": ["./src/unstable/migrations.ts"],
 			"rivetkit/utils": ["./src/utils.ts"],
 			"rivetkit/agent-os": ["./src/agent-os/index.ts"]
 		}
@@ -19,6 +20,7 @@
 	"include": [
 		"src/**/*",
 		"runtime/index.ts",
+		"fixtures/**/*.ts",
 		"tests/conn-state.types.ts",
 		"tests/token-issuance.types.ts"
 	],

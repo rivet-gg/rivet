@@ -13,8 +13,11 @@ type ConnParams = {
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const visibleLabels = (c: { conns: Map<unknown, { state?: ConnState }> }) =>
-	Array.from(c.conns.values()).map((conn) => conn.state?.label ?? null);
+// Preflight contexts type other connections' state as `unknown`.
+const visibleLabels = (c: { conns: Map<string, { state: unknown }> }) =>
+	Array.from(c.conns.values()).map(
+		(conn) => (conn.state as ConnState | undefined)?.label ?? null,
+	);
 
 export const connPreflightVisibilityActor = actor({
 	state: {
