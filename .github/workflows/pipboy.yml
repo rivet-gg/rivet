@@ -1,0 +1,202 @@
+# Pip-Boy: what a change does to the packages we ship, in one PR comment.
+#
+# Every job runs on `pull_request` or `push`. Only `report` gets a write token,
+# it builds nothing, and it comments only on same-repo PRs. Pushes to main
+# store baselines that later PRs compare against. Spec and tooling:
+# scripts/pipboy.
+name: pipboy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: pipboy-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      base: ${{ steps.changes.outputs.base }}
+      footprint: ${{ steps.changes.outputs.footprint }}
+      tool: ${{ steps.changes.outputs.tool }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "footprint=true" >> "$GITHUB_OUTPUT"
+            echo "tool=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="$(git merge-base "$PR_BASE_SHA" HEAD)"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          files="$(git diff --name-only "$base" HEAD)"
+          footprint=false
+          if grep -qE '^(rivetkit-typescript/|engine/sdks/typescript/|shared/typescript/|integrations/workflow-world/|pnpm-lock\.yaml|pnpm-workspace\.yaml|scripts/pipboy/|scripts/publish/|\.github/workflows/pipboy\.yml)' <<< "$files"; then
+            footprint=true
+          fi
+          echo "footprint=$footprint" >> "$GITHUB_OUTPUT"
+          tool=false
+          if grep -qE '^(scripts/pipboy/|scripts/publish/|\.github/workflows/pipboy\.yml)' <<< "$files"; then
+            tool=true
+          fi
+          echo "tool=$tool" >> "$GITHUB_OUTPUT"
+
+  self-test:
+    name: self-test
+    needs: changes
+    if: needs.changes.outputs.tool == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter 'pipboy...'
+      - run: pnpm --filter pipboy check-types
+      # Replays the September 2026 registry drift against a local npm registry.
+      - run: pnpm --filter pipboy test
+
+  footprint:
+    name: footprint
+    needs: changes
+    if: needs.changes.outputs.footprint == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read # download the base tarballs from a main run
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        env:
+          SKIP_NAPI_BUILD: "1"
+          SKIP_WASM_BUILD: "1"
+
+      - name: Pack this commit
+        run: pnpm --silent --filter pipboy pipboy pack --out "$RUNNER_TEMP/pr"
+
+      - name: Store tarballs as the baseline for later PRs
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: footprint-tarballs
+          path: ${{ runner.temp }}/pr
+          retention-days: 90
+
+      - name: Fetch the base tarballs from main
+        id: baseline
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ needs.changes.outputs.base }}
+        run: pnpm --silent --filter pipboy pipboy baseline --sha "$BASE_SHA" --artifact footprint-tarballs --out "$RUNNER_TEMP/base"
+
+      # Main has no baseline for this commit (older than this workflow, or
+      # expired), so pack the merge base here with this commit's tool.
+      - name: Pack the base
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.found != 'true'
+        env:
+          BASE_SHA: ${{ needs.changes.outputs.base }}
+          SKIP_NAPI_BUILD: "1"
+          SKIP_WASM_BUILD: "1"
+        run: |
+          git worktree add "$RUNNER_TEMP/base-src" "$BASE_SHA"
+          pnpm --dir "$RUNNER_TEMP/base-src" install --frozen-lockfile
+          pnpm --silent --filter pipboy pipboy pack --root "$RUNNER_TEMP/base-src" --out "$RUNNER_TEMP/base"
+
+      - name: Measure
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports"
+          base=()
+          if [ "$EVENT" = "pull_request" ]; then base=(--base "$RUNNER_TEMP/base"); fi
+          pnpm --silent --filter pipboy pipboy footprint --pr "$RUNNER_TEMP/pr" "${base[@]}" --out "$RUNNER_TEMP/reports/footprint.json"
+
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: report-footprint
+          path: ${{ runner.temp }}/reports/footprint.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  report:
+    name: report
+    needs: [changes, footprint]
+    # Not `always()`: a run cancelled by a newer push must not post its partial results.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read # job timings and report artifacts
+      pull-requests: write # the one Pip-Boy comment
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter 'pipboy...'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: report-*
+          path: ${{ runner.temp }}/reports
+          merge-multiple: true
+      - name: Write the comment and run summary
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # Empty for pushes and fork PRs: they get the run summary only.
+          PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.number || '' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Each check job's result, so a failed job is reported as failed, not skipped.
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: pnpm --silent --filter pipboy pipboy report --reports "$RUNNER_TEMP/reports"
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      - run: uvx zizmor@1.31.1 --offline --min-severity low .github/workflows/pipboy.yml
