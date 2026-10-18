@@ -3,6 +3,7 @@ import { NodeHttpClient, NodeRuntime, NodeServices } from "@effect/platform-node
 import { Config, Console, Effect, FileSystem, Layer, Option, Schema } from "effect";
 import { Command, Flag } from "effect/cli";
 import { compareFootprint } from "./compare/footprint.ts";
+import { compareHygiene } from "./compare/hygiene.ts";
 import { REPO_ROOT } from "./config.ts";
 import { inspectEntrypoints } from "./footprint/inspect.ts";
 import { pack, readPackManifest } from "./footprint/pack.ts";
@@ -12,9 +13,12 @@ import * as GitHubApi from "./github/api.ts";
 import { fetchBaseline } from "./github/baseline.ts";
 import { upsertComment } from "./github/comment.ts";
 import { readTiming, renderTiming } from "./github/timing.ts";
+import { collectHygiene } from "./hygiene/collect.ts";
 import { renderFootprint } from "./render/footprint.ts";
+import { renderHygiene } from "./render/hygiene.ts";
 import { JobResults, renderCheckSection } from "./render/status.ts";
 import { FootprintReport, type FootprintSide } from "./schema/footprint.ts";
+import { HygieneReport } from "./schema/hygiene.ts";
 
 export class ChecksFailed extends Schema.TaggedError<ChecksFailed>()("ChecksFailed", {
 	failures: Schema.Array(Schema.String),
@@ -72,6 +76,31 @@ const footprintCommand = Command.make(
 	}, Effect.provide(Registry.layer)),
 ).pipe(Command.withDescription("Measure what users install, resolved fresh from the registry without downloading"));
 
+const hygieneCommand = Command.make(
+	"hygiene",
+	{
+		root: Flag.String("root").pipe(Flag.withDefault(REPO_ROOT), Flag.withDescription("Checkout of this change")),
+		base: Flag.String("base-root").pipe(Flag.optional, Flag.withDescription("Checkout of the merge base")),
+		out: Flag.String("out").pipe(Flag.withDescription("Where to write the JSON report")),
+	},
+	Effect.fn("Cli.hygiene")(function* ({ root, base, out }) {
+		const fs = yield* FileSystem.FileSystem;
+		const [pr, baseFindings] = yield* Effect.all(
+			[collectHygiene(root), Effect.transposeOption(Option.map(base, collectHygiene))],
+			{ concurrency: "unbounded" },
+		);
+		const report: HygieneReport = {
+			schema: 1,
+			check: "hygiene",
+			sides: [{ side: "pr", findings: pr }, ...(Option.isSome(baseFindings) ? [{ side: "base" as const, findings: baseFindings.value }] : [])],
+		};
+		yield* fs.writeFileString(out, JSON.stringify(report));
+		const comparison = compareHygiene(report);
+		yield* Console.log(renderHygiene(comparison));
+		if (comparison.failures.length > 0) return yield* new ChecksFailed({ failures: comparison.failures });
+	}),
+).pipe(Command.withDescription("Diff cargo deny and cargo shear findings between the merge base and this change"));
+
 const baselineCommand = Command.make(
 	"baseline",
 	{
@@ -117,6 +146,17 @@ const reportCommand = Command.make(
 					: undefined,
 			),
 		);
+		const hygienePath = join(reports, "hygiene.json");
+		sections.push(
+			section(
+				"### 🧹 Rust dependencies",
+				"hygiene",
+				"this PR doesn't change any Rust code or dependencies.",
+				(yield* fs.exists(hygienePath))
+					? renderHygiene(compareHygiene(yield* readReport(hygienePath, HygieneReport)))
+					: undefined,
+			),
+		);
 
 		const timing = yield* readTiming();
 		sections.push(renderTiming(timing));
@@ -158,7 +198,7 @@ const setOutput = Effect.fn("Cli.setOutput")(function* (name: string, value: str
 });
 
 const cli = Command.make("pipboy").pipe(
-	Command.withSubcommands([packCommand, footprintCommand, baselineCommand, reportCommand]),
+	Command.withSubcommands([packCommand, footprintCommand, hygieneCommand, baselineCommand, reportCommand]),
 );
 
 Command.run(cli, { version: "0.0.0" }).pipe(

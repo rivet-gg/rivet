@@ -16,8 +16,15 @@ export interface RunOptions {
 	readonly env?: Record<string, string | undefined>;
 }
 
-/** Runs a command to completion and returns its stdout. Fails on a non-zero exit code. */
-export const run = Effect.fn("Exec.run")(function* (
+export interface Captured {
+	readonly command: string;
+	readonly exitCode: number;
+	readonly stdout: string;
+	readonly stderr: string;
+}
+
+/** Runs a command to completion and returns its output and exit code, whatever the exit code is. */
+export const capture = Effect.fn("Exec.capture")(function* (
 	command: string,
 	args: ReadonlyArray<string>,
 	options: RunOptions = {},
@@ -36,16 +43,24 @@ export const run = Effect.fn("Exec.run")(function* (
 				],
 				{ concurrency: "unbounded" },
 			);
-			if (exitCode !== 0) {
-				return yield* new CommandFailed({
-					command: [command, ...args].join(" "),
-					exitCode,
-					stderr: stderr.slice(-4000),
-				});
-			}
-			return stdout;
+			return { command: [command, ...args].join(" "), exitCode, stdout, stderr } satisfies Captured;
 		}),
 	);
+});
+
+/** A failure that carries the command's own error output. */
+export const commandFailed = (captured: Captured) =>
+	new CommandFailed({ command: captured.command, exitCode: captured.exitCode, stderr: captured.stderr.slice(-4000) });
+
+/** Runs a command to completion and returns its stdout. Fails on a non-zero exit code. */
+export const run = Effect.fn("Exec.run")(function* (
+	command: string,
+	args: ReadonlyArray<string>,
+	options: RunOptions = {},
+) {
+	const captured = yield* capture(command, args, options);
+	if (captured.exitCode !== 0) return yield* commandFailed(captured);
+	return captured.stdout;
 });
 
 /**
