@@ -21,6 +21,7 @@ use serde::Serialize;
 use serde_json::{Map as JsonMap, Value as JsonValue};
 #[cfg(feature = "sqlite-local")]
 use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::Notify;
 #[cfg(feature = "sqlite-local")]
 use tokio::task::JoinHandle;
 use tracing::Instrument as _;
@@ -252,7 +253,7 @@ pub struct SqliteDb {
 	open_lock: Arc<AsyncMutex<()>>,
 	#[cfg(feature = "sqlite-local")]
 	worker_failure_task: Arc<Mutex<Option<JoinHandle<()>>>>,
-	worker_fatal_reported: Arc<AtomicBool>,
+	worker_fatal_reported: Arc<WorkerFatal>,
 	transaction_coordinator: Arc<TransactionCoordinator>,
 	/// Set on handles that run on a foreign runtime's host thread. See `sync.rs`.
 	host_thread: bool,
@@ -440,7 +441,7 @@ impl SqliteDb {
 					let vfs_metrics = self.vfs_metrics.clone();
 					let rt_handle = tokio::runtime::Handle::try_current()
 						.context("open sqlite database requires a tokio runtime")?;
-					self.worker_fatal_reported.store(false, Ordering::Release);
+					self.worker_fatal_reported.reset();
 
 					let native_db = self.map_local_worker_result(
 						open_database_from_transport(
@@ -1152,7 +1153,12 @@ impl SqliteDb {
 	/// Whether this generation reported a crash to the engine. The engine restarts the actor from
 	/// durable state, so nothing this generation writes afterwards may become durable.
 	pub(crate) fn generation_failed(&self) -> bool {
-		self.worker_fatal_reported.load(Ordering::Acquire)
+		self.worker_fatal_reported.reported()
+	}
+
+	/// Resolves once this generation reports a crash to the engine.
+	pub(crate) async fn wait_for_generation_failure(&self) {
+		self.worker_fatal_reported.wait().await;
 	}
 
 	/// Restarts the owning actor from durable state, the same way a flush failure does: the
@@ -1452,8 +1458,52 @@ impl SqliteDb {
 #[cfg(feature = "sqlite-local")]
 const SQLITE_FULL_CODE: i32 = 13;
 
-fn report_sqlite_worker_fatal(reported: &AtomicBool, config: SqliteRuntimeConfig, message: String) {
-	if reported.swap(true, Ordering::AcqRel) {
+/// Whether a generation reported a SQLite crash, with a wakeup for work that waits on state the
+/// crashed generation can no longer produce, such as a state save.
+#[derive(Default)]
+struct WorkerFatal {
+	reported: AtomicBool,
+	notify: Notify,
+}
+
+impl WorkerFatal {
+	/// Returns false when the generation already reported its crash.
+	fn report(&self) -> bool {
+		if self.reported.swap(true, Ordering::AcqRel) {
+			return false;
+		}
+		self.notify.notify_waiters();
+		true
+	}
+
+	fn reported(&self) -> bool {
+		self.reported.load(Ordering::Acquire)
+	}
+
+	fn reset(&self) {
+		self.reported.store(false, Ordering::Release);
+	}
+
+	async fn wait(&self) {
+		loop {
+			let notified = self.notify.notified();
+			tokio::pin!(notified);
+			// Register before the check so a report between the check and the await still wakes us.
+			notified.as_mut().enable();
+			if self.reported() {
+				return;
+			}
+			notified.await;
+		}
+	}
+}
+
+fn report_sqlite_worker_fatal(
+	reported: &WorkerFatal,
+	config: SqliteRuntimeConfig,
+	message: String,
+) {
+	if !reported.report() {
 		return;
 	}
 	// A dead worker means SQLite's sole native connection is no longer a valid

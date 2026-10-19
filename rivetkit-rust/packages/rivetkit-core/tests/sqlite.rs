@@ -2110,6 +2110,173 @@ async fn aborted_generation_stops_without_retrying_state_saves() {
 	);
 }
 
+/// After an abort, the engine stops the generation with a sleep. A save waiter, such as the
+/// runtime's `onSleep` save, can never complete on the broken database. It must fail instead of
+/// holding the sleep until the grace deadline, because the next generation cannot start before
+/// this one stops.
+#[cfg(feature = "sqlite-local")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn aborted_generation_fails_save_waiters_instead_of_holding_sleep() {
+	use crate::actor::kv::LegacyActorKv;
+	use crate::actor::lifecycle_hooks::Reply;
+	use crate::actor::messages::{ActorEvent, SerializeStateReason, StateDelta};
+	use crate::actor::state::RequestSaveOpts;
+	use crate::actor::task::{ActorTask, LifecycleCommand};
+	use crate::actor::task_types::ShutdownKind;
+	use crate::{ActorConfig, ActorContext, ActorFactory};
+
+	let actor_id = "aborted-sleep";
+	let transport = Arc::new(MemorySqliteTransport::default());
+	let (handle, envoy_rx) = test_envoy_handle();
+	let _ = serve_envoy_sqlite(envoy_rx, transport);
+	// A grace period far longer than the test timeouts, so waiting for it fails the test.
+	let config = ActorConfig {
+		sqlite_deferred_commits: true,
+		sleep_grace_period: Duration::from_secs(120),
+		sleep_grace_period_overridden: true,
+		..ActorConfig::default()
+	};
+	let sql =
+		SqliteDb::new_with_remote_sqlite(handle.clone(), actor_id, None, Some(1), true, false)
+			.and_then(|db| db.with_deferred_commits(true))
+			.expect("local sqlite database should be configured");
+	let ctx = ActorContext::build(
+		actor_id.to_owned(),
+		"aborted".to_owned(),
+		Vec::new(),
+		"local".to_owned(),
+		Some(1),
+		handle.get_envoy_key().to_owned(),
+		config.clone(),
+		LegacyActorKv::new_in_memory(),
+		sql,
+	);
+	ctx.configure_envoy(handle, Some(1));
+	let (lifecycle_tx, lifecycle_rx) = mpsc::unbounded_channel();
+	let (_dispatch_tx, dispatch_rx) = mpsc::unbounded_channel();
+	let (events_tx, events_rx) = mpsc::unbounded_channel();
+	ctx.configure_lifecycle_events(Some(events_tx));
+
+	// The actor holds its first save reply, so a save is in flight when the abort lands. Its
+	// sleep cleanup saves state the way the runtime's `onSleep` does.
+	let (held_tx, mut held_rx) = mpsc::unbounded_channel::<Reply<Vec<StateDelta>>>();
+	let (cleanup_tx, mut cleanup_rx) = mpsc::unbounded_channel::<anyhow::Result<()>>();
+	let factory = Arc::new(ActorFactory::new(config, move |start| {
+		let held_tx = held_tx.clone();
+		let cleanup_tx = cleanup_tx.clone();
+		Box::pin(async move {
+			let ctx = start.ctx;
+			let mut events = start.events;
+			let mut held_one = false;
+			while let Some(event) = events.recv().await {
+				match event {
+					ActorEvent::SerializeState {
+						reason: SerializeStateReason::Save,
+						reply,
+					} => {
+						if held_one {
+							reply.send(Ok(Vec::new()));
+						} else {
+							held_one = true;
+							let _ = held_tx.send(reply);
+						}
+					}
+					ActorEvent::RunGracefulCleanup { reply, .. } => {
+						let ctx = ctx.clone();
+						let cleanup_tx = cleanup_tx.clone();
+						tokio::spawn(async move {
+							let saved = ctx
+								.request_save_and_wait(RequestSaveOpts {
+									immediate: true,
+									max_wait_ms: None,
+								})
+								.await;
+							let _ = cleanup_tx.send(saved);
+							reply.send(Ok(()));
+						});
+					}
+					ActorEvent::FinalizeSleep { reply } | ActorEvent::Destroy { reply } => {
+						reply.send(Ok(()));
+						break;
+					}
+					_ => {}
+				}
+			}
+			Ok(())
+		})
+	}));
+	let task = ActorTask::new(
+		actor_id.to_owned(),
+		1,
+		lifecycle_rx,
+		dispatch_rx,
+		events_rx,
+		factory,
+		ctx.clone(),
+		None,
+	);
+	let join = tokio::spawn(task.run());
+	let (start_tx, start_rx) = oneshot::channel();
+	lifecycle_tx
+		.send(LifecycleCommand::Start { reply: start_tx })
+		.expect("actor task should accept start");
+	start_rx
+		.await
+		.expect("start reply should send")
+		.expect("actor should start");
+
+	let waiter = tokio::spawn({
+		let ctx = ctx.clone();
+		async move {
+			ctx.request_save_and_wait(RequestSaveOpts {
+				immediate: true,
+				max_wait_ms: None,
+			})
+			.await
+		}
+	});
+	let held = tokio::time::timeout(Duration::from_secs(5), held_rx.recv())
+		.await
+		.expect("the actor receives the save")
+		.expect("the factory holds the save reply");
+
+	ctx.sql().abort_generation("output gate broke");
+	let saved = tokio::time::timeout(Duration::from_secs(5), waiter)
+		.await
+		.expect("a save waiter from before the abort fails instead of waiting")
+		.expect("save waiter task should join");
+	assert!(
+		saved.is_err(),
+		"a save that cannot become durable must not succeed"
+	);
+	held.send(Ok(vec![StateDelta::ActorState(b"lost".to_vec())]));
+
+	let (stop_tx, stop_rx) = oneshot::channel();
+	lifecycle_tx
+		.send(LifecycleCommand::Stop {
+			reason: ShutdownKind::Sleep,
+			reply: stop_tx,
+		})
+		.expect("actor task should accept stop");
+	let cleanup_saved = tokio::time::timeout(Duration::from_secs(5), cleanup_rx.recv())
+		.await
+		.expect("the sleep cleanup save fails instead of waiting for the grace deadline")
+		.expect("sleep cleanup should report its save");
+	assert!(
+		cleanup_saved.is_err(),
+		"a sleep cleanup save on an aborted generation must fail"
+	);
+	// The stop may fail because closing the broken database fails. Only a prompt answer matters.
+	let _ = tokio::time::timeout(Duration::from_secs(5), stop_rx)
+		.await
+		.expect("the aborted generation stops without waiting for the grace deadline")
+		.expect("stop reply should send");
+	let _ = tokio::time::timeout(Duration::from_secs(5), join)
+		.await
+		.expect("the aborted generation's task exits")
+		.expect("actor task should join");
+}
+
 #[cfg(feature = "sqlite-local")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn only_actors_that_opt_into_deferred_commits_return_before_depot_commits() {

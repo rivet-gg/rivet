@@ -25,7 +25,7 @@ use crate::actor::persist::decode_latest_with_embedded_version;
 use crate::actor::persist::encode_latest_with_embedded_version;
 use crate::actor::task::LifecycleEvent;
 use crate::actor::task_types::StateMutationReason;
-use crate::error::ActorRuntime;
+use crate::error::{ActorRuntime, SqliteRuntimeError};
 #[cfg(feature = "wasm-runtime")]
 use crate::runtime::RuntimeSpawner;
 use crate::sqlite::{BindParam, ExecuteResult, SqliteTransaction};
@@ -431,8 +431,7 @@ impl ActorContext {
 
 	pub async fn request_save_and_wait(&self, opts: RequestSaveOpts) -> Result<()> {
 		let save_request_revision = self.request_save_with_revision(opts)?;
-		self.wait_for_save_request(save_request_revision).await;
-		Ok(())
+		self.wait_for_save_request(save_request_revision).await
 	}
 
 	pub async fn save_state(&self, deltas: Vec<StateDelta>) -> Result<()> {
@@ -532,13 +531,25 @@ impl ActorContext {
 			})
 	}
 
-	pub(crate) async fn wait_for_save_request(&self, save_request_revision: u64) {
+	pub(crate) async fn wait_for_save_request(&self, save_request_revision: u64) -> Result<()> {
 		loop {
+			let completion = self.0.save_completion.notified();
+			tokio::pin!(completion);
+			// Register before the checks so a completion between them and the await still wakes us.
+			completion.as_mut().enable();
 			if self.0.save_completed_revision.load(Ordering::SeqCst) >= save_request_revision {
-				return;
+				return Ok(());
+			}
+			// A generation that reported a SQLite crash never saves again, so the request can
+			// never complete. The engine restarts the actor from its last durable state.
+			if self.sql().generation_failed() {
+				return Err(SqliteRuntimeError::Closed.build());
 			}
 
-			self.0.save_completion.notified().await;
+			tokio::select! {
+				_ = &mut completion => {}
+				_ = self.sql().wait_for_generation_failure() => {}
+			}
 		}
 	}
 
