@@ -1812,7 +1812,11 @@ impl ActorTask {
 			ShutdownKind::Destroy => LifecycleState::Destroying,
 		});
 		let result: Result<()> = async {
-			self.save_final_state().await?;
+			// A generation that reported a SQLite crash cannot persist, so its final save would
+			// only fail and skip the cleanup below that releases SQLite.
+			if !self.ctx.sql().generation_failed() {
+				self.save_final_state().await?;
+			}
 			self.close_actor_event_channel();
 			self.join_aborted_run_handle().await;
 			Self::finish_shutdown_cleanup_with_ctx(self.ctx.clone(), reason).await
@@ -2011,11 +2015,7 @@ impl ActorTask {
 	}
 
 	fn schedule_state_save(&mut self, immediate: bool) {
-		if !matches!(
-			self.lifecycle,
-			LifecycleState::Started | LifecycleState::SleepGrace
-		) || !self.ctx.save_requested()
-		{
+		if !self.state_save_allowed() {
 			self.state_save_deadline = None;
 			return;
 		}
@@ -2054,14 +2054,21 @@ impl ActorTask {
 		sleep_until(deadline).await;
 	}
 
+	/// A generation that reported a SQLite crash never saves again. Its database rejects every
+	/// write, and the engine restarts the actor from durable state once it stops this generation.
+	/// Retrying here would only spin until that stop arrives.
+	fn state_save_allowed(&self) -> bool {
+		matches!(
+			self.lifecycle,
+			LifecycleState::Started | LifecycleState::SleepGrace
+		) && self.ctx.save_requested()
+			&& !self.ctx.sql().generation_failed()
+	}
+
 	async fn on_state_save_tick(&mut self) {
 		self.state_save_deadline = None;
 		self.inspector_serialize_state_deadline = None;
-		if !matches!(
-			self.lifecycle,
-			LifecycleState::Started | LifecycleState::SleepGrace
-		) || !self.ctx.save_requested()
-		{
+		if !self.state_save_allowed() {
 			return;
 		}
 

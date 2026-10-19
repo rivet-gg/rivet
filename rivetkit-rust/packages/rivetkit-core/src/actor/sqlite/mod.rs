@@ -21,6 +21,7 @@ use serde::Serialize;
 use serde_json::{Map as JsonMap, Value as JsonValue};
 #[cfg(feature = "sqlite-local")]
 use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::Notify;
 #[cfg(feature = "sqlite-local")]
 use tokio::task::JoinHandle;
 use tracing::Instrument as _;
@@ -31,6 +32,7 @@ use crate::telemetry::SqliteOperation;
 mod envoy_sqlite_transport;
 #[cfg(feature = "sqlite-local")]
 mod profiling;
+mod sync;
 mod tx;
 
 pub use tx::{
@@ -55,6 +57,7 @@ use crate::runtime::RuntimeSpawner;
 #[cfg(feature = "sqlite-local")]
 use depot_client::{
 	database::{NativeDatabaseHandle, open_database_from_transport},
+	query::SqliteStatementError,
 	vfs::{CommitMode, DatabaseFailure, SqliteVfsMetrics, SqliteVfsMetricsSnapshot},
 	worker::{
 		SQLITE_WORKER_QUEUE_CAPACITY, SqliteWorkerCloseTimeoutError, SqliteWorkerClosingError,
@@ -250,8 +253,13 @@ pub struct SqliteDb {
 	open_lock: Arc<AsyncMutex<()>>,
 	#[cfg(feature = "sqlite-local")]
 	worker_failure_task: Arc<Mutex<Option<JoinHandle<()>>>>,
-	worker_fatal_reported: Arc<AtomicBool>,
+	worker_fatal_reported: Arc<WorkerFatal>,
 	transaction_coordinator: Arc<TransactionCoordinator>,
+	/// Set on handles that run on a foreign runtime's host thread. See `sync.rs`.
+	host_thread: bool,
+	/// Asynchronous callers wait for the flusher when the unflushed backlog is large.
+	/// Synchronous callers clear it: they must never wait on the network.
+	backlog_wait: bool,
 	#[cfg(feature = "sqlite-local")]
 	vfs_metrics: Option<Arc<dyn SqliteVfsMetrics>>,
 	#[cfg(feature = "sqlite-local")]
@@ -281,6 +289,8 @@ impl Default for SqliteDb {
 			worker_failure_task: Default::default(),
 			worker_fatal_reported: Default::default(),
 			transaction_coordinator: Default::default(),
+			host_thread: false,
+			backlog_wait: true,
 			#[cfg(feature = "sqlite-local")]
 			vfs_metrics: None,
 			#[cfg(feature = "sqlite-local")]
@@ -319,6 +329,8 @@ impl SqliteDb {
 			worker_failure_task: Default::default(),
 			worker_fatal_reported: Default::default(),
 			transaction_coordinator: Default::default(),
+			host_thread: false,
+			backlog_wait: true,
 			#[cfg(feature = "sqlite-local")]
 			vfs_metrics: None,
 			#[cfg(feature = "sqlite-local")]
@@ -429,7 +441,7 @@ impl SqliteDb {
 					let vfs_metrics = self.vfs_metrics.clone();
 					let rt_handle = tokio::runtime::Handle::try_current()
 						.context("open sqlite database requires a tokio runtime")?;
-					self.worker_fatal_reported.store(false, Ordering::Release);
+					self.worker_fatal_reported.reset();
 
 					let native_db = self.map_local_worker_result(
 						open_database_from_transport(
@@ -471,13 +483,18 @@ impl SqliteDb {
 	#[cfg(feature = "sqlite-local")]
 	async fn local_exec(&self, sql: String) -> Result<QueryResult> {
 		self.open().await?;
+		self.wait_for_backlog_room().await?;
 		self.map_local_worker_result(self.native_db_handle()?.exec(sql).await)
+			.map_err(|error| self.backlog_error(error))
 	}
 
 	#[cfg(feature = "sqlite-local")]
 	async fn local_exec_profiled(&self, sql: String) -> Result<SqliteWorkerResult<QueryResult>> {
 		self.open().await?;
+		self.wait_for_backlog_room().await?;
 		self.map_local_worker_result(self.native_db_handle()?.exec_profiled(sql).await)
+			.map(map_local_worker_reply)
+			.map(|reply| self.backlog_reply(reply))
 	}
 
 	#[cfg(not(feature = "sqlite-local"))]
@@ -492,7 +509,9 @@ impl SqliteDb {
 		params: Option<Vec<BindParam>>,
 	) -> Result<ExecuteResult> {
 		self.open().await?;
+		self.wait_for_backlog_room().await?;
 		self.map_local_worker_result(self.native_db_handle()?.execute(sql, params).await)
+			.map_err(|error| self.backlog_error(error))
 	}
 
 	#[cfg(feature = "sqlite-local")]
@@ -502,7 +521,10 @@ impl SqliteDb {
 		params: Option<Vec<BindParam>>,
 	) -> Result<SqliteWorkerResult<ExecuteResult>> {
 		self.open().await?;
+		self.wait_for_backlog_room().await?;
 		self.map_local_worker_result(self.native_db_handle()?.execute_profiled(sql, params).await)
+			.map(map_local_worker_reply)
+			.map(|reply| self.backlog_reply(reply))
 	}
 
 	#[cfg(not(feature = "sqlite-local"))]
@@ -1006,6 +1028,55 @@ impl SqliteDb {
 			.ok_or_else(|| SqliteRuntimeError::Closed.build())
 	}
 
+	/// Asynchronous writers wait for the flusher once the unflushed backlog passes half its
+	/// limit, so storage that is behind slows writes down instead of failing them, as in awaited
+	/// mode. Synchronous callers skip this and get `storage_behind` if the backlog fills.
+	#[cfg(feature = "sqlite-local")]
+	async fn wait_for_backlog_room(&self) -> Result<()> {
+		if !self.backlog_wait {
+			return Ok(());
+		}
+		let db = self.native_db_handle()?;
+		if db.commit_mode() != CommitMode::Deferred
+			|| db.unflushed_pages() <= db.max_commit_dirty_pages() / 2
+		{
+			return Ok(());
+		}
+		db.wait_for_flush(db.commit_seq()).await.map_err(|error| {
+			SqliteRuntimeError::DurabilityFailed {
+				message: error.to_string(),
+			}
+			.build()
+		})
+	}
+
+	/// A commit that failed because the unflushed backlog was full is a temporary storage
+	/// condition, not a full database.
+	#[cfg(feature = "sqlite-local")]
+	fn backlog_error(&self, error: anyhow::Error) -> anyhow::Error {
+		// `downcast_ref` also finds a statement error attached with `.context(...)`, which
+		// `chain()` does not expose as a typed cause.
+		let database_full = error
+			.downcast_ref::<SqliteStatementError>()
+			.into_iter()
+			.chain(error.chain().filter_map(|cause| cause.downcast_ref::<SqliteStatementError>()))
+			.any(|statement| statement.code & 0xff == SQLITE_FULL_CODE);
+		if database_full
+			&& self
+				.native_db_handle()
+				.is_ok_and(|db| db.take_backlog_full())
+		{
+			return SqliteRuntimeError::StorageBehind.build();
+		}
+		error
+	}
+
+	#[cfg(feature = "sqlite-local")]
+	fn backlog_reply<T>(&self, mut reply: SqliteWorkerResult<T>) -> SqliteWorkerResult<T> {
+		reply.result = reply.result.map_err(|error| self.backlog_error(error));
+		reply
+	}
+
 	#[cfg(feature = "sqlite-local")]
 	fn map_local_worker_result<T>(&self, result: Result<T>) -> Result<T> {
 		match result {
@@ -1076,6 +1147,34 @@ impl SqliteDb {
 		#[cfg(not(feature = "sqlite-local"))]
 		{
 			None
+		}
+	}
+
+	/// Whether this generation reported a crash to the engine. The engine restarts the actor from
+	/// durable state, so nothing this generation writes afterwards may become durable.
+	pub(crate) fn generation_failed(&self) -> bool {
+		self.worker_fatal_reported.reported()
+	}
+
+	/// Resolves once this generation reports a crash to the engine.
+	pub(crate) async fn wait_for_generation_failure(&self) {
+		self.worker_fatal_reported.wait().await;
+	}
+
+	/// Restarts the owning actor from durable state, the same way a flush failure does: the
+	/// engine records a crash, and the database is broken so every later write fails, including
+	/// the final state save. Native database providers use it when in-memory state can no longer
+	/// be trusted. Idempotent.
+	pub fn abort_generation(&self, reason: impl Into<String>) {
+		let message = format!("actor aborted: {}", reason.into());
+		// Report before breaking the database, so the crash carries this reason rather than the
+		// flush failure the break raises.
+		if let Ok(config) = self.runtime_config() {
+			report_sqlite_worker_fatal(&self.worker_fatal_reported, config, message.clone());
+		}
+		#[cfg(feature = "sqlite-local")]
+		if let Ok(db) = self.native_db_handle() {
+			db.break_database(message);
 		}
 	}
 
@@ -1355,8 +1454,56 @@ impl SqliteDb {
 	}
 }
 
-fn report_sqlite_worker_fatal(reported: &AtomicBool, config: SqliteRuntimeConfig, message: String) {
-	if reported.swap(true, Ordering::AcqRel) {
+/// SQLite's primary result code for a full database.
+#[cfg(feature = "sqlite-local")]
+const SQLITE_FULL_CODE: i32 = 13;
+
+/// Whether a generation reported a SQLite crash, with a wakeup for work that waits on state the
+/// crashed generation can no longer produce, such as a state save.
+#[derive(Default)]
+struct WorkerFatal {
+	reported: AtomicBool,
+	notify: Notify,
+}
+
+impl WorkerFatal {
+	/// Returns false when the generation already reported its crash.
+	fn report(&self) -> bool {
+		if self.reported.swap(true, Ordering::AcqRel) {
+			return false;
+		}
+		self.notify.notify_waiters();
+		true
+	}
+
+	fn reported(&self) -> bool {
+		self.reported.load(Ordering::Acquire)
+	}
+
+	fn reset(&self) {
+		self.reported.store(false, Ordering::Release);
+	}
+
+	async fn wait(&self) {
+		loop {
+			let notified = self.notify.notified();
+			tokio::pin!(notified);
+			// Register before the check so a report between the check and the await still wakes us.
+			notified.as_mut().enable();
+			if self.reported() {
+				return;
+			}
+			notified.await;
+		}
+	}
+}
+
+fn report_sqlite_worker_fatal(
+	reported: &WorkerFatal,
+	config: SqliteRuntimeConfig,
+	message: String,
+) {
+	if !reported.report() {
 		return;
 	}
 	// A dead worker means SQLite's sole native connection is no longer a valid
@@ -1424,6 +1571,13 @@ fn sqlite_worker_fatal_message(error: &anyhow::Error) -> String {
 	format!("sqlite worker failed: {error}")
 }
 
+/// Profiled worker calls carry the statement's own result inside a successful reply.
+#[cfg(feature = "sqlite-local")]
+fn map_local_worker_reply<T>(mut reply: SqliteWorkerResult<T>) -> SqliteWorkerResult<T> {
+	reply.result = reply.result.map_err(map_local_worker_error);
+	reply
+}
+
 #[cfg(feature = "sqlite-local")]
 fn map_local_worker_error(error: anyhow::Error) -> anyhow::Error {
 	if error
@@ -1443,6 +1597,21 @@ fn map_local_worker_error(error: anyhow::Error) -> anyhow::Error {
 		|| error.downcast_ref::<SqliteWorkerFatalError>().is_some()
 	{
 		return SqliteRuntimeError::Closed.build();
+	}
+
+	// The statement is the actor's own SQL, so its SQLite message is safe to return. The
+	// statement error stays in the chain for the Actor Runtime Socket's wire mapping.
+	if let Some(statement) = error.downcast_ref::<SqliteStatementError>() {
+		return SqliteRuntimeError::StatementFailed {
+			message: statement.message.clone(),
+			code: statement.code,
+		}
+		.build()
+		.context(SqliteStatementError {
+			code: statement.code,
+			statement_index: statement.statement_index,
+			message: statement.message.clone(),
+		});
 	}
 
 	error
