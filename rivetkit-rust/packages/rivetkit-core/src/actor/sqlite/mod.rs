@@ -1149,6 +1149,12 @@ impl SqliteDb {
 		}
 	}
 
+	/// Whether this generation reported a crash to the engine. The engine restarts the actor from
+	/// durable state, so nothing this generation writes afterwards may become durable.
+	pub(crate) fn generation_failed(&self) -> bool {
+		self.worker_fatal_reported.load(Ordering::Acquire)
+	}
+
 	/// Restarts the owning actor from durable state, the same way a flush failure does: the
 	/// engine records a crash, and the database is broken so every later write fails, including
 	/// the final state save. Native database providers use it when in-memory state can no longer

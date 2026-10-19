@@ -1888,14 +1888,15 @@ async fn deferred_flush_failure_stops_the_generation_and_reports_a_crash() {
 }
 
 /// Answers the SQLite requests an actor's native database sends through envoy, the way
-/// pegboard-envoy forwards them to depot.
+/// pegboard-envoy forwards them to depot. Returns every other message the actor sends to envoy.
 #[cfg(feature = "sqlite-local")]
 fn serve_envoy_sqlite(
 	mut envoy_rx: mpsc::UnboundedReceiver<ToEnvoyMessage>,
 	transport: Arc<MemorySqliteTransport>,
-) {
+) -> mpsc::UnboundedReceiver<ToEnvoyMessage> {
 	use depot_client::vfs::SqliteTransport;
 
+	let (other_tx, other_rx) = mpsc::unbounded_channel();
 	tokio::spawn(async move {
 		while let Some(message) = envoy_rx.recv().await {
 			let ToEnvoyMessage::SqliteRequest {
@@ -1903,6 +1904,7 @@ fn serve_envoy_sqlite(
 				response_tx,
 			} = message
 			else {
+				let _ = other_tx.send(message);
 				continue;
 			};
 			let transport = transport.clone();
@@ -1933,6 +1935,7 @@ fn serve_envoy_sqlite(
 			});
 		}
 	});
+	other_rx
 }
 
 /// Builds an actor's database the way the registry does, with its depot behind `transport`.
@@ -1943,10 +1946,168 @@ fn actor_sqlite(
 	deferred_commits: bool,
 ) -> SqliteDb {
 	let (handle, envoy_rx) = test_envoy_handle();
-	serve_envoy_sqlite(envoy_rx, transport);
+	let _ = serve_envoy_sqlite(envoy_rx, transport);
 	SqliteDb::new_with_remote_sqlite(handle, actor_id, None, Some(1), true, false)
 		.and_then(|db| db.with_deferred_commits(deferred_commits))
 		.expect("local sqlite database should be configured")
+}
+
+#[cfg(feature = "sqlite-local")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn aborted_generation_stops_without_retrying_state_saves() {
+	use crate::actor::internal_storage;
+	use crate::actor::kv::LegacyActorKv;
+	use crate::actor::messages::{ActorEvent, SerializeStateReason, StateDelta};
+	use crate::actor::state::RequestSaveOpts;
+	use crate::actor::task::{ActorTask, LifecycleCommand};
+	use crate::actor::task_types::ShutdownKind;
+	use crate::{ActorConfig, ActorContext, ActorFactory};
+
+	let actor_id = "aborted-generation";
+	let transport = Arc::new(MemorySqliteTransport::default());
+	let (handle, envoy_rx) = test_envoy_handle();
+	let mut to_engine = serve_envoy_sqlite(envoy_rx, transport.clone());
+	let config = ActorConfig {
+		sqlite_deferred_commits: true,
+		..ActorConfig::default()
+	};
+	let sql =
+		SqliteDb::new_with_remote_sqlite(handle.clone(), actor_id, None, Some(1), true, false)
+			.and_then(|db| db.with_deferred_commits(true))
+			.expect("local sqlite database should be configured");
+	let ctx = ActorContext::build(
+		actor_id.to_owned(),
+		"aborted".to_owned(),
+		Vec::new(),
+		"local".to_owned(),
+		Some(1),
+		handle.get_envoy_key().to_owned(),
+		config.clone(),
+		LegacyActorKv::new_in_memory(),
+		sql,
+	);
+	ctx.configure_envoy(handle, Some(1));
+	let (lifecycle_tx, lifecycle_rx) = mpsc::unbounded_channel();
+	let (_dispatch_tx, dispatch_rx) = mpsc::unbounded_channel();
+	let (events_tx, events_rx) = mpsc::unbounded_channel();
+	ctx.configure_lifecycle_events(Some(events_tx));
+
+	// Every state save asks the actor to serialize state that changed since the last save.
+	let serialized = Arc::new(AtomicU64::new(0));
+	let factory = Arc::new(ActorFactory::new(config, {
+		let serialized = serialized.clone();
+		move |start| {
+			let serialized = serialized.clone();
+			Box::pin(async move {
+				let mut events = start.events;
+				while let Some(event) = events.recv().await {
+					match event {
+						ActorEvent::SerializeState {
+							reason: SerializeStateReason::Save,
+							reply,
+						} => {
+							let next = serialized.fetch_add(1, Ordering::SeqCst) + 1;
+							reply.send(Ok(vec![StateDelta::ActorState(vec![next as u8])]));
+						}
+						ActorEvent::FinalizeSleep { reply } | ActorEvent::Destroy { reply } => {
+							reply.send(Ok(()));
+							break;
+						}
+						_ => {}
+					}
+				}
+				Ok(())
+			})
+		}
+	}));
+	let task = ActorTask::new(
+		actor_id.to_owned(),
+		1,
+		lifecycle_rx,
+		dispatch_rx,
+		events_rx,
+		factory,
+		ctx.clone(),
+		None,
+	);
+	let join = tokio::spawn(task.run());
+	let (start_tx, start_rx) = oneshot::channel();
+	lifecycle_tx
+		.send(LifecycleCommand::Start { reply: start_tx })
+		.expect("actor task should accept start");
+	start_rx
+		.await
+		.expect("start reply should send")
+		.expect("actor should start");
+
+	ctx.save_state(vec![StateDelta::ActorState(b"durable".to_vec())])
+		.await
+		.expect("state saves before the abort");
+	ctx.sql()
+		.when_durable(ctx.sql().commit_ticket())
+		.await
+		.expect("the saved state becomes durable");
+
+	ctx.sql().abort_generation("output gate broke");
+	ctx.request_save(RequestSaveOpts {
+		immediate: true,
+		max_wait_ms: None,
+	});
+
+	let intent = tokio::time::timeout(Duration::from_secs(5), async {
+		loop {
+			match to_engine.recv().await {
+				Some(ToEnvoyMessage::ActorIntent { intent, .. }) => return intent,
+				Some(_) => continue,
+				None => panic!("envoy channel closed before the crash report"),
+			}
+		}
+	})
+	.await
+	.expect("the abort must report a crash to the engine");
+	assert_eq!(intent, protocol::ActorIntent::ActorIntentSleep);
+
+	// Until the engine answers with a stop, the aborted generation must stay quiet. Each save
+	// it attempts fails on the broken database, so a retry would repeat without end.
+	let serialized_at_abort = serialized.load(Ordering::SeqCst);
+	tokio::time::sleep(Duration::from_millis(250)).await;
+	let retries = serialized.load(Ordering::SeqCst) - serialized_at_abort;
+	assert!(
+		retries <= 1,
+		"an aborted generation retried {retries} state saves in 250 ms"
+	);
+
+	let (stop_tx, stop_rx) = oneshot::channel();
+	lifecycle_tx
+		.send(LifecycleCommand::Stop {
+			reason: ShutdownKind::Sleep,
+			reply: stop_tx,
+		})
+		.expect("actor task should accept stop");
+	// The stop may fail because closing the broken database fails. The engine already has the
+	// crash, so only a prompt answer matters here.
+	let _ = tokio::time::timeout(Duration::from_secs(5), stop_rx)
+		.await
+		.expect("the aborted generation answers the engine's stop")
+		.expect("stop reply should send");
+	let _ = tokio::time::timeout(Duration::from_secs(5), join)
+		.await
+		.expect("the aborted generation's task exits")
+		.expect("actor task should join");
+
+	let (next_handle, next_envoy_rx) = test_envoy_handle();
+	let _ = serve_envoy_sqlite(next_envoy_rx, transport);
+	let next = SqliteDb::new_with_remote_sqlite(next_handle, actor_id, None, Some(2), true, false)
+		.expect("next generation sqlite should be configured");
+	let snapshot = internal_storage::load_actor_snapshot(&next)
+		.await
+		.expect("next generation reads durable state")
+		.expect("the actor's durable state survives the abort");
+	assert_eq!(
+		snapshot.actor.state,
+		b"durable".to_vec(),
+		"the next generation loads only state that was durable before the abort"
+	);
 }
 
 #[cfg(feature = "sqlite-local")]
