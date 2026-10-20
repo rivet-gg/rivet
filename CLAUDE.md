@@ -201,7 +201,7 @@ When the user asks to track something in a note, store it in `~/.agents/notes/` 
 - **rivetkit-core** (`rivetkit-rust/packages/rivetkit-core/`) — Core RivetKit logic in Rust, language-agnostic. Lifecycle state machine, sleep logic, shutdown sequencing, state persistence, action dispatch, event broadcast, queue management, schedule system, inspector, metrics. All callbacks are dynamic closures with opaque bytes. All load-bearing logic must live here. Config conversion helpers and HTTP request/response parsing for foreign runtimes belong here.
 - **rivetkit (Rust)** (`rivetkit-rust/packages/rivetkit/`) — Rust-friendly typed API. `Actor` trait, `Ctx<A>`, `Registry` builder, CBOR serde at boundaries. Thin wrapper over rivetkit-core. No load-bearing logic.
 - **rivetkit-napi** (`rivetkit-typescript/packages/rivetkit-napi/`) — NAPI bindings only. ThreadsafeFunction wrappers, JS object construction, Promise-to-Future conversion. No load-bearing logic. Must only translate between JS types and rivetkit-core types. Only consumed by `rivetkit-typescript/packages/rivetkit/`.
-- **rivetkit (TypeScript)** (`rivetkit-typescript/packages/rivetkit/`) — TypeScript-friendly API. Calls into rivetkit-core via NAPI for lifecycle logic. Owns workflow engine, agent-os, and client library. Zod validation for user-provided schemas runs here.
+- **rivetkit (TypeScript)** (`rivetkit-typescript/packages/rivetkit/`) — TypeScript-friendly API. Calls into rivetkit-core via NAPI for lifecycle logic. Owns workflow engine and client library. Zod validation for user-provided schemas runs here.
 
 ### Layer constraints
 
@@ -212,7 +212,7 @@ When the user asks to track something in a note, store it in `~/.agents/notes/` 
 - NAPI `ActorContext.sql()` returns `JsNativeDatabase` directly; do not reintroduce a standalone `SqliteDb` wrapper export.
 - TypeScript runtime adapters expose `CoreRuntime` from `rivetkit/src/registry/runtime.ts`; keep raw `@rivetkit/rivetkit-napi` and future `@rivetkit/rivetkit-wasm` imports inside `src/registry/*-runtime.ts`.
 - rivetkit (Rust) is a thin typed wrapper. If it does more than deserialize, delegate to core, and serialize, the logic should move to rivetkit-core.
-- rivetkit (TypeScript) owns only: workflow engine, agent-os, client library, Zod schema validation for user-defined types, and actor definition types.
+- rivetkit (TypeScript) owns only: workflow engine, client library, Zod schema validation for user-defined types, and actor definition types.
 - Errors use universal `RivetError` (group/code/message/metadata) at all boundaries. No custom error classes in TS.
 - CBOR serialization at all cross-language boundaries. JSON only for HTTP inspector endpoints.
 - Pegboard orchestrates actor exclusivity: at most one actor instance for a given actor id may be running or accessing that actor's storage at a time. This is the actor single-writer invariant: a Rivet Actor is the single writer for both KV and SQLite. `pegboard-envoy`, `envoy-client`, and remote/wasm SQLite may rely on this invariant and must not add envoy-protocol lease keys, engine-side transaction ownership, or separate same-actor concurrency fences. Coordinate LocalNative and remote/wasm transactions through the same actor-local `rivetkit-core` coordinator before backend dispatch. Actor Runtime Socket `leaseKey` values identify connection-local transaction handles and never cross depot, envoy, or engine boundaries. The lost-timeout + ping protocol is responsible for making overlapping actor generations impossible.

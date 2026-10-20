@@ -47,8 +47,6 @@ export const EXCLUDED = new Set<string>([
 	"@rivetkit/engine-frontend",
 	"@rivetkit/sqlite-native",
 	"@rivetkit/sqlite-wasm",
-	"example-agent-os",
-	"example-agent-os-e2e",
 ]);
 
 /**
