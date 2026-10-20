@@ -25,7 +25,11 @@ export async function withFakeClaude<T>(behavior: FakeClaudeBehavior, work: () =
 		FAKE_CLAUDE_ECHO_AS_STRUCTURED_OUTPUT: behavior.echoAsStructuredOutput ? "1" : undefined,
 		FAKE_CLAUDE_DELAY_MS: behavior.delayMs?.toString(),
 	};
-	Object.assign(process.env, Object.fromEntries(Object.entries(variables).filter(([, value]) => value !== undefined)));
+	for (const [name, value] of Object.entries(variables)) {
+		if (value !== undefined) {
+			process.env[name] = value;
+		}
+	}
 	try {
 		return await work();
 	} finally {
