@@ -9,10 +9,12 @@ const definition = actor({
 	},
 });
 
-declare const client: Client<Registry<{
-	auth: typeof definition;
-	user: typeof definition;
-}>>;
+declare const client: Client<
+	Registry<{
+		auth: typeof definition;
+		user: typeof definition;
+	}>
+>;
 
 const handle = client.user.getForId("actor-id");
 const actorResult: Promise<IssuedToken> = handle.issueToken();
