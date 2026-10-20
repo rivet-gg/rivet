@@ -129,7 +129,8 @@ export const useRivetDsn = ({
 				? namespace
 				: `${namespace}:${publishableToken ?? "<PUBLISHABLE_TOKEN>"}`;
 
-	const dsn = `https://${auth}@${apiEndpoint
+	const protocol = apiEndpoint.startsWith("http://") ? "http" : "https";
+	const dsn = `${protocol}://${auth}@${apiEndpoint
 		.replace("https://", "")
 		.replace("http://", "")}`;
 

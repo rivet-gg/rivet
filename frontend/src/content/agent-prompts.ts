@@ -59,9 +59,9 @@ const onboardingTargetCopy: Record<
 		quickstartUrl: "https://rivet.dev/docs/actors/quickstart/backend",
 	},
 	"agent-os": {
-		promptObject: "an agentOS project",
-		quickstartDescription: "Set up agentOS by hand, step by step.",
-		quickstartUrl: "https://rivet.dev/agentos/",
+		promptObject: "an agentOS VM",
+		quickstartDescription: "Connect to the managed agentOS service.",
+		quickstartUrl: "https://rivet.dev/agentos/docs/",
 	},
 	workflows: {
 		promptObject: "your first durable workflow",

@@ -29,6 +29,12 @@
 	--background-main: 0 7.14% 5.49%;
 }
 
+.shiki,
+.shiki span {
+	color: var(--shiki-dark) !important;
+	background-color: var(--shiki-dark-bg) !important;
+}
+
 @layer base {
 	* {
 		@apply border-border;

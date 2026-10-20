@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
 	createHighlighterCore,
 	createOnigurumaEngine,
+	type DecorationItem,
 	type HighlighterCore,
 	type ThemeInput,
 } from "shiki";
@@ -16,6 +17,7 @@ const langs = {
 	bash: () => import("@shikijs/langs/bash"),
 	markdown: () => import("@shikijs/langs/markdown"),
 	yaml: () => import("@shikijs/langs/yaml"),
+	http: () => import("@shikijs/langs/http"),
 };
 
 const DARK_THEME_NAME = theme.name;
@@ -62,9 +64,15 @@ interface CodePreviewProps {
 	code: string;
 	language: keyof typeof langs;
 	className?: string;
+	decorations?: DecorationItem[];
 }
 
-export function CodePreview({ className, code, language }: CodePreviewProps) {
+export function CodePreview({
+	className,
+	code,
+	language,
+	decorations,
+}: CodePreviewProps) {
 	const [isLoading, setIsLoading] = useState(true);
 	const [highlighter, setHighlighter] = useState<HighlighterCore | null>(
 		null,
@@ -99,8 +107,16 @@ export function CodePreview({ className, code, language }: CodePreviewProps) {
 						},
 						defaultColor: "light",
 						transformers: [notationTransformer],
+						decorations,
 					}) as TrustedHTML),
-		[isLoading, highlighter, code, language, notationTransformer],
+		[
+			isLoading,
+			highlighter,
+			code,
+			language,
+			notationTransformer,
+			decorations,
+		],
 	);
 
 	if (isLoading) {

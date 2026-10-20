@@ -8,9 +8,7 @@ import {
 import { features } from "@/lib/features";
 import { publicUrl } from "@/lib/utils";
 
-// Products are SDKs the user builds on and deploys themselves. Services are
-// managed by Rivet: the user only points a client at them, so they onboard
-// through a different path and are listed under their own heading.
+// Services use a different onboarding path from products that users deploy.
 export type ProductSection = "products" | "services";
 
 type Product = {
@@ -34,7 +32,7 @@ const PRODUCTS: Product[] = [
 	},
 	{
 		target: "agent-os",
-		section: "products",
+		section: "services",
 		label: "agentOS",
 		description: "Hand every agent a computer of its own",
 		markFileName: "agentos-mark.svg",
@@ -67,21 +65,8 @@ const PRODUCTS: Product[] = [
 	},
 ];
 
-const SECTIONS: { id: ProductSection; label: string }[] = [
-	{ id: "products", label: "Products" },
-	{ id: "services", label: "Services" },
-];
-
 export function getAvailableProducts() {
 	return PRODUCTS.filter((p) => p.isAvailable());
-}
-
-export function getProductSections() {
-	const available = getAvailableProducts();
-	return SECTIONS.map((section) => ({
-		...section,
-		products: available.filter((p) => p.section === section.id),
-	})).filter((section) => section.products.length > 0);
 }
 
 export function getProduct(target: OnboardingTarget) {
@@ -109,7 +94,37 @@ export function ProductMark({
 	/** `md` is the picker card size; `sm` fits inline in menus and text. */
 	size?: "sm" | "md";
 }) {
-	const isService = section === "services";
+	if (fileName === "durable-streams-mark.svg") {
+		return (
+			<span
+				className={cn(
+					"flex items-center justify-center bg-[#1B1916] ring-1 ring-white/65",
+					size === "md" ? "size-8 rounded-xl" : "size-4 rounded",
+				)}
+			>
+				<span
+					className={cn(
+						"flex items-center justify-center border border-white",
+						size === "md"
+							? "size-6 rounded-lg"
+							: "size-3 rounded-[3px]",
+					)}
+				>
+					<img
+						src={publicUrl(`images/brand/${fileName}`)}
+						alt=""
+						aria-hidden="true"
+						className={cn(
+							"brightness-0 invert",
+							size === "md" ? "size-4" : "size-2",
+						)}
+						draggable={false}
+					/>
+				</span>
+			</span>
+		);
+	}
+	const isService = section === "services" && fileName !== "agentos-mark.svg";
 	const img = (
 		<img
 			src={publicUrl(`images/brand/${fileName}`)}
@@ -129,7 +144,7 @@ export function ProductMark({
 	return (
 		<span
 			className={cn(
-				"flex items-center justify-center bg-muted",
+				"flex items-center justify-center border border-border bg-muted dark:bg-[#2d2c2a]",
 				size === "md" ? "size-8 rounded-xl" : "size-4 rounded",
 			)}
 		>
@@ -189,34 +204,24 @@ export function ProductPicker({
 	ariaLabel?: string;
 }) {
 	return (
-		<fieldset
-			aria-label={ariaLabel}
-			className="m-0 min-w-0 border-0 p-0 space-y-4"
-		>
-			{getProductSections().map((section) => (
-				<fieldset key={section.id} className="m-0 min-w-0 border-0 p-0">
-					<legend className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-						{section.label}
-					</legend>
-					<div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-						{section.products.map((product) => (
-							<ProductCard
-								key={product.target}
-								icon={
-									<ProductMark
-										fileName={product.markFileName}
-										section={product.section}
-									/>
-								}
-								label={product.label}
-								description={product.description}
-								badge={product.badge}
-								onSelect={() => onSelect(product.target)}
+		<fieldset aria-label={ariaLabel} className="m-0 min-w-0 border-0 p-0">
+			<div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				{getAvailableProducts().map((product) => (
+					<ProductCard
+						key={product.target}
+						icon={
+							<ProductMark
+								fileName={product.markFileName}
+								section={product.section}
 							/>
-						))}
-					</div>
-				</fieldset>
-			))}
+						}
+						label={product.label}
+						description={product.description}
+						badge={product.badge}
+						onSelect={() => onSelect(product.target)}
+					/>
+				))}
+			</div>
 		</fieldset>
 	);
 }

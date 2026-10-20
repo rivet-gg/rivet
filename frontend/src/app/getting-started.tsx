@@ -15,7 +15,7 @@ import {
 } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { type ReactNode, Suspense, useContext, useMemo } from "react";
+import { type ReactNode, Suspense, useContext } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { match } from "ts-pattern";
 import z from "zod";
@@ -37,13 +37,10 @@ import {
 	useCloudNamespaceDataProvider,
 	useEngineCompatDataProvider,
 } from "@/components/actors";
-import { AgentSelectStep } from "@/components/onboarding/agent-os/agent-select-step";
-import { buildAgentOsSetup } from "@/components/onboarding/agent-os/build-agent-os-setup";
 import {
-	DEFAULT_AGENT,
-	DEFAULT_PACKAGES,
-	DEFAULT_SANDBOX_PROVIDER,
-} from "@/components/onboarding/agent-os/catalog";
+	AgentOsConnectGuide,
+	type AgentOsExample,
+} from "@/components/onboarding/agent-os/connect-guide";
 import {
 	PRODUCT_COMPOSABILITY_NOTE,
 	ProductPicker,
@@ -62,6 +59,7 @@ import {
 import { deriveProviderFromMetadata } from "@/lib/data";
 import { engineEnv } from "@/lib/env";
 import { features } from "@/lib/features";
+import { useAdminToken } from "@/queries/accessors";
 import { queryClient } from "@/queries/global";
 import { cn } from "../components/lib/utils";
 import { Badge } from "../components/ui/badge";
@@ -134,31 +132,18 @@ const stepper = defineStepper(
 		previous: "Back",
 		schema: z.object({}),
 		group: "local",
-		// agentOS gets the dedicated agent/handoff steps below instead.
+		// Managed agentOS has a dedicated connect step below.
 		isVisible: (values: Record<string, unknown>) =>
 			values.template !== "agent-os",
 	},
-	// agentOS-only steps. Hidden for the actor path via isVisible, so the
-	// stepper skips them and the wizard stays a two-step local -> deploy flow.
 	{
-		id: "agent",
-		title: "Choose your agent",
-		description: "Pick the coding agent to run inside agentOS.",
-		next: "Continue",
+		id: "agent-os-connect",
+		title: "Connect to agentOS",
+		description: "Run your first command in a managed agentOS VM.",
+		next: "Done",
 		previous: "Back",
-		schema: z.object({ agent: z.string().nonempty() }),
-		group: "local",
-		isVisible: (values: Record<string, unknown>) =>
-			values.template === "agent-os",
-	},
-	{
-		id: "handoff",
-		title: "Set up agentOS",
-		description:
-			"Boot an agentOS instance and run your first session, locally.",
-		next: "Continue to deploy",
-		schema: z.object({}),
-		group: "local",
+		schema: z.object({ agentOsExample: z.enum(["typescript", "http"]) }),
+		group: "deploy",
 		isVisible: (values: Record<string, unknown>) =>
 			values.template === "agent-os",
 	},
@@ -184,7 +169,8 @@ const stepper = defineStepper(
 		assist: true,
 		group: "deploy",
 		isVisible: (values: Record<string, unknown>) =>
-			values.template !== "durable-streams",
+			values.template !== "durable-streams" &&
+			values.template !== "agent-os",
 		schema: (values: Record<string, unknown>) => {
 			const provider = (values.provider as string) || "rivet";
 			if (provider === "rivet") {
@@ -292,12 +278,7 @@ export function GettingStarted({
 			| "serverless"
 			| "serverful",
 		template: "actor" as OnboardingTarget,
-		agent: DEFAULT_AGENT,
-		packages: DEFAULT_PACKAGES,
-		sandbox: { enabled: false, provider: DEFAULT_SANDBOX_PROVIDER } as {
-			enabled: boolean;
-			provider?: string;
-		},
+		agentOsExample: "typescript" as const,
 		...(initialRunnerConfig || {}),
 	};
 
@@ -388,14 +369,9 @@ export function GettingStarted({
 											<RunLocallyStep />
 										</StepContent>
 									),
-									agent: () => (
+									"agent-os-connect": () => (
 										<StepContent>
-											<AgentSelectStep />
-										</StepContent>
-									),
-									handoff: () => (
-										<StepContent>
-											<AgentOsHandoff />
+											<AgentOsConnect />
 										</StepContent>
 									),
 									services: () => (
@@ -410,9 +386,8 @@ export function GettingStarted({
 									),
 								}}
 								onSubmit={async ({ values, form }) => {
-									// Finish: the deploy step is last. Save a
-									// non-Rivet provider's config, then go to the
-									// dashboard.
+									// Save a non-Rivet provider's config after
+									// deploy, then go to the dashboard.
 									const accumulated = values as Record<
 										string,
 										unknown
@@ -427,13 +402,14 @@ export function GettingStarted({
 										live.template) as
 										| OnboardingTarget
 										| undefined;
-									// Services skip the platform deploy step, so
+									// Managed services skip the platform deploy step, so
 									// the provider fields hold untouched defaults;
 									// writing them would register a bogus runner.
 									if (
 										provider &&
 										provider !== "rivet" &&
-										template !== "durable-streams"
+										template !== "durable-streams" &&
+										template !== "agent-os"
 									) {
 										await saveProviderConfig({
 											...accumulated,
@@ -449,9 +425,8 @@ export function GettingStarted({
 									});
 								}}
 								onPartialSubmit={async ({ stepper }) => {
-									// The managed pool is created by the Rivet CLI
-									// during deploy, not by the dashboard, so we only
-									// prefetch the data the deploy step renders here.
+									// Prefetch credentials needed by the connect and
+									// deploy steps after a product is selected.
 									if (stepper.current.id === "select") {
 										await Promise.all([
 											...(features.auth &&
@@ -829,7 +804,7 @@ function CloudBuildTargetSelector() {
 	return (
 		<BuildTargetSelector
 			onSelectTarget={(target) => {
-				if (target !== "durable-streams") {
+				if (target !== "durable-streams" && target !== "agent-os") {
 					return;
 				}
 				mutate(MANAGED_SERVICES_POOL_CONFIG);
@@ -1014,7 +989,11 @@ function DurableStreamsConnect() {
 	);
 }
 
-function DurableStreamsManagedService({ serviceUrl }: { serviceUrl: string }) {
+export function DurableStreamsManagedService({
+	serviceUrl,
+}: {
+	serviceUrl: string;
+}) {
 	return (
 		<>
 			<div className="flex gap-3">
@@ -1105,74 +1084,22 @@ function DurableStreamsSelfHosted() {
 	);
 }
 
-// agentOS handoff: turns the agent/software/sandbox selections into the install
-// command, server.ts/client.ts, and a copy-prompt for the coding agent. Shown
-// as the final local-group step on the agentOS path.
-function AgentOsHandoff() {
-	const agent = useWatch({ name: "agent" }) as string | undefined;
-	const packages = useWatch({ name: "packages" }) as string[] | undefined;
-	const sandbox = useWatch({ name: "sandbox" }) as
-		| { enabled: boolean; provider?: string }
-		| undefined;
-
-	const setup = useMemo(
-		() =>
-			buildAgentOsSetup({
-				agent: agent ?? DEFAULT_AGENT,
-				packages: packages ?? DEFAULT_PACKAGES,
-				sandbox: sandbox ?? {
-					enabled: false,
-					provider: DEFAULT_SANDBOX_PROVIDER,
-				},
-			}),
-		[agent, packages, sandbox],
-	);
+function AgentOsConnect() {
+	const privateEndpoint = useRivetDsn({ kind: "secret" });
+	const token = useAdminToken();
+	const namespace = useEngineCompatDataProvider().engineNamespace;
+	const { setValue } = useFormContext();
+	const example = (useWatch({ name: "agentOsExample" }) ||
+		"typescript") as AgentOsExample;
 
 	return (
-		<div className="flex flex-col gap-6">
-			<AgentPromptBanner
-				code={setup.prompt}
-				title="Use your coding agent"
-				description="Have your coding agent set up agentOS and run a session for you."
-			/>
-			<OrDivider label="or set it up yourself" />
-			<div className="flex flex-col gap-4">
-				<div>
-					<p className="font-medium mb-1.5">Install</p>
-					<CommandBox command={setup.installCommand} />
-				</div>
-				<CodeGroup className="my-0">
-					{[
-						<CodeFrame
-							key="server"
-							language="typescript"
-							title="server.ts"
-							code={() => setup.serverCode}
-							className="m-0"
-						>
-							<CodePreview
-								language="typescript"
-								className="text-left"
-								code={setup.serverCode}
-							/>
-						</CodeFrame>,
-						<CodeFrame
-							key="client"
-							language="typescript"
-							title="client.ts"
-							code={() => setup.clientCode}
-							className="m-0"
-						>
-							<CodePreview
-								language="typescript"
-								className="text-left"
-								code={setup.clientCode}
-							/>
-						</CodeFrame>,
-					]}
-				</CodeGroup>
-			</div>
-		</div>
+		<AgentOsConnectGuide
+			privateEndpoint={privateEndpoint}
+			namespace={namespace}
+			token={token}
+			example={example}
+			onExampleChange={(value) => setValue("agentOsExample", value)}
+		/>
 	);
 }
 
