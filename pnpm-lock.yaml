@@ -597,6 +597,28 @@ importers:
         specifier: ^5.0.0
         version: 5.4.21(@types/node@22.19.15)(less@4.4.1)(lightningcss@1.33.0)(sass@1.93.2)(stylus@0.62.0)(terser@5.46.0)
 
+  examples/claude-code-research:
+    dependencies:
+      '@rivet-dev/claude-code':
+        specifier: workspace:*
+        version: link:../../integrations/claude-code
+      rivetkit:
+        specifier: workspace:*
+        version: link:../../rivetkit-typescript/packages/rivetkit
+      zod:
+        specifier: ^4.1.0
+        version: 4.3.6
+    devDependencies:
+      '@types/node':
+        specifier: ^22.13.9
+        version: 22.19.15
+      tsx:
+        specifier: ^3.12.7
+        version: 3.14.0
+      typescript:
+        specifier: ^5.5.2
+        version: 5.9.3
+
   examples/collaborative-document:
     dependencies:
       '@rivetkit/react':
