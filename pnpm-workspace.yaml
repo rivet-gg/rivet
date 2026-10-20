@@ -24,6 +24,7 @@ packages:
   - integrations/*/examples/*
   - rivetkit-typescript/packages/*
   - rivetkit-swift/examples/*/server
+  - scripts/pipboy
   - scripts/publish
   - scripts/tests
   - scripts/vercel-examples
