@@ -1,14 +1,21 @@
 import { fileURLToPath } from "node:url";
+import { z } from "zod";
 
-export const FAKE_CLAUDE_CODE = fileURLToPath(new URL("./fake-claude-process.mjs", import.meta.url));
+export const FAKE_CLAUDE_CODE = fileURLToPath(new URL("./fake-claude-process.ts", import.meta.url));
 
-export interface FakeClaudeEcho {
-	prompt: string;
-	systemPrompt: string[] | null;
-	jsonSchema: Record<string, unknown> | null;
-	args: string[];
-	cwd: string;
-	parentSession: string | null;
+const fakeClaudeEchoSchema = z.object({
+	prompt: z.string(),
+	systemPrompt: z.array(z.string()).nullable(),
+	jsonSchema: z.record(z.string(), z.unknown()).nullable(),
+	args: z.array(z.string()),
+	cwd: z.string(),
+	parentSession: z.string().nullable(),
+});
+
+export type FakeClaudeEcho = z.infer<typeof fakeClaudeEchoSchema>;
+
+export function parseEcho(response: string): FakeClaudeEcho {
+	return fakeClaudeEchoSchema.parse(JSON.parse(response));
 }
 
 export interface FakeClaudeBehavior {

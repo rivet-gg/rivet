@@ -12,11 +12,11 @@ const DEFAULT_TURN_TIMEOUT_MS = 10 * 60_000;
 
 export interface ClaudeCodeAgentOptions {
 	systemPrompt: string;
-	tools?: readonly string[];
-	model?: string;
-	cwd?: string;
-	turnTimeoutMs?: number;
-	claudeCodePath?: string;
+	tools?: readonly string[] | undefined;
+	model?: string | undefined;
+	cwd?: string | undefined;
+	turnTimeoutMs?: number | undefined;
+	claudeCodePath?: string | undefined;
 }
 
 export interface ClaudeCodeTurn {
@@ -73,10 +73,10 @@ const turnEvent: Type<ClaudeCodeTurn> = event<ClaudeCodeTurn>();
 
 export function claudeCodeAgent(options: ClaudeCodeAgentOptions): ClaudeCodeAgentDefinition {
 	return actor({
-		state: {
-			sessionId: null as string | null,
-			turns: [] as ClaudeCodeTurn[],
-		},
+		createState: (): ClaudeCodeAgentState => ({
+			sessionId: null,
+			turns: [],
+		}),
 		createVars: (): ClaudeCodeAgentVars => ({
 			turnInProgress: false,
 		}),

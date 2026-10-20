@@ -20,13 +20,13 @@ const PARENT_SESSION_VARIABLES = [
 export interface ClaudeCodeRequest {
 	prompt: string;
 	systemPrompt: string;
-	tools?: readonly string[];
-	model?: string;
-	cwd?: string;
-	resumeSessionId?: string;
-	persistSession?: boolean;
-	signal?: AbortSignal;
-	claudeCodePath?: string;
+	tools?: readonly string[] | undefined;
+	model?: string | undefined;
+	cwd?: string | undefined;
+	resumeSessionId?: string | undefined;
+	persistSession?: boolean | undefined;
+	signal?: AbortSignal | undefined;
+	claudeCodePath?: string | undefined;
 }
 
 export interface ClaudeCodeRun<Output> {

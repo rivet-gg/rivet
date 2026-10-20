@@ -1,21 +1,39 @@
 import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline";
 
+interface InitializeRequest {
+	systemPrompt?: string[];
+	jsonSchema?: Record<string, unknown>;
+}
+
+interface ControlRequestMessage {
+	type: "control_request";
+	request_id: string;
+	request: InitializeRequest;
+}
+
+interface UserMessage {
+	type: "user";
+	message: { content: string | { text: string }[] };
+}
+
+type IncomingMessage = ControlRequestMessage | UserMessage;
+
 const args = process.argv.slice(2);
 const sessionId = args.find((arg) => arg.startsWith("--resume="))?.slice("--resume=".length) ?? randomUUID();
 const failWith = process.env.FAKE_CLAUDE_FAIL_WITH;
 const delayMs = Number(process.env.FAKE_CLAUDE_DELAY_MS ?? 0);
-let initializeRequest = {};
+let initializeRequest: InitializeRequest = {};
 
-function send(message) {
+function send(message: unknown): void {
 	process.stdout.write(`${JSON.stringify(message)}\n`);
 }
 
-function promptText(content) {
+function promptText(content: UserMessage["message"]["content"]): string {
 	return typeof content === "string" ? content : content.map((block) => block.text).join("");
 }
 
-function echo(prompt) {
+function echo(prompt: string) {
 	return {
 		prompt,
 		systemPrompt: initializeRequest.systemPrompt ?? null,
@@ -26,7 +44,7 @@ function echo(prompt) {
 	};
 }
 
-function structuredOutput(prompt) {
+function structuredOutput(prompt: string): unknown {
 	if (process.env.FAKE_CLAUDE_ECHO_AS_STRUCTURED_OUTPUT) {
 		return echo(prompt);
 	}
@@ -34,7 +52,7 @@ function structuredOutput(prompt) {
 	return configured === undefined ? undefined : JSON.parse(configured);
 }
 
-function result(prompt) {
+function result(prompt: string) {
 	const common = {
 		type: "result",
 		session_id: sessionId,
@@ -63,7 +81,7 @@ function result(prompt) {
 process.stdin.on("end", () => process.exit(0));
 
 for await (const line of createInterface({ input: process.stdin })) {
-	const message = JSON.parse(line);
+	const message: IncomingMessage = JSON.parse(line);
 	if (message.type === "control_request") {
 		initializeRequest = message.request;
 		send({ type: "control_response", response: { subtype: "success", request_id: message.request_id, response: {} } });

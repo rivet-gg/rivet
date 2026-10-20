@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { type ClaudeCodeRequest, runClaudeCode } from "../src/run.ts";
-import { FAKE_CLAUDE_CODE, type FakeClaudeEcho, optionValue, withFakeClaude } from "./fake-claude.ts";
+import { FAKE_CLAUDE_CODE, optionValue, parseEcho, withFakeClaude } from "./fake-claude.ts";
 
 const planSchema = z.object({ subQuestions: z.array(z.string()) });
 
@@ -14,7 +14,7 @@ async function runAndEcho(request: Partial<ClaudeCodeRequest> = {}) {
 		claudeCodePath: FAKE_CLAUDE_CODE,
 		...request,
 	});
-	return { run, echo: JSON.parse(run.output) as FakeClaudeEcho };
+	return { run, echo: parseEcho(run.output) };
 }
 
 describe("runClaudeCode", () => {

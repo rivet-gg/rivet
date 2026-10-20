@@ -28,6 +28,15 @@ export interface Finding {
 	costUsd: number;
 }
 
+export interface ResearchState {
+	question: string | null;
+	status: ResearchStatus;
+	findings: Finding[];
+	report: string | null;
+	error: string | null;
+	costUsd: number;
+}
+
 export const researcher = claudeCodeAgent({
 	systemPrompt: RESEARCHER_SYSTEM_PROMPT,
 	tools: ["WebSearch", "WebFetch"],
@@ -35,14 +44,14 @@ export const researcher = claudeCodeAgent({
 });
 
 export const researchCoordinator = actor({
-	state: {
-		question: null as string | null,
-		status: "idle" as ResearchStatus,
-		findings: [] as Finding[],
-		report: null as string | null,
-		error: null as string | null,
+	createState: (): ResearchState => ({
+		question: null,
+		status: "idle",
+		findings: [],
+		report: null,
+		error: null,
 		costUsd: 0,
-	},
+	}),
 	events: {
 		progress: event<ResearchProgress>(),
 	},
@@ -55,7 +64,7 @@ export const researchCoordinator = actor({
 			void c.keepAwake(research(c, question));
 			return { status: c.state.status };
 		},
-		getResult: (c) => ({ ...c.state }),
+		getResult: (c): ResearchState => ({ ...c.state }),
 	},
 });
 
