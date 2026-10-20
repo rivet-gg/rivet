@@ -14,7 +14,7 @@ pnpm start
 In a second terminal:
 
 ```sh
-pnpm research "How do Rivet Actors compare to Cloudflare Durable Objects for building AI agents?"
+pnpm client "How do Rivet Actors compare to Cloudflare Durable Objects for building AI agents?"
 ```
 
 ## Features
@@ -35,7 +35,7 @@ Agent runs count toward your Claude Code usage limits. Use your own login for yo
 
 The researcher agent and the coordinator live in [`src/actors.ts`](https://github.com/rivet-dev/rivet/tree/main/examples/claude-code-research/src/actors.ts). Researchers come from [`@rivet-dev/claude-code`](https://github.com/rivet-dev/rivet/tree/main/integrations/claude-code), and the coordinator uses `runClaudeCode` for planning and the final report.
 
-The command line client in [`src/research.ts`](https://github.com/rivet-dev/rivet/tree/main/examples/claude-code-research/src/research.ts) starts a research run and prints its progress.
+The command line client in [`scripts/client.ts`](https://github.com/rivet-dev/rivet/tree/main/examples/claude-code-research/scripts/client.ts) starts a research run and prints its progress.
 
 ## Resources
 

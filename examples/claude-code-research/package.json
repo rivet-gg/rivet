@@ -4,8 +4,9 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"dev": "tsx watch src/server.ts",
 		"start": "tsx src/server.ts",
-		"research": "tsx src/research.ts",
+		"client": "tsx scripts/client.ts",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
