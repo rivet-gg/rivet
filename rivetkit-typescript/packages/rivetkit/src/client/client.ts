@@ -477,11 +477,15 @@ export class ClientRaw {
  *
  * @template A The actor registry type.
  */
-export type Client<A extends Registry<any>> = ClientRaw & Omit<{
-	[K in keyof ExtractActorsFromRegistry<A>]: ActorAccessor<
-		ExtractActorsFromRegistry<A>[K]
+export type Client<A extends Registry<any>> = ClientRaw &
+	Omit<
+		{
+			[K in keyof ExtractActorsFromRegistry<A>]: ActorAccessor<
+				ExtractActorsFromRegistry<A>[K]
+			>;
+		},
+		keyof ClientRaw
 	>;
-}, keyof ClientRaw>;
 
 export type AnyClient = Client<Registry<any>>;
 
