@@ -3726,12 +3726,13 @@ importers:
 
   rivetkit-typescript/packages/rivetkit-napi:
     dependencies:
-      '@napi-rs/cli':
-        specifier: ^2.18.4
-        version: 2.18.4
       '@rivetkit/engine-envoy-protocol':
         specifier: workspace:*
         version: link:../../../engine/sdks/typescript/envoy-protocol
+    devDependencies:
+      '@napi-rs/cli':
+        specifier: ^2.18.4
+        version: 2.18.4
 
   rivetkit-typescript/packages/rivetkit-wasm:
     devDependencies:

@@ -43,7 +43,9 @@
 		"build:embed": "node scripts/build.mjs"
 	},
 	"dependencies": {
-		"@napi-rs/cli": "^2.18.4",
 		"@rivetkit/engine-envoy-protocol": "workspace:*"
+	},
+	"devDependencies": {
+		"@napi-rs/cli": "^2.18.4"
 	}
 }
