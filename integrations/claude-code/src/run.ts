@@ -122,6 +122,8 @@ function invokeCli(request: ClaudeCodeRequest, args: string[]): Promise<CliResul
 			env: environmentWithoutNestedSession(),
 			signal: request.signal,
 			stdio: ["pipe", "pipe", "pipe"],
+			// Without this, a windowed host on Windows flashes a console window per call.
+			windowsHide: true,
 		});
 
 		let stdout = "";
