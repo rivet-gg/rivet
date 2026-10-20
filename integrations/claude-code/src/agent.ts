@@ -6,7 +6,7 @@ import {
 	type Type,
 	UserError,
 } from "rivetkit";
-import { type ClaudeCodeExecutable, runClaudeCode } from "./run.js";
+import { runClaudeCode } from "./run.js";
 
 const DEFAULT_TURN_TIMEOUT_MS = 10 * 60_000;
 
@@ -16,7 +16,7 @@ export interface ClaudeCodeAgentOptions {
 	model?: string;
 	cwd?: string;
 	turnTimeoutMs?: number;
-	executable?: ClaudeCodeExecutable;
+	claudeCodePath?: string;
 }
 
 export interface ClaudeCodeTurn {
@@ -102,7 +102,7 @@ export function claudeCodeAgent(options: ClaudeCodeAgentOptions): ClaudeCodeAgen
 						tools: options.tools,
 						model: options.model,
 						cwd: options.cwd,
-						executable: options.executable,
+						claudeCodePath: options.claudeCodePath,
 						resumeSessionId: c.state.sessionId ?? undefined,
 						persistSession: true,
 						signal: c.abortSignal,

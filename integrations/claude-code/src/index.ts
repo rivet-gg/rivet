@@ -5,10 +5,4 @@ export {
 	type ClaudeCodeTurn,
 	claudeCodeAgent,
 } from "./agent.js";
-export {
-	type ClaudeCodeExecutable,
-	type ClaudeCodeRequest,
-	type ClaudeCodeRun,
-	defaultExecutable,
-	runClaudeCode,
-} from "./run.js";
+export { type ClaudeCodeRequest, type ClaudeCodeRun, runClaudeCode } from "./run.js";

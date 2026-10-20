@@ -1,6 +1,6 @@
 # @rivet-dev/claude-code
 
-Run [Claude Code](https://code.claude.com) agents as durable [Rivet](https://rivet.dev) Actors. Each agent runs the `claude` CLI under your own Claude Code login, so no API key is needed.
+Run [Claude Code](https://code.claude.com) agents as durable [Rivet](https://rivet.dev) Actors. Each agent runs Claude Code through the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk/overview) under your own Claude Code login, so a Claude subscription is enough and no API key is needed.
 
 Each actor is one persistent Claude Code session. Prompts continue the same conversation, and every turn is stored in actor state and broadcast as a `turn` event.
 
@@ -38,6 +38,9 @@ const followUp = await agent.prompt("Which one fits long-running coding agents?"
 | `model` | Model for every turn. Defaults to your Claude Code default. |
 | `cwd` | Working directory, for example a repository a coding agent works in. |
 | `turnTimeoutMs` | Maximum time for one turn. Defaults to 10 minutes. |
+| `claudeCodePath` | Claude Code executable to run. Defaults to the one bundled with the Agent SDK. |
+
+Agents do not load your Claude Code settings or `CLAUDE.md` files, so they behave only as their options describe.
 
 An agent works on one prompt at a time. A prompt sent while a turn is running fails with `claude_code_turn_in_progress`.
 
@@ -57,5 +60,4 @@ const plan = await runClaudeCode(
 
 ## Requirements
 
-- Claude Code installed and logged in. Run `claude` once.
-- Set `CLAUDE_CODE_BIN` if `claude` is not on your `PATH`.
+- Logged in to Claude Code. Run `claude` once and sign in with your Claude account.

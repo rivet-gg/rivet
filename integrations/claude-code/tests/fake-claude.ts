@@ -1,44 +1,40 @@
-import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const [fakeMode, fakeValue, ...cliArgs] = process.argv.slice(2);
-const prompt = readFileSync(0, "utf8");
-const resumeAt = cliArgs.indexOf("--resume");
-const sessionId = resumeAt === -1 ? randomUUID() : cliArgs[resumeAt + 1];
+export const FAKE_CLAUDE_CODE = fileURLToPath(new URL("./fake-claude-process.mjs", import.meta.url));
 
-const echo = {
-	prompt,
-	args: cliArgs,
-	cwd: process.cwd(),
-	nestedSession: process.env.CLAUDECODE ?? null,
-};
+export interface FakeClaudeEcho {
+	prompt: string;
+	systemPrompt: string[] | null;
+	jsonSchema: Record<string, unknown> | null;
+	args: string[];
+	cwd: string;
+	parentSession: string | null;
+}
 
-function structuredOutput(): unknown {
-	switch (fakeMode) {
-		case "--fake-structured-output":
-			return JSON.parse(fakeValue);
-		case "--fake-structured-echo":
-			return echo;
-		default:
-			return undefined;
+export interface FakeClaudeBehavior {
+	failWith?: "error_during_execution";
+	structuredOutput?: unknown;
+	echoAsStructuredOutput?: boolean;
+	delayMs?: number;
+}
+
+export async function withFakeClaude<T>(behavior: FakeClaudeBehavior, work: () => Promise<T>): Promise<T> {
+	const variables: Record<string, string | undefined> = {
+		FAKE_CLAUDE_FAIL_WITH: behavior.failWith,
+		FAKE_CLAUDE_STRUCTURED_OUTPUT: behavior.structuredOutput === undefined ? undefined : JSON.stringify(behavior.structuredOutput),
+		FAKE_CLAUDE_ECHO_AS_STRUCTURED_OUTPUT: behavior.echoAsStructuredOutput ? "1" : undefined,
+		FAKE_CLAUDE_DELAY_MS: behavior.delayMs?.toString(),
+	};
+	Object.assign(process.env, Object.fromEntries(Object.entries(variables).filter(([, value]) => value !== undefined)));
+	try {
+		return await work();
+	} finally {
+		for (const name of Object.keys(variables)) {
+			delete process.env[name];
+		}
 	}
 }
 
-const isError = fakeMode === "--fake-error";
-
-if (fakeMode === "--fake-delay") {
-	await new Promise((resolve) => setTimeout(resolve, Number(fakeValue)));
+export function optionValue(args: string[], option: string): string | undefined {
+	return args.find((arg) => arg.startsWith(`${option}=`))?.slice(option.length + 1);
 }
-
-console.log(
-	JSON.stringify({
-		type: "result",
-		subtype: isError ? "error_during_execution" : "success",
-		is_error: isError,
-		result: JSON.stringify(echo),
-		structured_output: structuredOutput(),
-		session_id: sessionId,
-		total_cost_usd: 0.01,
-		duration_ms: 5,
-	}),
-);
