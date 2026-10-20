@@ -10,7 +10,6 @@ ARG BUILD_MODE=release
 ARG BUILD_FRONTEND=false
 ARG VITE_APP_API_URL=__SAME__
 ARG VITE_FEATURE_FLAGS=
-ARG RUST_TOOLCHAIN=1.91.1
 
 ENV BINDGEN_EXTRA_CLANG_ARGS_aarch64_apple_darwin="--sysroot=/root/osxcross/target/SDK/MacOSX11.3.sdk -isystem /root/osxcross/target/SDK/MacOSX11.3.sdk/usr/include" \
     CFLAGS_aarch64_apple_darwin="-B/root/osxcross/target/bin" \
@@ -33,7 +32,9 @@ ENV RUSTC_WRAPPER=sccache \
 WORKDIR /build
 COPY . .
 
-RUN rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal && \
+# Install the channel pinned in rust-toolchain.toml, copied in above.
+RUN RUST_TOOLCHAIN="$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" && \
+    rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal && \
     rustup default "${RUST_TOOLCHAIN}" && \
     rustup target add aarch64-apple-darwin
 
