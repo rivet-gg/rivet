@@ -27,32 +27,22 @@ Open a new terminal so the changes apply.
 ```powershell
 npm install --global pnpm
 pnpm install
+pnpm -F @rivetkit/engine-frontend build:engine
 cargo build -p rivet-engine
 $env:SKIP_WASM_BUILD = "1"
 pnpm build -F rivetkit -F @rivetkit/react
 ```
 
-`SKIP_WASM_BUILD` skips the wasm runtime, which this guide does not cover.
+`build:engine` builds the dashboard that the engine embeds, so build it before the engine. `SKIP_WASM_BUILD` skips the wasm runtime, which this guide does not cover.
 
 ## Run
 
-The published Windows engine package does not run yet, so start the locally built engine and tell RivetKit not to spawn its own.
-
-Start the engine:
+The published Windows engine package does not run yet, so point RivetKit at the locally built engine:
 
 ```powershell
-$env:RIVET__AUTH__ADMIN_TOKEN = "default"
-.\target\debug\rivet-engine.exe start
-```
-
-In a second terminal, start an example:
-
-```powershell
+$env:RIVET_ENGINE_BINARY_PATH = "$PWD\target\debug\rivet-engine.exe"
 cd examples\hello-world
-$env:RIVETKIT_ENGINE_SPAWN = "never"
-$env:RIVET_RUN_SERVICES = "0"
-$env:RIVET_TOKEN = "default"
 pnpm dev
 ```
 
-Open http://localhost:5173.
+Open http://localhost:5173 for the example and http://127.0.0.1:6420/ui/ for the dashboard.
