@@ -22,6 +22,7 @@ npx @rivetkit/cli <command>
 | --- | --- |
 | `rivet dev` | Run a local engine and your handler's dev server. |
 | `rivet deploy` | Build and deploy the project to Rivet Cloud. |
+| `rivet logs` | Read or follow a compute pool's logs. |
 | `rivet pool` | List or delete compute pools in a namespace. |
 | `rivet engine` | Run the bundled `rivet-engine` binary directly. |
 | `rivet setup-ci` | Install the GitHub Actions deploy workflow. |
@@ -75,6 +76,45 @@ The token is saved to `~/.rivet/credentials` (also read from `RIVET_CLOUD_TOKEN`
 | `--env KEY=VAL` | — | Environment override, repeatable. |
 | `--image` | project slug | Image repository name. |
 | `--tag` | git short SHA | Image tag. |
+| `--yes` | — | Skip prompts. |
+| `--reuse-image` | — | Keep the pool's current image and skip the Docker build and push. Use it to change resources without a rebuild. |
+| `--cloud-api` | `https://cloud-api.rivet.dev` | Cloud API endpoint. |
+
+The pool's resources and scaling are set with these flags. Each one left out keeps its server-side default.
+
+| Flag | Server default | Description |
+| --- | --- | --- |
+| `--cpu` | `1` | vCPUs per actor: `1`, `2`, `4`, `8`, or a value from `0.08` to below `1` with at most two decimals. |
+| `--memory` | `512Mi` | Memory per actor, from `512Mi` to `4Gi`. |
+| `--min-scale` | `0` | Actors kept running, `0` to `100`. |
+| `--max-scale` | `1` | Most actors to scale to, `1` to `5000`. |
+| `--max-concurrent-actors` | `1000` | Most actors the pool runs at once, `1` to `50000`. |
+| `--instance-request-concurrency` | `80` | Concurrent requests per actor instance, `1` to `500`. |
+| `--drain-grace-period` | `1800` | Seconds a draining instance waits for its actors to finish, `5` to `3200`. |
+| `--drain-on-version-upgrade` | `true` | Drain instances on the old version when a new one deploys. Pass `--drain-on-version-upgrade=false` to disable. |
+
+## `rivet logs`
+
+Prints a compute pool's logs, oldest first. `-f` follows new lines live.
+
+```bash
+rivet logs
+rivet logs --pool workers --contains error -n 200
+rivet logs --region us-east4 -f
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--namespace` | `production` | Cloud namespace. |
+| `--pool` | `default` | Compute pool. |
+| `--region` | all | Regions to include, comma-separated. |
+| `--contains` | — | Only lines containing this text, case-insensitive. |
+| `-n`, `--limit` | `100` | Number of history lines. Ignored with `--follow`. |
+| `-f`, `--follow` | — | Keep printing new lines as they arrive. |
+| `--before` | — | Page back: only lines before this ISO 8601 timestamp. |
+| `--json` | — | Emit JSON lines instead of formatted output. |
+| `--token` | env / credentials | Rivet Cloud API token. |
+| `--project` / `--org` | from token | Override project/org. |
 
 ## `rivet pool`
 
@@ -94,6 +134,7 @@ Each pool is printed as a status line (colorized by status) followed by its conf
 | `--namespace` | `production` | Cloud namespace. |
 | `--project` / `--org` | from token | Override project/org. |
 | `--json` | — | Emit raw JSON instead of formatted output. |
+| `--with-env-vars` | — | Include environment variable values, which are secret and omitted otherwise. |
 
 ### `rivet pool delete`
 
