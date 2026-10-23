@@ -32,6 +32,10 @@ allow = [
 	"Zlib",
 	"EPL-2.0",
 	"Unlicense",
+	# Boost Software License, not Business Source License (clipboard-win, error-code, xxhash-rust).
+	"BSL-1.0",
+	# Mozilla's CA root list (webpki-roots, webpki-root-certs).
+	"CDLA-Permissive-2.0",
 ]
 unused-allowed-license = "allow"
 
@@ -42,10 +46,6 @@ allow = ["Unicode-DFS-2016"]
 [[licenses.exceptions]]
 name = "ring"
 allow = ["OpenSSL"]
-
-[[licenses.exceptions]]
-name = "lockfree-object-pool"
-allow = ["BSL-1.0"]  # Boost Software License, not Business Source License
 
 # See https://github.com/EmbarkStudios/buildkite-jobify/blob/a1b953b03f3330e499b1af47cc2dc38bd777da7c/deny.toml#LL27C1-L38C1
 [[licenses.clarify]]

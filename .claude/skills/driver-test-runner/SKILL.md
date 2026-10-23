@@ -150,10 +150,6 @@ Each row: `[native] [wasm] <file> | <suite description>`
 - [ ] [ ] hibernatable-websocket-protocol | hibernatable websocket protocol
 - [ ] [ ] actor-db-stress | Actor Database Stress Tests
 
-## Excluded
-
-- [ ] [ ] actor-agent-os | Actor agentOS Tests (skip unless explicitly requested)
-
 ## Log
 ```
 
@@ -246,7 +242,6 @@ Replace `<FILE>` with the file name stem (part before the `|` in the progress fi
 | actor-run | Actor Run Tests |
 | hibernatable-websocket-protocol | hibernatable websocket protocol |
 | actor-db-stress | Actor Database Stress Tests |
-| actor-agent-os | Actor agentOS Tests |
 
 **c) Pipe output to file and analyze:**
 

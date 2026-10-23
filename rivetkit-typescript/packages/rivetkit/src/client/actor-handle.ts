@@ -1001,7 +1001,9 @@ export class ActorHandleRaw {
 	}
 
 	/** Issue a token scoped to this actor. Defaults to actor gateway read access. */
-	async issueToken(options: ActorIssueTokenOptions = {}): Promise<IssuedToken> {
+	async issueToken(
+		options: ActorIssueTokenOptions = {},
+	): Promise<IssuedToken> {
 		const actorId = await this.resolve();
 		const permissions: ActorTokenPermissions = options.permissions ?? {
 			actor_gateway: ["read"],

@@ -13,13 +13,14 @@ ARG CARGO_BUILD_MODE=debug
 ARG VITE_APP_API_URL=__SAME__
 ARG VITE_APP_TURNSTILE_SITE_KEY=
 ARG OVERRIDE_GIT_SHA
-ARG RUST_TOOLCHAIN=1.91.1
 
 WORKDIR /app
 
 COPY . .
 
-RUN rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal && \
+# Install the channel pinned in rust-toolchain.toml, copied in above.
+RUN RUST_TOOLCHAIN="$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" && \
+    rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal && \
     rustup default "${RUST_TOOLCHAIN}"
 
 # Build frontend. Use --ignore-scripts because the root postinstall runs
