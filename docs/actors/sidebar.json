@@ -298,10 +298,6 @@
 			"title": "Guides",
 			"pages": [
 				{
-					"title": "AI Agent",
-					"href": "/guides/ai-agent"
-				},
-				{
 					"title": "Authenticate Users End to End",
 					"href": "/guides/authentication"
 				},
